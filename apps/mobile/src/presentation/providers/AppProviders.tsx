@@ -7,6 +7,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import type { AppContainer } from '@/application/AppContainer';
 import { createI18n } from '@/presentation/i18n/createI18n';
 import { createQueryClient } from '@/presentation/query/queryClient';
+import { useAppFonts } from '@/presentation/theme/fonts';
 
 import { ContainerProvider } from './ContainerProvider';
 import { SessionProvider } from './SessionProvider';
@@ -17,10 +18,11 @@ interface AppProvidersProps {
   children: React.ReactNode;
 }
 
-/** Providers globales. Renderiza la app cuando el idioma inicial está resuelto. */
+/** Providers globales. Renderiza la app cuando el idioma inicial y la tipografía están listos. */
 export function AppProviders({ container, fallbackLanguage, children }: AppProvidersProps) {
   const [queryClient] = useState(createQueryClient);
   const [i18nInstance, setI18nInstance] = useState<i18n | null>(null);
+  const fontsReady = useAppFonts();
 
   useEffect(() => {
     let mounted = true;
@@ -37,7 +39,7 @@ export function AppProviders({ container, fallbackLanguage, children }: AppProvi
   }, [container, fallbackLanguage]);
 
   // El splash definitivo llega con COPAYNI-18.
-  if (!i18nInstance) return null;
+  if (!i18nInstance || !fontsReady) return null;
 
   return (
     <SafeAreaProvider>

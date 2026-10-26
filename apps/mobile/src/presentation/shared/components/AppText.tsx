@@ -1,16 +1,16 @@
 import { StyleSheet, Text, type TextProps } from 'react-native';
 
-import { colors, fontWeight, typography } from '@/presentation/theme/tokens';
+import { colors, fontFamily, typography, type FontWeight } from '@/presentation/theme/tokens';
 
-type Variant = 'display' | 'title' | 'highlight' | 'body' | 'caption' | 'footnote';
+type Variant = keyof typeof typography;
 
 interface AppTextProps extends TextProps {
   variant?: Variant;
-  weight?: keyof typeof fontWeight;
+  weight?: FontWeight;
   color?: string;
 }
 
-/** Texto base: respeta el tamaño de fuente del sistema (allowFontScaling por defecto). */
+/** Texto base: tipografía Outfit y respeto al tamaño de fuente del sistema (allowFontScaling). */
 export function AppText({
   variant = 'body',
   weight = 'regular',
@@ -20,7 +20,7 @@ export function AppText({
 }: AppTextProps) {
   return (
     <Text
-      style={[typography[variant], { fontWeight: fontWeight[weight], color }, styles.base, style]}
+      style={[typography[variant], { fontFamily: fontFamily[weight], color }, styles.base, style]}
       {...rest}
     />
   );
