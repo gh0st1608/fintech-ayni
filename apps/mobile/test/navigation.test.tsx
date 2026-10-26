@@ -39,6 +39,17 @@ describe('shell de navegación', () => {
     }
   });
 
+  it.each([
+    ['Círculos', '/circles'],
+    ['Pagos', '/payment'],
+  ])('la pestaña %s abre su pantalla', async (tab, pathname) => {
+    await storeSession();
+    await renderRouter(APP_DIR, { initialUrl: '/home' });
+    await fireEvent.press(screen.getAllByText(tab)[0]!);
+    await waitFor(() => expect(screen).toHavePathname(pathname));
+    expect(screen.getAllByText('Próximamente').length).toBeGreaterThan(0);
+  });
+
   it('el botón central abre "Elige un servicio"', async () => {
     await storeSession();
     await renderRouter(APP_DIR, { initialUrl: '/home' });

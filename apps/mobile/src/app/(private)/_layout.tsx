@@ -1,15 +1,13 @@
 import { Stack } from 'expo-router';
-import { useTranslation } from 'react-i18next';
+
+import { useJoinScreenOptions } from '@/presentation/navigation/screenOptions';
 
 export default function PrivateLayout() {
-  const { t } = useTranslation();
+  const joinOptions = useJoinScreenOptions();
   return (
     <Stack>
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-      <Stack.Screen
-        name="join"
-        options={{ title: t('join.title'), headerBackButtonDisplayMode: 'minimal' }}
-      />
+      <Stack.Screen name="join" options={joinOptions} />
     </Stack>
   );
 }

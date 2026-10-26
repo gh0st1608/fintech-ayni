@@ -21,10 +21,13 @@ const FRAMEWORKS = [
   'i18next',
 ];
 
+const DEVICE_APIS = ['expo-secure-store', '@react-native-async-storage/*', 'expo-localization'];
+
 /** Regla de dependencia hexagonal: cada capa declara lo que no puede importar. */
-function layerBoundary(files, forbidden, message) {
+function layerBoundary(files, forbidden, message, ignores = []) {
   return {
     files,
+    ignores,
     rules: {
       'no-restricted-imports': ['error', { patterns: [{ group: forbidden, message }] }],
     },
@@ -84,25 +87,46 @@ module.exports = defineConfig([
     'Infrastructure implementa puertos de Domain; no conoce casos de uso ni UI.',
   ),
   layerBoundary(
-    ['src/presentation/**', 'src/app/**'],
-    [
-      '@/infrastructure/*',
-      'expo-secure-store',
-      '@react-native-async-storage/*',
-      'expo-localization',
-    ],
-    'La UI usa casos de uso del contenedor; no accede a adaptadores ni APIs del dispositivo.',
-  ),
-  layerBoundary(
     ['src/presentation/**'],
+    ['@/infrastructure/*', '@/bootstrap/*', ...DEVICE_APIS],
+    'Presentation recibe dependencias por ContainerProvider; solo src/app compone el bootstrap.',
+  ),
+  // src/app es el adaptador de navegación (Expo Router): cada archivo es una ruta.
+  layerBoundary(
+    ['src/app/**'],
     [
       '@/infrastructure/*',
       '@/bootstrap/*',
-      'expo-secure-store',
-      '@react-native-async-storage/*',
-      'expo-localization',
+      '@/domain/*',
+      '@/application/*',
+      '@/presentation/shared/*',
+      '@/presentation/theme/*',
+      '@/presentation/i18n/*',
+      '@/presentation/navigation/*',
+      'react-native',
+      'react-native-*',
+      'react-i18next',
+      '@expo/*',
+      ...DEVICE_APIS,
     ],
-    'Presentation recibe dependencias por ContainerProvider; solo src/app compone el bootstrap.',
+    'Las rutas solo re-exportan pantallas de presentation/<módulo>/screens (o usan router y sesión).',
+    ['src/app/**/_layout.tsx'],
+  ),
+  layerBoundary(
+    ['src/app/**/_layout.tsx'],
+    [
+      '@/infrastructure/*',
+      '@/domain/*',
+      '@/application/*',
+      '@/presentation/shared/*',
+      '@/presentation/theme/*',
+      'react-native',
+      'react-native-*',
+      'react-i18next',
+      '@expo/*',
+      ...DEVICE_APIS,
+    ],
+    'Los layouts componen navegadores y providers; la UI y su configuración viven en presentation.',
   ),
   {
     // La configuración es el único lugar donde se define la moneda por defecto.

@@ -54,13 +54,14 @@ src/
     device/                       #   ExpoDeviceLocale, ReactNativeLayoutDirection
   presentation/                   # Pantallas, componentes, hooks y providers
     providers/                    #   AppProviders, ContainerProvider (DI), SessionProvider
-    auth/ profile/                #   Pantallas por módulo
+    <módulo>/screens/             #   Pantallas por módulo (auth, home, circles, join, payment, profile)
+    navigation/                   #   Configuración de pestañas y cabeceras (sin URLs)
     shared/components/            #   Design system
     i18n/ formatters/ query/ theme/
   bootstrap/
     env.ts                        # Variables EXPO_PUBLIC_* validadas con Zod (falla rápido)
     container.ts                  # Raíz de composición: único lugar que instancia adaptadores
-  app/                            # Rutas Expo Router: solo componen pantallas
+  app/                            # Adaptador de navegación (Expo Router): re-exporta pantallas
 test/
   fakes/                          # Puertos en memoria + createTestContainer
   navigation.test.tsx             # Integración con las rutas reales
@@ -70,13 +71,16 @@ test/
 
 **Límites protegidos por lint** (`no-restricted-imports` en `eslint.config.js`):
 
-| Capa             | No puede importar                                                                   |
-| ---------------- | ----------------------------------------------------------------------------------- |
-| `domain`         | otras capas, React/React Native/Expo, AsyncStorage, TanStack, i18next, Zod          |
-| `application`    | infrastructure, presentation, bootstrap, frameworks                                 |
-| `infrastructure` | application, presentation, bootstrap                                                |
-| `presentation`   | infrastructure, bootstrap, SecureStore, AsyncStorage, expo-localization             |
-| `app` (rutas)    | infrastructure ni APIs del dispositivo (solo compone el bootstrap en `_layout.tsx`) |
+| Capa             | No puede importar                                                                                                              |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| `domain`         | otras capas, React/React Native/Expo, AsyncStorage, TanStack, i18next, Zod                                                     |
+| `application`    | infrastructure, presentation, bootstrap, frameworks                                                                            |
+| `infrastructure` | application, presentation, bootstrap                                                                                           |
+| `presentation`   | infrastructure, bootstrap, SecureStore, AsyncStorage, expo-localization                                                        |
+| `app` (rutas)    | todo excepto `expo-router`, `presentation/<módulo>/screens` y `presentation/providers`                                         |
+| `app` (layouts)  | domain, application, infrastructure, UI (`react-native`, i18n, theme, componentes). Solo el `_layout.tsx` raíz usa `bootstrap` |
+
+**`app/` frente a `presentation/`:** `app/` es parte de la capa de presentación, pero se mantiene aparte porque Expo Router convierte cada archivo de `src/app` en una ruta. Contiene solo layouts, guards y re-exports como `export { HomeScreen as default } from '@/presentation/home/screens/HomeScreen'`. Las URLs se deciden en `app/`; por ejemplo, `useMainTabs({ onJoinPress })` recibe la navegación desde el layout. Cambiar de router solo afectaría a `app/`.
 
 Convenciones: casos de uso `VerbObjectUseCase`, puertos `ConceptoPort`, adaptadores `<Tecnología><Concepto>`, componentes en PascalCase y hooks `useXxx`.
 
