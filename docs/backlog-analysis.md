@@ -1,7 +1,7 @@
 # Backlog propuesto — COPAYNI (coperativa-ayni)
 
-Estado: **APROBADO y CREADO en Jira** el 2026-10-25 (ver sección E.1).
-Fuentes: [product-context.md](product-context.md) (inventario de Figma), guías *Backend Enterprise NestJS* y *Base Técnica Enterprise Frontend React Native* (PDF), README (`Nestjs-React-HCL-AWS`).
+Estado: **APROBADO y CREADO en Jira** el 2026-10-25 (ver sección E.1). Descripciones del frontend revisadas el 2026-10-26 según la *Base Técnica Enterprise Senior Frontend Mobile* (ver sección E.2).
+Fuentes: [product-context.md](product-context.md) (inventario de Figma), guías *Backend Enterprise NestJS* y *Base Técnica Enterprise Senior Frontend Mobile* (PDF; sustituye a la *Base Técnica Enterprise Frontend React Native*), README (`Nestjs-React-HCL-AWS`).
 
 ## A. Resumen ejecutivo
 
@@ -20,7 +20,7 @@ Fuentes: [product-context.md](product-context.md) (inventario de Figma), guías 
 | Capa | Decisión base |
 |---|---|
 | Backend | NestJS + TypeScript strict, hexagonal por módulos (`domain/application/infrastructure/presentation`), DI con tokens, ValidationPipe global + DTOs, Exception Filter con contrato `{success,data|error,traceId}`, `@nestjs/config` validado, Jest con cobertura > 90%, OpenTelemetry → New Relic, Helmet/CORS/rate limiting |
-| Mobile | React Native + Expo + TypeScript strict, Expo Router, TanStack Query, cliente HTTP centralizado, React Hook Form + Zod, SecureStore, Jest + RNTL, arquitectura por features |
+| Mobile | React Native + Expo SDK 58 + TypeScript strict, **arquitectura hexagonal** (`domain` / `application` / `infrastructure` / `presentation` / `bootstrap` + `app` de Expo Router), puertos y adaptadores, contenedor inyectado por contexto, TanStack Query, Zod para datos externos, SecureStore, Jest + RNTL con pruebas por nivel, límites entre capas protegidos por lint. React Hook Form opcional (solo en formularios complejos) |
 | Calidad / CI | ESLint, Prettier, Husky, lint-staged, commitlint (Conventional Commits), GitHub Actions; despliegue AWS por OIDC |
 | Infra | AWS (Lambda/API Gateway **o** contenedores: decisión en spike) con Terraform (HCL, según el README) |
 
@@ -58,9 +58,9 @@ Objetivo: base backend y mobile lista para producción según las guías enterpr
 Criterios de finalización clave:
 - **T1.1:** ValidationPipe global, Exception Filter con contrato uniforme, ConfigModule que falla rápido, `.env.example`, Swagger, Helmet/CORS/rate limit, módulo de ejemplo con puerto y adaptador más tests.
 - **T1.3:** trazas con traceId en los logs; `/health/live` y `/health/ready` distintos; conectividad del exporter verificada.
-- **T1.6:** cliente HTTP con timeout, normalización de errores y correlación; SecureStore para tokens; scripts `lint`, `typecheck`, `test` y `test:coverage`.
-- **T1.9 (i18n con JSON):** un archivo por idioma en `src/app-core/i18n/locales/<código>.json` (p. ej. `es.json`, `en.json`), con claves agrupadas por feature (`auth.otp.title`, `circles.join.cta`…). La app carga el idioma del dispositivo si existe su JSON y, si no, usa el idioma por defecto (`es`, pendiente de confirmar). Fallback por clave al idioma por defecto. Interpolación y plurales (`{{count}}`). Soporte RTL automático si el idioma es RTL. **Ningún texto de UI hardcodeado**: lint o test que detecte strings literales en JSX. Agregar un idioma = agregar un JSON y registrarlo, sin tocar pantallas. Test de paridad de claves entre todos los JSON.
-- **T1.10 (moneda configurable):** ningún "MAD" ni símbolo hardcodeado. El backend modela `Money { amount (unidades menores, entero), currency (ISO 4217) }` y expone la moneda del círculo o plan en cada respuesta. La moneda por defecto viene de configuración validada (`DEFAULT_CURRENCY`, pendiente: PEN propuesto). La app formatea con `Intl.NumberFormat(locale, { style: 'currency', currency })` a través de un único helper `formatMoney`. Tests con al menos dos monedas y dos locales.
+- **T1.6:** capas hexagonales y raíz de composición (`bootstrap/container.ts`); `HttpClientPort` + `FetchHttpClient` con timeout, cancelación, normalización de errores y correlación; `TokenStoragePort` sobre SecureStore; scripts `lint`, `typecheck`, `test`, `test:coverage` y `validate`; Node ≥ 22.13 fijado.
+- **T1.9 (i18n con JSON):** un archivo por idioma en `src/presentation/i18n/locales/<código>.json`, resuelto por `ResolveLanguageUseCase` y cambiado por `ChangeLanguageUseCase` (p. ej. `es.json`, `en.json`), con claves agrupadas por feature (`auth.otp.title`, `circles.join.cta`…). La app carga el idioma del dispositivo si existe su JSON y, si no, usa el idioma por defecto (`es`, pendiente de confirmar). Fallback por clave al idioma por defecto. Interpolación y plurales (`{{count}}`). Soporte RTL automático si el idioma es RTL. **Ningún texto de UI hardcodeado**: lint o test que detecte strings literales en JSX. Agregar un idioma = agregar un JSON y registrarlo, sin tocar pantallas. Test de paridad de claves entre todos los JSON.
+- **T1.10 (moneda configurable):** ningún "MAD" ni símbolo hardcodeado. El backend modela `Money { amount (unidades menores, entero), currency (ISO 4217) }` y expone la moneda del círculo o plan en cada respuesta. La moneda por defecto viene de configuración validada (`DEFAULT_CURRENCY`, pendiente: PEN propuesto). La app modela el dinero con el value object `Money` del dominio y lo formatea con `Intl.NumberFormat(locale, { style: 'currency', currency })` a través de un único helper de presentación, `formatMoney`. Tests con al menos dos monedas y dos locales.
 - **T1.7:** componentes Button, TextField, OTPInput, Card, CircleCard (timeline de turnos), InfoBanner, EmptyState, BottomSheet, SegmentedTabs, Stepper, RadioCard y ListItem, con accesibilidad y tests.
 
 ### E2 · Onboarding y autenticación — 23 SP · confianza media
@@ -260,6 +260,35 @@ Verificación por JQL:
 - 41 issues con "is blocked by": OK.
 
 Incidencia: el enlace COPAYNI-43 → COPAYNI-48 dio timeout. Se comprobó que no existía y se creó una vez.
+
+## E.2 Revisión según la Base Técnica Enterprise Senior (2026-10-26)
+
+Las descripciones del frontend se escribieron con la guía anterior (*por features*, `app-core`). Se reescribieron para la arquitectura hexagonal de la nueva guía. Ningún estado ni story point cambió.
+
+| Cambio | Issues |
+|---|---|
+| Tareas técnicas reescritas | COPAYNI-1, 9, 13, 14, 15, 16, 17 |
+| Historias con bloque "Implementación mobile (Base Técnica Enterprise Senior)" | 31: COPAYNI-18–23, 25–33, 35–41, 44–52 |
+| *Definition of Done* mobile común (§21 de la guía) | En la épica COPAYNI-1; todas las historias la referencian |
+| Enlaces "Blocks" nuevos | COPAYNI-8 → 28, 32, 35, 38, 40, 50 · COPAYNI-14 → 50 |
+| Etiqueta corregida | COPAYNI-50: `mobile` → `fullstack` (tiene trabajo backend) |
+
+**Conflictos resueltos con la nueva guía:**
+
+| Issue | Antes | Ahora |
+|---|---|---|
+| COPAYNI-21 Sesión | "Interceptor de refresh con cola" en la capa HTTP | `RefreshSessionUseCase` con renovación única en vuelo, un reintento por petición, exclusión de `/auth/refresh` y estado `sessionExpired` (sin bucles de renovación) |
+| COPAYNI-40 Tarjeta | SDK de la pasarela usado desde la UI | `CardTokenizerPort` con adaptador del proveedor elegido en COPAYNI-34; avance en paralelo con adaptador falso |
+| COPAYNI-47/48 Documentos | Cámara y subida usadas desde la UI | `DocumentScannerPort` y `DocumentRepositoryPort`; permisos explicados y manejados; imágenes borradas tras subirlas |
+| COPAYNI-50 Idioma | Reimplementar cambio de idioma | Reutiliza `ChangeLanguageUseCase` / `useLanguage()`; añade sincronización con el perfil sin bloquear la UI |
+
+**Decisiones de diseño transversales que fija la revisión:**
+
+- Los cálculos de negocio (cuotas, turnos, cashback, elegibilidad) viven en el backend; el dominio mobile solo valida coherencia (p. ej. fecha de payout posterior al inicio).
+- Las historias fullstack acuerdan primero el contrato de API; el lado mobile avanza con adaptadores falsos y la historia se cierra con la integración real.
+- Cada historia tiene un criterio de aceptación para el estado sin conexión.
+
+**Decisiones de producto abiertas por la revisión** (registradas en [pending-scope.md](pending-scope.md), §3): R12–R14.
 
 ## F. Resumen de estimaciones
 

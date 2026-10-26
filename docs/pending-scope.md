@@ -8,8 +8,8 @@ Responsables sugeridos: **PO** = Product Owner / negocio, **UX** = diseño, **TL
 
 El Figma está localizado para Marruecos/Egipto (MAD, árabe, Fawry). El backlog ya obliga a que **ni la moneda ni los textos estén hardcodeados**:
 
-- **Idiomas:** la app usa archivos JSON por idioma (`src/app-core/i18n/locales/<código>.json`). Agregar un idioma = agregar un JSON (tarea T1.9; selector en H6.7).
-- **Moneda:** modelo `Money { amount en unidades menores, currency ISO 4217 }`, moneda por defecto en configuración, formato con `Intl.NumberFormat` (tarea T1.10).
+- **Idiomas:** la app usa archivos JSON por idioma (`apps/mobile/src/presentation/i18n/locales/<código>.json`). Agregar un idioma = agregar un JSON y registrarlo en el catálogo (COPAYNI-16; selector en COPAYNI-50).
+- **Moneda:** value object `Money { amount en unidades menores, currency ISO 4217 }` en el dominio, moneda por defecto en configuración, formato con `Intl.NumberFormat` (COPAYNI-17).
 
 | # | Pendiente | Responsable | Propuesta |
 |---|---|---|---|
@@ -53,6 +53,9 @@ El Figma está localizado para Marruecos/Egipto (MAD, árabe, Fawry). El backlog
 | R9 | ¿Cambiar teléfono o email exige **re-verificación OTP**? | H6.2 |
 | R10 | Política de **OTP:** duración, intentos y reenvíos; comportamiento de "Remember Me" | H2.3 |
 | R11 | Qué **documentos** son obligatorios y cuáles opcionales; verificación manual o automática; vigencia | H6.3–H6.6 |
+| R12 | **Nombres de los planes de ahorro:** ¿el backend los envía ya traducidos o como claves para los JSON de idioma? | COPAYNI-32 |
+| R13 | **"Remember Me":** confirmar que, sin marcar, la sesión vive solo en memoria y termina al cerrar la app | COPAYNI-20 |
+| R14 | **Biometría:** confirmar el nuevo estado de sesión `locked` y cuándo se vuelve a pedir al volver de background | COPAYNI-22 |
 
 ## 4. Decisiones técnicas y de proveedores
 
