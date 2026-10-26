@@ -1,6 +1,8 @@
 import { createContainer } from '@/bootstrap/container';
 import { parseEnv } from '@/bootstrap/env';
 
+import { InMemoryAuthApi } from '@/infrastructure/auth/InMemoryAuthApi';
+
 import {
   FakeDeviceLocale,
   FakeLayoutDirection,
@@ -13,6 +15,7 @@ interface TestAdapters {
   languagePreference: InMemoryLanguagePreference;
   deviceLocale: FakeDeviceLocale;
   layoutDirection: FakeLayoutDirection;
+  authApi: InMemoryAuthApi;
 }
 
 /** Contenedor real con adaptadores en memoria: casos de uso reales, sin dispositivo ni red. */
@@ -22,6 +25,7 @@ export function createTestContainer(overrides: Partial<TestAdapters> = {}) {
     languagePreference: new InMemoryLanguagePreference(),
     deviceLocale: new FakeDeviceLocale(),
     layoutDirection: new FakeLayoutDirection(),
+    authApi: new InMemoryAuthApi({ latencyMs: 0 }),
     ...overrides,
   };
   const env = parseEnv({ apiUrl: 'https://api.test.local/v1' });

@@ -40,7 +40,16 @@
       ],
       "expo-secure-store",
       "expo-font",
-      "expo-asset"
+      "expo-asset",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 160,
+          "resizeMode": "contain",
+          "backgroundColor": "#FAFAFA"
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true

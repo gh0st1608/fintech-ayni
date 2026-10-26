@@ -1,3 +1,4 @@
+import { FAKE_OTP_CODE } from '@/infrastructure/auth/InMemoryAuthApi';
 import { createTestContainer } from '@test/fakes/createTestContainer';
 
 import { loadEnv, parseEnv } from './env';
@@ -10,7 +11,23 @@ describe('parseEnv', () => {
       defaultLanguage: 'es',
       defaultCurrency: 'PEN',
       httpTimeoutMs: 15000,
+      authApi: 'http',
     });
+  });
+
+  it('solo admite la API de auth falsa en dev', () => {
+    const base = { apiUrl: 'https://api.example.com/v1', authApi: 'fake' };
+    expect(parseEnv({ ...base, appEnv: 'dev' }).authApi).toBe('fake');
+    expect(() => parseEnv({ ...base, appEnv: 'prod' })).toThrow(/authApi/);
+  });
+
+  it('los enlaces legales deben ser https; vacíos cuentan como no definidos', () => {
+    const base = { apiUrl: 'https://api.example.com/v1' };
+    expect(parseEnv({ ...base, termsUrl: '' }).termsUrl).toBeUndefined();
+    expect(parseEnv({ ...base, privacyUrl: 'https://ayni.pe/privacy' }).privacyUrl).toBe(
+      'https://ayni.pe/privacy',
+    );
+    expect(() => parseEnv({ ...base, termsUrl: 'http://ayni.pe/terms' })).toThrow(/termsUrl/);
   });
 
   it('convierte el timeout a número', () => {
@@ -35,7 +52,12 @@ describe('createContainer', () => {
   it('conecta los casos de uso con los adaptadores recibidos', async () => {
     const { container, adapters } = createTestContainer();
 
-    await container.auth.signIn.execute({ accessToken: 'a1', refreshToken: 'r1' });
+    const challenge = await container.auth.startAuthentication.execute('ana@mail.com');
+    await container.auth.verifyOtp.execute({
+      challengeId: challenge.challengeId,
+      code: FAKE_OTP_CODE,
+      rememberMe: true,
+    });
     expect(adapters.tokenStorage.tokens).not.toBeNull();
     await expect(container.auth.restoreSession.execute()).resolves.toBe('authenticated');
 

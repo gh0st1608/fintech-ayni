@@ -18,7 +18,13 @@ cp .env.example .env.local   # ajustar EXPO_PUBLIC_API_URL
 npm start
 ```
 
-En el ambiente `dev`, la pantalla de bienvenida ofrece **"Entrar en modo demo"** para recorrer el shell sin backend. Se retira cuando exista el login con OTP (COPAYNI-19/20).
+Sin backend, el login funciona con la API de autenticación falsa (`EXPO_PUBLIC_AUTH_API=fake`, solo en `dev`):
+
+1. Bienvenida → **Continuar**.
+2. Ingresa cualquier email válido o un teléfono con código de país (`+51…`).
+3. En Verify OTP escribe **`1234`**.
+
+Otro código descuenta intentos; el reenvío se habilita a los 30 s.
 
 ## Scripts
 
@@ -88,7 +94,7 @@ Decisiones:
 
 - **Inyección por contexto, no singleton:** `createContainer(env)` se instancia una vez en `app/_layout.tsx` y se entrega por `ContainerProvider`. Las pruebas inyectan `createTestContainer()` con adaptadores en memoria.
 - **El puerto HTTP no depende de Zod:** recibe `parse?: (data) => T`, y los repositorios pasan `schema.parse`.
-- **Sin capas vacías:** el `FetchHttpClient` se compone en el contenedor con el primer repositorio (COPAYNI-19). La notificación de 401 → `sessionExpired` se conecta en COPAYNI-21; el caso de uso `SignOutUseCase('expired')` ya existe.
+- **Sin capas vacías:** el `FetchHttpClient` se compone en el contenedor junto con `AuthApiRepository` (COPAYNI-19). La notificación de 401 → `sessionExpired` se conecta en COPAYNI-21; el caso de uso `SignOutUseCase('expired')` ya existe.
 
 ## Internacionalización: un JSON por idioma (COPAYNI-16)
 
@@ -149,12 +155,54 @@ El cambio LTR↔RTL requiere reiniciar la app y no funciona en Expo Go.
 - `BottomSheet` es modal: el lector de pantalla solo alcanza su contenido; se cierra con la X, tocando el fondo o con el botón atrás de Android. Sin animación si el sistema pide reducir movimiento (`useReducedMotion`).
 - **Catálogo visual** (`presentation/dev`): en el ambiente `dev`, Perfil → "Catálogo de componentes (dev)" muestra todos los componentes para revisarlos con UX. La ruta `/catalog` está protegida con `Stack.Protected` y no existe en staging ni en prod. Sus textos de ejemplo no van en los JSON de idioma.
 
+## Autenticación (COPAYNI-18, 19, 20)
+
+```
+SignInScreen    → useStartAuthentication → StartAuthenticationUseCase → AuthApiPort
+VerifyOtpScreen → useVerifyOtp           → VerifyOtpUseCase           → AuthApiPort + TokenStoragePort
+                → useResendOtp           → ResendOtpUseCase           → AuthApiPort
+```
+
+**Arranque y bienvenida**
+
+- El splash nativo (`expo-splash-screen`) se mantiene hasta que el idioma, las fuentes y la sesión están resueltos: nunca se ve una pantalla en blanco.
+- Con sesión, la app va directo a Home; sin sesión, a la bienvenida.
+
+**Validación y contrato**
+
+- `LoginIdentifier` (email normalizado o teléfono E.164) y `OtpCode` (4 dígitos) validan en el dominio.
+- La pantalla reutiliza esa misma regla para validar en vivo. Un formato inválido nunca llega a la red.
+- Contrato de API en [docs/api/auth.md](../../docs/api/auth.md): `AuthApiRepository` lo implementa sobre el backend y `InMemoryAuthApi` lo imita en `dev`.
+  - La API falsa se elige con `EXPO_PUBLIC_AUTH_API=fake`.
+  - La configuración la rechaza fuera de `dev`.
+
+**Sesión y Remember Me**
+
+- Remember Me marcado (por defecto): los tokens se guardan en SecureStore.
+- Remember Me desmarcado: los tokens quedan solo en memoria y la sesión termina al cerrar la app.
+
+**Errores**
+
+- Errores del OTP tipados: `OtpVerificationError` con los motivos `invalid`, `expired` y `attempts_exceeded`.
+  - Un código rechazado se borra.
+  - Ante un fallo de red se conserva y se ofrece reintentar.
+- Rate limit: el cliente HTTP lee `Retry-After` y la app muestra cuántos segundos esperar.
+- El contador de reenvío se calcula desde `resendAvailableAt` del backend, no desde ticks locales.
+
+**Navegación y enlaces**
+
+- Los parámetros de ruta de Verify OTP solo llevan datos no sensibles: id del desafío y destino enmascarado.
+- Si la ruta se abre sin ellos, la app vuelve al ingreso.
+- Los enlaces de Términos y Privacidad se configuran con `EXPO_PUBLIC_TERMS_URL` / `EXPO_PUBLIC_PRIVACY_URL` (solo https). Sin URL se muestran como texto.
+
 ## Pendientes conocidos
 
 - Cierre del `BottomSheet` deslizando hacia abajo: requiere `react-native-gesture-handler` + Reanimated; se evaluará cuando una historia lo necesite.
 - Validación visual del catálogo con UX en dispositivo (COPAYNI-14).
 - Selector de país del `PhoneInput`: sin diseño; hoy el prefijo es fijo o abre un callback.
-- Splash y onboarding definitivos: COPAYNI-18.
-- Login con OTP (COPAYNI-19/20). Refresh de tokens y conexión 401 → `sessionExpired` (COPAYNI-21).
+- Backend de autenticación (`/auth/start`, `/auth/verify`, `/auth/resend`): las historias COPAYNI-19/20 se cierran con la integración real.
+- Refresh de tokens y conexión 401 → `sessionExpired` (COPAYNI-21).
+- Marca final (logo, icono y splash nativo) y selector de país del teléfono: pending-scope D15 y D14.
+- Política de OTP (duración, intentos, reenvíos): pending-scope R10.
 - Crash reporting y telemetría mobile: decisión técnica pendiente (pending-scope T8).
-- React Hook Form + Zod se instalarán con la primera historia que tenga formulario (COPAYNI-19). Hoy `@hookform/resolvers` tiene un conflicto de dependencias opcionales.
+- React Hook Form: los formularios de auth tienen un solo campo y no lo necesitan; se evaluará con el primer formulario de varios campos (KYC). Hoy `@hookform/resolvers` tiene un conflicto de dependencias opcionales.

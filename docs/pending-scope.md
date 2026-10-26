@@ -37,6 +37,8 @@ El Figma está localizado para Marruecos/Egipto (MAD, árabe, Fawry). El backlog
 | D11 | Significado y comportamiento del **icono de fuego** del header | Sin definir | PO / UX |
 | D12 | **Login social** (el texto lo menciona, pero no hay botones) | Decidir si entra o se elimina el texto | PO |
 | D13 | **Back-office** de administración: crear y operar círculos, validar KYC, conciliar pagos, gestionar ofertas y metas | Sin él no se puede operar el producto | PO / UX / TL |
+| D14 | **Selector de país** del teléfono en el login y en el Perfil | Sin él, el login exige el formato internacional (+51…); el campo Email/Phone del Figma no indica país (COPAYNI-19) | UX / PO |
+| D15 | **Marca final** (Figma dice "Dart", el producto es Ayni): logo, icono de la app e imagen del splash nativo | Hoy se muestra el nombre como texto y el splash usa el icono por defecto de Expo (COPAYNI-18) | PO / UX |
 
 ## 3. Reglas de negocio por confirmar
 
@@ -54,7 +56,7 @@ El Figma está localizado para Marruecos/Egipto (MAD, árabe, Fawry). El backlog
 | R10 | Política de **OTP:** duración, intentos y reenvíos; comportamiento de "Remember Me" | H2.3 |
 | R11 | Qué **documentos** son obligatorios y cuáles opcionales; verificación manual o automática; vigencia | H6.3–H6.6 |
 | R12 | **Nombres de los planes de ahorro:** ¿el backend los envía ya traducidos o como claves para los JSON de idioma? | COPAYNI-32 |
-| R13 | **"Remember Me":** confirmar que, sin marcar, la sesión vive solo en memoria y termina al cerrar la app | COPAYNI-20 |
+| R13 | **"Remember Me":** confirmar que, sin marcar, la sesión vive solo en memoria y termina al cerrar la app (implementado así en mobile, marcado por defecto como en el Figma) | COPAYNI-20 |
 | R14 | **Biometría:** confirmar el nuevo estado de sesión `locked` y cuándo se vuelve a pedir al volver de background | COPAYNI-22 |
 
 ## 4. Decisiones técnicas y de proveedores

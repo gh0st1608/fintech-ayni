@@ -20,6 +20,8 @@ export interface AppErrorDetails {
   /** traceId del backend para correlacionar con la observabilidad. */
   traceId?: string;
   fieldErrors?: Record<string, string>;
+  /** Segundos de espera indicados por el backend (Retry-After) en un rate_limited. */
+  retryAfterSeconds?: number;
   cause?: unknown;
 }
 
@@ -31,6 +33,7 @@ export class AppError extends Error {
   readonly code?: string;
   readonly traceId?: string;
   readonly fieldErrors?: Record<string, string>;
+  readonly retryAfterSeconds?: number;
 
   constructor(kind: AppErrorKind, message: string, details: AppErrorDetails = {}) {
     super(message, { cause: details.cause });
@@ -40,6 +43,7 @@ export class AppError extends Error {
     this.code = details.code;
     this.traceId = details.traceId;
     this.fieldErrors = details.fieldErrors;
+    this.retryAfterSeconds = details.retryAfterSeconds;
   }
 
   /** Solo los fallos transitorios admiten reintento; nunca los de negocio o validación. */

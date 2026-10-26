@@ -38,7 +38,7 @@ export function AppProviders({ container, fallbackLanguage, children }: AppProvi
     };
   }, [container, fallbackLanguage]);
 
-  // El splash definitivo llega con COPAYNI-18.
+  // Mientras tanto se mantiene el splash nativo (lo oculta el navegador raíz).
   if (!i18nInstance || !fontsReady) return null;
 
   return (

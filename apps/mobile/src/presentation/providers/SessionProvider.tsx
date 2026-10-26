@@ -7,7 +7,8 @@ import { useContainer } from './ContainerProvider';
 
 interface SessionContextValue {
   status: SessionStatus;
-  signIn(credentials: { accessToken: string; refreshToken: string }): Promise<void>;
+  /** Aplica el estado devuelto por un caso de uso que ya guardó la sesión (p. ej. VerifyOtp). */
+  completeSignIn(status: SessionStatus): void;
   signOut(): Promise<void>;
 }
 
@@ -29,10 +30,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     };
   }, [auth.restoreSession]);
 
-  const signIn = useCallback<SessionContextValue['signIn']>(
-    async (credentials) => setStatus(await auth.signIn.execute(credentials)),
-    [auth.signIn],
-  );
+  const completeSignIn = useCallback((next: SessionStatus) => setStatus(next), []);
 
   const signOut = useCallback(async () => {
     const next = await auth.signOut.execute();
@@ -40,7 +38,10 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     setStatus(next);
   }, [auth.signOut, queryClient]);
 
-  const value = useMemo(() => ({ status, signIn, signOut }), [status, signIn, signOut]);
+  const value = useMemo(
+    () => ({ status, completeSignIn, signOut }),
+    [status, completeSignIn, signOut],
+  );
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;
 }
 

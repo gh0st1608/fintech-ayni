@@ -141,6 +141,23 @@ describe('FetchHttpClient', () => {
     expect(onUnauthorized).toHaveBeenCalledTimes(1);
   });
 
+  it('expone Retry-After en segundos solo si es un número válido', async () => {
+    const { client, fetchImpl } = setup();
+    fetchImpl.mockResolvedValueOnce(
+      jsonResponse({ success: false }, 429, { 'Retry-After': '9.2' }),
+    );
+    await expect(captureError(client.get('/x'))).resolves.toMatchObject({
+      kind: 'rate_limited',
+      retryAfterSeconds: 10,
+    });
+    fetchImpl.mockResolvedValueOnce(
+      jsonResponse({ success: false }, 429, { 'Retry-After': 'Wed, 21 Oct 2026 07:28:00 GMT' }),
+    );
+    await expect(captureError(client.get('/x'))).resolves.toMatchObject({
+      retryAfterSeconds: undefined,
+    });
+  });
+
   it('trata success:false con HTTP 200 como error de negocio', async () => {
     const { client, fetchImpl } = setup();
     fetchImpl.mockResolvedValue(jsonResponse({ success: false, error: { code: 'LIMIT' } }));

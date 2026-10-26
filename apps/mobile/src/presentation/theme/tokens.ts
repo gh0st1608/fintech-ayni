@@ -2,7 +2,7 @@ import { Platform, type ViewStyle } from 'react-native';
 
 /**
  * Tokens de diseño extraídos de las variables del Figma
- * (Home 55:8637, Payment Eligibility 55:9892, Payout Method 55:9520, Signin 55:10724,
+ * (Onboarding 55:10710, Home 55:8637, Payment Eligibility 55:9892, Payout Method 55:9520, Signin 55:10724,
  * Verify OTP 55:10749, Add Card 55:10158).
  */
 export const colors = {
@@ -22,6 +22,8 @@ export const colors = {
   error: '#C03744',
   textPrimary: '#0E0E0F',
   black: '#0A0A0B',
+  /** Fondo oscuro del onboarding (55:10710). */
+  inkBackground: '#151314',
   background: '#FAFAFA',
   surface: '#FFFFFF',
   onPrimary: '#FFFFFF',
@@ -43,6 +45,7 @@ export const radius = {
   xxs: 2,
   s: 4,
   sm: 6,
+  base: 8,
   md: 12,
   lg: 24,
   full: 1000,
@@ -64,6 +67,8 @@ export const typography = {
   highlight: { fontSize: 16, lineHeight: 19.2 },
   title: { fontSize: 22, lineHeight: 26.4 },
   display: { fontSize: 28, lineHeight: 33.6 },
+  /** Titular del onboarding (55:10721). */
+  hero: { fontSize: 32, lineHeight: 38.4 },
 } as const;
 
 /** Elevación equivalente en iOS (sombra) y Android (elevation). */

@@ -1,11 +1,15 @@
 import { Stack } from 'expo-router';
+import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import { createContainer } from '@/bootstrap/container';
 import { loadEnv } from '@/bootstrap/env';
 import { AppProviders } from '@/presentation/providers/AppProviders';
 import { useSession } from '@/presentation/providers/SessionProvider';
+
+// El splash nativo cubre la carga de idioma, fuentes y sesión: nunca se ve una pantalla en blanco.
+SplashScreen.preventAutoHideAsync().catch(() => {});
 
 export default function RootLayout() {
   const [{ env, container }] = useState(() => {
@@ -23,7 +27,13 @@ export default function RootLayout() {
 /** Única política de guardas: el área privada solo existe con sesión autenticada. */
 function RootNavigator() {
   const { status } = useSession();
-  if (status === 'checking') return null;
+  const ready = status !== 'checking';
+
+  useEffect(() => {
+    if (ready) SplashScreen.hideAsync().catch(() => {});
+  }, [ready]);
+
+  if (!ready) return null;
   const isAuthenticated = status === 'authenticated';
 
   return (

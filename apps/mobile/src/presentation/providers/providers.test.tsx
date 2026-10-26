@@ -40,16 +40,19 @@ describe('SessionProvider', () => {
     await waitFor(() => expect(result.current.status).toBe('authenticated'));
   });
 
-  it('signIn abre la sesión y signOut la cierra limpiando la caché remota', async () => {
+  it('completeSignIn abre la sesión y signOut la cierra limpiando la caché remota', async () => {
     const setup = createTestContainer();
     const queryClient = new QueryClient();
     queryClient.setQueryData(['me'], { name: 'x' });
     const { result } = await renderSession(setup, queryClient);
     await waitFor(() => expect(result.current.status).toBe('unauthenticated'));
 
-    await act(() => result.current.signIn({ accessToken: 'a1', refreshToken: 'r1' }));
+    setup.adapters.tokenStorage.tokens = AuthTokens.create({
+      accessToken: 'a1',
+      refreshToken: 'r1',
+    });
+    await act(() => result.current.completeSignIn('authenticated'));
     expect(result.current.status).toBe('authenticated');
-    expect(setup.adapters.tokenStorage.tokens).toMatchObject({ accessToken: 'a1' });
 
     await act(() => result.current.signOut());
     expect(result.current.status).toBe('unauthenticated');

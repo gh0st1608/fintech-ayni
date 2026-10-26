@@ -1,6 +1,8 @@
 import * as SecureStore from 'expo-secure-store';
 import { fireEvent, renderRouter, screen, waitFor } from 'expo-router/testing-library';
 
+import { FAKE_OTP_CODE } from '@/infrastructure/auth/InMemoryAuthApi';
+
 // Rutas reales de la app: se prueba el shell de navegación completo (COPAYNI-15).
 const APP_DIR = './src/app';
 
@@ -57,14 +59,27 @@ describe('shell de navegación', () => {
     await waitFor(() => expect(screen).toHavePathname('/join'));
   });
 
-  it('entrar en modo demo y cerrar sesión cambian de área sin loops', async () => {
+  it('bienvenida → ingreso → OTP correcto abre Home; cerrar sesión vuelve a la bienvenida', async () => {
     await renderRouter(APP_DIR, { initialUrl: '/' });
-    await fireEvent.press(await screen.findByText('Entrar en modo demo'));
-    await waitFor(() => expect(screen).toHavePathname('/home'));
+    await fireEvent.press(await screen.findByRole('button', { name: 'Continuar' }));
+    await waitFor(() => expect(screen).toHavePathname('/sign-in'));
+
+    await fireEvent.changeText(screen.getByLabelText('Email/Teléfono'), 'ana@mail.com');
+    await fireEvent.press(screen.getByRole('button', { name: 'Continuar' }));
+    await waitFor(() => expect(screen).toHavePathname('/verify-otp'));
+    expect(screen.getByText(/a\*\*\*@mail\.com/)).toBeTruthy();
+
+    await fireEvent.changeText(screen.getByLabelText('Código de verificación'), FAKE_OTP_CODE);
+    await waitFor(() => expect(screen).toHavePathname('/home'), { timeout: 5000 });
 
     await fireEvent.press(screen.getAllByText('Perfil')[0]!);
     await fireEvent.press(await screen.findByText('Cerrar sesión'));
     expect(await screen.findByText('Bienvenido a Ayni')).toBeTruthy();
+  });
+
+  it('verify-otp sin datos del desafío vuelve al ingreso', async () => {
+    await renderRouter(APP_DIR, { initialUrl: '/verify-otp' });
+    await waitFor(() => expect(screen).toHavePathname('/sign-in'));
   });
 
   it('en dev, el perfil abre el catálogo de componentes', async () => {
@@ -76,12 +91,14 @@ describe('shell de navegación', () => {
   });
 
   describe('fuera de dev', () => {
-    const original = process.env.EXPO_PUBLIC_APP_ENV;
+    const original = { ...process.env };
     beforeEach(() => {
       process.env.EXPO_PUBLIC_APP_ENV = 'prod';
+      process.env.EXPO_PUBLIC_AUTH_API = 'http';
     });
     afterEach(() => {
-      process.env.EXPO_PUBLIC_APP_ENV = original;
+      process.env.EXPO_PUBLIC_APP_ENV = original.EXPO_PUBLIC_APP_ENV;
+      process.env.EXPO_PUBLIC_AUTH_API = original.EXPO_PUBLIC_AUTH_API;
     });
 
     it('el catálogo no existe ni se ofrece en el perfil', async () => {

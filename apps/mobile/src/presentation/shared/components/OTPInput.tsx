@@ -95,18 +95,20 @@ export function OTPInput({
   );
 }
 
-const BOX_SIZE = 52;
+/** Casillas de Verify OTP (55:10756): 40 × 52, radio 8. */
+const BOX_WIDTH = 40;
+const BOX_HEIGHT = 52;
 
 const styles = StyleSheet.create({
   field: { gap: spacing.sm, alignItems: 'center' },
   boxes: { flexDirection: 'row', gap: spacing.sm },
   box: {
-    width: BOX_SIZE,
-    height: BOX_SIZE,
+    width: BOX_WIDTH,
+    height: BOX_HEIGHT,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderRadius: radius.md,
+    borderRadius: radius.base,
     backgroundColor: colors.surface,
   },
   // Accesible y enfocable, pero invisible: las casillas son la representación visual.

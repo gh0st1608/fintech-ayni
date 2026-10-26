@@ -1,15 +1,21 @@
 import type { AppContainer } from '@/application/AppContainer';
+import { ResendOtpUseCase } from '@/application/auth/usecases/ResendOtpUseCase';
 import { RestoreSessionUseCase } from '@/application/auth/usecases/RestoreSessionUseCase';
-import { SignInUseCase } from '@/application/auth/usecases/SignInUseCase';
 import { SignOutUseCase } from '@/application/auth/usecases/SignOutUseCase';
+import { StartAuthenticationUseCase } from '@/application/auth/usecases/StartAuthenticationUseCase';
+import { VerifyOtpUseCase } from '@/application/auth/usecases/VerifyOtpUseCase';
 import { ChangeLanguageUseCase } from '@/application/i18n/usecases/ChangeLanguageUseCase';
 import { ResolveLanguageUseCase } from '@/application/i18n/usecases/ResolveLanguageUseCase';
+import type { AuthApiPort } from '@/domain/auth/ports/AuthApiPort';
 import type { TokenStoragePort } from '@/domain/auth/ports/TokenStoragePort';
 import type { DeviceLocalePort } from '@/domain/i18n/ports/DeviceLocalePort';
 import type { LanguagePreferencePort } from '@/domain/i18n/ports/LanguagePreferencePort';
 import type { LayoutDirectionPort } from '@/domain/i18n/ports/LayoutDirectionPort';
+import { AuthApiRepository } from '@/infrastructure/auth/AuthApiRepository';
+import { InMemoryAuthApi } from '@/infrastructure/auth/InMemoryAuthApi';
 import { ExpoDeviceLocale } from '@/infrastructure/device/ExpoDeviceLocale';
 import { ReactNativeLayoutDirection } from '@/infrastructure/device/ReactNativeLayoutDirection';
+import { FetchHttpClient } from '@/infrastructure/http/FetchHttpClient';
 import { AsyncStorageLanguagePreference } from '@/infrastructure/storage/AsyncStorageLanguagePreference';
 import { SecureStoreTokenStorage } from '@/infrastructure/storage/SecureStoreTokenStorage';
 import { SUPPORTED_LANGUAGES } from '@/presentation/i18n/languages';
@@ -21,30 +27,42 @@ export interface ContainerAdapters {
   languagePreference: LanguagePreferencePort;
   deviceLocale: DeviceLocalePort;
   layoutDirection: LayoutDirectionPort;
+  authApi: AuthApiPort;
 }
 
-/**
- * Raíz de composición: único lugar que conoce las implementaciones concretas.
- * El FetchHttpClient se compone aquí con el primer repositorio que lo necesite (COPAYNI-19).
- */
+/** Raíz de composición: único lugar que conoce las implementaciones concretas. */
 export function createContainer(
   env: Env,
   overrides: Partial<ContainerAdapters> = {},
 ): AppContainer {
+  const tokenStorage = overrides.tokenStorage ?? new SecureStoreTokenStorage();
+  const http = new FetchHttpClient({
+    baseUrl: env.apiUrl,
+    timeoutMs: env.httpTimeoutMs,
+    getAccessToken: async () => (await tokenStorage.read())?.accessToken ?? null,
+  });
+
   const adapters: ContainerAdapters = {
-    tokenStorage: new SecureStoreTokenStorage(),
+    tokenStorage,
     languagePreference: new AsyncStorageLanguagePreference(),
     deviceLocale: new ExpoDeviceLocale(),
     layoutDirection: new ReactNativeLayoutDirection(),
+    authApi: env.authApi === 'fake' ? new InMemoryAuthApi() : new AuthApiRepository(http),
     ...overrides,
   };
 
   return {
-    config: { environment: env.appEnv, defaultCurrency: env.defaultCurrency },
+    config: {
+      environment: env.appEnv,
+      defaultCurrency: env.defaultCurrency,
+      legal: { termsUrl: env.termsUrl, privacyUrl: env.privacyUrl },
+    },
     auth: {
       restoreSession: new RestoreSessionUseCase(adapters.tokenStorage),
-      signIn: new SignInUseCase(adapters.tokenStorage),
       signOut: new SignOutUseCase(adapters.tokenStorage),
+      startAuthentication: new StartAuthenticationUseCase(adapters.authApi),
+      verifyOtp: new VerifyOtpUseCase(adapters.authApi, adapters.tokenStorage),
+      resendOtp: new ResendOtpUseCase(adapters.authApi),
     },
     i18n: {
       resolveLanguage: new ResolveLanguageUseCase(

@@ -50,6 +50,12 @@ function buildUrl(baseUrl: string, path: string, query?: Record<string, QueryVal
   return params.length ? `${url}?${params.join('&')}` : url;
 }
 
+/** Retry-After en segundos (la forma de fecha HTTP no se usa en el backend). */
+function parseRetryAfter(headers: Headers): number | undefined {
+  const seconds = Number(headers.get('retry-after'));
+  return Number.isFinite(seconds) && seconds > 0 ? Math.ceil(seconds) : undefined;
+}
+
 async function readEnvelope(response: Response): Promise<ResponseEnvelope | undefined> {
   const text = await response.text();
   if (!text) return undefined;
@@ -114,6 +120,7 @@ export class FetchHttpClient implements HttpClientPort {
           code: envelope?.error?.code,
           traceId,
           fieldErrors: envelope?.error?.details,
+          retryAfterSeconds: parseRetryAfter(response.headers),
         },
       );
     }

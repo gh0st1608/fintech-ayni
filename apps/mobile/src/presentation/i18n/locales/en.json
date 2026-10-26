@@ -19,12 +19,12 @@
     "rate_limited": "Too many attempts. Please wait a moment.",
     "business": "We couldn't complete the operation.",
     "server": "Something went wrong on our side. Please try later.",
-    "unknown": "An unexpected error occurred."
+    "unknown": "An unexpected error occurred.",
+    "rateLimitedWait": "Too many attempts. Try again in {{count}} s."
   },
   "welcome": {
     "title": "Welcome to {{appName}}",
-    "subtitle": "Save together, reach your goals and get paid on the turn you choose.",
-    "devEnter": "Enter demo mode"
+    "subtitle": "Explore everything you require for your financial progress and your adventure - browse, learn, network, all in one place."
   },
   "tabs": {
     "home": "Home",
@@ -43,5 +43,29 @@
   },
   "catalog": {
     "title": "Component catalog"
+  },
+  "auth": {
+    "signIn": {
+      "title": "Welcome",
+      "subtitle": "Please enter your email or phone to continue.",
+      "identifierLabel": "Email/Phone",
+      "identifierPlaceholder": "Enter your Email or Phone",
+      "invalidIdentifier": "Enter a valid email or a phone number with country code (e.g. +51 987 654 321).",
+      "legal": "By clicking Continue, you agree to {{appName}} <terms>Terms of Use</terms> and <privacy>Privacy Policy</privacy>."
+    },
+    "verifyOtp": {
+      "title": "Verify OTP",
+      "instructions": "We sent a 4-digit code to {{destination}}. Enter it to verify.",
+      "codeLabel": "Verification code",
+      "notReceived": "Didn't receive the code?",
+      "resend": "Resend",
+      "resent": "We sent you a new code.",
+      "rememberMe": "Remember Me",
+      "invalid": "Incorrect code.",
+      "invalidWithAttempts": "Incorrect code. Attempts left: {{count}}.",
+      "expired": "The code expired. Request a new one.",
+      "attemptsExceeded": "Too many attempts. Request a new code.",
+      "retry": "Retry verification"
+    }
   }
 }

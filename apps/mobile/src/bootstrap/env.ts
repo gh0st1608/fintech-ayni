@@ -1,15 +1,30 @@
 import { z } from 'zod';
 
-const envSchema = z.object({
-  appEnv: z.enum(['dev', 'staging', 'prod']).default('dev'),
-  apiUrl: z.url(),
-  defaultLanguage: z.string().min(2).default('es'),
-  defaultCurrency: z
-    .string()
-    .regex(/^[A-Z]{3}$/, 'must be an ISO 4217 code')
-    .default('PEN'),
-  httpTimeoutMs: z.coerce.number().int().positive().default(15000),
-});
+/** Las variables vacías del .env cuentan como no definidas. */
+const optionalHttpsUrl = z.preprocess(
+  (value) => (value === '' ? undefined : value),
+  z.url({ protocol: /^https$/ }).optional(),
+);
+
+const envSchema = z
+  .object({
+    appEnv: z.enum(['dev', 'staging', 'prod']).default('dev'),
+    apiUrl: z.url(),
+    defaultLanguage: z.string().min(2).default('es'),
+    defaultCurrency: z
+      .string()
+      .regex(/^[A-Z]{3}$/, 'must be an ISO 4217 code')
+      .default('PEN'),
+    httpTimeoutMs: z.coerce.number().int().positive().default(15000),
+    /** fake: adaptador en memoria mientras no exista el backend; solo se admite en dev. */
+    authApi: z.enum(['http', 'fake']).default('http'),
+    termsUrl: optionalHttpsUrl,
+    privacyUrl: optionalHttpsUrl,
+  })
+  .refine((env) => env.authApi === 'http' || env.appEnv === 'dev', {
+    path: ['authApi'],
+    message: 'fake is only allowed in dev',
+  });
 
 export type Env = z.infer<typeof envSchema>;
 
@@ -33,5 +48,8 @@ export function loadEnv(): Env {
     defaultLanguage: process.env.EXPO_PUBLIC_DEFAULT_LANGUAGE,
     defaultCurrency: process.env.EXPO_PUBLIC_DEFAULT_CURRENCY,
     httpTimeoutMs: process.env.EXPO_PUBLIC_HTTP_TIMEOUT_MS,
+    authApi: process.env.EXPO_PUBLIC_AUTH_API,
+    termsUrl: process.env.EXPO_PUBLIC_TERMS_URL,
+    privacyUrl: process.env.EXPO_PUBLIC_PRIVACY_URL,
   });
 }

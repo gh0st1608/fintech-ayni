@@ -19,12 +19,12 @@
     "rate_limited": "Demasiados intentos. Espera un momento.",
     "business": "No pudimos completar la operación.",
     "server": "Tuvimos un problema. Inténtalo más tarde.",
-    "unknown": "Ocurrió un error inesperado."
+    "unknown": "Ocurrió un error inesperado.",
+    "rateLimitedWait": "Demasiados intentos. Vuelve a intentarlo en {{count}} s."
   },
   "welcome": {
     "title": "Bienvenido a {{appName}}",
-    "subtitle": "Ahorra en comunidad, cumple tus metas y recibe tu dinero en el turno que elijas.",
-    "devEnter": "Entrar en modo demo"
+    "subtitle": "Explora todo lo que necesitas para tu progreso financiero y tu aventura: descubre, aprende y conecta, todo en un solo lugar."
   },
   "tabs": {
     "home": "Inicio",
@@ -43,5 +43,29 @@
   },
   "catalog": {
     "title": "Catálogo de componentes"
+  },
+  "auth": {
+    "signIn": {
+      "title": "Bienvenido",
+      "subtitle": "Ingresa tu email o teléfono para continuar.",
+      "identifierLabel": "Email/Teléfono",
+      "identifierPlaceholder": "Ingresa tu email o teléfono",
+      "invalidIdentifier": "Ingresa un email válido o un teléfono con código de país (p. ej. +51 987 654 321).",
+      "legal": "Al pulsar Continuar, aceptas los <terms>Términos de uso</terms> y la <privacy>Política de privacidad</privacy> de {{appName}}."
+    },
+    "verifyOtp": {
+      "title": "Verificar código",
+      "instructions": "Te enviamos un código de 4 dígitos a {{destination}}. Ingrésalo para verificar.",
+      "codeLabel": "Código de verificación",
+      "notReceived": "¿No recibiste el código?",
+      "resend": "Reenviar",
+      "resent": "Te enviamos un código nuevo.",
+      "rememberMe": "Recordarme",
+      "invalid": "Código incorrecto.",
+      "invalidWithAttempts": "Código incorrecto. Intentos restantes: {{count}}.",
+      "expired": "El código venció. Pide uno nuevo.",
+      "attemptsExceeded": "Superaste el número de intentos. Pide un código nuevo.",
+      "retry": "Reintentar verificación"
+    }
   }
 }

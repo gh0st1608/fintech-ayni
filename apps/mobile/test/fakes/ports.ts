@@ -1,4 +1,4 @@
-import type { TokenStoragePort } from '@/domain/auth/ports/TokenStoragePort';
+import type { SaveTokensOptions, TokenStoragePort } from '@/domain/auth/ports/TokenStoragePort';
 import type { AuthTokens } from '@/domain/auth/value-objects/AuthTokens';
 import type { TextDirection } from '@/domain/i18n/Language';
 import type { DeviceLocalePort } from '@/domain/i18n/ports/DeviceLocalePort';
@@ -7,6 +7,8 @@ import type { LayoutDirectionPort } from '@/domain/i18n/ports/LayoutDirectionPor
 
 export class InMemoryTokenStorage implements TokenStoragePort {
   tokens: AuthTokens | null = null;
+  /** Si la última sesión guardada debía sobrevivir al cierre de la app. */
+  persisted: boolean | null = null;
   failOnRead = false;
 
   async read() {
@@ -14,12 +16,14 @@ export class InMemoryTokenStorage implements TokenStoragePort {
     return this.tokens;
   }
 
-  async save(tokens: AuthTokens) {
+  async save(tokens: AuthTokens, { persist = true }: SaveTokensOptions = {}) {
     this.tokens = tokens;
+    this.persisted = persist;
   }
 
   async clear() {
     this.tokens = null;
+    this.persisted = null;
   }
 }
 
