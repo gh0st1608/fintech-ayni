@@ -1,0 +1,16 @@
+# Finales de línea LF en el repositorio y en el checkout, en cualquier sistema operativo.
+# Prettier verifica LF: sin esto, un clon en Windows con core.autocrlf=true fallaría format:check.
+* text=auto eol=lf
+
+# Binarios: sin conversión de finales de línea.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.ico binary
+*.ttf binary
+*.otf binary
+*.woff binary
+*.woff2 binary
+*.pdf binary

@@ -5,7 +5,7 @@ Backlog: Jira **COPAYNI** (épica COPAYNI-1, Fundaciones técnicas).
 
 ## Requisitos
 
-- **Node.js ≥ 22.13** (exigido por Expo SDK 58; con Node 20 la CLI muestra una advertencia).
+- **Node.js ≥ 22.13**, exigido por Expo SDK 58. Está fijado en `.nvmrc` (`nvm use`) y en `engines` de `package.json`.
 - npm (el lockfile es `package-lock.json`).
 - Expo Go o un development build para ejecutar en dispositivo.
 
