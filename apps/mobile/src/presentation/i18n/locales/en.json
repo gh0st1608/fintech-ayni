@@ -1,0 +1,43 @@
+{
+  "common": {
+    "appName": "Ayni",
+    "continue": "Continue",
+    "retry": "Try again",
+    "loading": "Loading…",
+    "comingSoon": "Coming soon",
+    "comingSoonDescription": "We are building this section."
+  },
+  "errors": {
+    "network": "You are offline. Check your connection and try again.",
+    "timeout": "The request took too long. Please try again.",
+    "cancelled": "The request was cancelled.",
+    "validation": "Please check the information you entered.",
+    "unauthorized": "Your session expired. Please sign in again.",
+    "forbidden": "You are not allowed to perform this action.",
+    "not_found": "We couldn't find what you were looking for.",
+    "conflict": "The information changed while you were using it. Refresh and try again.",
+    "rate_limited": "Too many attempts. Please wait a moment.",
+    "business": "We couldn't complete the operation.",
+    "server": "Something went wrong on our side. Please try later.",
+    "unknown": "An unexpected error occurred."
+  },
+  "welcome": {
+    "title": "Welcome to {{appName}}",
+    "subtitle": "Save together, reach your goals and get paid on the turn you choose.",
+    "devEnter": "Enter demo mode"
+  },
+  "tabs": {
+    "home": "Home",
+    "circles": "Circles",
+    "join": "Join",
+    "payment": "Payment",
+    "profile": "Profile"
+  },
+  "join": {
+    "title": "Choose a service",
+    "a11yButton": "Join a circle or a saving program"
+  },
+  "profile": {
+    "logout": "Log out"
+  }
+}

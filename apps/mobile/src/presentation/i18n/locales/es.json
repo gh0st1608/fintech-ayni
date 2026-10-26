@@ -1,0 +1,43 @@
+{
+  "common": {
+    "appName": "Ayni",
+    "continue": "Continuar",
+    "retry": "Reintentar",
+    "loading": "Cargando…",
+    "comingSoon": "Próximamente",
+    "comingSoonDescription": "Estamos construyendo esta sección."
+  },
+  "errors": {
+    "network": "No hay conexión. Revisa tu internet e inténtalo de nuevo.",
+    "timeout": "La solicitud tardó demasiado. Inténtalo de nuevo.",
+    "cancelled": "La solicitud fue cancelada.",
+    "validation": "Revisa los datos ingresados.",
+    "unauthorized": "Tu sesión expiró. Vuelve a ingresar.",
+    "forbidden": "No tienes permiso para realizar esta acción.",
+    "not_found": "No encontramos lo que buscabas.",
+    "conflict": "La información cambió mientras la usabas. Actualiza e inténtalo otra vez.",
+    "rate_limited": "Demasiados intentos. Espera un momento.",
+    "business": "No pudimos completar la operación.",
+    "server": "Tuvimos un problema. Inténtalo más tarde.",
+    "unknown": "Ocurrió un error inesperado."
+  },
+  "welcome": {
+    "title": "Bienvenido a {{appName}}",
+    "subtitle": "Ahorra en comunidad, cumple tus metas y recibe tu dinero en el turno que elijas.",
+    "devEnter": "Entrar en modo demo"
+  },
+  "tabs": {
+    "home": "Inicio",
+    "circles": "Círculos",
+    "join": "Unirse",
+    "payment": "Pagos",
+    "profile": "Perfil"
+  },
+  "join": {
+    "title": "Elige un servicio",
+    "a11yButton": "Unirse a un círculo o a un programa de ahorro"
+  },
+  "profile": {
+    "logout": "Cerrar sesión"
+  }
+}
