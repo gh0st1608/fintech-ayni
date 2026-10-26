@@ -25,6 +25,8 @@ export const colors = {
   background: '#FAFAFA',
   surface: '#FFFFFF',
   onPrimary: '#FFFFFF',
+  /** Fondo detrás de hojas inferiores y diálogos (negro base al 40%). */
+  overlay: 'rgba(10, 10, 11, 0.4)',
 } as const;
 
 export const spacing = {

@@ -142,13 +142,17 @@ El cambio LTR↔RTL requiere reiniciar la app y no funciona en Expo Go.
 - Componentes en `presentation/shared/components`:
   - Base: `AppText`, `Button`, `Screen`, `Card`, `ListItem`, `Toggle`, `SegmentedTabs`, `Badge`, `EmptyState`, `InfoBanner`, `Chevron` (se invierte en RTL), `JoinTabButton`, `ComingSoon`.
   - Formularios: `TextField`, `PhoneInput` (bandera calculada del código de región), `OTPInput`, `RadioCard` + `RadioGroup`, `FieldError`.
+  - Superposiciones y dominio visual: `BottomSheet`, `Stepper`, `CircleCard` (recibe montos y fechas ya formateados con `formatMoney` / `formatDate`).
 - Son de presentación pura: reciben datos, textos y eventos por props; no llaman casos de uso ni validan reglas de negocio (la validación vive en los value objects del dominio).
 - Accesibilidad: roles y estados (`button`, `tab`, `switch`, `link`, `radio`, `radiogroup`, `alert`), áreas táctiles ≥ 48, ilustraciones ocultas a lectores de pantalla y tamaño de texto del sistema. Los errores de campo se anuncian como alerta.
 - `OTPInput` usa un único `TextInput` oculto y las casillas son solo visuales: así funcionan pegar el código y el autocompletado desde SMS o email (`oneTimeCode` / `sms-otp`).
+- `BottomSheet` es modal: el lector de pantalla solo alcanza su contenido; se cierra con la X, tocando el fondo o con el botón atrás de Android. Sin animación si el sistema pide reducir movimiento (`useReducedMotion`).
+- **Catálogo visual** (`presentation/dev`): en el ambiente `dev`, Perfil → "Catálogo de componentes (dev)" muestra todos los componentes para revisarlos con UX. La ruta `/catalog` está protegida con `Stack.Protected` y no existe en staging ni en prod. Sus textos de ejemplo no van en los JSON de idioma.
 
 ## Pendientes conocidos
 
-- Design system, etapa 3: BottomSheet, Stepper, CircleCard y catálogo visual (COPAYNI-14).
+- Cierre del `BottomSheet` deslizando hacia abajo: requiere `react-native-gesture-handler` + Reanimated; se evaluará cuando una historia lo necesite.
+- Validación visual del catálogo con UX en dispositivo (COPAYNI-14).
 - Selector de país del `PhoneInput`: sin diseño; hoy el prefijo es fijo o abre un callback.
 - Splash y onboarding definitivos: COPAYNI-18.
 - Login con OTP (COPAYNI-19/20). Refresh de tokens y conexión 401 → `sessionExpired` (COPAYNI-21).

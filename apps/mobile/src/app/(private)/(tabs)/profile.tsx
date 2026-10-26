@@ -1,1 +1,7 @@
-export { ProfileScreen as default } from '@/presentation/profile/screens/ProfileScreen';
+import { router } from 'expo-router';
+
+import { ProfileScreen } from '@/presentation/profile/screens/ProfileScreen';
+
+export default function ProfileRoute() {
+  return <ProfileScreen onOpenCatalog={() => router.push('/catalog')} />;
+}

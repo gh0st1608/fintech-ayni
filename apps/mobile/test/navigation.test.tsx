@@ -66,4 +66,33 @@ describe('shell de navegación', () => {
     await fireEvent.press(await screen.findByText('Cerrar sesión'));
     expect(await screen.findByText('Bienvenido a Ayni')).toBeTruthy();
   });
+
+  it('en dev, el perfil abre el catálogo de componentes', async () => {
+    await storeSession();
+    await renderRouter(APP_DIR, { initialUrl: '/profile' });
+    await fireEvent.press(await screen.findByText('Catálogo de componentes (dev)'));
+    await waitFor(() => expect(screen).toHavePathname('/catalog'));
+    expect(await screen.findByText('Tipografía')).toBeTruthy();
+  });
+
+  describe('fuera de dev', () => {
+    const original = process.env.EXPO_PUBLIC_APP_ENV;
+    beforeEach(() => {
+      process.env.EXPO_PUBLIC_APP_ENV = 'prod';
+    });
+    afterEach(() => {
+      process.env.EXPO_PUBLIC_APP_ENV = original;
+    });
+
+    it('el catálogo no existe ni se ofrece en el perfil', async () => {
+      await storeSession();
+      await renderRouter(APP_DIR, { initialUrl: '/catalog' });
+      await waitFor(() => expect(screen).not.toHavePathname('/catalog'));
+      expect(screen.queryByText('Tipografía')).toBeNull();
+
+      await fireEvent.press(screen.getAllByText('Perfil')[0]!);
+      expect(await screen.findByText('Cerrar sesión')).toBeTruthy();
+      expect(screen.queryByText('Catálogo de componentes (dev)')).toBeNull();
+    });
+  });
 });

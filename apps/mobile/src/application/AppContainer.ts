@@ -11,6 +11,8 @@ import type { ResolveLanguageUseCase } from '@/application/i18n/usecases/Resolve
 export interface AppContainer {
   config: {
     environment: 'dev' | 'staging' | 'prod';
+    /** ISO 4217 por defecto mientras el backend no devuelva la moneda de cada monto (M1). */
+    defaultCurrency: string;
   };
   auth: {
     restoreSession: RestoreSessionUseCase;

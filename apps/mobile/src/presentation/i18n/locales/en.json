@@ -38,6 +38,10 @@
     "a11yButton": "Join a circle or a saving program"
   },
   "profile": {
-    "logout": "Log out"
+    "logout": "Log out",
+    "devCatalog": "Component catalog (dev)"
+  },
+  "catalog": {
+    "title": "Component catalog"
   }
 }

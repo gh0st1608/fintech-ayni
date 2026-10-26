@@ -40,7 +40,7 @@ export function createContainer(
   };
 
   return {
-    config: { environment: env.appEnv },
+    config: { environment: env.appEnv, defaultCurrency: env.defaultCurrency },
     auth: {
       restoreSession: new RestoreSessionUseCase(adapters.tokenStorage),
       signIn: new SignInUseCase(adapters.tokenStorage),
