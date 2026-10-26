@@ -2,7 +2,8 @@ import { Platform, type ViewStyle } from 'react-native';
 
 /**
  * Tokens de diseño extraídos de las variables del Figma
- * (Home 55:8637, Payment Eligibility 55:9892, Payout Method 55:9520).
+ * (Home 55:8637, Payment Eligibility 55:9892, Payout Method 55:9520, Signin 55:10724,
+ * Verify OTP 55:10749, Add Card 55:10158).
  */
 export const colors = {
   primary: '#3051BB',
@@ -10,8 +11,13 @@ export const colors = {
   primary300: '#A1B2E7',
   secondary100: '#E7EBEF',
   secondary200: '#DAE1E7',
+  secondary300: '#CED7DE',
   neutral100: '#E3E3E3',
   neutral500: '#898384',
+  neutral600: '#726C6C',
+  neutral700: '#5A5555',
+  borderNormal: '#A1A1AA',
+  textSecondary: '#3F3F46',
   success: '#15B097',
   error: '#C03744',
   textPrimary: '#0E0E0F',

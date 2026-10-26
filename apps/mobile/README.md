@@ -139,13 +139,17 @@ El cambio LTR↔RTL requiere reiniciar la app y no funciona en Expo Go.
 
 - Tokens del Figma en `presentation/theme/tokens.ts`: colores (incluidos éxito y error), espaciados, radios, tipografía, elevación y alto de botón.
 - Tipografía **Outfit** (`presentation/theme/fonts.ts`): se cargan solo los pesos Light, Regular y SemiBold; si falla la carga, la app usa la fuente del sistema.
-- Componentes en `presentation/shared/components`: `AppText`, `Button`, `Screen`, `Card`, `ListItem`, `Toggle`, `SegmentedTabs`, `Badge`, `EmptyState`, `InfoBanner`, `Chevron` (se invierte en RTL), `JoinTabButton`, `ComingSoon`.
-- Son de presentación pura: reciben datos, textos y eventos por props; no llaman casos de uso.
-- Accesibilidad: roles y estados (`button`, `tab`, `switch`, `link`), áreas táctiles ≥ 48, ilustraciones ocultas a lectores de pantalla y tamaño de texto del sistema.
+- Componentes en `presentation/shared/components`:
+  - Base: `AppText`, `Button`, `Screen`, `Card`, `ListItem`, `Toggle`, `SegmentedTabs`, `Badge`, `EmptyState`, `InfoBanner`, `Chevron` (se invierte en RTL), `JoinTabButton`, `ComingSoon`.
+  - Formularios: `TextField`, `PhoneInput` (bandera calculada del código de región), `OTPInput`, `RadioCard` + `RadioGroup`, `FieldError`.
+- Son de presentación pura: reciben datos, textos y eventos por props; no llaman casos de uso ni validan reglas de negocio (la validación vive en los value objects del dominio).
+- Accesibilidad: roles y estados (`button`, `tab`, `switch`, `link`, `radio`, `radiogroup`, `alert`), áreas táctiles ≥ 48, ilustraciones ocultas a lectores de pantalla y tamaño de texto del sistema. Los errores de campo se anuncian como alerta.
+- `OTPInput` usa un único `TextInput` oculto y las casillas son solo visuales: así funcionan pegar el código y el autocompletado desde SMS o email (`oneTimeCode` / `sms-otp`).
 
 ## Pendientes conocidos
 
-- Design system, etapas 2 y 3: TextField, PhoneInput, OTPInput, RadioCard, BottomSheet, Stepper, CircleCard y catálogo visual (COPAYNI-14).
+- Design system, etapa 3: BottomSheet, Stepper, CircleCard y catálogo visual (COPAYNI-14).
+- Selector de país del `PhoneInput`: sin diseño; hoy el prefijo es fijo o abre un callback.
 - Splash y onboarding definitivos: COPAYNI-18.
 - Login con OTP (COPAYNI-19/20). Refresh de tokens y conexión 401 → `sessionExpired` (COPAYNI-21).
 - Crash reporting y telemetría mobile: decisión técnica pendiente (pending-scope T8).
