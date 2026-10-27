@@ -1,11 +1,12 @@
 # Contrato de API: círculos (propuesta)
 
-**Estado:** propuesta _contract-first_ para COPAYNI-27 y COPAYNI-28.
+**Estado:** `GET /v1/circles/join-config` está **implementado en el backend** (COPAYNI-8; `apps/backend/src/modules/circles`), con los montos tomados de la configuración validada.
 
 - La app mobile ya la consume:
   - `JoinConfigApiRepository` usa el backend real.
   - `InMemoryJoinConfigRepository` es el adaptador falso de dev (`EXPO_PUBLIC_CIRCLES_API=fake`).
-- El backend (COPAYNI-8 y COPAYNI-24) debe confirmarla o ajustarla antes de implementar los endpoints.
+- Hasta que exista el módulo auth (COPAYNI-19, 20), el backend responde `401` a cualquier token: la app debe seguir usando el adaptador falso.
+- Los montos pasarán a la base de datos con el modelo de círculos (COPAYNI-24).
 
 Usa el contrato común de respuestas descrito en [auth.md](auth.md). Requiere `Authorization: Bearer <accessToken>`.
 

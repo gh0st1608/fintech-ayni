@@ -1,0 +1,12 @@
+node_modules/
+dist/
+coverage/
+*.tsbuildinfo
+
+# Variables locales: solo .env.example se versiona.
+.env
+.env.*
+!.env.example
+
+npm-debug.*
+.DS_Store
