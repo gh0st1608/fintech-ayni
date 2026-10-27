@@ -1,4 +1,6 @@
 import type { AppContainer } from '@/application/AppContainer';
+import { SessionEvents } from '@/application/auth/SessionEvents';
+import { RefreshSessionUseCase } from '@/application/auth/usecases/RefreshSessionUseCase';
 import { ResendOtpUseCase } from '@/application/auth/usecases/ResendOtpUseCase';
 import { RestoreSessionUseCase } from '@/application/auth/usecases/RestoreSessionUseCase';
 import { SignOutUseCase } from '@/application/auth/usecases/SignOutUseCase';
@@ -36,10 +38,14 @@ export function createContainer(
   overrides: Partial<ContainerAdapters> = {},
 ): AppContainer {
   const tokenStorage = overrides.tokenStorage ?? new SecureStoreTokenStorage();
+  // El cliente HTTP y la renovación se necesitan mutuamente: la referencia se resuelve
+  // al primer 401, cuando refreshSession ya está construido.
   const http = new FetchHttpClient({
     baseUrl: env.apiUrl,
     timeoutMs: env.httpTimeoutMs,
     getAccessToken: async () => (await tokenStorage.read())?.accessToken ?? null,
+    renewSession: () => refreshSession.execute(),
+    onUnauthorized: () => void refreshSession.expire(),
   });
 
   const adapters: ContainerAdapters = {
@@ -51,6 +57,15 @@ export function createContainer(
     ...overrides,
   };
 
+  const sessionEvents = new SessionEvents();
+  const signOut = new SignOutUseCase(adapters.tokenStorage, adapters.authApi);
+  const refreshSession = new RefreshSessionUseCase(
+    adapters.authApi,
+    adapters.tokenStorage,
+    signOut,
+    sessionEvents,
+  );
+
   return {
     config: {
       environment: env.appEnv,
@@ -59,7 +74,9 @@ export function createContainer(
     },
     auth: {
       restoreSession: new RestoreSessionUseCase(adapters.tokenStorage),
-      signOut: new SignOutUseCase(adapters.tokenStorage),
+      signOut,
+      refreshSession,
+      sessionEvents,
       startAuthentication: new StartAuthenticationUseCase(adapters.authApi),
       verifyOtp: new VerifyOtpUseCase(adapters.authApi, adapters.tokenStorage),
       resendOtp: new ResendOtpUseCase(adapters.authApi),

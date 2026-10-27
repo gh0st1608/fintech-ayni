@@ -1,6 +1,7 @@
 import * as SecureStore from 'expo-secure-store';
-import { fireEvent, renderRouter, screen, waitFor } from 'expo-router/testing-library';
+import { act, fireEvent, renderRouter, screen, waitFor } from 'expo-router/testing-library';
 
+import { SessionEvents } from '@/application/auth/SessionEvents';
 import { FAKE_OTP_CODE } from '@/infrastructure/auth/InMemoryAuthApi';
 
 // Rutas reales de la app: se prueba el shell de navegación completo (COPAYNI-15).
@@ -75,6 +76,28 @@ describe('shell de navegación', () => {
     await fireEvent.press(screen.getAllByText('Perfil')[0]!);
     await fireEvent.press(await screen.findByText('Cerrar sesión'));
     expect(await screen.findByText('Bienvenido a Ayni')).toBeTruthy();
+  });
+
+  it('una sesión que expira lleva a la bienvenida con el aviso, sin bucles', async () => {
+    let notify: ((status: 'sessionExpired') => void) | undefined;
+    const subscribe = jest.spyOn(SessionEvents.prototype, 'subscribe');
+    subscribe.mockImplementation(function (this: SessionEvents, listener) {
+      notify = listener;
+      return () => undefined;
+    });
+    try {
+      await storeSession();
+      await renderRouter(APP_DIR, { initialUrl: '/home' });
+      await waitFor(() => expect(screen).toHavePathname('/home'));
+
+      await act(() => notify?.('sessionExpired'));
+
+      expect(await screen.findByText('Tu sesión expiró. Vuelve a ingresar.')).toBeTruthy();
+      expect(screen).toHavePathname('/welcome');
+      expect(screen.queryByText('Cerrar sesión')).toBeNull();
+    } finally {
+      subscribe.mockRestore();
+    }
   });
 
   it('verify-otp sin datos del desafío vuelve al ingreso', async () => {

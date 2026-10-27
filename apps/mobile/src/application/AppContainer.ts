@@ -1,3 +1,5 @@
+import type { SessionEvents } from '@/application/auth/SessionEvents';
+import type { RefreshSessionUseCase } from '@/application/auth/usecases/RefreshSessionUseCase';
 import type { ResendOtpUseCase } from '@/application/auth/usecases/ResendOtpUseCase';
 import type { RestoreSessionUseCase } from '@/application/auth/usecases/RestoreSessionUseCase';
 import type { SignOutUseCase } from '@/application/auth/usecases/SignOutUseCase';
@@ -21,6 +23,9 @@ export interface AppContainer {
   auth: {
     restoreSession: RestoreSessionUseCase;
     signOut: SignOutUseCase;
+    refreshSession: RefreshSessionUseCase;
+    /** Expiraciones detectadas fuera de la UI (p. ej. un 401 sin renovación posible). */
+    sessionEvents: Pick<SessionEvents, 'subscribe'>;
     startAuthentication: StartAuthenticationUseCase;
     verifyOtp: VerifyOtpUseCase;
     resendOtp: ResendOtpUseCase;

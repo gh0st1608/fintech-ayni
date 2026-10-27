@@ -60,6 +60,21 @@ describe('SessionProvider', () => {
     expect(queryClient.getQueryData(['me'])).toBeUndefined();
   });
 
+  it('una expiración detectada fuera de la UI pasa a sessionExpired y limpia la caché', async () => {
+    const setup = createTestContainer();
+    setup.adapters.tokenStorage.tokens = AuthTokens.create({ accessToken: 'a', refreshToken: 'r' });
+    const queryClient = new QueryClient();
+    queryClient.setQueryData(['me'], { name: 'x' });
+    const { result } = await renderSession(setup, queryClient);
+    await waitFor(() => expect(result.current.status).toBe('authenticated'));
+
+    await act(() => setup.container.auth.refreshSession.expire());
+
+    expect(result.current.status).toBe('sessionExpired');
+    expect(setup.adapters.tokenStorage.tokens).toBeNull();
+    expect(queryClient.getQueryData(['me'])).toBeUndefined();
+  });
+
   it('exige estar dentro de su provider', async () => {
     jest.spyOn(console, 'error').mockImplementation(() => {});
     await expect(renderHook(() => useSession())).rejects.toThrow(/SessionProvider/);

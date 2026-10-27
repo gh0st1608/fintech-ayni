@@ -30,6 +30,16 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     };
   }, [auth.restoreSession]);
 
+  // Una expiración detectada por la capa HTTP cierra la sesión sin bucles: no se reintenta.
+  useEffect(
+    () =>
+      auth.sessionEvents.subscribe((next) => {
+        queryClient.clear();
+        setStatus(next);
+      }),
+    [auth.sessionEvents, queryClient],
+  );
+
   const completeSignIn = useCallback((next: SessionStatus) => setStatus(next), []);
 
   const signOut = useCallback(async () => {

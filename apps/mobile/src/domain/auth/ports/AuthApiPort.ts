@@ -11,4 +11,8 @@ export interface AuthApiPort {
   verifyOtp(challengeId: string, code: OtpCode, signal?: AbortSignal): Promise<AuthTokens>;
   /** Invalida el código anterior y envía uno nuevo. */
   resendOtp(challengeId: string, signal?: AbortSignal): Promise<AuthChallenge>;
+  /** Rota el par de tokens. Un refresh token vencido o revocado se rechaza con AppError unauthorized. */
+  refreshSession(refreshToken: string): Promise<AuthTokens>;
+  /** Revoca el refresh token en el backend. */
+  logout(refreshToken: string): Promise<void>;
 }

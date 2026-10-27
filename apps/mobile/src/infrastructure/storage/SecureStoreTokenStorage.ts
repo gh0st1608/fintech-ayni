@@ -25,7 +25,8 @@ export class SecureStoreTokenStorage implements TokenStoragePort {
     return AuthTokens.create({ accessToken, refreshToken });
   }
 
-  async save(tokens: AuthTokens, { persist = true }: SaveTokensOptions = {}): Promise<void> {
+  async save(tokens: AuthTokens, options: SaveTokensOptions = {}): Promise<void> {
+    const persist = options.persist ?? this.volatile === null;
     if (!persist) {
       await this.deletePersisted();
       this.volatile = tokens;

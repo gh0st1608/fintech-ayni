@@ -5,9 +5,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import GLOW from '@assets/images/onboarding/welcome-glow.png';
 import HAND from '@assets/images/onboarding/welcome-hand.webp';
+import { useSession } from '@/presentation/providers/SessionProvider';
 import { AppText } from '@/presentation/shared/components/AppText';
 import { Button } from '@/presentation/shared/components/Button';
-import { colors, spacing } from '@/presentation/theme/tokens';
+import { colors, radius, spacing } from '@/presentation/theme/tokens';
 
 /** Proporción de la ilustración exportada del Figma (Design 2, 55:10723). */
 const HAND_ASPECT_RATIO = 1662 / 1299;
@@ -17,10 +18,14 @@ interface WelcomeScreenProps {
   onContinue: () => void;
 }
 
-/** Onboarding "Welcome to …" (Figma 55:10710). Se muestra solo sin sesión. */
+/**
+ * Onboarding "Welcome to …" (Figma 55:10710). Se muestra solo sin sesión; si la sesión
+ * expiró, avisa para que el usuario vuelva a ingresar.
+ */
 export function WelcomeScreen({ onContinue }: WelcomeScreenProps) {
   const { t } = useTranslation();
   const appName = t('common.appName');
+  const { status } = useSession();
 
   return (
     <View style={styles.root}>
@@ -55,6 +60,18 @@ export function WelcomeScreen({ onContinue }: WelcomeScreenProps) {
         </View>
 
         <View style={styles.copy}>
+          {status === 'sessionExpired' && (
+            <View style={styles.notice}>
+              <AppText
+                variant="caption"
+                color={colors.background}
+                accessibilityRole="alert"
+                accessibilityLiveRegion="polite"
+              >
+                {t('errors.unauthorized')}
+              </AppText>
+            </View>
+          )}
           <AppText
             variant="hero"
             weight="semibold"
@@ -101,6 +118,13 @@ const styles = StyleSheet.create({
   },
   hand: { height: '100%', aspectRatio: HAND_ASPECT_RATIO, mixBlendMode: 'hard-light' },
   copy: { gap: spacing.l },
+  notice: {
+    padding: spacing.m,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.error,
+    backgroundColor: colors.errorSurfaceOnDark,
+  },
   subtitle: { lineHeight: 20 },
   actions: { gap: spacing.m, marginTop: 40 },
 });

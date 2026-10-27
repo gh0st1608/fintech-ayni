@@ -13,6 +13,12 @@ export interface FetchHttpClientConfig {
   timeoutMs: number;
   getAccessToken?: () => Promise<string | null>;
   getLanguage?: () => string;
+  /**
+   * Renueva la sesión ante un 401 (single-flight en RefreshSessionUseCase). Devuelve true si
+   * hay tokens nuevos; false si la sesión expiró (ya notificada por quien renueva).
+   */
+  renewSession?: () => Promise<boolean>;
+  /** 401 sin renovación posible (o tras el único reintento): la sesión debe expirar. */
   onUnauthorized?: () => void;
   fetchImpl?: typeof fetch;
   generateRequestId?: () => string;
@@ -68,7 +74,8 @@ async function readEnvelope(response: Response): Promise<ResponseEnvelope | unde
 
 /**
  * Adaptador HTTP sobre fetch: base URL, timeout, cancelación, headers de correlación y
- * normalización de errores a AppError. No reintenta: la política vive en la capa de consultas.
+ * normalización de errores a AppError. Solo reintenta una vez tras renovar la sesión ante un
+ * 401; cualquier otra política de reintento vive en la capa de consultas.
  */
 export class FetchHttpClient implements HttpClientPort {
   private readonly fetchImpl: typeof fetch;
@@ -103,6 +110,7 @@ export class FetchHttpClient implements HttpClientPort {
     method: HttpMethod,
     path: string,
     options: HttpBodyRequestOptions<T> = {},
+    isRetry = false,
   ): Promise<T> {
     if (options.signal?.aborted) throw new AppError('cancelled', 'Request cancelled');
 
@@ -111,7 +119,13 @@ export class FetchHttpClient implements HttpClientPort {
     const traceId = envelope?.traceId ?? response.headers.get('x-trace-id') ?? undefined;
 
     if (!response.ok || envelope?.success === false) {
-      if (response.status === 401) this.config.onUnauthorized?.();
+      if (response.status === 401 && !options.skipSessionRefresh) {
+        if (!isRetry && this.config.renewSession) {
+          if (await this.config.renewSession()) return this.request(method, path, options, true);
+        } else {
+          this.config.onUnauthorized?.();
+        }
+      }
       throw new AppError(
         response.ok ? 'business' : httpStatusToErrorKind(response.status),
         envelope?.error?.message ?? `HTTP ${response.status}`,

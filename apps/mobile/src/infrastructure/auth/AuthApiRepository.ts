@@ -61,6 +61,7 @@ export class AuthApiRepository implements AuthApiPort {
     const dto = await this.http.post('/auth/start', {
       body: { identifier: identifier.value, type: identifier.kind },
       signal,
+      skipSessionRefresh: true,
       parse: (data) => challengeDto.parse(data),
     });
     return toChallenge(dto);
@@ -71,6 +72,7 @@ export class AuthApiRepository implements AuthApiPort {
       const dto = await this.http.post('/auth/verify', {
         body: { challengeId, code: code.value },
         signal,
+        skipSessionRefresh: true,
         parse: (data) => tokensDto.parse(data),
       });
       return AuthTokens.create(dto);
@@ -83,8 +85,22 @@ export class AuthApiRepository implements AuthApiPort {
     const dto = await this.http.post('/auth/resend', {
       body: { challengeId },
       signal,
+      skipSessionRefresh: true,
       parse: (data) => challengeDto.parse(data),
     });
     return toChallenge(dto);
+  }
+
+  async refreshSession(refreshToken: string): Promise<AuthTokens> {
+    const dto = await this.http.post('/auth/refresh', {
+      body: { refreshToken },
+      skipSessionRefresh: true,
+      parse: (data) => tokensDto.parse(data),
+    });
+    return AuthTokens.create(dto);
+  }
+
+  async logout(refreshToken: string): Promise<void> {
+    await this.http.post('/auth/logout', { body: { refreshToken }, skipSessionRefresh: true });
   }
 }

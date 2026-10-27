@@ -29,6 +29,8 @@ export const colors = {
   onPrimary: '#FFFFFF',
   /** Fondo detrás de hojas inferiores y diálogos (negro base al 40%). */
   overlay: 'rgba(10, 10, 11, 0.4)',
+  /** Aviso de error sobre fondo oscuro (color de error al 20%). */
+  errorSurfaceOnDark: 'rgba(192, 55, 68, 0.2)',
 } as const;
 
 export const spacing = {

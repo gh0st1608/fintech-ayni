@@ -25,6 +25,14 @@ describe('WelcomeScreen', () => {
     expect(screen.queryByText(/modo demo/)).toBeNull();
     await fireEvent.press(screen.getByRole('button', { name: 'Continuar' }));
     expect(onContinue).toHaveBeenCalled();
+    expect(screen.queryByRole('alert')).toBeNull();
+  });
+
+  it('si la sesión expiró avisa que hay que volver a ingresar', async () => {
+    const setup = createTestContainer();
+    await renderWithProviders(<WelcomeScreen onContinue={jest.fn()} />, setup);
+    await act(() => setup.container.auth.refreshSession.expire());
+    expect(screen.getByRole('alert')).toHaveTextContent('Tu sesión expiró. Vuelve a ingresar.');
   });
 });
 

@@ -1,6 +1,6 @@
 # Contrato de API: autenticación sin contraseña (propuesta)
 
-**Estado:** propuesta _contract-first_ para COPAYNI-19 y COPAYNI-20.
+**Estado:** propuesta _contract-first_ para COPAYNI-19, COPAYNI-20 y COPAYNI-21.
 
 - La app mobile ya la consume:
   - `AuthApiRepository` usa el backend real.
@@ -86,6 +86,38 @@ La comparación del código debe hacerse en tiempo constante.
 | ---- | -------------- | ---------------------------------------------------------------------------------------- |
 | 429  | `RATE_LIMITED` | Antes de `resendAvailableAt` o por superar el máximo de reenvíos. Incluye `Retry-After`. |
 | 404  | `NOT_FOUND`    | Desafío inexistente.                                                                     |
+
+## `POST /v1/auth/refresh`
+
+```json
+{ "refreshToken": "..." }
+```
+
+**200** → `{ "accessToken": "...", "refreshToken": "..." }`.
+
+- Rotación obligatoria: el refresh token recibido queda invalidado.
+- Si se reutiliza un refresh token ya rotado (posible robo), el backend revoca toda la familia de sesiones.
+
+| HTTP | `error.code`   | Caso                                           |
+| ---- | -------------- | ---------------------------------------------- |
+| 401  | `UNAUTHORIZED` | Refresh token vencido, revocado o reutilizado. |
+
+Comportamiento de la app (COPAYNI-21):
+
+- Una sola renovación en vuelo aunque varias peticiones reciban 401 a la vez.
+- Cada petición se reintenta una sola vez.
+- Un 401 de este endpoint nunca dispara otra renovación: borra los tokens y la sesión pasa a `sessionExpired`.
+
+## `POST /v1/auth/logout`
+
+```json
+{ "refreshToken": "..." }
+```
+
+**204** o **200**. Revoca el refresh token.
+
+- Debe ser idempotente: un token ya revocado o desconocido también responde éxito.
+- No requiere `Authorization`: la app borra la sesión local antes de llamar y no espera la respuesta.
 
 ## Diferencias con la descripción original de Jira
 

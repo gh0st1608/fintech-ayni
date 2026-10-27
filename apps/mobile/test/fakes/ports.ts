@@ -16,9 +16,9 @@ export class InMemoryTokenStorage implements TokenStoragePort {
     return this.tokens;
   }
 
-  async save(tokens: AuthTokens, { persist = true }: SaveTokensOptions = {}) {
+  async save(tokens: AuthTokens, { persist }: SaveTokensOptions = {}) {
     this.tokens = tokens;
-    this.persisted = persist;
+    this.persisted = persist ?? this.persisted ?? true;
   }
 
   async clear() {

@@ -55,6 +55,8 @@ export function maskDestination(identifier: LoginIdentifier): string {
 export class InMemoryAuthApi implements AuthApiPort {
   private sequence = 0;
   private readonly challenges = new Map<string, StoredChallenge>();
+  /** Refresh tokens vigentes: rotan en cada renovación y se revocan en el logout. */
+  private readonly refreshTokens = new Set<string>();
   private readonly latencyMs: number;
   private readonly resendCooldownSeconds: number;
   private readonly otpTtlSeconds: number;
@@ -91,10 +93,7 @@ export class InMemoryAuthApi implements AuthApiPort {
       throw new OtpVerificationError('invalid', challenge.attemptsLeft);
     }
     this.challenges.delete(challengeId);
-    return AuthTokens.create({
-      accessToken: `fake-access-${challengeId}`,
-      refreshToken: `fake-refresh-${challengeId}`,
-    });
+    return this.issueTokens();
   }
 
   async resendOtp(challengeId: string, signal?: AbortSignal): Promise<AuthChallenge> {
@@ -109,6 +108,31 @@ export class InMemoryAuthApi implements AuthApiPort {
       });
     }
     return this.issue(challengeId, challenge.identifier);
+  }
+
+  async refreshSession(refreshToken: string): Promise<AuthTokens> {
+    await wait(this.latencyMs);
+    if (!this.refreshTokens.delete(refreshToken)) {
+      throw new AppError('unauthorized', 'Refresh token expired or revoked', { status: 401 });
+    }
+    return this.issueTokens();
+  }
+
+  async logout(refreshToken: string): Promise<void> {
+    await wait(this.latencyMs);
+    this.refreshTokens.delete(refreshToken);
+  }
+
+  /** Revoca todas las sesiones: permite probar la expiración en dev y en tests. */
+  revokeAllSessions(): void {
+    this.refreshTokens.clear();
+  }
+
+  private issueTokens(): AuthTokens {
+    this.sequence += 1;
+    const refreshToken = `fake-refresh-${this.sequence}`;
+    this.refreshTokens.add(refreshToken);
+    return AuthTokens.create({ accessToken: `fake-access-${this.sequence}`, refreshToken });
   }
 
   private issue(challengeId: string, identifier: LoginIdentifier): AuthChallenge {

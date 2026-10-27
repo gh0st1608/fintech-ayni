@@ -33,11 +33,22 @@ describe('SecureStoreTokenStorage', () => {
     await expect(new SecureStoreTokenStorage().read()).resolves.toBeNull();
   });
 
-  it('guardar con Remember Me reemplaza la sesión en memoria', async () => {
+  it('una renovación sin indicar el modo conserva la sesión en memoria', async () => {
     await storage.save(AuthTokens.create({ accessToken: 'a1', refreshToken: 'r1' }), {
       persist: false,
     });
     await storage.save(AuthTokens.create({ accessToken: 'a2', refreshToken: 'r2' }));
+    await expect(storage.read()).resolves.toMatchObject({ accessToken: 'a2' });
+    await expect(new SecureStoreTokenStorage().read()).resolves.toBeNull();
+  });
+
+  it('guardar con Remember Me reemplaza la sesión en memoria', async () => {
+    await storage.save(AuthTokens.create({ accessToken: 'a1', refreshToken: 'r1' }), {
+      persist: false,
+    });
+    await storage.save(AuthTokens.create({ accessToken: 'a2', refreshToken: 'r2' }), {
+      persist: true,
+    });
     await expect(new SecureStoreTokenStorage().read()).resolves.toMatchObject({
       accessToken: 'a2',
     });

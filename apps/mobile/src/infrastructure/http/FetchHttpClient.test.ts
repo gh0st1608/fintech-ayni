@@ -141,6 +141,64 @@ describe('FetchHttpClient', () => {
     expect(onUnauthorized).toHaveBeenCalledTimes(1);
   });
 
+  describe('renovación de sesión ante 401', () => {
+    const unauthorized = () =>
+      jsonResponse({ success: false, error: { code: 'UNAUTHORIZED' } }, 401);
+
+    it('renueva y reintenta la petición original una sola vez', async () => {
+      const renewSession = jest.fn().mockResolvedValue(true);
+      const onUnauthorized = jest.fn();
+      const { client, fetchImpl } = setup({ renewSession, onUnauthorized });
+      fetchImpl
+        .mockResolvedValueOnce(unauthorized())
+        .mockResolvedValueOnce(jsonResponse({ success: true, data: { id: 1 } }));
+
+      await expect(client.post('/circles', { body: { a: 1 } })).resolves.toEqual({ id: 1 });
+      expect(renewSession).toHaveBeenCalledTimes(1);
+      expect(fetchImpl).toHaveBeenCalledTimes(2);
+      expect(fetchImpl.mock.calls[1]?.[1]?.body).toBe('{"a":1}');
+      expect(onUnauthorized).not.toHaveBeenCalled();
+    });
+
+    it('si el reintento vuelve a dar 401 no reintenta más y expira la sesión', async () => {
+      const renewSession = jest.fn().mockResolvedValue(true);
+      const onUnauthorized = jest.fn();
+      const { client, fetchImpl } = setup({ renewSession, onUnauthorized });
+      fetchImpl.mockImplementation(async () => unauthorized());
+
+      await expect(captureError(client.get('/me'))).resolves.toMatchObject({
+        kind: 'unauthorized',
+      });
+      expect(fetchImpl).toHaveBeenCalledTimes(2);
+      expect(renewSession).toHaveBeenCalledTimes(1);
+      expect(onUnauthorized).toHaveBeenCalledTimes(1);
+    });
+
+    it('si la renovación no es posible falla sin reintentar ni notificar dos veces', async () => {
+      const renewSession = jest.fn().mockResolvedValue(false);
+      const onUnauthorized = jest.fn();
+      const { client, fetchImpl } = setup({ renewSession, onUnauthorized });
+      fetchImpl.mockResolvedValue(unauthorized());
+
+      await expect(captureError(client.get('/me'))).resolves.toMatchObject({
+        kind: 'unauthorized',
+      });
+      expect(fetchImpl).toHaveBeenCalledTimes(1);
+      expect(onUnauthorized).not.toHaveBeenCalled();
+    });
+
+    it('los endpoints de auth no disparan renovación ni expiración', async () => {
+      const renewSession = jest.fn();
+      const onUnauthorized = jest.fn();
+      const { client, fetchImpl } = setup({ renewSession, onUnauthorized });
+      fetchImpl.mockResolvedValue(unauthorized());
+
+      await captureError(client.post('/auth/refresh', { skipSessionRefresh: true }));
+      expect(renewSession).not.toHaveBeenCalled();
+      expect(onUnauthorized).not.toHaveBeenCalled();
+    });
+  });
+
   it('expone Retry-After en segundos solo si es un número válido', async () => {
     const { client, fetchImpl } = setup();
     fetchImpl.mockResolvedValueOnce(

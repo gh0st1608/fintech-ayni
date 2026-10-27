@@ -94,7 +94,7 @@ Decisiones:
 
 - **Inyección por contexto, no singleton:** `createContainer(env)` se instancia una vez en `app/_layout.tsx` y se entrega por `ContainerProvider`. Las pruebas inyectan `createTestContainer()` con adaptadores en memoria.
 - **El puerto HTTP no depende de Zod:** recibe `parse?: (data) => T`, y los repositorios pasan `schema.parse`.
-- **Sin capas vacías:** el `FetchHttpClient` se compone en el contenedor junto con `AuthApiRepository` (COPAYNI-19). La notificación de 401 → `sessionExpired` se conecta en COPAYNI-21; el caso de uso `SignOutUseCase('expired')` ya existe.
+- **Sin capas vacías:** el `FetchHttpClient` se compone en el contenedor junto con `AuthApiRepository` (COPAYNI-19) y la renovación de sesión ante 401 (COPAYNI-21).
 
 ## Internacionalización: un JSON por idioma (COPAYNI-16)
 
@@ -155,7 +155,7 @@ El cambio LTR↔RTL requiere reiniciar la app y no funciona en Expo Go.
 - `BottomSheet` es modal: el lector de pantalla solo alcanza su contenido; se cierra con la X, tocando el fondo o con el botón atrás de Android. Sin animación si el sistema pide reducir movimiento (`useReducedMotion`).
 - **Catálogo visual** (`presentation/dev`): en el ambiente `dev`, Perfil → "Catálogo de componentes (dev)" muestra todos los componentes para revisarlos con UX. La ruta `/catalog` está protegida con `Stack.Protected` y no existe en staging ni en prod. Sus textos de ejemplo no van en los JSON de idioma.
 
-## Autenticación (COPAYNI-18, 19, 20)
+## Autenticación (COPAYNI-18, 19, 20, 21)
 
 ```
 SignInScreen    → useStartAuthentication → StartAuthenticationUseCase → AuthApiPort
@@ -195,13 +195,31 @@ VerifyOtpScreen → useVerifyOtp           → VerifyOtpUseCase           → Au
 - Si la ruta se abre sin ellos, la app vuelve al ingreso.
 - Los enlaces de Términos y Privacidad se configuran con `EXPO_PUBLIC_TERMS_URL` / `EXPO_PUBLIC_PRIVACY_URL` (solo https). Sin URL se muestran como texto.
 
+**Renovación de sesión sin bucles (COPAYNI-21)**
+
+```
+Petición → 401 → ¿endpoint de auth (skipSessionRefresh)? ─ sí → error, sin renovar
+                     │ no
+                     ▼
+          RefreshSessionUseCase (una sola renovación en vuelo)
+             ├─ tokens nuevos → la petición se reintenta UNA vez
+             │                    └─ 401 otra vez → expire() → sessionExpired
+             ├─ /auth/refresh rechazado → expire() → sessionExpired (sin reintentar)
+             └─ fallo de red → se propaga; la sesión sigue abierta
+```
+
+- `expire()` borra los tokens y avisa por `SessionEvents`. El `SessionProvider` pasa a `sessionExpired` y limpia la caché de TanStack Query.
+- La bienvenida muestra "Tu sesión expiró. Vuelve a ingresar.".
+- La renovación conserva la elección de Remember Me: `save` sin `persist` mantiene el modo actual.
+- **Cerrar sesión** borra la sesión local de inmediato. La revocación del refresh token (`/auth/logout`) va en segundo plano y no bloquea si no hay red.
+
 ## Pendientes conocidos
 
 - Cierre del `BottomSheet` deslizando hacia abajo: requiere `react-native-gesture-handler` + Reanimated; se evaluará cuando una historia lo necesite.
 - Validación visual del catálogo con UX en dispositivo (COPAYNI-14).
 - Selector de país del `PhoneInput`: sin diseño; hoy el prefijo es fijo o abre un callback.
 - Backend de autenticación (`/auth/start`, `/auth/verify`, `/auth/resend`): las historias COPAYNI-19/20 se cierran con la integración real.
-- Refresh de tokens y conexión 401 → `sessionExpired` (COPAYNI-21).
+- Backend de `/auth/refresh` (rotación con detección de reutilización) y `/auth/logout`: COPAYNI-21 se cierra con la integración real y la prueba de expiración en dispositivo.
 - Marca final (logo, icono y splash nativo) y selector de país del teléfono: pending-scope D15 y D14.
 - Política de OTP (duración, intentos, reenvíos): pending-scope R10.
 - Crash reporting y telemetría mobile: decisión técnica pendiente (pending-scope T8).
