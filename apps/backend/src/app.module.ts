@@ -5,8 +5,10 @@ import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 
 import { type AppConfigService, configModuleOptions } from './config/configuration';
 import { CirclesModule } from './modules/circles/circles.module';
+import { HealthModule } from './modules/health/health.module';
 import { ACCESS_TOKEN_VERIFIER } from './shared/application/ports/access-token-verifier.port';
 import { DenyAllAccessTokenVerifier } from './shared/infrastructure/auth/deny-all-access-token-verifier';
+import { TelemetryShutdown } from './shared/infrastructure/observability/telemetry-shutdown';
 import { AllExceptionsFilter } from './shared/presentation/filters/all-exceptions.filter';
 import { BearerAuthGuard } from './shared/presentation/guards/bearer-auth.guard';
 import { ResponseEnvelopeInterceptor } from './shared/presentation/interceptors/response-envelope.interceptor';
@@ -27,9 +29,11 @@ import { createValidationPipe } from './shared/presentation/pipes/validation.pip
         },
       ],
     }),
+    HealthModule,
     CirclesModule,
   ],
   providers: [
+    TelemetryShutdown,
     { provide: ACCESS_TOKEN_VERIFIER, useClass: DenyAllAccessTokenVerifier },
     { provide: APP_FILTER, useClass: AllExceptionsFilter },
     { provide: APP_PIPE, useFactory: createValidationPipe },

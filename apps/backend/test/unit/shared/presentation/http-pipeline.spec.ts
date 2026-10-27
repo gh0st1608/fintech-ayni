@@ -1,11 +1,21 @@
-import { type CallHandler, type ExecutionContext, RequestTimeoutException } from '@nestjs/common';
+import { EventEmitter } from 'node:events';
+
+import {
+  type CallHandler,
+  type ExecutionContext,
+  Logger,
+  RequestTimeoutException,
+} from '@nestjs/common';
+import { trace } from '@opentelemetry/api';
 import { IsEmail, IsInt, IsString, Min, ValidateNested } from 'class-validator';
 import { Type } from 'class-transformer';
 import { firstValueFrom, NEVER, of, throwError } from 'rxjs';
 
 import { type AppConfigService } from '@src/config/configuration';
 import { ValidationError } from '@src/shared/errors/app-error';
+import { startTelemetry } from '@src/shared/infrastructure/observability/telemetry';
 import {
+  accessLogMiddleware,
   type AppRequest,
   TRACE_ID_HEADER,
   traceIdMiddleware,
@@ -57,6 +67,28 @@ describe('TimeoutInterceptor', () => {
 });
 
 describe('traceIdMiddleware', () => {
+  it('usa el trace id de OpenTelemetry si hay un span activo', () => {
+    const telemetry = startTelemetry({
+      APP_NAME: 'ayni-api',
+      APP_VERSION: '0.1.0',
+      DEPLOYMENT_ENVIRONMENT: 'test',
+      LOG_LEVEL: 'fatal',
+      ENABLE_TRACING: false,
+      ENABLE_METRICS: false,
+      ENABLE_LOGGING: false,
+    });
+    const request = { headers: {} } as unknown as AppRequest;
+
+    const traceId = trace.getTracer('test').startActiveSpan('peticion', (span) => {
+      traceIdMiddleware(request, { setHeader: jest.fn() } as never, jest.fn());
+      span.end();
+      return span.spanContext().traceId;
+    });
+
+    expect(request.traceId).toBe(traceId);
+    return telemetry.shutdown();
+  });
+
   it('asigna un traceId nuevo e ignora el enviado por el cliente', () => {
     const request = { traceId: 'del-cliente', headers: {} } as unknown as AppRequest;
     const response = { setHeader: jest.fn() };
@@ -64,9 +96,50 @@ describe('traceIdMiddleware', () => {
 
     traceIdMiddleware(request, response as never, next);
 
-    expect(request.traceId).toMatch(/^[0-9a-f-]{36}$/);
+    expect(request.traceId).toMatch(/^[0-9a-f]{32}$/);
     expect(response.setHeader).toHaveBeenCalledWith(TRACE_ID_HEADER, request.traceId);
     expect(next).toHaveBeenCalled();
+  });
+});
+
+describe('accessLogMiddleware', () => {
+  let log: jest.SpyInstance;
+  let debug: jest.SpyInstance;
+
+  beforeEach(() => {
+    log = jest.spyOn(Logger.prototype, 'log').mockImplementation(() => undefined);
+    debug = jest.spyOn(Logger.prototype, 'debug').mockImplementation(() => undefined);
+  });
+
+  afterEach(() => jest.restoreAllMocks());
+
+  const finish = (path: string): void => {
+    const request = { method: 'GET', path, traceId: 'a'.repeat(32) } as AppRequest;
+    const response = Object.assign(new EventEmitter(), { statusCode: 200 });
+    const next = jest.fn();
+    accessLogMiddleware(request, response as never, next);
+    expect(next).toHaveBeenCalled();
+    response.emit('finish');
+  };
+
+  it('registra método, ruta sin query, estado, duración y traceId al terminar', () => {
+    finish('/v1/circles/join-config');
+
+    expect(log).toHaveBeenCalledWith({
+      message: 'GET /v1/circles/join-config 200',
+      method: 'GET',
+      path: '/v1/circles/join-config',
+      statusCode: 200,
+      durationMs: expect.any(Number),
+      traceId: 'a'.repeat(32),
+    });
+  });
+
+  it('registra los health checks solo en debug', () => {
+    finish('/health/live');
+
+    expect(log).not.toHaveBeenCalled();
+    expect(debug).toHaveBeenCalledWith(expect.objectContaining({ path: '/health/live' }));
   });
 });
 

@@ -5,11 +5,13 @@ import {
   IsIn,
   IsInt,
   IsNotEmpty,
+  IsOptional,
   IsString,
   IsUrl,
   Matches,
   Max,
   Min,
+  ValidateIf,
   validateSync,
 } from 'class-validator';
 
@@ -103,6 +105,39 @@ export class EnvironmentVariables {
   @IsBoolean()
   ENABLE_SWAGGER: boolean = false;
 
+  /** Ambiente en las trazas, métricas y logs (`deployment.environment.name`): local, dev, prod… */
+  @Matches(/^[a-z][a-z0-9-]*$/)
+  DEPLOYMENT_ENVIRONMENT: string = 'local';
+
+  /** Exporta trazas por OTLP. Sin exportar, las trazas igual existen para correlacionar logs. */
+  @Transform(toBoolean)
+  @IsBoolean()
+  ENABLE_TRACING: boolean = false;
+
+  /** Exporta métricas (duración de peticiones HTTP) por OTLP. */
+  @Transform(toBoolean)
+  @IsBoolean()
+  ENABLE_METRICS: boolean = false;
+
+  /** Exporta los logs por OTLP. Los logs JSON por stdout se escriben siempre. */
+  @Transform(toBoolean)
+  @IsBoolean()
+  ENABLE_LOGGING: boolean = false;
+
+  /**
+   * Endpoint OTLP/HTTP base, sin `/v1/traces`. Obligatorio si se exporta alguna señal. Para
+   * New Relic depende de la región de la cuenta (README).
+   */
+  @ValidateIf((env: EnvironmentVariables) => exportsTelemetry(env))
+  @IsUrl({ require_tld: false, require_protocol: true, protocols: ['http', 'https'] })
+  OTEL_EXPORTER_OTLP_ENDPOINT?: string;
+
+  /** License key de ingesta de New Relic (cabecera `api-key`). Es un secreto: nunca se registra. */
+  @IsOptional()
+  @IsString()
+  @IsNotEmpty()
+  NEW_RELIC_LICENSE_KEY?: string;
+
   /** Moneda de operación (pending-scope M1). Sin valor por defecto: se decide por ambiente. */
   @Matches(/^[A-Z]{3}$/, { message: 'DEFAULT_CURRENCY debe ser un código ISO 4217' })
   DEFAULT_CURRENCY!: string;
@@ -118,6 +153,13 @@ export class EnvironmentVariables {
 
   @IsInt()
   SAVING_PROGRAM_MAX!: number;
+}
+
+/** Si se exporta alguna señal de telemetría (y por tanto se necesita el endpoint OTLP). */
+export function exportsTelemetry(
+  env: Pick<EnvironmentVariables, 'ENABLE_TRACING' | 'ENABLE_METRICS' | 'ENABLE_LOGGING'>,
+): boolean {
+  return env.ENABLE_TRACING || env.ENABLE_METRICS || env.ENABLE_LOGGING;
 }
 
 /**

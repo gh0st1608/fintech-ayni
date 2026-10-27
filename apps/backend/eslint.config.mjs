@@ -70,7 +70,8 @@ export default tseslint.config(
     },
   },
   {
-    files: ['src/config/**/*.ts', 'src/main.ts'],
+    // instrumentation.ts corre antes que NestJS: valida process.env con la misma clase.
+    files: ['src/config/**/*.ts', 'src/main.ts', 'src/instrumentation.ts'],
     rules: { 'no-restricted-properties': 'off' },
   },
   layerBoundary(

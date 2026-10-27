@@ -5,6 +5,7 @@ import {
   Logger,
   NotFoundException,
   RequestTimeoutException,
+  ServiceUnavailableException,
 } from '@nestjs/common';
 import { ThrottlerException } from '@nestjs/throttler';
 
@@ -116,6 +117,22 @@ describe('AllExceptionsFilter', () => {
     expect(JSON.stringify(result.body)).not.toMatch(/detalle interno|Cannot GET|teapot/);
   });
 
+  it('un 503 lanzado a propósito (readiness) responde genérico y no se registra de nuevo', () => {
+    const result = catchWith(new ServiceUnavailableException('database caída'));
+
+    expect(result.status).toBe(503);
+    expect(result.body.error).toEqual({
+      code: 'SERVICE_UNAVAILABLE',
+      message: 'Servicio no disponible temporalmente',
+    });
+    expect(logError).not.toHaveBeenCalled();
+  });
+
+  it('una excepción HTTP 5xx distinta de 503 sí se registra', () => {
+    catchWith(new HttpException('bad gateway', 502));
+    expect(logError).toHaveBeenCalledTimes(1);
+  });
+
   it.each([
     [{ status: 400, expose: true, type: 'entity.parse.failed' }, 400, 'BAD_REQUEST'],
     [{ status: 413, expose: true, type: 'entity.too.large' }, 413, 'PAYLOAD_TOO_LARGE'],
@@ -137,6 +154,6 @@ describe('AllExceptionsFilter', () => {
 
   it('genera un traceId si la petición no lo tiene', () => {
     const result = catchWith(new NotFoundError(), {});
-    expect(result.body.traceId).toMatch(/^[0-9a-f-]{36}$/);
+    expect(result.body.traceId).toMatch(/^[0-9a-f]{32}$/);
   });
 });

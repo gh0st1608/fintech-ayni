@@ -17,10 +17,10 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "typecheck": "tsc --noEmit",
-    "test": "jest --testPathPatterns test/unit test/integration",
-    "test:watch": "jest --watch --testPathPatterns test/unit test/integration",
-    "test:cov": "jest --coverage",
-    "test:e2e": "jest --testPathPatterns test/e2e",
+    "test": "node --experimental-vm-modules --disable-warning=ExperimentalWarning node_modules/jest/bin/jest.js --testPathPatterns test/unit test/integration",
+    "test:watch": "node --experimental-vm-modules --disable-warning=ExperimentalWarning node_modules/jest/bin/jest.js --watch --testPathPatterns test/unit test/integration",
+    "test:cov": "node --experimental-vm-modules --disable-warning=ExperimentalWarning node_modules/jest/bin/jest.js --coverage",
+    "test:e2e": "node --experimental-vm-modules --disable-warning=ExperimentalWarning node_modules/jest/bin/jest.js --testPathPatterns test/e2e",
     "validate": "npm run lint && npm run typecheck && npm run format:check && npm run test:cov && npm run build"
   },
   "jest": {
@@ -34,7 +34,12 @@
       "^.+[.]ts$": [
         "ts-jest",
         {
-          "tsconfig": "tsconfig.json"
+          "tsconfig": "tsconfig.json",
+          "diagnostics": {
+            "ignoreCodes": [
+              151002
+            ]
+          }
         }
       ]
     },
@@ -48,7 +53,8 @@
     ],
     "collectCoverageFrom": [
       "src/**/*.ts",
-      "!src/main.ts"
+      "!src/main.ts",
+      "!src/instrumentation.ts"
     ],
     "coverageThreshold": {
       "global": {
@@ -66,9 +72,29 @@
     "@nestjs/platform-express": "^11.2.8",
     "@nestjs/swagger": "^11.4.7",
     "@nestjs/throttler": "^6.7.1",
+    "@opentelemetry/api": "~1.9.0",
+    "@opentelemetry/api-logs": "^0.223.0",
+    "@opentelemetry/core": "^2.12.0",
+    "@opentelemetry/exporter-logs-otlp-proto": "^0.223.0",
+    "@opentelemetry/exporter-metrics-otlp-http": "^0.223.0",
+    "@opentelemetry/exporter-metrics-otlp-proto": "^0.223.0",
+    "@opentelemetry/exporter-trace-otlp-proto": "^0.223.0",
+    "@opentelemetry/instrumentation": "^0.223.0",
+    "@opentelemetry/instrumentation-express": "^0.71.1",
+    "@opentelemetry/instrumentation-http": "^0.223.0",
+    "@opentelemetry/instrumentation-nestjs-core": "^0.70.0",
+    "@opentelemetry/instrumentation-pino": "^0.69.0",
+    "@opentelemetry/otlp-exporter-base": "^0.223.0",
+    "@opentelemetry/resources": "^2.12.0",
+    "@opentelemetry/sdk-logs": "^0.223.0",
+    "@opentelemetry/sdk-metrics": "^2.12.0",
+    "@opentelemetry/sdk-trace-base": "^2.12.0",
+    "@opentelemetry/sdk-trace-node": "^2.12.0",
+    "@opentelemetry/semantic-conventions": "^1.43.0",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.15.1",
     "helmet": "^8.3.0",
+    "pino": "^10.4.0",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.2"
   },

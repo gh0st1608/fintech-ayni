@@ -2,11 +2,12 @@
 
 API REST de Ayni: NestJS 11 + TypeScript strict con arquitectura hexagonal por módulos, siguiendo la guía _Backend Enterprise NestJS_.
 
-**Estado:** fundaciones de COPAYNI-8, más el primer endpoint real (`GET /v1/circles/join-config`, que consume la app mobile). Fuera de este alcance:
+**Estado:**
 
-- CI, Husky y commitlint: COPAYNI-9.
-- OpenTelemetry, New Relic y health checks: COPAYNI-10.
-- Despliegue AWS y base de datos: COPAYNI-11 y COPAYNI-12.
+- Fundaciones (COPAYNI-8) y el primer endpoint real, `GET /v1/circles/join-config`, que consume la app mobile.
+- CI, Husky y commitlint (COPAYNI-9): ver el README de la raíz.
+- Observabilidad (COPAYNI-10): OpenTelemetry con exportación OTLP a New Relic, logs JSON correlacionados y health checks.
+- Pendiente: despliegue en AWS y base de datos (COPAYNI-11 y COPAYNI-12).
 
 ## Requisitos
 
@@ -39,10 +40,12 @@ npm run start:dev      # http://localhost:3000, Swagger en /docs si ENABLE_SWAGG
 
 ```text
 src/
+  instrumentation.ts      primer import de main.ts: valida el entorno e inicia OpenTelemetry
   main.ts                 arranque: crea la app, aplica configureApp y escucha
   app.module.ts           composición: config, rate limit, módulos y providers globales
   app.setup.ts            Helmet, CORS, body limit, versionado /v1, Swagger (compartido con e2e)
   config/                 ConfigModule y validación de variables al arrancar
+  modules/health/         /health/live y /health/ready
   modules/<módulo>/
     domain/               entidades y value objects puros (sin NestJS, ORM ni AWS)
     application/          casos de uso y puertos (interfaces + tokens de DI)
@@ -53,7 +56,7 @@ src/
     domain/               value objects comunes (Money)
     errors/               jerarquía de errores, sin dependencia de HTTP
     application/ports/    puertos transversales (verificación de access token)
-    infrastructure/       adaptadores transversales
+    infrastructure/       adaptadores transversales (auth; observability: telemetría y logger)
     presentation/         filter, interceptores, pipe, guard, decoradores
 test/
   unit/                   dominio, casos de uso y piezas HTTP aisladas
@@ -124,7 +127,7 @@ sequenceDiagram
 - **Versionado** por URI: `/v1/...`. Una ruta sin versión responde 404.
 - **Éxito:** `{ "success": true, "data": ..., "traceId": "..." }`. Las respuestas 204 van sin cuerpo.
 - **Error:** `{ "success": false, "error": { "code", "message", "details"? }, "traceId": "..." }`.
-- **Trace id:** cada respuesta incluye la cabecera `x-trace-id` (generada por el servidor; con COPAYNI-10 será el trace id de OpenTelemetry).
+- **Trace id:** cada respuesta incluye la cabecera `x-trace-id`, que es el trace id de OpenTelemetry. Con él se busca la traza y sus logs en New Relic.
 - **Autenticación:** todas las rutas exigen `Authorization: Bearer <token>`, salvo las marcadas con `@Public()`.
   - Hasta que exista el módulo auth (COPAYNI-19 y 20), el verificador de producción rechaza todos los tokens, así que ninguna ruta protegida queda abierta.
   - Las pruebas e2e lo reemplazan por un doble.
@@ -142,6 +145,7 @@ sequenceDiagram
 | Regla de negocio (`DomainError`)      | 422  | código propio, p. ej. `OTP_INVALID`          |
 | Rate limit                            | 429  | `RATE_LIMITED`, con cabecera `Retry-After`   |
 | `InfrastructureError`                 | 503  | `INFRASTRUCTURE_ERROR`, con mensaje genérico |
+| Readiness con una dependencia caída   | 503  | `SERVICE_UNAVAILABLE`, sin decir cuál        |
 | Cualquier otro error                  | 500  | `INTERNAL_ERROR`, con mensaje genérico       |
 
 Los errores 5xx se registran con su causa y su trace id. Al cliente nunca le llegan stack traces ni mensajes internos.
@@ -168,6 +172,12 @@ Se validan al arrancar ([src/config/env.validation.ts](src/config/env.validation
 | `BODY_LIMIT`                        | `100kb`              | Tamaño máximo del JSON.                                                                  |
 | `RATE_LIMIT_TTL` / `RATE_LIMIT_MAX` | `60000` / `100`      | Ventana en ms y solicitudes por IP.                                                      |
 | `ENABLE_SWAGGER`                    | `false`              | Expone `/docs`.                                                                          |
+| `DEPLOYMENT_ENVIRONMENT`            | `local`              | Ambiente en trazas, métricas y logs: `local`, `dev`, `staging`, `prod`.                  |
+| `ENABLE_TRACING`                    | `false`              | Exporta trazas por OTLP.                                                                 |
+| `ENABLE_METRICS`                    | `false`              | Exporta métricas (duración de peticiones HTTP) por OTLP.                                 |
+| `ENABLE_LOGGING`                    | `false`              | Exporta los logs por OTLP. Los logs JSON por stdout se escriben siempre.                 |
+| `OTEL_EXPORTER_OTLP_ENDPOINT`       | vacío                | Endpoint OTLP/HTTP base. Obligatorio si algún `ENABLE_*` es `true`.                      |
+| `NEW_RELIC_LICENSE_KEY`             | vacío                | **Secreto.** License key de ingesta; se envía como cabecera `api-key`.                   |
 | `DEFAULT_CURRENCY`                  | obligatoria          | ISO 4217 (pending-scope M1; PEN propuesto).                                              |
 | `JOIN_PAYOUT_MIN` / `MAX` / `STEP`  | obligatorias         | Rango del payout, en unidades menores. Debe ser alcanzable en saltos completos.          |
 | `SAVING_PROGRAM_MAX`                | obligatoria          | Máximo del programa de ahorro, en unidades menores.                                      |
@@ -176,6 +186,92 @@ Se validan al arrancar ([src/config/env.validation.ts](src/config/env.validation
 
 - Nunca se versionan: `.gitignore` excluye `.env*` salvo `.env.example`.
 - En los ambientes desplegados llegan del gestor de secretos (definido en COPAYNI-11).
+
+## Observabilidad
+
+### Qué se genera
+
+- **Trazas:**
+  - Un span de servidor por petición (instrumentación HTTP). El nombre lleva la ruta, p. ej. `GET /v1/circles/join-config`.
+  - Un span hijo por controller (instrumentación NestJS).
+  - Express solo aporta la ruta: no crea spans por middleware ni por handler, para no duplicar.
+  - Los health checks no se trazan.
+- **Métricas:** `http.server.request.duration` (instrumentación HTTP), con temporalidad delta, que es la que procesa New Relic.
+- **Logs:** JSON por stdout, una línea por evento, con `level`, `time`, `service`, `version`, `env`, `context` y `message`.
+  - Dentro de una petición llevan `traceId` y `spanId`.
+  - Cada petición deja una línea `HTTP` con método, ruta sin query string, estado y duración. La de los health checks solo sale con `LOG_LEVEL=debug`.
+  - Se redactan como `[REDACTED]`, hasta tres niveles de anidamiento ([logger.ts](src/shared/infrastructure/observability/logger.ts)):
+    - credenciales: `authorization`, `cookie`, contraseñas, tokens, `apiKey`, `secret`;
+    - OTP y `pin`;
+    - `documentNumber`;
+    - datos de tarjeta: `cardNumber`, `pan`, `cvv` y `cvc`.
+  - Con `ENABLE_LOGGING=true` también se exportan por OTLP, ya redactados.
+- **Resource:** `service.name` (`APP_NAME`), `service.version` (`APP_VERSION`) y `deployment.environment.name` (`DEPLOYMENT_ENVIRONMENT`).
+
+Las trazas se generan aunque `ENABLE_TRACING=false`: así el trace id existe para `x-trace-id` y para los logs. Cada flag decide solo si esa señal se envía.
+
+### Inicialización
+
+[src/instrumentation.ts](src/instrumentation.ts) es el primer import de `main.ts`:
+
+1. Carga `.env` si existe; las variables del entorno tienen prioridad.
+2. Valida el entorno con la misma clase que ConfigModule. Si falla, termina con código 1 sin mostrar valores.
+3. Registra los providers y las instrumentaciones antes de que se carguen http, express, NestJS y pino.
+
+Al cerrar (SIGTERM), `TelemetryShutdown` envía lo pendiente y espera como máximo 5 segundos. Así un collector que no responde no consume el periodo de gracia del orquestador.
+
+### New Relic
+
+Se usa OTLP/HTTP con protobuf y gzip, que es lo que recomienda New Relic.
+
+| Variable                      | Valor                                                                                                        |
+| ----------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| `OTEL_EXPORTER_OTLP_ENDPOINT` | `https://otlp.nr-data.net:4318` (cuenta en EE. UU.) o `https://otlp.eu01.nr-data.net:4318` (cuenta en la UE) |
+| `NEW_RELIC_LICENSE_KEY`       | License key de ingesta (tipo _Ingest - License_) de la cuenta                                                |
+
+- La región y la key dependen de la cuenta de New Relic del proyecto: hay que confirmarlas con quien la administra.
+- La key llega del gestor de secretos (COPAYNI-11). Nunca se versiona ni se registra en los logs.
+- El endpoint es el base: el exporter agrega `/v1/traces`, `/v1/metrics` y `/v1/logs`.
+- Sin license key sirve para cualquier collector OTLP, p. ej. uno local.
+
+### Verificar la conectividad del exporter
+
+1. Arrancar con los flags, el endpoint y la key del ambiente:
+
+   ```bash
+   ENABLE_TRACING=true ENABLE_METRICS=true ENABLE_LOGGING=true \
+   OTEL_EXPORTER_OTLP_ENDPOINT=https://otlp.nr-data.net:4318 NEW_RELIC_LICENSE_KEY=... npm run start:prod
+   ```
+
+2. Hacer una petición y anotar su `x-trace-id`:
+
+   ```bash
+   curl -si http://localhost:3000/v1/circles/join-config | grep -i x-trace-id
+   ```
+
+3. Revisar stderr. Los errores de exportación salen como JSON con `"context":"OpenTelemetry"`, sin la key:
+   - Código `401` o `403`: la license key es inválida o no corresponde a la región del endpoint.
+   - `ECONNREFUSED` o `ENOTFOUND`: el endpoint es inaccesible desde la red del servicio.
+   - Sin errores tras unos 5 segundos (trazas y logs) o 60 segundos (métricas): los envíos se aceptaron.
+4. En New Relic (APM & Services → `ayni-api` → Distributed tracing), buscar la traza con `trace.id` igual al `x-trace-id`.
+5. Abrir _Logs_ desde esa traza: deben aparecer los logs de la petición con el mismo trace id.
+
+Sin cuenta de New Relic, el mismo flujo funciona contra un collector OTLP local (p. ej. `otel/opentelemetry-collector` con el exporter `debug`), con `OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318` y sin key.
+
+### Health checks
+
+| Ruta            | Responde 200 cuando…                      | Uso                                                                 |
+| --------------- | ----------------------------------------- | ------------------------------------------------------------------- |
+| `/health/live`  | el proceso atiende peticiones             | Liveness: si falla, el orquestador reinicia el contenedor.          |
+| `/health/ready` | todas las dependencias críticas responden | Readiness: si falla (503), el balanceador deja de enviarle tráfico. |
+
+- Sin versión, sin autenticación y sin rate limit.
+- La respuesta es `{ "status": "ok" }`, sin versiones, dependencias ni tiempos.
+- Liveness no consulta dependencias: si la base de datos cae, reiniciar la API no lo resuelve.
+- Readiness consulta los `ReadinessIndicator` registrados en [HealthModule](src/modules/health/health.module.ts):
+  - en paralelo, con 2 segundos como máximo cada uno;
+  - qué indicador falló queda en un log `warn`, nunca en la respuesta.
+- Todavía no hay indicadores. El de la base de datos llega con COPAYNI-12.
 
 ## Decisiones y limitaciones
 
@@ -188,4 +284,13 @@ Se validan al arrancar ([src/config/env.validation.ts](src/config/env.validation
 - **`overrides` en package.json:** fuerzan `multer` 2.5 y `js-yaml` 5.4+, que corrigen vulnerabilidades (GHSA-q7qp-rjg7-q26m, GHSA-r3ph-w7gj-g6xm) de las dependencias de `@nestjs/platform-express` y `@nestjs/swagger` 11. Se pueden quitar cuando esos paquetes publiquen versiones corregidas.
 - **Rate limit en memoria:** sirve para una sola instancia. Con varias réplicas o con Lambda necesita un almacenamiento compartido (COPAYNI-11).
 - **Montos desde configuración:** `join-config` se lee de variables validadas mientras no haya base de datos. `userPayoutLimit` es `null` hasta definir el límite por usuario (pending-scope R5).
-- **Logs:** por ahora se usa el logger de NestJS. Los logs estructurados correlacionados con trazas llegan con COPAYNI-10.
+- **OpenTelemetry 2.x (SDK 2.12, instrumentaciones 0.223):**
+  - La línea 3.x exige Node 22.15 o superior, y el proyecto fija 22.13.
+  - `@opentelemetry/api` queda en 1.9 porque el SDK 2.12 no admite 1.10.
+- **Providers armados a mano en lugar de `@opentelemetry/sdk-node`:** sdk-node agrega gRPC, Zipkin y Prometheus, y configura exporters desde variables `OTEL_*` por su cuenta. Así toda la configuración pasa por la validación de entorno.
+- **Jest con `--experimental-vm-modules`:** los exporters OTLP cargan `http` con `import()` dinámico, que Jest solo admite con ese flag. Las pruebas siguen siendo CommonJS.
+- **Las instrumentaciones no aplican dentro de Jest**, porque Jest usa su propio cargador de módulos.
+  - Las pruebas cubren la exportación OTLP contra un collector falso y la correlación de logs con spans manuales.
+  - La forma de las trazas HTTP (un span de servidor por petición, sin duplicados) se verificó con el build en un proceso Node real.
+- **Muestreo:** se trazan todas las peticiones (ParentBased + AlwaysOn). Si el volumen o el costo de New Relic lo exigen, se agrega un ratio por variable.
+- **Propagación W3C:** se acepta el `traceparent` entrante, para continuar trazas que vienen de API Gateway o de otros servicios. Un cliente puede elegir su trace id, pero eso solo afecta a la correlación de su propia petición.

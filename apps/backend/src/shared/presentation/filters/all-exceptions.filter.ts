@@ -5,6 +5,7 @@ import {
   HttpException,
   HttpStatus,
   Logger,
+  ServiceUnavailableException,
 } from '@nestjs/common';
 import { type Response } from 'express';
 
@@ -34,6 +35,8 @@ const STATUS_BY_KIND: Record<ErrorKind, number> = {
   infrastructure: HttpStatus.SERVICE_UNAVAILABLE,
 };
 
+const UNAVAILABLE_MESSAGE = 'Servicio no disponible temporalmente';
+
 /** Errores HTTP del framework y de body-parser: código y mensaje propios, nunca el original. */
 const FRAMEWORK_ERRORS: Partial<Record<number, Omit<HttpError, 'status'>>> = {
   [HttpStatus.BAD_REQUEST]: { code: 'BAD_REQUEST', message: 'Petición mal formada' },
@@ -57,6 +60,7 @@ const FRAMEWORK_ERRORS: Partial<Record<number, Omit<HttpError, 'status'>>> = {
     code: 'RATE_LIMITED',
     message: 'Demasiadas solicitudes, intenta más tarde',
   },
+  [HttpStatus.SERVICE_UNAVAILABLE]: { code: 'SERVICE_UNAVAILABLE', message: UNAVAILABLE_MESSAGE },
 };
 
 const INTERNAL_ERROR: HttpError = {
@@ -64,8 +68,6 @@ const INTERNAL_ERROR: HttpError = {
   code: 'INTERNAL_ERROR',
   message: 'Ocurrió un error inesperado',
 };
-
-const UNAVAILABLE_MESSAGE = 'Servicio no disponible temporalmente';
 
 /** Errores de body-parser (JSON mal formado, cuerpo demasiado grande). */
 function isClientHttpError(error: unknown): error is { status: number; expose: true } {
@@ -104,7 +106,8 @@ export class AllExceptionsFilter implements ExceptionFilter {
     const traceId = traceIdOf(request);
 
     const error = this.toHttpError(exception);
-    if (error.status >= 500) {
+    // Un 503 de framework se lanza a propósito (readiness) y ya se registró con su motivo.
+    if (error.status >= 500 && !(exception instanceof ServiceUnavailableException)) {
       this.logger.error(
         { traceId, method: request.method, path: request.path, status: error.status },
         exception instanceof Error ? exception.stack : String(exception),

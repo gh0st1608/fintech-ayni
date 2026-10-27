@@ -1,3 +1,5 @@
+// Primero: instrumenta los módulos que se cargan después.
+import './instrumentation';
 import 'reflect-metadata';
 
 import { Logger } from '@nestjs/common';

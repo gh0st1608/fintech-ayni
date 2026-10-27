@@ -64,4 +64,55 @@ describe('validateEnvironment', () => {
       /JOIN_PAYOUT_MIN[\s\S]*JOIN_PAYOUT_MAX[\s\S]*JOIN_PAYOUT_STEP[\s\S]*SAVING_PROGRAM_MAX/,
     );
   });
+
+  describe('observabilidad', () => {
+    it('no exporta nada por defecto y no exige endpoint', () => {
+      expect(validateEnvironment(REQUIRED)).toMatchObject({
+        DEPLOYMENT_ENVIRONMENT: 'local',
+        ENABLE_TRACING: false,
+        ENABLE_METRICS: false,
+        ENABLE_LOGGING: false,
+      });
+    });
+
+    it.each(['ENABLE_TRACING', 'ENABLE_METRICS', 'ENABLE_LOGGING'])(
+      'exige OTEL_EXPORTER_OTLP_ENDPOINT si %s=true',
+      (flag) => {
+        expect(() => validateEnvironment({ ...REQUIRED, [flag]: 'true' })).toThrow(
+          /OTEL_EXPORTER_OTLP_ENDPOINT/,
+        );
+        expect(
+          validateEnvironment({
+            ...REQUIRED,
+            [flag]: 'true',
+            OTEL_EXPORTER_OTLP_ENDPOINT: 'https://otlp.example.com:4318',
+          }),
+        ).toMatchObject({ [flag]: true });
+      },
+    );
+
+    it('rechaza un ambiente inválido, un endpoint sin http(s) y una license key vacía', () => {
+      expect(() =>
+        validateEnvironment({
+          ...REQUIRED,
+          ENABLE_TRACING: 'true',
+          OTEL_EXPORTER_OTLP_ENDPOINT: 'grpc://collector:4317',
+          DEPLOYMENT_ENVIRONMENT: 'Producción',
+          NEW_RELIC_LICENSE_KEY: '',
+        }),
+      ).toThrow(
+        /DEPLOYMENT_ENVIRONMENT[\s\S]*OTEL_EXPORTER_OTLP_ENDPOINT[\s\S]*NEW_RELIC_LICENSE_KEY/,
+      );
+    });
+
+    it('nunca muestra la license key en el error', () => {
+      expect(() =>
+        validateEnvironment({
+          ...REQUIRED,
+          ENABLE_TRACING: 'yes',
+          NEW_RELIC_LICENSE_KEY: 'secreta-123',
+        }),
+      ).toThrow(expect.objectContaining({ message: expect.not.stringContaining('secreta-123') }));
+    });
+  });
 });
