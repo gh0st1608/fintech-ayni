@@ -2,10 +2,16 @@ import { useTranslation } from 'react-i18next';
 
 import { useContainer } from '@/presentation/providers/ContainerProvider';
 
-/** Cabecera de "Elige un servicio" dentro del stack privado. */
+/** Cabeceras del flujo de unión dentro del stack privado. */
 export function useJoinScreenOptions() {
   const { t } = useTranslation();
-  return { title: t('join.title'), headerBackButtonDisplayMode: 'minimal' } as const;
+  const options = (title: string) => ({ title, headerBackButtonDisplayMode: 'minimal' }) as const;
+  return {
+    chooseService: options(t('join.title')),
+    payoutAmount: options(t('join.payout.title')),
+    monthlyPayIn: options(t('join.monthlyPayIn.title')),
+    savingProgram: options(t('saving.chooseCircle.title')),
+  };
 }
 
 /** Cabecera del catálogo del design system. */

@@ -5,6 +5,7 @@ import type { RestoreSessionUseCase } from '@/application/auth/usecases/RestoreS
 import type { SignOutUseCase } from '@/application/auth/usecases/SignOutUseCase';
 import type { StartAuthenticationUseCase } from '@/application/auth/usecases/StartAuthenticationUseCase';
 import type { VerifyOtpUseCase } from '@/application/auth/usecases/VerifyOtpUseCase';
+import type { GetJoinConfigUseCase } from '@/application/circles/usecases/GetJoinConfigUseCase';
 import type { ChangeLanguageUseCase } from '@/application/i18n/usecases/ChangeLanguageUseCase';
 import type { ResolveLanguageUseCase } from '@/application/i18n/usecases/ResolveLanguageUseCase';
 
@@ -29,6 +30,9 @@ export interface AppContainer {
     startAuthentication: StartAuthenticationUseCase;
     verifyOtp: VerifyOtpUseCase;
     resendOtp: ResendOtpUseCase;
+  };
+  circles: {
+    getJoinConfig: GetJoinConfigUseCase;
   };
   i18n: {
     resolveLanguage: ResolveLanguageUseCase;

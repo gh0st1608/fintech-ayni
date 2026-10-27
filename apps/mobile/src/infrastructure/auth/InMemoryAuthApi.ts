@@ -5,6 +5,7 @@ import { AuthTokens } from '@/domain/auth/value-objects/AuthTokens';
 import type { LoginIdentifier } from '@/domain/auth/value-objects/LoginIdentifier';
 import type { OtpCode } from '@/domain/auth/value-objects/OtpCode';
 import { AppError } from '@/domain/shared/errors/AppError';
+import { simulateLatency } from '@/infrastructure/fake/simulateLatency';
 
 /** Código que acepta el adaptador falso (documentado en .env.example). */
 export const FAKE_OTP_CODE = '1234';
@@ -26,18 +27,6 @@ interface StoredChallenge {
 }
 
 const SECOND = 1000;
-
-function wait(ms: number, signal?: AbortSignal): Promise<void> {
-  return new Promise((resolve, reject) => {
-    if (signal?.aborted) return reject(new AppError('cancelled', 'Request cancelled'));
-    if (ms <= 0) return resolve();
-    const timer = setTimeout(resolve, ms);
-    signal?.addEventListener('abort', () => {
-      clearTimeout(timer);
-      reject(new AppError('cancelled', 'Request cancelled'));
-    });
-  });
-}
 
 /** Imita el enmascarado del backend: "j***@mail.com" o "+51 ••• ••• 789". */
 export function maskDestination(identifier: LoginIdentifier): string {
@@ -75,13 +64,13 @@ export class InMemoryAuthApi implements AuthApiPort {
     identifier: LoginIdentifier,
     signal?: AbortSignal,
   ): Promise<AuthChallenge> {
-    await wait(this.latencyMs, signal);
+    await simulateLatency(this.latencyMs, signal);
     this.sequence += 1;
     return this.issue(`fake-challenge-${this.sequence}`, identifier);
   }
 
   async verifyOtp(challengeId: string, code: OtpCode, signal?: AbortSignal): Promise<AuthTokens> {
-    await wait(this.latencyMs, signal);
+    await simulateLatency(this.latencyMs, signal);
     const challenge = this.challenges.get(challengeId);
     if (!challenge || challenge.expiresAt <= this.now().getTime()) {
       throw new OtpVerificationError('expired');
@@ -97,7 +86,7 @@ export class InMemoryAuthApi implements AuthApiPort {
   }
 
   async resendOtp(challengeId: string, signal?: AbortSignal): Promise<AuthChallenge> {
-    await wait(this.latencyMs, signal);
+    await simulateLatency(this.latencyMs, signal);
     const challenge = this.challenges.get(challengeId);
     if (!challenge) throw new AppError('not_found', 'Unknown challenge', { status: 404 });
     if (challenge.resendAvailableAt > this.now().getTime()) {
@@ -111,7 +100,7 @@ export class InMemoryAuthApi implements AuthApiPort {
   }
 
   async refreshSession(refreshToken: string): Promise<AuthTokens> {
-    await wait(this.latencyMs);
+    await simulateLatency(this.latencyMs);
     if (!this.refreshTokens.delete(refreshToken)) {
       throw new AppError('unauthorized', 'Refresh token expired or revoked', { status: 401 });
     }
@@ -119,7 +108,7 @@ export class InMemoryAuthApi implements AuthApiPort {
   }
 
   async logout(refreshToken: string): Promise<void> {
-    await wait(this.latencyMs);
+    await simulateLatency(this.latencyMs);
     this.refreshTokens.delete(refreshToken);
   }
 

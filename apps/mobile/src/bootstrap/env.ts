@@ -18,11 +18,17 @@ const envSchema = z
     httpTimeoutMs: z.coerce.number().int().positive().default(15000),
     /** fake: adaptador en memoria mientras no exista el backend; solo se admite en dev. */
     authApi: z.enum(['http', 'fake']).default('http'),
+    /** Igual que authApi, para círculos y configuración de unión (E3). */
+    circlesApi: z.enum(['http', 'fake']).default('http'),
     termsUrl: optionalHttpsUrl,
     privacyUrl: optionalHttpsUrl,
   })
   .refine((env) => env.authApi === 'http' || env.appEnv === 'dev', {
     path: ['authApi'],
+    message: 'fake is only allowed in dev',
+  })
+  .refine((env) => env.circlesApi === 'http' || env.appEnv === 'dev', {
+    path: ['circlesApi'],
     message: 'fake is only allowed in dev',
   });
 
@@ -49,6 +55,7 @@ export function loadEnv(): Env {
     defaultCurrency: process.env.EXPO_PUBLIC_DEFAULT_CURRENCY,
     httpTimeoutMs: process.env.EXPO_PUBLIC_HTTP_TIMEOUT_MS,
     authApi: process.env.EXPO_PUBLIC_AUTH_API,
+    circlesApi: process.env.EXPO_PUBLIC_CIRCLES_API,
     termsUrl: process.env.EXPO_PUBLIC_TERMS_URL,
     privacyUrl: process.env.EXPO_PUBLIC_PRIVACY_URL,
   });

@@ -213,6 +213,20 @@ Petición → 401 → ¿endpoint de auth (skipSessionRefresh)? ─ sí → error
 - La renovación conserva la elección de Remember Me: `save` sin `persist` mantiene el modo actual.
 - **Cerrar sesión** borra la sesión local de inmediato. La revocación del refresh token (`/auth/logout`) va en segundo plano y no bloquea si no hay red.
 
+## Unirse a un círculo (COPAYNI-27, 28)
+
+```
+JoinScreen / PayoutAmountScreen → useJoinConfig → GetJoinConfigUseCase → JoinConfigRepositoryPort
+                                → JoinFlowProvider (JoinCircleDraft en memoria)
+```
+
+- Botón central "+" → **Elige un servicio** (`/join`) → Game'ya (`/join/payout-amount`) o programa de ahorro (`/join/saving-program`, COPAYNI-32).
+- Los montos máximos y el rango del slider llegan de `GET /circles/join-config` ([docs/api/circles.md](../../docs/api/circles.md)). Mientras no cargan, las opciones se muestran sin monto.
+  - La API falsa se elige con `EXPO_PUBLIC_CIRCLES_API=fake` (solo `dev`).
+- `PayoutRange` (dominio) ajusta cualquier monto al salto y lo limita al máximo del usuario (`capTo`).
+- `JoinCircleDraft` es inmutable y vive en `JoinFlowProvider` (nunca en disco). "Unirme a un Game'ya" empieza un borrador limpio; "Join now" de Home podrá empezarlo con un monto (`start(amount)`).
+- `Slider` del design system: se arrastra o se toca la pista; con lector de pantalla es `adjustable` y sube o baja de a un salto, anunciando el monto formateado.
+
 ## Pendientes conocidos
 
 - Cierre del `BottomSheet` deslizando hacia abajo: requiere `react-native-gesture-handler` + Reanimated; se evaluará cuando una historia lo necesite.
@@ -222,5 +236,6 @@ Petición → 401 → ¿endpoint de auth (skipSessionRefresh)? ─ sí → error
 - Backend de `/auth/refresh` (rotación con detección de reutilización) y `/auth/logout`: COPAYNI-21 se cierra con la integración real y la prueba de expiración en dispositivo.
 - Marca final (logo, icono y splash nativo) y selector de país del teléfono: pending-scope D15 y D14.
 - Política de OTP (duración, intentos, reenvíos): pending-scope R10.
+- Backend de `/circles/join-config`; rangos y salto definitivos (M6, R15); carrusel y "Learn More" del paso 1 (D16).
 - Crash reporting y telemetría mobile: decisión técnica pendiente (pending-scope T8).
 - React Hook Form: los formularios de auth tienen un solo campo y no lo necesitan; se evaluará con el primer formulario de varios campos (KYC). Hoy `@hookform/resolvers` tiene un conflicto de dependencias opcionales.

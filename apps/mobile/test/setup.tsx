@@ -6,6 +6,7 @@ process.env.EXPO_PUBLIC_DEFAULT_LANGUAGE = 'es';
 process.env.EXPO_PUBLIC_DEFAULT_CURRENCY = 'PEN';
 process.env.EXPO_PUBLIC_HTTP_TIMEOUT_MS = '15000';
 process.env.EXPO_PUBLIC_AUTH_API = 'fake';
+process.env.EXPO_PUBLIC_CIRCLES_API = 'fake';
 
 jest.mock('@react-native-async-storage/async-storage', () =>
   require('@react-native-async-storage/async-storage/jest/async-storage-mock'),

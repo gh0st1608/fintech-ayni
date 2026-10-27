@@ -6,15 +6,19 @@ import { RestoreSessionUseCase } from '@/application/auth/usecases/RestoreSessio
 import { SignOutUseCase } from '@/application/auth/usecases/SignOutUseCase';
 import { StartAuthenticationUseCase } from '@/application/auth/usecases/StartAuthenticationUseCase';
 import { VerifyOtpUseCase } from '@/application/auth/usecases/VerifyOtpUseCase';
+import { GetJoinConfigUseCase } from '@/application/circles/usecases/GetJoinConfigUseCase';
 import { ChangeLanguageUseCase } from '@/application/i18n/usecases/ChangeLanguageUseCase';
 import { ResolveLanguageUseCase } from '@/application/i18n/usecases/ResolveLanguageUseCase';
 import type { AuthApiPort } from '@/domain/auth/ports/AuthApiPort';
 import type { TokenStoragePort } from '@/domain/auth/ports/TokenStoragePort';
+import type { JoinConfigRepositoryPort } from '@/domain/circles/ports/JoinConfigRepositoryPort';
 import type { DeviceLocalePort } from '@/domain/i18n/ports/DeviceLocalePort';
 import type { LanguagePreferencePort } from '@/domain/i18n/ports/LanguagePreferencePort';
 import type { LayoutDirectionPort } from '@/domain/i18n/ports/LayoutDirectionPort';
 import { AuthApiRepository } from '@/infrastructure/auth/AuthApiRepository';
 import { InMemoryAuthApi } from '@/infrastructure/auth/InMemoryAuthApi';
+import { InMemoryJoinConfigRepository } from '@/infrastructure/circles/InMemoryJoinConfigRepository';
+import { JoinConfigApiRepository } from '@/infrastructure/circles/JoinConfigApiRepository';
 import { ExpoDeviceLocale } from '@/infrastructure/device/ExpoDeviceLocale';
 import { ReactNativeLayoutDirection } from '@/infrastructure/device/ReactNativeLayoutDirection';
 import { FetchHttpClient } from '@/infrastructure/http/FetchHttpClient';
@@ -30,6 +34,7 @@ export interface ContainerAdapters {
   deviceLocale: DeviceLocalePort;
   layoutDirection: LayoutDirectionPort;
   authApi: AuthApiPort;
+  joinConfig: JoinConfigRepositoryPort;
 }
 
 /** Raíz de composición: único lugar que conoce las implementaciones concretas. */
@@ -54,6 +59,10 @@ export function createContainer(
     deviceLocale: new ExpoDeviceLocale(),
     layoutDirection: new ReactNativeLayoutDirection(),
     authApi: env.authApi === 'fake' ? new InMemoryAuthApi() : new AuthApiRepository(http),
+    joinConfig:
+      env.circlesApi === 'fake'
+        ? new InMemoryJoinConfigRepository(env.defaultCurrency)
+        : new JoinConfigApiRepository(http),
     ...overrides,
   };
 
@@ -80,6 +89,9 @@ export function createContainer(
       startAuthentication: new StartAuthenticationUseCase(adapters.authApi),
       verifyOtp: new VerifyOtpUseCase(adapters.authApi, adapters.tokenStorage),
       resendOtp: new ResendOtpUseCase(adapters.authApi),
+    },
+    circles: {
+      getJoinConfig: new GetJoinConfigUseCase(adapters.joinConfig),
     },
     i18n: {
       resolveLanguage: new ResolveLanguageUseCase(

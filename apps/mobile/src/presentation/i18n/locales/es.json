@@ -35,7 +35,36 @@
   },
   "join": {
     "title": "Elige un servicio",
-    "a11yButton": "Unirse a un círculo o a un programa de ahorro"
+    "a11yButton": "Unirse a un círculo o a un programa de ahorro",
+    "step": "Paso {{current}} de {{total}}",
+    "next": "Siguiente",
+    "question": "¿Qué te gustaría hacer?",
+    "gameya": {
+      "title": "Unirme a un Game'ya",
+      "description": "Elige tu turno preferido y el monto de payout que quieras.",
+      "descriptionWithMax": "Elige tu turno preferido y cualquier monto de payout de hasta {{amount}} por Game'ya."
+    },
+    "saving": {
+      "title": "Unirme a un programa de ahorro",
+      "description": "Ahorra en cuotas y recíbelo al final del plazo elegido, con cashback.",
+      "descriptionWithMax": "Ahorra en cuotas hasta {{amount}} y recíbelo al final del plazo elegido, con cashback."
+    },
+    "payout": {
+      "title": "Monto de payout",
+      "question": "¿Cuánto quieres recibir en tu turno?",
+      "sliderLabel": "Monto de payout",
+      "userLimit": "Tu límite mensual permite un payout de hasta {{amount}}. Sube más documentos para aumentarlo.",
+      "belowMinimum": "Tu límite mensual todavía no alcanza el payout mínimo. Sube más documentos para aumentarlo.",
+      "info": "Tu cuota mensual se descuenta automáticamente."
+    },
+    "monthlyPayIn": {
+      "title": "Cuota mensual"
+    }
+  },
+  "saving": {
+    "chooseCircle": {
+      "title": "Elige un círculo de ahorro"
+    }
   },
   "profile": {
     "logout": "Cerrar sesión",

@@ -23,6 +23,12 @@ export async function renderWithProviders(
 ) {
   const i18n = await createI18n(language, 'es');
   const queryClient = createQueryClient();
+  // Sin recolección: sus timers de 5 min mantendrían vivo a Jest al terminar el archivo.
+  const defaults = queryClient.getDefaultOptions();
+  queryClient.setDefaultOptions({
+    queries: { ...defaults.queries, gcTime: Infinity },
+    mutations: { ...defaults.mutations, gcTime: Infinity },
+  });
   const view = await render(
     <SafeAreaProvider initialMetrics={SAFE_AREA}>
       <ContainerProvider container={setup.container}>

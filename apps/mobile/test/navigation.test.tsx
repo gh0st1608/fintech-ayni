@@ -60,6 +60,24 @@ describe('shell de navegación', () => {
     await waitFor(() => expect(screen).toHavePathname('/join'));
   });
 
+  it('Elige un servicio → Game’ya → monto (paso 1) → paso 2', async () => {
+    await storeSession();
+    await renderRouter(APP_DIR, { initialUrl: '/join' });
+    await fireEvent.press(await screen.findByRole('button', { name: /Unirme a un Game'ya/ }));
+    await waitFor(() => expect(screen).toHavePathname('/join/payout-amount'));
+
+    expect(await screen.findByTestId('payout-slider', {}, { timeout: 5000 })).toBeTruthy();
+    await fireEvent.press(screen.getByRole('button', { name: 'Siguiente' }));
+    await waitFor(() => expect(screen).toHavePathname('/join/monthly-pay-in'));
+  });
+
+  it('Elige un servicio → programa de ahorro', async () => {
+    await storeSession();
+    await renderRouter(APP_DIR, { initialUrl: '/join' });
+    await fireEvent.press(await screen.findByRole('button', { name: /programa de ahorro/ }));
+    await waitFor(() => expect(screen).toHavePathname('/join/saving-program'));
+  });
+
   it('bienvenida → ingreso → OTP correcto abre Home; cerrar sesión vuelve a la bienvenida', async () => {
     await renderRouter(APP_DIR, { initialUrl: '/' });
     await fireEvent.press(await screen.findByRole('button', { name: 'Continuar' }));
@@ -118,10 +136,12 @@ describe('shell de navegación', () => {
     beforeEach(() => {
       process.env.EXPO_PUBLIC_APP_ENV = 'prod';
       process.env.EXPO_PUBLIC_AUTH_API = 'http';
+      process.env.EXPO_PUBLIC_CIRCLES_API = 'http';
     });
     afterEach(() => {
       process.env.EXPO_PUBLIC_APP_ENV = original.EXPO_PUBLIC_APP_ENV;
       process.env.EXPO_PUBLIC_AUTH_API = original.EXPO_PUBLIC_AUTH_API;
+      process.env.EXPO_PUBLIC_CIRCLES_API = original.EXPO_PUBLIC_CIRCLES_API;
     });
 
     it('el catálogo no existe ni se ofrece en el perfil', async () => {

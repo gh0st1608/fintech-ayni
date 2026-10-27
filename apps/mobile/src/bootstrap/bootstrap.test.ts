@@ -12,13 +12,14 @@ describe('parseEnv', () => {
       defaultCurrency: 'PEN',
       httpTimeoutMs: 15000,
       authApi: 'http',
+      circlesApi: 'http',
     });
   });
 
-  it('solo admite la API de auth falsa en dev', () => {
-    const base = { apiUrl: 'https://api.example.com/v1', authApi: 'fake' };
-    expect(parseEnv({ ...base, appEnv: 'dev' }).authApi).toBe('fake');
-    expect(() => parseEnv({ ...base, appEnv: 'prod' })).toThrow(/authApi/);
+  it.each(['authApi', 'circlesApi'] as const)('solo admite %s falsa en dev', (key) => {
+    const base = { apiUrl: 'https://api.example.com/v1', [key]: 'fake' };
+    expect(parseEnv({ ...base, appEnv: 'dev' })[key]).toBe('fake');
+    expect(() => parseEnv({ ...base, appEnv: 'prod' })).toThrow(new RegExp(key));
   });
 
   it('los enlaces legales deben ser https; vacíos cuentan como no definidos', () => {

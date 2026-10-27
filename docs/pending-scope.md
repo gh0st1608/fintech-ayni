@@ -38,6 +38,7 @@ El Figma está localizado para Marruecos/Egipto (MAD, árabe, Fawry). El backlog
 | D12 | **Login social** (el texto lo menciona, pero no hay botones) | Decidir si entra o se elimina el texto | PO |
 | D13 | **Back-office** de administración: crear y operar círculos, validar KYC, conciliar pagos, gestionar ofertas y metas | Sin él no se puede operar el producto | PO / UX / TL |
 | D14 | **Selector de país** del teléfono en el login y en el Perfil | Sin él, el login exige el formato internacional (+51…); el campo Email/Phone del Figma no indica país (COPAYNI-19) | UX / PO |
+| D16 | **Payout Amount:** contenido del carrusel informativo y destino de "Learn More"; ilustraciones de "Elige un servicio"; textos del paso 1; porcentaje de cashback (R6) | "Elige un servicio" ya usa el título y los textos del Figma (55:9069), pero con iconos en lugar de las ilustraciones y sin el 20% de cashback. Payout Amount muestra un único aviso sin "Learn More": no se pudo obtener el diseño por el límite de la integración (COPAYNI-27, 28) | UX / PO |
 | D15 | **Marca final** (Figma dice "Dart", el producto es Ayni): logo, icono de la app e imagen del splash nativo | Hoy se muestra el nombre como texto y el splash usa el icono por defecto de Expo (COPAYNI-18) | PO / UX |
 
 ## 3. Reglas de negocio por confirmar
@@ -57,6 +58,7 @@ El Figma está localizado para Marruecos/Egipto (MAD, árabe, Fawry). El backlog
 | R11 | Qué **documentos** son obligatorios y cuáles opcionales; verificación manual o automática; vigencia | H6.3–H6.6 |
 | R12 | **Nombres de los planes de ahorro:** ¿el backend los envía ya traducidos o como claves para los JSON de idioma? | COPAYNI-32 |
 | R13 | **"Remember Me":** confirmar que, sin marcar, la sesión vive solo en memoria y termina al cerrar la app (implementado así en mobile, marcado por defecto como en el Figma) | COPAYNI-20 |
+| R15 | **Salto del slider de payout:** de cuánto en cuánto se elige el monto (mobile usa 500 provisional, configurable desde el backend) | COPAYNI-28 |
 | R14 | **Biometría:** confirmar el nuevo estado de sesión `locked` y cuándo se vuelve a pedir al volver de background | COPAYNI-22 |
 
 ## 4. Decisiones técnicas y de proveedores

@@ -35,7 +35,36 @@
   },
   "join": {
     "title": "Choose a service",
-    "a11yButton": "Join a circle or a saving program"
+    "a11yButton": "Join a circle or a saving program",
+    "step": "Step {{current}} of {{total}}",
+    "next": "Next",
+    "question": "What would you like to do?",
+    "gameya": {
+      "title": "Join a Game'ya",
+      "description": "Select your preferred slot and choose any payout amount.",
+      "descriptionWithMax": "Select your preferred slot and choose any payout amount up to {{amount}} per Game'ya."
+    },
+    "saving": {
+      "title": "Join Saving Program",
+      "description": "Save in installments and receive it at the end of the chosen duration, with cashback.",
+      "descriptionWithMax": "Save in installments up to {{amount}} and receive it at the end of the chosen duration, with cashback."
+    },
+    "payout": {
+      "title": "Payout Amount",
+      "question": "How much do you want to receive on your turn?",
+      "sliderLabel": "Payout amount",
+      "userLimit": "Your monthly limit allows a payout of up to {{amount}}. Upload more documents to increase it.",
+      "belowMinimum": "Your monthly limit doesn't reach the minimum payout yet. Upload more documents to increase it.",
+      "info": "Your monthly pay-in is deducted automatically."
+    },
+    "monthlyPayIn": {
+      "title": "Monthly Pay-in"
+    }
+  },
+  "saving": {
+    "chooseCircle": {
+      "title": "Choose a Saving Circle"
+    }
   },
   "profile": {
     "logout": "Log out",

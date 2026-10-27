@@ -1,5 +1,7 @@
 import { Stack } from 'expo-router';
 
+import { JoinFlowProvider } from '@/presentation/join/JoinFlowProvider';
+
 import {
   useCatalogScreenOptions,
   useIsDevEnvironment,
@@ -11,13 +13,19 @@ export default function PrivateLayout() {
   const catalogOptions = useCatalogScreenOptions();
   const isDev = useIsDevEnvironment();
 
+  // El borrador de unión vive mientras dure la sesión privada; cada flujo lo reinicia al empezar.
   return (
-    <Stack>
-      <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-      <Stack.Screen name="join" options={joinOptions} />
-      <Stack.Protected guard={isDev}>
-        <Stack.Screen name="catalog" options={catalogOptions} />
-      </Stack.Protected>
-    </Stack>
+    <JoinFlowProvider>
+      <Stack>
+        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        <Stack.Screen name="join/index" options={joinOptions.chooseService} />
+        <Stack.Screen name="join/payout-amount" options={joinOptions.payoutAmount} />
+        <Stack.Screen name="join/monthly-pay-in" options={joinOptions.monthlyPayIn} />
+        <Stack.Screen name="join/saving-program" options={joinOptions.savingProgram} />
+        <Stack.Protected guard={isDev}>
+          <Stack.Screen name="catalog" options={catalogOptions} />
+        </Stack.Protected>
+      </Stack>
+    </JoinFlowProvider>
   );
 }
