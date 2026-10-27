@@ -1,0 +1,8 @@
+[
+  {
+    "id": "GHSA-mrhx-c7xc-m3w5",
+    "package": "zod",
+    "reason": "Solo en @expo/cli (herramienta de build, no va en el bundle), que depende de zod 3. La app usa zod 4.6.7, ya corregido. npm audit fix propone bajar a Expo 54. Revisar al actualizar Expo.",
+    "expires": "2027-01-31"
+  }
+]

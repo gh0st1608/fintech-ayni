@@ -105,7 +105,7 @@ export default tseslint.config(
     },
   },
   {
-    files: ['eslint.config.mjs'],
+    files: ['eslint.config.mjs', '.lintstagedrc.mjs'],
     extends: [tseslint.configs.disableTypeChecked],
   },
 );

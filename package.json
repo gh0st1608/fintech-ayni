@@ -1,0 +1,18 @@
+{
+  "name": "fintech-ayni",
+  "private": true,
+  "description": "Herramientas del repositorio: hooks de git y convención de commits. Cada app tiene sus propias dependencias.",
+  "engines": {
+    "node": ">=22.13"
+  },
+  "scripts": {
+    "prepare": "husky",
+    "commitlint": "commitlint"
+  },
+  "devDependencies": {
+    "@commitlint/cli": "^21.2.4",
+    "@commitlint/config-conventional": "^21.2.4",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.4.0"
+  }
+}
