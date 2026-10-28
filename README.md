@@ -6,6 +6,7 @@ Ayni: app de ahorro colaborativo (ROSCA / Game'ya). Monorepo con paquetes npm in
 | --- | --- | --- |
 | [apps/mobile](apps/mobile) | React Native + Expo, arquitectura hexagonal | [README](apps/mobile/README.md) |
 | [apps/backend](apps/backend) | NestJS + TypeScript, arquitectura hexagonal | [README](apps/backend/README.md) |
+| [infra/terraform](infra/terraform) | Terraform: dev con el emulador floci, prd en AWS | [README](infra/terraform/README.md) |
 
 Contratos de API: [docs/api](docs/api). Contexto de producto y backlog: [docs](docs).
 
@@ -37,6 +38,7 @@ Corre en cada pull request y en cada push a `main`.
 | `secrets` | gitleaks sobre todo el historial (`--redact`: el log no muestra los valores). |
 | `backend` | lint (con límites entre capas), typecheck, formato, pruebas unitarias, de integración y e2e con cobertura ≥ 90%, build y vulnerabilidades. |
 | `mobile` | `npm run validate`, `expo-doctor`, `expo install --check`, `expo export` (Android e iOS) y vulnerabilidades. |
+| `infra` | Terraform: formato, `validate`, `terraform test`, tflint, checkov y build de la imagen de la API. |
 
 - Los reportes de cobertura quedan como artefactos del pipeline durante 14 días.
 - **Vulnerabilidades:** [scripts/check-audit.mjs](scripts/check-audit.mjs) falla ante cualquier vulnerabilidad alta o crítica que no esté en el `audit-allowlist.json` de la app. Cada excepción lleva su motivo y su fecha de vencimiento; al vencer, el check vuelve a fallar.

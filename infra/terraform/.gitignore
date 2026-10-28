@@ -1,0 +1,15 @@
+# El estado y los planes pueden contener datos sensibles: nunca se versionan.
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+.terraform.tfstate.lock.info
+crash.log
+crash.*.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# Los módulos no fijan providers: el lockfile solo se versiona en los stacks (live/ y bootstrap/).
+modules/**/.terraform.lock.hcl

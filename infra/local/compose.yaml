@@ -1,0 +1,33 @@
+# Emulador AWS para el ambiente dev (ADR, docs/architecture.md). floci es MIT y no pide cuenta.
+# Uso: docker compose -f infra/local/compose.yaml up -d  (ver infra/terraform/README.md)
+name: ayni-local
+
+services:
+  floci:
+    # Versión fijada: subirla después de probar el stack dev con la nueva.
+    image: floci/floci:2.2.0
+    ports:
+      - '127.0.0.1:4566:4566'
+      # Proxies de RDS: cada instancia de PostgreSQL recibe un puerto de este rango.
+      - '127.0.0.1:7001-7099:7001-7099'
+    volumes:
+      # ECS, RDS y ECR levantan contenedores reales (la API, PostgreSQL, el registry).
+      - /var/run/docker.sock:/var/run/docker.sock
+      - floci-data:/var/lib/floci
+    environment:
+      FLOCI_DEFAULT_REGION: us-east-1
+      # El estado sobrevive a reinicios: tiene que coincidir con el estado local de Terraform.
+      FLOCI_STORAGE_MODE: hybrid
+      FLOCI_STORAGE_PERSISTENT_PATH: /var/lib/floci
+      # La misma versión mayor que prd (ADR: PostgreSQL 17).
+      FLOCI_SERVICES_RDS_DEFAULT_POSTGRES_IMAGE: postgres:17.6-alpine
+      # Los endpoints de RDS apuntan al puerto publicado en esta máquina.
+      FLOCI_SERVICES_RDS_ENDPOINT_HOST: localhost
+      # ECR como localhost:4566/<cuenta>/<región>/<repo>: Docker Desktop en Windows no resuelve
+      # *.localhost, y localhost es un registry inseguro permitido sin configurar el daemon.
+      FLOCI_SERVICES_ECR_URI_STYLE: path
+      # La consola web usa una imagen sin versión fija: apagada.
+      FLOCI_SERVICES_UI_ENABLED: 'false'
+
+volumes:
+  floci-data:

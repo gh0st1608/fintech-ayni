@@ -4,7 +4,9 @@
 **Estado:** propuesto, pendiente de la aprobación del Tech Lead.
 **Fecha:** 2026-10-27.
 
-Las decisiones marcadas **[pendiente]** necesitan una respuesta antes de provisionar (COPAYNI-12). El resto son propuestas con su justificación: se aceptan, se cambian o se rechazan en la revisión.
+Las decisiones marcadas **[pendiente]** necesitan una respuesta antes de provisionar prd. El resto son propuestas con su justificación: se aceptan, se cambian o se rechazan en la revisión.
+
+**Implementación (COPAYNI-12):** [infra/terraform](../infra/terraform/README.md). dev corre contra un emulador local y prd espera la cuenta dedicada (D2).
 
 ## Contexto
 
@@ -27,12 +29,15 @@ Lo que ya existe en el código condiciona la infraestructura:
 | 1   | Cómputo                  | **ECS Fargate** detrás de un Application Load Balancer                                       |
 | 2   | Base de datos            | **Amazon RDS for PostgreSQL** (17); Single-AZ en dev, Multi-AZ en prod                       |
 | 3   | Documentos KYC           | **S3** privado con cifrado SSE-KMS (clave propia), versionado y URLs prefirmadas             |
-| 4   | Infraestructura como código | **Terraform** con módulos propios, estado en S3 con bloqueo nativo, un directorio por ambiente |
+| 4   | Infraestructura como código | **Terraform** con módulos propios, estado en S3 con bloqueo nativo, un stack por ambiente en `live/` |
 | 5   | Secretos y despliegue    | **Secrets Manager** (secretos) y SSM Parameter Store (configuración); **GitHub Actions con OIDC** |
 | 6   | Tareas programadas       | **EventBridge Scheduler → tarea ECS** con la misma imagen                                    |
-| D1  | Región                   | **[pendiente]** `us-east-1` o `sa-east-1`                                                    |
-| D2  | Cuentas AWS              | **[pendiente]** cuenta dedicada al proyecto; idealmente una para prod y otra para dev/staging |
-| D3  | Dominio y TLS            | **[pendiente]** dominio para la API (certificado ACM)                                        |
+| 7   | Ambiente dev             | **Emulador floci** en Docker local; prd en AWS (ver [Ambientes](#ambientes-dev-con-emulador-y-prd-en-aws)) |
+| D1  | Región                   | **Decidido:** `us-east-1`                                                                    |
+| D2  | Cuenta AWS               | **[pendiente]** cuenta dedicada a prd: en el código es un valor `CAMBIAR` (no `mayo-prod`)    |
+| D3  | Dominio y TLS            | **Decidido:** `backend-ayni.solutionserj.com`, solo HTTPS. El subdominio se delega desde GoDaddy a Route 53 |
+| 8   | Observabilidad           | **New Relic como lugar principal** (APM por OTLP, métricas y logs de AWS, alertas, SLO, monitor sintético); CloudWatch de respaldo |
+| 9   | Auditoría                | **CloudTrail** multi-región con data events de los documentos KYC y alarmas de seguridad (CIS) |
 
 ## Diagrama
 
@@ -104,35 +109,38 @@ flowchart LR
 ## 3. Documentos KYC: S3 con SSE-KMS
 
 - **Acceso:** un bucket por ambiente, con _Block Public Access_ completo, propietario forzado (sin ACL) y política que rechaza todo lo que no sea TLS.
-- **Cifrado:** SSE-KMS con una clave propia del bucket. Solo el rol de la tarea puede usarla, y cada acceso queda en CloudTrail.
+- **Cifrado:** SSE-KMS con una clave propia del bucket. Solo el rol de la tarea puede usarla.
+- **Auditoría de accesos:** el trail registra los **data events** del bucket (cada lectura y escritura de un documento) además de los usos de la clave. Los data events se activan explícitamente; sin ellos, CloudTrail solo registra la gestión del bucket (ver Observabilidad y auditoría).
 - **Versionado** activo para recuperar borrados accidentales. Las reglas de ciclo de vida para la retención esperan la decisión de Legal (L5).
 - **Subida y descarga** con URLs prefirmadas de vida corta, generadas por la API después de autorizar al usuario (COPAYNI-43). El archivo no pasa por la API.
 - **Object Lock** (retención inmutable) solo si Legal lo exige: se activa al crear el bucket y no se puede quitar.
 
 ## 4. Terraform
 
+Estructura de la base técnica "Terraform IaC Enterprise": módulos reutilizables (`modules/`), stacks de composición por ambiente y región (`live/<ambiente>/<región>/{account,api}/`) y `bootstrap/` por cuenta. El detalle está en [infra/terraform/README.md](../infra/terraform/README.md).
+
 ```text
 infra/terraform/
   bootstrap/            una vez por cuenta, aplicado por un administrador:
                           bucket del estado (versionado, cifrado), proveedor OIDC de GitHub y roles
-  modules/
-    network/            VPC, subredes públicas y privadas en 2 AZ, NAT opcional
-    ecr/                repositorio de imágenes, escaneo al publicar, retención de imágenes
-    ecs-service/        cluster, servicio, task definition, ALB, target group, logs
-    database/           RDS PostgreSQL, subnet group, parameter group, security group
-    documents-bucket/   S3 + clave KMS + políticas
-    scheduled-task/     EventBridge Scheduler → RunTask
-  envs/
-    dev/  staging/  prod/   main.tf (instancia los módulos), backend.tf, terraform.tfvars sin secretos
+  modules/              network, ecr, documents-bucket, database, service-runtime (ECS + ALB),
+                          api-domain (ACM + Route 53), web-acl (WAF), audit-trail (CloudTrail),
+                          newrelic-aws-integration, newrelic-observability, log-forwarding,
+                          observability (alarmas de respaldo de CloudWatch)
+  live/
+    dev/us-east-1/{account,api}/   contra el emulador local, estado local
+    prd/us-east-1/{account,api}/   contra AWS, estado en S3; account se aplica primero
 ```
+
+El módulo `scheduled-task` (EventBridge Scheduler) se agrega con el primer job.
 
 - **Estado remoto:** en S3, con una clave por ambiente y bloqueo nativo (`use_lockfile = true`, Terraform 1.10 o superior). No hace falta una tabla de DynamoDB.
 - **Versiones fijadas** de Terraform y del provider AWS, con `.terraform.lock.hcl` versionado.
-- **Calidad:** `terraform fmt -check`, `terraform validate` y `tflint` en CI.
-  - En cada PR, `terraform plan` con un rol de solo lectura.
-  - El `apply` de dev corre al hacer merge a `main`.
-  - El de prod exige aprobación manual (GitHub Environments).
-- **Etiquetas comunes:** `project`, `environment`, `managed-by=terraform`, para separar los costos.
+- **Calidad:** `terraform fmt -check`, `validate`, `terraform test` (provider simulado), tflint y checkov en CI.
+  - En cada PR, `terraform plan` de prd con un rol de solo lectura.
+  - El `apply` de prd exige aprobación manual (GitHub Environments) y aplica el plan aprobado.
+  - dev no se despliega desde CI: vive en la máquina de cada desarrollador.
+- **Etiquetas comunes:** `Owner`, `Application`, `Environment`, `CostCenter`, `DataClassification`, `ManagedBy` y `Repository`, para separar los costos.
 
 ## 5. Secretos y despliegue
 
@@ -159,18 +167,83 @@ infra/terraform/
 - **Idempotencia:** cada ejecución registra su clave (job y periodo) en la base de datos. Así, un reintento o una ejecución duplicada no cobra dos veces.
 - **Sin cron dentro de la API:** con varias tareas se ejecutaría en cada una.
 
+## Ambientes: dev con emulador y prd en AWS
+
+**Decisión (2026-10-27):** dev corre en la máquina de cada desarrollador contra un emulador de AWS, y prd en la cuenta dedicada. No hay cuenta AWS de dev por ahora.
+
+**Por qué no LocalStack.** En marzo de 2026 LocalStack archivó su edición Community y pasó a una imagen única que exige cuenta y token.
+
+- Su plan gratuito (Hobby) no permite uso comercial, y Ayni es un producto comercial.
+- Además, ese plan no incluye ECS, ECR, RDS, ELBv2 ni CloudFront.
+- El plan Base sí los incluye, pero cuesta 39 a 45 USD por persona al mes.
+
+**Opciones evaluadas**
+
+| Opción | Resultado |
+| --- | --- |
+| LocalStack Hobby | Descartado: no comercial y sin ECS, RDS ni ALB. |
+| LocalStack Base | Viable y maduro, pero pago por persona. Queda como respaldo. |
+| **floci** (MIT) | **Elegido.** ECS, RDS y ECR con contenedores reales; ELBv2, ACM, WAF, Route 53, S3, KMS, Secrets Manager, IAM y CloudWatch emulados; compatible con el provider AWS 6 de Terraform. |
+| MiniStack (MIT) | Alternativa si floci falla: también ejecuta ECS y RDS reales. |
+| Cuenta AWS dev | Unos 56 USD al mes (ver Costos). No es local. |
+
+**Verificado con floci 2.2.0** (`terraform apply` del stack dev):
+
+- Los mismos módulos que prd crean 55 recursos.
+- La API corre como tarea ECS real: sistema de archivos de solo lectura, usuario sin privilegios y health check en verde.
+- PostgreSQL 17.6 acepta la credencial del secreto que gestiona RDS.
+
+**Límites:** son las diferencias conocidas que se listan en el README de la infraestructura (por ejemplo, el ALB no enruta a ECS y RDS no aplica los parameter groups). Esos comportamientos se verifican en prd.
+
+**¿API Gateway y ALB a la vez?** No. La propuesta de prd es solo el **ALB**: termina TLS y le aplica WAF (con rate limit por IP). API Gateway delante del ALB (HTTP API con VPC Link) agregaría costo y latencia sin cubrir nada que falte:
+
+- la autenticación, la validación y el rate limit de la aplicación ya están en la API;
+- el rate limit por IP lo cubre WAF.
+
+Se reconsidera si aparece una necesidad concreta, como planes de uso por cliente o autorizadores administrados. Usar un emulador en dev no cambia la arquitectura de prd. En dev no hay ni gateway ni ALB funcional, y la API se prueba directamente en su contenedor.
+
+## Observabilidad y auditoría
+
+**Decisión (2026-10-28):** New Relic es el lugar principal de observabilidad y alertas; CloudWatch queda de respaldo. CloudTrail cubre la auditoría.
+
+| Pieza | Cómo |
+| --- | --- |
+| Aplicación | OpenTelemetry por OTLP directo a New Relic (COPAYNI-10): trazas, métricas y logs. |
+| Métricas de AWS | CloudWatch Metric Streams → Firehose → New Relic (casi en tiempo real). La cuenta AWS se vincula con un rol de solo lectura y external ID. |
+| Logs de infraestructura | WAF, PostgreSQL, flow logs y CloudTrail → Firehose → New Relic. Los de la API no, porque ya llegan por OTLP. |
+| Alertas | New Relic: errores 5xx y latencia p95 desde los spans, infraestructura, monitor sintético externo del health check, SLO de disponibilidad (99,9 %) y de latencia (99 % bajo 800 ms) en 28 días, y alerta de consumo rápido del presupuesto de error. |
+| Respaldo | CloudWatch: targets no sanos y almacenamiento de la base. Avisan aunque New Relic no esté disponible. |
+| Auditoría | CloudTrail multi-región con validación de integridad, en un bucket cifrado con un año de retención, y data events de los documentos KYC. Siete alarmas de seguridad CIS: root, consola sin MFA, llamadas no autorizadas, cambios de IAM, de security groups, de claves KMS y del propio trail. |
+
+**Secretos:**
+
+- **License key de ingesta:** está en Secrets Manager con el formato `{"api_key": "…"}`. La leen Firehose y la API, y nunca pasa por el estado de Terraform.
+- **User API key** (la usa Terraform para crear los recursos de New Relic): llega como variable efímera desde un secreto de GitHub.
+
+**Ambientes:** dev puede usar una cuenta de New Relic propia para la telemetría y las alertas de la API. La integración de AWS solo existe en prd, porque New Relic no puede leer el emulador.
+
+**Costo adicional estimado (prd):**
+
+- CloudTrail: la primera copia de los eventos de gestión es gratis; los data events cuestan ~0,10 USD por 100.000.
+- Metric Streams: ~0,003 USD por 1.000 actualizaciones de métricas.
+- Firehose: ~0,03 USD por GB.
+- New Relic: ingesta según el plan (el gratuito incluye 100 GB al mes).
+- Total con el volumen inicial: unos pocos USD al mes; se revisa con el uso real.
+
 ## Red
 
 - **VPC** en 2 zonas de disponibilidad, con subredes públicas (ALB) y privadas (RDS).
 - **dev:** las tareas van en subredes públicas con IP pública, y su security group solo acepta tráfico del ALB. Así se evita el NAT gateway, que es el costo fijo más alto de un ambiente chico. RDS sigue en subred privada.
-- **prod:** las tareas van en subredes privadas, con un NAT gateway por zona para la salida a New Relic y a los proveedores.
+- **prod:** las tareas van en subredes privadas, con salida por NAT hacia New Relic y los proveedores. Se arranca con **un NAT compartido** (ver Riesgos). El módulo `network` admite uno por zona (`nat_gateway_mode = "per_az"`).
 - **Más adelante:** VPC endpoints (S3 gratis como gateway; ECR, Secrets Manager y Logs como interface) para reducir el tráfico por NAT.
 
 ## Costos estimados
 
 Valores mensuales aproximados, en USD, para `us-east-1` y 730 horas. Las tarifas de Fargate, ALB, NAT e IPv4 se verificaron en las páginas de AWS; las de RDS y RDS Proxy son aproximadas. Antes de aprobar, conviene contrastar el total con el [AWS Pricing Calculator](https://calculator.aws/). En `sa-east-1` los precios son más altos (ver D1).
 
-**dev (ECS Fargate, propuesta)**
+**dev:** 0 USD, porque corre en el emulador local (ver Ambientes). La tabla siguiente queda como referencia por si se crea una cuenta de dev.
+
+**dev en AWS (referencia)**
 
 | Recurso                                                          | Cálculo                                     | USD/mes  |
 | ---------------------------------------------------------------- | ------------------------------------------- | -------- |
@@ -189,11 +262,11 @@ Valores mensuales aproximados, en USD, para `us-east-1` y 730 horas. Las tarifas
 | ---------------------------------------------------------- | --------- |
 | Fargate: 2 tareas de 0,5 vCPU y 1 GB                       | ~36       |
 | ALB y 2 IPv4 públicas                                      | ~25       |
-| 2 NAT gateways (uno por zona) + datos                      | ~70       |
+| 1 NAT gateway compartido + datos (uno por zona: ~70)       | ~37       |
 | RDS `db.t4g.small` Multi-AZ + 50 GB gp3                    | ~60       |
 | AWS WAF (web ACL, unas 3 reglas, tráfico bajo)             | ~10       |
 | Secrets Manager, KMS, CloudWatch, ECR, S3 y backups        | ~15       |
-| **Total prod**                                             | **~215**  |
+| **Total prod**                                             | **~182**  |
 
 **No incluido:**
 
@@ -205,7 +278,7 @@ Valores mensuales aproximados, en USD, para `us-east-1` y 730 horas. Las tarifas
 
 **Ahorros posibles:**
 
-- un solo NAT gateway en prod (~-33; si cae esa zona, se pierde la salida a internet);
+- ya aplicado: un solo NAT gateway en prod (si cae esa zona, se pierde la salida a internet; pasar a uno por zona cuesta ~+33);
 - Graviton (alrededor de 20 % menos en Fargate);
 - Savings Plans cuando la carga se estabilice.
 
@@ -213,26 +286,25 @@ Valores mensuales aproximados, en USD, para `us-east-1` y 730 horas. Las tarifas
 
 | Riesgo                                                                                       | Mitigación                                                                                   |
 | -------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
-| **El perfil AWS por defecto de la máquina de desarrollo es `mayo-prod`** (otra cuenta productiva). Un `terraform apply` sin perfil explícito actuaría sobre ella. | Cuenta dedicada (D2). Provider con `allowed_account_ids` por ambiente, para que Terraform se niegue a operar en otra cuenta. Despliegues solo desde CI con OIDC. |
+| **El perfil AWS por defecto de la máquina de desarrollo es `mayo-prod`** (otra cuenta productiva). Un `terraform apply` sin perfil explícito actuaría sobre ella. | **Implementado:**<br>- dev usa credenciales fijas de prueba y solo admite el endpoint local.<br>- El provider de prd tiene `allowed_account_ids` con la cuenta dedicada y rechaza la de ejemplo.<br>- Despliegues solo desde CI con OIDC. |
 | La región elegida no cumple lo que defina Legal sobre transferencia de datos (L3).           | Decidir D1 con Legal antes de cargar datos reales. Cambiar de región con datos es una migración. |
 | El costo fijo de prod (NAT y Multi-AZ) es alto para el volumen inicial.                      | Arrancar con un NAT y revisar a los 3 meses con datos reales de uso.                          |
 | Rate limit no compartido entre tareas.                                                       | WAF por IP en el ALB y límites críticos en la base de datos.                                  |
 | Tareas programadas duplicadas o reintentadas.                                                | Claves de idempotencia por job y periodo.                                                    |
 | Secretos en el estado de Terraform.                                                          | Contraseña gestionada por RDS; secretos creados vacíos y cargados fuera de Terraform; bucket del estado cifrado y con acceso restringido. |
-| Sin dominio no hay TLS en el ALB, e iOS exige HTTPS.                                         | D3 antes de conectar la app a dev.                                                           |
+| El DNS de `solutionserj.com` está en GoDaddy.                                                 | Se delega solo el subdominio `backend-ayni` a Route 53, con 4 registros NS que se crean una vez en GoDaddy. Después, Terraform administra el certificado y el alias sin pasos manuales. |
+| New Relic deja de recibir datos o de alertar.                                                 | Alarmas de respaldo en CloudWatch para los dos síntomas más graves.                           |
+| El emulador de dev se aleja de AWS en algunos comportamientos.                                | Diferencias documentadas. Lo que el emulador no aplica (TLS en RDS, enrutamiento del ALB, políticas) se verifica con smoke tests en prd. |
 
-## Decisiones pendientes
+## Decisiones
 
-- **D1. Región:**
-  - `us-east-1` es la más barata y tiene todos los servicios.
-  - `sa-east-1` (São Paulo) está más cerca de los usuarios si el producto opera en Perú, pero es más cara.
-  - Depende de Legal (L3, transferencia internacional de datos personales) y de la latencia aceptable.
-- **D2. Cuenta AWS:** confirmar la cuenta (o las cuentas) del proyecto y quién administra el acceso. No se debe usar `mayo-prod`.
-- **D3. Dominio de la API:** p. ej. `api.<dominio>` y `api.dev.<dominio>`, y si el DNS estará en Route 53.
+- **D1. Región:** `us-east-1` (decidido el 2026-10-27). Queda pendiente confirmar con Legal la transferencia internacional de datos personales (L3) antes de cargar datos reales.
+- **D2. Cuenta AWS [pendiente]:** cuenta dedicada a prd. En el código es un valor a cambiar (`aws_account_id`); con el valor de ejemplo, plan y apply fallan a propósito. No se debe usar `mayo-prod`.
+- **D3. Dominio:** `backend-ayni.solutionserj.com` (decidido el 2026-10-27), solo por HTTPS. El DNS de `solutionserj.com` está en GoDaddy: se delega el subdominio a una zona de Route 53 (decidido el 2026-10-28). DNSSEC queda pendiente: requiere el registro DS en GoDaddy.
 
 ## Consecuencias para el backlog
 
-- **COPAYNI-12:** se implementa según este documento, empezando por `bootstrap/` y `envs/dev`. Requiere D1, D2 y D3.
+- **COPAYNI-12:** implementado en `infra/terraform`. dev está verificado contra floci; prd está validado y probado con provider simulado. Falta la cuenta (D2) para el bootstrap, el primer apply y el workflow de despliegue.
 - **COPAYNI-24:** la persistencia usa PostgreSQL. Las migraciones corren como tarea ECS.
 - **COPAYNI-43:** bucket y clave KMS del módulo `documents-bucket`.
 - **COPAYNI-9:** el despliegue por perfil de mobile (EAS) sigue pendiente. Las credenciales de firma pueden ir en Secrets Manager o en los secretos de GitHub Environments.

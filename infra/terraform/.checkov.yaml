@@ -1,0 +1,49 @@
+# Escaneo de seguridad de la infraestructura (base técnica, pipeline de calidad).
+# Cada excepción lleva su motivo. Revisarlas cuando cambie la decisión que las justifica.
+framework:
+  - terraform
+compact: true
+quiet: true
+skip-path:
+  - .terraform
+
+skip-check:
+  # --- Controlados por variables: prd los activa y live/prd/.../tests/prd.tftest.hcl lo afirma.
+  #     checkov los marca porque también evalúa el stack dev (emulador descartable).
+  - CKV_AWS_157 # RDS Multi-AZ
+  - CKV_AWS_293 # RDS deletion protection
+  - CKV_AWS_353 # RDS Performance Insights
+  - CKV_AWS_118 # RDS Enhanced Monitoring
+  - CKV_AWS_150 # ALB deletion protection
+  - CKV_AWS_333 # IP pública en las tareas (solo dev, sin NAT)
+  - CKV_AWS_2 # Listener HTTP: en prd solo redirige a HTTPS; en dev no hay certificado
+  - CKV_AWS_378 # Target group HTTP: el TLS termina en el ALB, dentro de la VPC
+  - CKV_AWS_65 # Container Insights: variable; New Relic cubre las métricas de la aplicación
+
+  # --- Decisiones aceptadas (ADR, docs/architecture.md).
+  - CKV_AWS_354 # Performance Insights con clave propia: la clave administrada por AWS alcanza
+  - CKV_AWS_158 # Log groups con clave propia: los logs no llevan secretos ni PII (redacción del logger)
+  - CKV_AWS_338 # Retención de 1 año: la define cada stack; la de cumplimiento espera a Legal (L5)
+  - CKV_AWS_91 # Access logs del ALB: pendiente (requiere bucket de logs); los logs de la API cubren el acceso
+  - CKV_AWS_18 # Access logging de S3: CloudTrail registra los accesos a documentos y estado
+  - CKV_AWS_144 # Replicación entre regiones: pendiente de la estrategia de DR
+  - CKV2_AWS_62 # Notificaciones de eventos de S3: sin consumidor
+  - CKV_AWS_149 # Secreto de New Relic con clave propia: la clave administrada por AWS alcanza
+  - CKV2_AWS_57 # Rotación automática: la license key de New Relic se rota en New Relic, a mano
+  - CKV_AWS_252 # SNS por cada archivo entregado del trail: sin consumidor; las alarmas usan CloudWatch Logs
+  - CKV_AWS_241 # Firehose con clave propia: datos en tránsito hacia New Relic; la clave de AWS alcanza
+  - CKV_AWS_21 # Versionado del bucket de envíos fallidos a New Relic: datos temporales con expiración
+  - CKV2_AWS_39 # Query logging de Route 53: zona de un solo nombre; no aporta frente a su costo
+  # DNSSEC de la zona delegada: pendiente. Requiere publicar el registro DS en GoDaddy (zona padre).
+  - CKV2_AWS_38
+  # Log4j: la regla está en AWSManagedRulesKnownBadInputsRuleSet; checkov no lee el bloque dynamic.
+  - CKV_AWS_192
+  - CKV2_AWS_76
+
+  # --- Rol de apply de bootstrap/: necesita crear los recursos del stack. Acotado por la
+  #     confianza OIDC (solo el environment protegido prd) y con IAM limitado a ayni-prd-*.
+  - CKV_AWS_107
+  - CKV_AWS_108
+  - CKV_AWS_109
+  - CKV_AWS_111
+  - CKV_AWS_356
