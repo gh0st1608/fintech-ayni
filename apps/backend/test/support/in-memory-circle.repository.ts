@@ -1,4 +1,7 @@
-import { type CircleRepositoryPort } from '@src/modules/circles/application/ports/circle-repository.port';
+import {
+  type CircleRepositoryPort,
+  type JoinableCircleCriteria,
+} from '@src/modules/circles/application/ports/circle-repository.port';
 import { IdempotencyKeyExistsError } from '@src/modules/circles/application/ports/circle-repository.port';
 import {
   AlreadyMemberError,
@@ -26,6 +29,25 @@ export class InMemoryCircleRepository implements CircleRepositoryPort {
     await roundTrip();
     const stored = this.circles.get(id);
     return stored ? Circle.restore({ id, ...stored }) : null;
+  }
+
+  /** Mismo criterio que el adaptador de PostgreSQL; el orden de alta es el de inserción. */
+  async findOldestJoinable(criteria: JoinableCircleCriteria): Promise<Circle | null> {
+    await roundTrip();
+    for (const [id, stored] of this.circles) {
+      const circle = Circle.restore({ id, ...stored });
+      const { terms } = circle;
+      if (
+        terms.payout.equals(criteria.payout) &&
+        terms.months === criteria.months &&
+        terms.startsOn.isAfter(criteria.startsAfter) &&
+        circle.status === 'open' &&
+        !circle.isMember(criteria.userId)
+      ) {
+        return circle;
+      }
+    }
+    return null;
   }
 
   async addMembership(circleId: string, membership: Membership): Promise<void> {

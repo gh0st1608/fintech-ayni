@@ -16,6 +16,7 @@ import {
 import {
   type CircleRepositoryPort,
   IdempotencyKeyExistsError,
+  type JoinableCircleCriteria,
 } from '../../../application/ports/circle-repository.port';
 import {
   AlreadyMemberError,
@@ -50,6 +51,34 @@ export class TypeOrmCircleRepository implements CircleRepositoryPort {
     if (!isUuid(id)) return null;
     const row = await this.circles.findOne({ where: { id }, relations: { memberships: true } });
     return row ? TypeOrmCircleRepository.toDomain(row) : null;
+  }
+
+  async findOldestJoinable(criteria: JoinableCircleCriteria): Promise<Circle | null> {
+    const { payout, months, startsAfter, userId } = criteria;
+    const row = await this.circles
+      .createQueryBuilder('circle')
+      .select('circle.id', 'id')
+      .where('circle.payout_amount = :amount AND circle.currency = :currency', {
+        amount: payout.amount,
+        currency: payout.currency,
+      })
+      .andWhere('circle.months = :months', { months })
+      // Empieza después del mes actual: el primer día del mes siguiente o más tarde.
+      .andWhere('circle.starts_on >= :firstAllowed', {
+        firstAllowed: toStartsOn(startsAfter.addMonths(1)),
+      })
+      .andWhere(
+        '(SELECT count(*) FROM circle_memberships m WHERE m.circle_id = circle.id) < circle.months',
+      )
+      .andWhere(
+        'NOT EXISTS (SELECT 1 FROM circle_memberships m WHERE m.circle_id = circle.id AND m.user_id::text = :userId)',
+        { userId },
+      )
+      .orderBy('circle.created_at', 'ASC')
+      .addOrderBy('circle.id', 'ASC')
+      .limit(1)
+      .getRawOne<{ id: string }>();
+    return row ? this.findById(row.id) : null;
   }
 
   /** Guarda un círculo nuevo con sus membresías (alta de círculos y datos de prueba). */

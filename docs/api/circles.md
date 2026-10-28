@@ -5,7 +5,7 @@
 - La app mobile ya la consume:
   - `JoinConfigApiRepository` usa el backend real.
   - `InMemoryJoinConfigRepository` es el adaptador falso de dev (`EXPO_PUBLIC_CIRCLES_API=fake`).
-- Hasta que exista el módulo auth (COPAYNI-19, 20), el backend responde `401` a cualquier token: la app debe seguir usando el adaptador falso.
+- Requiere un access token del módulo auth (COPAYNI-19, 20 y 21; [auth.md](auth.md)).
 - Los montos pasarán a la base de datos con el modelo de círculos (COPAYNI-24).
 
 Usa el contrato común de respuestas descrito en [auth.md](auth.md). Requiere `Authorization: Bearer <accessToken>`.
@@ -74,24 +74,43 @@ Cuotas y duraciones posibles para el payout elegido (Monthly Pay-in, COPAYNI-29)
 - `options` va de menor a mayor duración y puede venir vacío si ninguna duración da cuotas exactas.
 - **Propuesto (R5, no implementado en el backend):** `withinMonthlyLimit` (boolean, opcional) en cada opción. Con `false`, la cuota supera el límite mensual de pay-in del usuario y la app la muestra deshabilitada con el motivo (COPAYNI-29). Si falta, la app no restringe la opción.
 
-| Error                | HTTP | Cuándo                                                         |
-| -------------------- | ---- | -------------------------------------------------------------- |
-| `VALIDATION_ERROR`   | 400  | Falta `payoutAmount`, no es un entero o hay parámetros de más. |
+| Error                | HTTP | Cuándo                                                          |
+| -------------------- | ---- | --------------------------------------------------------------- |
+| `VALIDATION_ERROR`   | 400  | Falta `payoutAmount`, no es un entero o hay parámetros de más.  |
 | `PAYOUT_NOT_ALLOWED` | 422  | Fuera del rango, fuera del salto o sobre el límite del usuario. |
 
-## `GET /v1/circles/slots?payoutAmount=<entero>&months=<entero>` (propuesta)
+## `GET /v1/circles/slots?payoutAmount=<entero>&months=<entero>`
 
-**Estado:** propuesta _contract-first_ para COPAYNI-30. **No está implementada en el backend.** La app la consume con `CircleQuoteApiRepository` y, en dev, con el adaptador falso.
+**Estado:** implementado en el backend (COPAYNI-30), con una **regla provisional** para elegir el círculo (R2). La app la consume con `CircleQuoteApiRepository` y, en dev, con el adaptador falso.
 
-Slots de un círculo con ese payout y esa duración, ocupados incluidos, con el precio que calcula `SlotPricing` (COPAYNI-24).
+Slots del círculo que se le ofrece al usuario con ese payout y esa duración, ocupados incluidos, con el precio que calcula `SlotPricing` (COPAYNI-24).
 
 - `payoutAmount` y `months` tienen que ser una combinación de `installment-options`.
-- **Pendiente (R2):** cómo se elige el círculo cuyos slots se muestran (uno existente con lugares libres o uno nuevo).
+
+### Qué círculo se ofrece (regla provisional, pending-scope R2)
+
+Se configura con `CIRCLE_ASSIGNMENT_STRATEGY`:
+
+| Estrategia              | Círculo ofrecido                                                                                                                                                                        |
+| ----------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `fill_oldest` (defecto) | El círculo abierto **más antiguo** con el mismo payout, moneda y duración, que **todavía no empezó**, que **no está lleno** y donde el usuario **no es miembro**. Si no hay, uno nuevo. |
+| `always_new`            | Siempre uno nuevo.                                                                                                                                                                      |
+
+Por qué es coherente con el dominio:
+
+- **Completar antes de abrir:** un círculo empieza a pagar cuando tiene a sus miembros. Llenar primero el más antiguo hace que arranque antes, en lugar de repartir a los usuarios entre muchos círculos a medio llenar.
+- **Solo círculos que no empezaron:** el slot 1 cobra el primer mes; en un círculo ya iniciado ese cobro pasó y el cronograma no cuadra.
+- **Uno por usuario:** el agregado `Circle` ya impide que un usuario tenga dos slots en el mismo círculo, así que no se le ofrece uno donde ya está.
+- **Círculo nuevo:** empieza `CIRCLE_START_OFFSET_MONTHS` meses después del mes actual (1 por defecto). El mes actual se calcula en `BUSINESS_TIME_ZONE` (America/Lima por defecto). El círculo se crea al unirse el primer miembro (COPAYNI-31), no al consultar.
+
+Queda abierto en R2: si los círculos los arma un administrador, el tamaño máximo y qué pasa si no se llenan antes de su fecha de inicio.
 
 **200**:
 
 ```json
 {
+  "circleId": null,
+  "startsOn": "2026-11",
   "payout": { "amount": 3000000, "currency": "PEN" },
   "months": 10,
   "slots": [
@@ -107,14 +126,16 @@ Slots de un círculo con ese payout y esa duración, ocupados incluidos, con el 
 }
 ```
 
-| Campo          | Notas                                                                                  |
-| -------------- | -------------------------------------------------------------------------------------- |
-| `position`     | 1 = cobra el primer mes. Un slot por mes del círculo.                                  |
-| `payoutPeriod` | Mes de cobro en formato `YYYY-MM`.                                                     |
-| `type`         | `fastest_payout`, `lowest_fees` o `highest_return` (`SLOT_TYPES` del dominio).         |
-| `fee`          | Fee por cobrar antes; cero salvo en `fastest_payout`.                                  |
-| `discount`     | Descuento en los pay-ins por cobrar al final; cero salvo en `highest_return`.          |
-| `available`    | `false` si otro miembro ya ocupa el slot. La app lo muestra deshabilitado.             |
+| Campo          | Notas                                                                          |
+| -------------- | ------------------------------------------------------------------------------ |
+| `circleId`     | Círculo ofrecido; `null` si es uno nuevo. Lo usará la unión (COPAYNI-31).      |
+| `startsOn`     | Mes de inicio del círculo (`YYYY-MM`).                                         |
+| `position`     | 1 = cobra el primer mes. Un slot por mes del círculo.                          |
+| `payoutPeriod` | Mes de cobro en formato `YYYY-MM`.                                             |
+| `type`         | `fastest_payout`, `lowest_fees` o `highest_return` (`SLOT_TYPES` del dominio). |
+| `fee`          | Fee por cobrar antes; cero salvo en `fastest_payout`.                          |
+| `discount`     | Descuento en los pay-ins por cobrar al final; cero salvo en `highest_return`.  |
+| `available`    | `false` si otro miembro ya ocupa el slot. La app lo muestra deshabilitado.     |
 
 Comportamiento de la app:
 
@@ -131,4 +152,4 @@ El adaptador falso usa los valores del Figma como provisionales:
 - Payout de 3.000 a 120.000 en saltos de 500.
 - Ahorro de hasta 1.000.000.
 - Sin límite del usuario (se puede simular con la opción `userPayoutLimit`).
-- Slots con los parámetros de las pruebas del backend (R1): 25 % Fastest con fee de hasta el 10 % del payout, 25 % Highest con descuento de hasta el 5 %, y el círculo empieza el mes siguiente. Las opciones `takenPositions` y `take(position)` simulan slots ocupados.
+- Slots con los mismos parámetros provisionales que el backend (R1, variables `SLOT_*` y `ADMIN_FEE_*`): 25 % Fastest con fee de hasta el 10 % del payout, 25 % Highest con descuento de hasta el 5 %, y el círculo empieza el mes siguiente. Las opciones `takenPositions` y `take(position)` simulan slots ocupados.

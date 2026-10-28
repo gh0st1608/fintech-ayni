@@ -34,6 +34,18 @@ export class Period {
     return Period.of(Number(match[1]), Number(match[2]));
   }
 
+  /** Mes calendario de `date` en la zona horaria IANA `timeZone` (p. ej. America/Lima). */
+  static fromDate(date: Date, timeZone: string): Period {
+    const parts = new Intl.DateTimeFormat('en-US', {
+      timeZone,
+      year: 'numeric',
+      month: 'numeric',
+    }).formatToParts(date);
+    const part = (type: 'year' | 'month'): number =>
+      Number(parts.find((candidate) => candidate.type === type)?.value);
+    return Period.of(part('year'), part('month'));
+  }
+
   addMonths(months: number): Period {
     if (!Number.isInteger(months)) throw new InvalidPeriodError('Los meses deben ser enteros');
     const index = this.year * 12 + (this.month - 1) + months;
@@ -43,6 +55,10 @@ export class Period {
   /** Meses desde `this` hasta `other` (negativo si `other` es anterior). */
   monthsUntil(other: Period): number {
     return other.year * 12 + other.month - (this.year * 12 + this.month);
+  }
+
+  isAfter(other: Period): boolean {
+    return this.monthsUntil(other) < 0;
   }
 
   equals(other: Period): boolean {

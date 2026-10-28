@@ -8,6 +8,7 @@ import {
   IsNotEmpty,
   IsOptional,
   IsString,
+  IsTimeZone,
   IsUrl,
   Matches,
   Max,
@@ -19,6 +20,9 @@ import {
 
 export const NODE_ENVS = ['development', 'test', 'production'] as const;
 export const LOG_LEVELS = ['debug', 'info', 'warn', 'error', 'fatal'] as const;
+export const CIRCLE_ASSIGNMENT_STRATEGIES = ['fill_oldest', 'always_new'] as const;
+/** Igual que `ADMIN_FEE_MODES` del dominio de círculos (pending-scope R4). */
+export const ADMIN_FEE_MODES = ['added_to_installments', 'deducted_from_payout'] as const;
 
 interface RawValue {
   key: string;
@@ -169,6 +173,57 @@ export class EnvironmentVariables {
   @IsInt({ each: true })
   @Min(2, { each: true })
   CIRCLE_DURATION_OPTIONS!: number[];
+
+  /**
+   * Cómo se elige el círculo cuyos slots se ofrecen (pending-scope R2, provisional):
+   * `fill_oldest` completa el círculo abierto más antiguo que aún no empezó; `always_new` ofrece
+   * siempre uno nuevo.
+   */
+  @IsIn(CIRCLE_ASSIGNMENT_STRATEGIES)
+  CIRCLE_ASSIGNMENT_STRATEGY: (typeof CIRCLE_ASSIGNMENT_STRATEGIES)[number] = 'fill_oldest';
+
+  /** Meses entre el mes actual y el inicio de un círculo nuevo. */
+  @IsInt()
+  @Min(1)
+  @Max(12)
+  CIRCLE_START_OFFSET_MONTHS: number = 1;
+
+  /** Zona horaria del negocio: define en qué mes estamos para los cronogramas. */
+  @IsTimeZone()
+  BUSINESS_TIME_ZONE: string = 'America/Lima';
+
+  /**
+   * Precio de los slots (pending-scope R1 y R4, provisionales), en puntos básicos: 25 % de slots
+   * Fastest con fee de hasta el 10 %, 25 % Highest con descuento de hasta el 5 % y Admin Fees del
+   * 12 %. Los mismos valores que el adaptador falso de mobile.
+   */
+  @IsInt()
+  @Min(0)
+  @Max(10000)
+  SLOT_FASTEST_SHARE_BPS: number = 2500;
+
+  @IsInt()
+  @Min(0)
+  @Max(10000)
+  SLOT_HIGHEST_SHARE_BPS: number = 2500;
+
+  @IsInt()
+  @Min(0)
+  @Max(10000)
+  SLOT_MAX_FEE_BPS: number = 1000;
+
+  @IsInt()
+  @Min(0)
+  @Max(10000)
+  SLOT_MAX_DISCOUNT_BPS: number = 500;
+
+  @IsInt()
+  @Min(0)
+  @Max(10000)
+  ADMIN_FEE_BPS: number = 1200;
+
+  @IsIn(ADMIN_FEE_MODES)
+  ADMIN_FEE_MODE: (typeof ADMIN_FEE_MODES)[number] = 'added_to_installments';
 
   /** PostgreSQL (ADR 2, docs/architecture.md). */
   @IsString()

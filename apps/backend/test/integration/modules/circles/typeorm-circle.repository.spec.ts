@@ -175,4 +175,57 @@ describe('TypeOrmCircleRepository', () => {
       }),
     ).rejects.toThrow(/check constraint/);
   });
+
+  describe('findOldestJoinable', () => {
+    // Un payout propio para no cruzarse con los círculos de las demás pruebas.
+    const payout = Money.of(7_350_000, 'PEN');
+    const create = async (startsOn: Period, members: string[] = [], months = 6) => {
+      const id = randomUUID();
+      await repository.create(
+        Circle.restore({
+          id,
+          terms: CircleTerms.create({ payout, months, startsOn }),
+          memberships: members.map((userId, index) => ({
+            userId,
+            position: index + 1,
+            idempotencyKey: `k-${index}`,
+          })),
+        }),
+      );
+      return id;
+    };
+    const find = (userId: string) =>
+      repository.findOldestJoinable({
+        payout,
+        months: 6,
+        startsAfter: Period.of(2030, 1),
+        userId,
+      });
+
+    it('elige el más antiguo que no empezó, no está lleno y donde el usuario no es miembro', async () => {
+      const ana = await user();
+      const others = await Promise.all(Array.from({ length: 6 }, () => user()));
+      await create(Period.of(2030, 1)); // empieza en el mes actual: ya no se puede unir
+      await create(Period.of(2030, 3), others); // lleno
+      await create(Period.of(2030, 2), [ana]); // ya es miembro
+      const oldest = await create(Period.of(2030, 4), [others[0]!]);
+      await create(Period.of(2030, 2));
+
+      const circle = await find(ana);
+      expect(circle?.id).toBe(oldest);
+      expect(circle?.isTaken(1)).toBe(true);
+      expect(circle?.isMember(others[0]!)).toBe(true);
+    });
+
+    it('sin candidatos devuelve null, también con un usuario que no es uuid', async () => {
+      await expect(
+        repository.findOldestJoinable({
+          payout: Money.of(7_350_000, 'USD'),
+          months: 6,
+          startsAfter: Period.of(2030, 1),
+          userId: 'user-1',
+        }),
+      ).resolves.toBeNull();
+    });
+  });
 });

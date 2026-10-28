@@ -11,79 +11,79 @@ El Figma está localizado para Marruecos/Egipto (MAD, árabe, Fawry). El backlog
 - **Idiomas:** la app usa archivos JSON por idioma (`apps/mobile/src/presentation/i18n/locales/<código>.json`). Agregar un idioma = agregar un JSON y registrarlo en el catálogo (COPAYNI-16; selector en COPAYNI-50).
 - **Moneda:** value object `Money { amount en unidades menores, currency ISO 4217 }` en el dominio, moneda por defecto en configuración, formato con `Intl.NumberFormat` (COPAYNI-17).
 
-| # | Pendiente | Responsable | Propuesta |
-|---|---|---|---|
-| M1 | Moneda oficial de operación | PO | PEN (sol peruano) |
-| M2 | ¿Se aceptan varias monedas (PEN y USD)? ¿Un círculo puede ser en USD? | PO | Una sola moneda por círculo; empezar solo con PEN |
-| M3 | Idioma por defecto y lista de idiomas del MVP | PO | `es` por defecto, `en` secundario; quechua o aimara a evaluar; árabe descartado salvo confirmación |
-| M4 | Traducción de todos los textos del Figma al español y revisión de tono | UX / PO | Generar `es.json` a partir de los textos del Figma |
-| M5 | Corregir en el diseño los montos que están en MAD y USD (incoherencia 150 USD / 150 MAD) | UX | Usar la moneda de M1 |
-| M6 | Rangos de montos en la nueva moneda (payout 3.000–120.000, ahorro hasta 1.000.000, prepaid 100.000, referido 150) | PO | Recalcular según el mercado objetivo |
+| #   | Pendiente                                                                                                         | Responsable | Propuesta                                                                                          |
+| --- | ----------------------------------------------------------------------------------------------------------------- | ----------- | -------------------------------------------------------------------------------------------------- |
+| M1  | Moneda oficial de operación                                                                                       | PO          | PEN (sol peruano)                                                                                  |
+| M2  | ¿Se aceptan varias monedas (PEN y USD)? ¿Un círculo puede ser en USD?                                             | PO          | Una sola moneda por círculo; empezar solo con PEN                                                  |
+| M3  | Idioma por defecto y lista de idiomas del MVP                                                                     | PO          | `es` por defecto, `en` secundario; quechua o aimara a evaluar; árabe descartado salvo confirmación |
+| M4  | Traducción de todos los textos del Figma al español y revisión de tono                                            | UX / PO     | Generar `es.json` a partir de los textos del Figma                                                 |
+| M5  | Corregir en el diseño los montos que están en MAD y USD (incoherencia 150 USD / 150 MAD)                          | UX          | Usar la moneda de M1                                                                               |
+| M6  | Rangos de montos en la nueva moneda (payout 3.000–120.000, ahorro hasta 1.000.000, prepaid 100.000, referido 150) | PO          | Recalcular según el mercado objetivo                                                               |
 
 ## 2. Pantallas y flujos sin diseño
 
-| # | Pendiente | Por qué es necesario | Responsable |
-|---|---|---|---|
-| D1 | **Pago de la cuota mensual (pay-in):** cuotas pendientes, pagar con tarjeta guardada, confirmación, recibo, pago fallido | Núcleo financiero; sin esto el círculo no funciona | UX / PO |
-| D2 | Pantalla de **confirmación de unión** al Game'ya (resumen, aceptar términos) | El User Flow la incluye ("Confirm"), pero no existe la pantalla | UX |
-| D3 | **Firma del contrato y del pagaré de seguro** (Insurance Note) | El checklist de elegibilidad los exige | UX / Legal |
-| D4 | **Add Account:** datos de la cuenta bancaria o wallet para recibir el payout | El User Flow la incluye, pero no hay diseño | UX |
-| D5 | Paso posterior a "Next" en el **programa de ahorro** (confirmación y primer pago) | El flujo termina sin destino | UX |
-| D6 | **Notificaciones:** bandeja, tipos (cuota por vencer, turno de cobro, documento aprobado) y push | La campana aparece en todas las pantallas | UX / PO |
-| D7 | **Payment Policy, Help / Get Help** (contenido, FAQ, canal de soporte) | Hay accesos, pero no pantallas | UX / PO |
-| D8 | **Detalle** de círculo, de círculo finalizado y de transacción | Los chevrons no llevan a ningún destino | UX |
-| D9 | Flujos de **passcode** (crear, cambiar, recuperar) y activación de **biometría** | Menús visibles sin flujo (historias H2.5/H2.6 marcadas `pendiente-diseno`) | UX / PO |
-| D10 | Estados de **error y carga** por pantalla (sin red, sesión expirada, documento rechazado) | Solo están diseñados algunos estados vacíos | UX |
-| D11 | Significado y comportamiento del **icono de fuego** del header | Sin definir | PO / UX |
-| D12 | **Login social** (el texto lo menciona, pero no hay botones) | Decidir si entra o se elimina el texto | PO |
-| D13 | **Back-office** de administración: crear y operar círculos, validar KYC, conciliar pagos, gestionar ofertas y metas | Sin él no se puede operar el producto | PO / UX / TL |
-| D14 | **Selector de país** del teléfono en el login y en el Perfil | Sin él, el login exige el formato internacional (+51…); el campo Email/Phone del Figma no indica país (COPAYNI-19) | UX / PO |
-| D16 | **Payout Amount:** contenido del carrusel informativo y destino de "Learn More"; ilustraciones de "Elige un servicio"; textos del paso 1; porcentaje de cashback (R6) | "Elige un servicio" ya usa el título y los textos del Figma (55:9069), pero con iconos en lugar de las ilustraciones y sin el 20% de cashback. Payout Amount muestra un único aviso sin "Learn More": no se pudo obtener el diseño por el límite de la integración (COPAYNI-27, 28) | UX / PO |
-| D15 | **Marca final** (Figma dice "Dart", el producto es Ayni): logo, icono de la app e imagen del splash nativo | Hoy se muestra el nombre como texto y el splash usa el icono por defecto de Expo (COPAYNI-18) | PO / UX |
+| #   | Pendiente                                                                                                                                                             | Por qué es necesario                                                                                                                                                                                                                                                                | Responsable  |
+| --- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------ |
+| D1  | **Pago de la cuota mensual (pay-in):** cuotas pendientes, pagar con tarjeta guardada, confirmación, recibo, pago fallido                                              | Núcleo financiero; sin esto el círculo no funciona                                                                                                                                                                                                                                  | UX / PO      |
+| D2  | Pantalla de **confirmación de unión** al Game'ya (resumen, aceptar términos)                                                                                          | El User Flow la incluye ("Confirm"), pero no existe la pantalla                                                                                                                                                                                                                     | UX           |
+| D3  | **Firma del contrato y del pagaré de seguro** (Insurance Note)                                                                                                        | El checklist de elegibilidad los exige                                                                                                                                                                                                                                              | UX / Legal   |
+| D4  | **Add Account:** datos de la cuenta bancaria o wallet para recibir el payout                                                                                          | El User Flow la incluye, pero no hay diseño                                                                                                                                                                                                                                         | UX           |
+| D5  | Paso posterior a "Next" en el **programa de ahorro** (confirmación y primer pago)                                                                                     | El flujo termina sin destino                                                                                                                                                                                                                                                        | UX           |
+| D6  | **Notificaciones:** bandeja, tipos (cuota por vencer, turno de cobro, documento aprobado) y push                                                                      | La campana aparece en todas las pantallas                                                                                                                                                                                                                                           | UX / PO      |
+| D7  | **Payment Policy, Help / Get Help** (contenido, FAQ, canal de soporte)                                                                                                | Hay accesos, pero no pantallas                                                                                                                                                                                                                                                      | UX / PO      |
+| D8  | **Detalle** de círculo, de círculo finalizado y de transacción                                                                                                        | Los chevrons no llevan a ningún destino                                                                                                                                                                                                                                             | UX           |
+| D9  | Flujos de **passcode** (crear, cambiar, recuperar) y activación de **biometría**                                                                                      | Menús visibles sin flujo (historias H2.5/H2.6 marcadas `pendiente-diseno`)                                                                                                                                                                                                          | UX / PO      |
+| D10 | Estados de **error y carga** por pantalla (sin red, sesión expirada, documento rechazado)                                                                             | Solo están diseñados algunos estados vacíos                                                                                                                                                                                                                                         | UX           |
+| D11 | Significado y comportamiento del **icono de fuego** del header                                                                                                        | Sin definir                                                                                                                                                                                                                                                                         | PO / UX      |
+| D12 | **Login social** (el texto lo menciona, pero no hay botones)                                                                                                          | Decidir si entra o se elimina el texto                                                                                                                                                                                                                                              | PO           |
+| D13 | **Back-office** de administración: crear y operar círculos, validar KYC, conciliar pagos, gestionar ofertas y metas                                                   | Sin él no se puede operar el producto                                                                                                                                                                                                                                               | PO / UX / TL |
+| D14 | **Selector de país** del teléfono en el login y en el Perfil                                                                                                          | Sin él, el login exige el formato internacional (+51…); el campo Email/Phone del Figma no indica país (COPAYNI-19)                                                                                                                                                                  | UX / PO      |
+| D16 | **Payout Amount:** contenido del carrusel informativo y destino de "Learn More"; ilustraciones de "Elige un servicio"; textos del paso 1; porcentaje de cashback (R6) | "Elige un servicio" ya usa el título y los textos del Figma (55:9069), pero con iconos en lugar de las ilustraciones y sin el 20% de cashback. Payout Amount muestra un único aviso sin "Learn More": no se pudo obtener el diseño por el límite de la integración (COPAYNI-27, 28) | UX / PO      |
+| D15 | **Marca final** (Figma dice "Dart", el producto es Ayni): logo, icono de la app e imagen del splash nativo                                                            | Hoy se muestra el nombre como texto y el splash usa el icono por defecto de Expo (COPAYNI-18)                                                                                                                                                                                       | PO / UX      |
 
 ## 3. Reglas de negocio por confirmar
 
-| # | Pregunta | Afecta a |
-|---|---|---|
-| R1 | Fórmula de **fees de los primeros slots** y **descuentos de los últimos**. Implementado con parámetros y una fórmula lineal provisional (`SlotPricingRules`, README del backend) | T3.1, H3.6 |
-| R2 | Cómo se **forman los círculos** (admin o automático), número de miembros, qué pasa si no se llenan | T3.1, H3.1, H3.7 |
-| R3 | **Mora e impago:** penalidades, uso del seguro y del pagaré, exclusión del círculo | T3.1, D1, D3 |
-| R4 | ¿Las **Admin Fees** se suman a la cuota o se descuentan del payout? (24.000 frente a 2.880). Los dos modos están implementados (`adminFeeMode`) | T3.1, H3.5 |
-| R5 | Fórmula del **límite mensual de pay-in** según ingresos y documentos | H6.1, H6.5, H3.7 |
-| R6 | Fórmula del **cashback** del ahorro (el diseño muestra 20% y 5%) y nombres de los planes | H4.1, H4.2 |
-| R7 | Reglas de **referidos:** tope de invitaciones, expiración del saldo, moneda | H7.1–H7.3 |
-| R8 | ¿Cuándo se puede **cambiar el método de cobro** y qué pasa con los payouts en curso? | H5.3 |
-| R9 | ¿Cambiar teléfono o email exige **re-verificación OTP**? | H6.2 |
-| R10 | Política de **OTP:** duración, intentos y reenvíos; comportamiento de "Remember Me" | H2.3 |
-| R11 | Qué **documentos** son obligatorios y cuáles opcionales; verificación manual o automática; vigencia | H6.3–H6.6 |
-| R12 | **Nombres de los planes de ahorro:** ¿el backend los envía ya traducidos o como claves para los JSON de idioma? | COPAYNI-32 |
-| R13 | **"Remember Me":** confirmar que, sin marcar, la sesión vive solo en memoria y termina al cerrar la app (implementado así en mobile, marcado por defecto como en el Figma) | COPAYNI-20 |
-| R15 | **Salto del slider de payout:** de cuánto en cuánto se elige el monto (mobile usa 500 provisional, configurable desde el backend) | COPAYNI-28 |
-| R14 | **Biometría:** confirmar el nuevo estado de sesión `locked` y cuándo se vuelve a pedir al volver de background | COPAYNI-22 |
+| #   | Pregunta                                                                                                                                                                                                             | Afecta a         |
+| --- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------- |
+| R1  | Fórmula de **fees de los primeros slots** y **descuentos de los últimos**. Implementado con parámetros y una fórmula lineal provisional (`SlotPricingRules`, README del backend)                                     | T3.1, H3.6       |
+| R2  | Cómo se **forman los círculos** (admin o automático), número de miembros, qué pasa si no se llenan. Implementado con una regla provisional configurable (`CIRCLE_ASSIGNMENT_STRATEGY`, [circles.md](api/circles.md)) | T3.1, H3.1, H3.7 |
+| R3  | **Mora e impago:** penalidades, uso del seguro y del pagaré, exclusión del círculo                                                                                                                                   | T3.1, D1, D3     |
+| R4  | ¿Las **Admin Fees** se suman a la cuota o se descuentan del payout? (24.000 frente a 2.880). Los dos modos están implementados (`adminFeeMode`)                                                                      | T3.1, H3.5       |
+| R5  | Fórmula del **límite mensual de pay-in** según ingresos y documentos                                                                                                                                                 | H6.1, H6.5, H3.7 |
+| R6  | Fórmula del **cashback** del ahorro (el diseño muestra 20% y 5%) y nombres de los planes                                                                                                                             | H4.1, H4.2       |
+| R7  | Reglas de **referidos:** tope de invitaciones, expiración del saldo, moneda                                                                                                                                          | H7.1–H7.3        |
+| R8  | ¿Cuándo se puede **cambiar el método de cobro** y qué pasa con los payouts en curso?                                                                                                                                 | H5.3             |
+| R9  | ¿Cambiar teléfono o email exige **re-verificación OTP**?                                                                                                                                                             | H6.2             |
+| R10 | Política de **OTP:** duración, intentos y reenvíos; comportamiento de "Remember Me"                                                                                                                                  | H2.3             |
+| R11 | Qué **documentos** son obligatorios y cuáles opcionales; verificación manual o automática; vigencia                                                                                                                  | H6.3–H6.6        |
+| R12 | **Nombres de los planes de ahorro:** ¿el backend los envía ya traducidos o como claves para los JSON de idioma?                                                                                                      | COPAYNI-32       |
+| R13 | **"Remember Me":** confirmar que, sin marcar, la sesión vive solo en memoria y termina al cerrar la app (implementado así en mobile, marcado por defecto como en el Figma)                                           | COPAYNI-20       |
+| R15 | **Salto del slider de payout:** de cuánto en cuánto se elige el monto (mobile usa 500 provisional, configurable desde el backend)                                                                                    | COPAYNI-28       |
+| R14 | **Biometría:** confirmar el nuevo estado de sesión `locked` y cuándo se vuelve a pedir al volver de background                                                                                                       | COPAYNI-22       |
 
 ## 4. Decisiones técnicas y de proveedores
 
-| # | Decisión | Issue relacionado |
-|---|---|---|
-| T1 | Despliegue: AWS Lambda + API Gateway o contenedores (ECS/Fargate). **Propuesto: ECS Fargate** ([architecture.md](architecture.md)), pendiente de aprobación | T1.4 (spike) |
-| T2 | Base de datos (relacional recomendada por la naturaleza transaccional). **Propuesto: RDS for PostgreSQL** ([architecture.md](architecture.md)), pendiente de aprobación | T1.4 (spike) |
-| T3 | Pasarela de pago y tokenización (PCI-DSS) disponible en el país | T5.1 (spike) |
-| T4 | Proveedor de verificación de identidad y OCR | T6.1 (spike) |
-| T5 | Proveedores de payout: bancos, wallets locales (p. ej. Yape/Plin si es Perú), prepago | H5.3, D4 |
-| T6 | Proveedor de envío de OTP (SMS y email) | H2.2 |
-| T7 | Proveedor de push notifications | D6 |
-| T8 | Crash reporting y telemetría mobile | T1.6 |
-| T9 | Firma electrónica de contrato y pagaré | D3 |
+| #   | Decisión                                                                                                                                                                | Issue relacionado |
+| --- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------- |
+| T1  | Despliegue: AWS Lambda + API Gateway o contenedores (ECS/Fargate). **Propuesto: ECS Fargate** ([architecture.md](architecture.md)), pendiente de aprobación             | T1.4 (spike)      |
+| T2  | Base de datos (relacional recomendada por la naturaleza transaccional). **Propuesto: RDS for PostgreSQL** ([architecture.md](architecture.md)), pendiente de aprobación | T1.4 (spike)      |
+| T3  | Pasarela de pago y tokenización (PCI-DSS) disponible en el país                                                                                                         | T5.1 (spike)      |
+| T4  | Proveedor de verificación de identidad y OCR                                                                                                                            | T6.1 (spike)      |
+| T5  | Proveedores de payout: bancos, wallets locales (p. ej. Yape/Plin si es Perú), prepago                                                                                   | H5.3, D4          |
+| T6  | Proveedor de envío de OTP (SMS y email)                                                                                                                                 | H2.2              |
+| T7  | Proveedor de push notifications                                                                                                                                         | D6                |
+| T8  | Crash reporting y telemetría mobile                                                                                                                                     | T1.6              |
+| T9  | Firma electrónica de contrato y pagaré                                                                                                                                  | D3                |
 
 ## 5. Cumplimiento y legal
 
-| # | Pendiente | Responsable |
-|---|---|---|
-| L1 | Regulador aplicable (el diseño cita "Central Bank"; en Perú, SBS/UIF) y si la cooperativa requiere licencia para esta operativa | Legal |
-| L2 | Requisitos KYC/AML (prevención de lavado de activos): documentos, listas restrictivas, monitoreo | Legal / TL |
-| L3 | Protección de datos personales (Ley 29733 en Perú): consentimiento, retención y derechos ARCO | Legal |
-| L4 | Textos de Términos de Uso y Política de Privacidad | Legal |
-| L5 | Retención y eliminación de documentos KYC | Legal / TL |
+| #   | Pendiente                                                                                                                       | Responsable |
+| --- | ------------------------------------------------------------------------------------------------------------------------------- | ----------- |
+| L1  | Regulador aplicable (el diseño cita "Central Bank"; en Perú, SBS/UIF) y si la cooperativa requiere licencia para esta operativa | Legal       |
+| L2  | Requisitos KYC/AML (prevención de lavado de activos): documentos, listas restrictivas, monitoreo                                | Legal / TL  |
+| L3  | Protección de datos personales (Ley 29733 en Perú): consentimiento, retención y derechos ARCO                                   | Legal       |
+| L4  | Textos de Términos de Uso y Política de Privacidad                                                                              | Legal       |
+| L5  | Retención y eliminación de documentos KYC                                                                                       | Legal / TL  |
 
 ## 6. Correcciones al Figma
 

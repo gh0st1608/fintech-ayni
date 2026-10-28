@@ -95,6 +95,14 @@ export class Circle {
     return this.members.length === this.terms.months ? 'full' : 'open';
   }
 
+  isMember(userId: string): boolean {
+    return this.members.some((member) => member.userId === userId);
+  }
+
+  isTaken(position: number): boolean {
+    return this.members.some((member) => member.position === position);
+  }
+
   availablePositions(): number[] {
     const taken = new Set(this.members.map(({ position }) => position));
     return Array.from({ length: this.terms.months }, (_, index) => index + 1).filter(
