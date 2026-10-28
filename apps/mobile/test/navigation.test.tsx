@@ -60,7 +60,7 @@ describe('shell de navegación', () => {
     await waitFor(() => expect(screen).toHavePathname('/join'));
   });
 
-  it('Elige un servicio → Game’ya → monto (paso 1) → cuota (paso 2) → turno (paso 3)', async () => {
+  it('Elige un servicio → Game’ya → monto (paso 1) → cuota (paso 2) → turno (paso 3) → paso 4', async () => {
     await storeSession();
     await renderRouter(APP_DIR, { initialUrl: '/join' });
     await fireEvent.press(await screen.findByRole('button', { name: /Unirme a un Game'ya/ }));
@@ -79,6 +79,10 @@ describe('shell de navegación', () => {
     await fireEvent.press(await screen.findByRole('radio', { name: /6 meses/ }, { timeout: 5000 }));
     await fireEvent.press(screen.getByRole('button', { name: 'Siguiente' }));
     await waitFor(() => expect(screen).toHavePathname('/join/slot'));
+
+    await fireEvent.press(await screen.findByTestId('slot-1', {}, { timeout: 5000 }));
+    await fireEvent.press(screen.getByRole('button', { name: /^Continuar con / }));
+    await waitFor(() => expect(screen).toHavePathname('/join/payout-method'));
   });
 
   it('Elige un servicio → programa de ahorro', async () => {

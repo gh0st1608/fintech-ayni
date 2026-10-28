@@ -79,6 +79,51 @@ Cuotas y duraciones posibles para el payout elegido (Monthly Pay-in, COPAYNI-29)
 | `VALIDATION_ERROR`   | 400  | Falta `payoutAmount`, no es un entero o hay parámetros de más. |
 | `PAYOUT_NOT_ALLOWED` | 422  | Fuera del rango, fuera del salto o sobre el límite del usuario. |
 
+## `GET /v1/circles/slots?payoutAmount=<entero>&months=<entero>` (propuesta)
+
+**Estado:** propuesta _contract-first_ para COPAYNI-30. **No está implementada en el backend.** La app la consume con `CircleQuoteApiRepository` y, en dev, con el adaptador falso.
+
+Slots de un círculo con ese payout y esa duración, ocupados incluidos, con el precio que calcula `SlotPricing` (COPAYNI-24).
+
+- `payoutAmount` y `months` tienen que ser una combinación de `installment-options`.
+- **Pendiente (R2):** cómo se elige el círculo cuyos slots se muestran (uno existente con lugares libres o uno nuevo).
+
+**200**:
+
+```json
+{
+  "payout": { "amount": 3000000, "currency": "PEN" },
+  "months": 10,
+  "slots": [
+    {
+      "position": 1,
+      "payoutPeriod": "2026-11",
+      "type": "fastest_payout",
+      "fee": { "amount": 300000, "currency": "PEN" },
+      "discount": { "amount": 0, "currency": "PEN" },
+      "available": false
+    }
+  ]
+}
+```
+
+| Campo          | Notas                                                                                  |
+| -------------- | -------------------------------------------------------------------------------------- |
+| `position`     | 1 = cobra el primer mes. Un slot por mes del círculo.                                  |
+| `payoutPeriod` | Mes de cobro en formato `YYYY-MM`.                                                     |
+| `type`         | `fastest_payout`, `lowest_fees` o `highest_return` (`SLOT_TYPES` del dominio).         |
+| `fee`          | Fee por cobrar antes; cero salvo en `fastest_payout`.                                  |
+| `discount`     | Descuento en los pay-ins por cobrar al final; cero salvo en `highest_return`.          |
+| `available`    | `false` si otro miembro ya ocupa el slot. La app lo muestra deshabilitado.             |
+
+Comportamiento de la app:
+
+- Agrupa los slots por tipo, en el orden de `SLOT_TYPES`.
+- Antes de continuar, vuelve a pedir la lista y comprueba que el slot elegido siga libre. Si se ocupó, avisa, refresca la lista y quita la selección.
+- Esa comprobación no reserva el slot: la reserva atómica es la unión al círculo (COPAYNI-31), con la unicidad por (círculo, slot) del repositorio.
+
+Errores: los mismos que `installment-options`, más `VALIDATION_ERROR` si `months` no es una duración ofrecida para ese payout.
+
 ## Valores pendientes (pending-scope M6, R5 y R15)
 
 El adaptador falso usa los valores del Figma como provisionales:
@@ -86,3 +131,4 @@ El adaptador falso usa los valores del Figma como provisionales:
 - Payout de 3.000 a 120.000 en saltos de 500.
 - Ahorro de hasta 1.000.000.
 - Sin límite del usuario (se puede simular con la opción `userPayoutLimit`).
+- Slots con los parámetros de las pruebas del backend (R1): 25 % Fastest con fee de hasta el 10 % del payout, 25 % Highest con descuento de hasta el 5 %, y el círculo empieza el mes siguiente. Las opciones `takenPositions` y `take(position)` simulan slots ocupados.

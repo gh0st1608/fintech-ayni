@@ -6,7 +6,9 @@ import { RestoreSessionUseCase } from '@/application/auth/usecases/RestoreSessio
 import { SignOutUseCase } from '@/application/auth/usecases/SignOutUseCase';
 import { StartAuthenticationUseCase } from '@/application/auth/usecases/StartAuthenticationUseCase';
 import { VerifyOtpUseCase } from '@/application/auth/usecases/VerifyOtpUseCase';
+import { ConfirmSlotSelectionUseCase } from '@/application/circles/usecases/ConfirmSlotSelectionUseCase';
 import { GetJoinConfigUseCase } from '@/application/circles/usecases/GetJoinConfigUseCase';
+import { ListAvailableSlotsUseCase } from '@/application/circles/usecases/ListAvailableSlotsUseCase';
 import { ListInstallmentOptionsUseCase } from '@/application/circles/usecases/ListInstallmentOptionsUseCase';
 import { ChangeLanguageUseCase } from '@/application/i18n/usecases/ChangeLanguageUseCase';
 import { ResolveLanguageUseCase } from '@/application/i18n/usecases/ResolveLanguageUseCase';
@@ -115,6 +117,8 @@ export function createContainer(
     circles: {
       getJoinConfig: new GetJoinConfigUseCase(adapters.joinConfig),
       listInstallmentOptions: new ListInstallmentOptionsUseCase(adapters.circleQuote),
+      listAvailableSlots: new ListAvailableSlotsUseCase(adapters.circleQuote),
+      confirmSlotSelection: new ConfirmSlotSelectionUseCase(adapters.circleQuote),
     },
     i18n: {
       resolveLanguage: new ResolveLanguageUseCase(

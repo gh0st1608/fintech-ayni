@@ -7,6 +7,7 @@ import {
   InvalidInstallmentOptionError,
 } from './value-objects/InstallmentOption';
 import { InvalidPayoutRangeError, PayoutRange } from './value-objects/PayoutRange';
+import { InvalidSlotError, Slot } from './value-objects/Slot';
 
 const pen = (major: number) => Money.fromMajor(major, 'PEN');
 const range = () => PayoutRange.create({ min: pen(3000), max: pen(120000), step: pen(500) });
@@ -108,9 +109,59 @@ describe('JoinCircleDraft', () => {
     );
   });
 
+  it('exige monto y cuota antes del turno', () => {
+    const slot = Slot.create({
+      position: 1,
+      payoutPeriod: '2026-11',
+      type: 'fastestPayout',
+      fee: pen(100),
+      discount: pen(0),
+      available: true,
+    });
+    expect(() => JoinCircleDraft.empty().withPayoutAmount(pen(6000)).withSlot(slot)).toThrow(
+      IncompleteJoinDraftError,
+    );
+    const draft = JoinCircleDraft.empty()
+      .withPayoutAmount(pen(6000))
+      .withInstallment(sixMonths)
+      .withSlot(slot);
+    expect(draft.slot).toBe(slot);
+    // Otra cuota descarta el turno; la misma lo conserva.
+    expect(draft.withInstallment(sixMonths).slot).toBe(slot);
+    const tenMonths = InstallmentOption.create({ months: 10, installment: pen(600) });
+    expect(draft.withInstallment(tenMonths).slot).toBeNull();
+    expect(draft.withPayoutAmount(pen(7000)).slot).toBeNull();
+  });
+
   it('cambiar el monto descarta la cuota; repetir el mismo la conserva', () => {
     const draft = JoinCircleDraft.empty().withPayoutAmount(pen(6000)).withInstallment(sixMonths);
     expect(draft.withPayoutAmount(pen(6000)).installment).toBe(sixMonths);
     expect(draft.withPayoutAmount(pen(6500)).installment).toBeNull();
+  });
+});
+
+describe('Slot', () => {
+  const base = {
+    position: 3,
+    payoutPeriod: '2027-01',
+    type: 'lowestFees' as const,
+    fee: pen(0),
+    discount: pen(0),
+    available: true,
+  };
+
+  it('expone el primer día del mes de cobro', () => {
+    const date = Slot.create(base).payoutDate;
+    expect([date.getFullYear(), date.getMonth(), date.getDate()]).toEqual([2027, 0, 1]);
+  });
+
+  it.each([
+    [{ ...base, position: 0 }],
+    [{ ...base, payoutPeriod: '2027-13' }],
+    [{ ...base, payoutPeriod: '01/2027' }],
+    [{ ...base, fee: pen(-1) }],
+    [{ ...base, discount: Money.fromMajor(1, 'USD') }],
+  ])('rechaza slots inválidos', (input) => {
+    expect(() => Slot.create(input)).toThrow(InvalidSlotError);
   });
 });

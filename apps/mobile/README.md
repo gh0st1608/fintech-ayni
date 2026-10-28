@@ -221,11 +221,13 @@ Petición → 401 → ¿endpoint de auth (skipSessionRefresh)? ─ sí → error
 - La renovación conserva la elección de Remember Me: `save` sin `persist` mantiene el modo actual.
 - **Cerrar sesión** borra la sesión local de inmediato. La revocación del refresh token (`/auth/logout`) va en segundo plano y no bloquea si no hay red.
 
-## Unirse a un círculo (COPAYNI-27, 28, 29)
+## Unirse a un círculo (COPAYNI-27, 28, 29, 30)
 
 ```
 JoinScreen / PayoutAmountScreen → useJoinConfig → GetJoinConfigUseCase → JoinConfigRepositoryPort
 MonthlyPayInScreen → useInstallmentOptions → ListInstallmentOptionsUseCase → CircleQuoteRepositoryPort
+SlotScreen → useAvailableSlots / useConfirmSlot
+           → ListAvailableSlotsUseCase / ConfirmSlotSelectionUseCase → CircleQuoteRepositoryPort
                                 → JoinFlowProvider (JoinCircleDraft en memoria)
 ```
 
@@ -240,6 +242,13 @@ MonthlyPayInScreen → useInstallmentOptions → ListInstallmentOptionsUseCase �
   - Una cuota con `withinMonthlyLimit: false` aparece deshabilitada con el motivo. El campo es una propuesta para R5: si el backend no lo envía, ninguna cuota se restringe.
   - Cambiar el monto en el paso 1 descarta la cuota elegida; volver desde el paso 3 la conserva.
   - El diseño (Figma 55:9334) no se pudo leer por el límite de la integración de Figma: se armó con el inventario de `docs/product-context.md` y queda pendiente de validar con UX.
+- **Turno de cobro** (`/join/slot`, paso 3): los slots llegan de `GET /circles/slots`, una propuesta que el backend todavía no implementa ([docs/api/circles.md](../../docs/api/circles.md)).
+  - Resumen editable del monto y de la cuota; pestañas por tipo (Cobro más rápido, Menos fees, Mayor retorno) con el rango de meses y la etiqueta del tipo seleccionado.
+  - Cada mes muestra su posición y el fee o el descuento. Los slots ocupados aparecen deshabilitados.
+  - El botón dice "Continuar con <mes>". Antes de avanzar, `ConfirmSlotSelectionUseCase` revalida el slot; si se ocupó, avisa, invalida la query y quita la selección.
+  - Cambiar la cuota o el monto descarta el turno elegido.
+  - El paso 4 (`/join/payout-method`) es un placeholder hasta COPAYNI-37 y COPAYNI-31.
+  - "Learn More" del aviso de Admin Fees no tiene destino diseñado y no se muestra (igual que en el paso 1, pending-scope D16). El diseño (Figma 55:9377 y 55:9444) tampoco se pudo leer; se armó con el inventario y queda pendiente de validar con UX.
 
 ## Pendientes conocidos
 

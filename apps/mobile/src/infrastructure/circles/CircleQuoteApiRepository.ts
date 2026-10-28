@@ -2,6 +2,7 @@ import { z } from 'zod';
 
 import type { CircleQuoteRepositoryPort } from '@/domain/circles/ports/CircleQuoteRepositoryPort';
 import { InstallmentOption } from '@/domain/circles/value-objects/InstallmentOption';
+import { Slot, type SlotType } from '@/domain/circles/value-objects/Slot';
 import type { HttpClientPort } from '@/domain/shared/ports/HttpClientPort';
 import type { Money } from '@/domain/shared/value-objects/Money';
 
@@ -16,6 +17,28 @@ const installmentOptionsDto = z.object({
       installment: moneyDto,
       /** Propuesto para R5; si el backend no lo envía, la opción no se restringe. */
       withinMonthlyLimit: z.boolean().optional(),
+    }),
+  ),
+});
+
+const SLOT_TYPE_BY_DTO = {
+  fastest_payout: 'fastestPayout',
+  lowest_fees: 'lowestFees',
+  highest_return: 'highestReturn',
+} as const satisfies Record<string, SlotType>;
+
+/** DTO propuesto de GET /circles/slots (docs/api/circles.md). */
+const slotsDto = z.object({
+  payout: moneyDto,
+  months: z.number().int().positive(),
+  slots: z.array(
+    z.object({
+      position: z.number().int().positive(),
+      payoutPeriod: z.string(),
+      type: z.enum(['fastest_payout', 'lowest_fees', 'highest_return']),
+      fee: moneyDto,
+      discount: moneyDto,
+      available: z.boolean(),
     }),
   ),
 });
@@ -35,6 +58,24 @@ export class CircleQuoteApiRepository implements CircleQuoteRepositoryPort {
         months: option.months,
         installment: toMoney(option.installment),
         withinMonthlyLimit: option.withinMonthlyLimit,
+      }),
+    );
+  }
+
+  async listSlots(payout: Money, months: number, signal?: AbortSignal): Promise<Slot[]> {
+    const dto = await this.http.get('/circles/slots', {
+      query: { payoutAmount: payout.amount, months },
+      signal,
+      parse: (data) => slotsDto.parse(data),
+    });
+    return dto.slots.map((slot) =>
+      Slot.create({
+        position: slot.position,
+        payoutPeriod: slot.payoutPeriod,
+        type: SLOT_TYPE_BY_DTO[slot.type],
+        fee: toMoney(slot.fee),
+        discount: toMoney(slot.discount),
+        available: slot.available,
       }),
     );
   }

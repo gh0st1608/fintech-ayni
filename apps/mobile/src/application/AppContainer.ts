@@ -5,7 +5,9 @@ import type { RestoreSessionUseCase } from '@/application/auth/usecases/RestoreS
 import type { SignOutUseCase } from '@/application/auth/usecases/SignOutUseCase';
 import type { StartAuthenticationUseCase } from '@/application/auth/usecases/StartAuthenticationUseCase';
 import type { VerifyOtpUseCase } from '@/application/auth/usecases/VerifyOtpUseCase';
+import type { ConfirmSlotSelectionUseCase } from '@/application/circles/usecases/ConfirmSlotSelectionUseCase';
 import type { GetJoinConfigUseCase } from '@/application/circles/usecases/GetJoinConfigUseCase';
+import type { ListAvailableSlotsUseCase } from '@/application/circles/usecases/ListAvailableSlotsUseCase';
 import type { ListInstallmentOptionsUseCase } from '@/application/circles/usecases/ListInstallmentOptionsUseCase';
 import type { ChangeLanguageUseCase } from '@/application/i18n/usecases/ChangeLanguageUseCase';
 import type { ResolveLanguageUseCase } from '@/application/i18n/usecases/ResolveLanguageUseCase';
@@ -36,6 +38,8 @@ export interface AppContainer {
   circles: {
     getJoinConfig: GetJoinConfigUseCase;
     listInstallmentOptions: ListInstallmentOptionsUseCase;
+    listAvailableSlots: ListAvailableSlotsUseCase;
+    confirmSlotSelection: ConfirmSlotSelectionUseCase;
   };
   i18n: {
     resolveLanguage: ResolveLanguageUseCase;

@@ -73,7 +73,36 @@
       "choosePayout": "Choose the amount"
     },
     "slot": {
-      "title": "Payout Slot"
+      "title": "Payout Slot",
+      "question": "In which month do you want to receive your payout?",
+      "installmentSummaryLabel": "Monthly pay-in",
+      "installmentSummary": "{{amount}} per month · {{months}} months",
+      "editInstallmentA11y": "Edit the monthly pay-in",
+      "types": {
+        "fastestPayout": "Fastest Payout",
+        "lowestFees": "Lowest Fees",
+        "highestReturn": "Highest Return"
+      },
+      "typeRange": "You get paid between {{from}} and {{to}}.",
+      "typeTag": {
+        "fastestPayout": "Fees apply.",
+        "lowestFees": "No fees.",
+        "highestReturn": "Pay-ins discount."
+      },
+      "typeEmpty": "There are no slots of this type in this circle.",
+      "slotsLabel": "Available months",
+      "position": "Slot {{position}}",
+      "fee": "{{amount}} in fees",
+      "zeroFees": "Zero Fees",
+      "discount": "{{amount}} discount",
+      "taken": "Taken",
+      "adminFeesInfo": "Admin Fees are split equally across your pay-ins until your payout month.",
+      "continueWith": "Continue with {{month}}",
+      "noLongerAvailable": "That slot was just taken. Choose another month.",
+      "missingSteps": "Choose the payout amount and the monthly pay-in first."
+    },
+    "payoutMethod": {
+      "title": "Payout Method"
     }
   },
   "saving": {

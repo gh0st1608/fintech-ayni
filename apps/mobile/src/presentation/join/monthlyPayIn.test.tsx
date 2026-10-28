@@ -52,7 +52,7 @@ describe('MonthlyPayInScreen', () => {
   it('muestra el paso 2 de 4 con el resumen del monto y las combinaciones del backend', async () => {
     await renderPayIn();
     expect(screen.getByLabelText('Paso 2 de 4')).toBeTruthy();
-    expect(screen.getByTestId('payout-summary')).toHaveTextContent(/Monto de payout.*30\.000/);
+    expect(screen.getByTestId('join-summary')).toHaveTextContent(/Monto de payout.*30\.000/);
     // Intl en español no agrupa los miles de 4 cifras: "5000", no "5.000".
     expect(await option(/5\.?000.*al mes.*6 meses/)).toBeTruthy();
     expect(await option(/3\.?000.*al mes.*10 meses/)).toBeTruthy();
@@ -114,7 +114,7 @@ describe('MonthlyPayInScreen', () => {
     expect(await screen.findByRole('alert', {}, { timeout: 6000 })).toHaveTextContent(
       /No hay conexión/,
     );
-    expect(screen.getByTestId('payout-summary')).toHaveTextContent(/30\.000/);
+    expect(screen.getByTestId('join-summary')).toHaveTextContent(/30\.000/);
     online = true;
     await fireEvent.press(screen.getByRole('button', { name: 'Reintentar' }));
     expect(await option(/6 meses/)).toBeTruthy();

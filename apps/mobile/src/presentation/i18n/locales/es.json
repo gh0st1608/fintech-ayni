@@ -73,7 +73,36 @@
       "choosePayout": "Elegir el monto"
     },
     "slot": {
-      "title": "Turno de cobro"
+      "title": "Turno de cobro",
+      "question": "¿En qué mes quieres recibir tu payout?",
+      "installmentSummaryLabel": "Cuota mensual",
+      "installmentSummary": "{{amount}} al mes · {{months}} meses",
+      "editInstallmentA11y": "Editar la cuota mensual",
+      "types": {
+        "fastestPayout": "Cobro más rápido",
+        "lowestFees": "Menos fees",
+        "highestReturn": "Mayor retorno"
+      },
+      "typeRange": "Cobras entre {{from}} y {{to}}.",
+      "typeTag": {
+        "fastestPayout": "Aplican fees.",
+        "lowestFees": "Sin fees.",
+        "highestReturn": "Descuento en tus pay-ins."
+      },
+      "typeEmpty": "No hay turnos de este tipo en este círculo.",
+      "slotsLabel": "Meses disponibles",
+      "position": "Turno {{position}}",
+      "fee": "{{amount}} de fees",
+      "zeroFees": "Sin fees",
+      "discount": "{{amount}} de descuento",
+      "taken": "Ocupado",
+      "adminFeesInfo": "Las Admin Fees se reparten en partes iguales sobre tus pay-ins hasta tu mes de payout.",
+      "continueWith": "Continuar con {{month}}",
+      "noLongerAvailable": "Ese turno acaba de ocuparse. Elige otro mes.",
+      "missingSteps": "Primero elige el monto y la cuota mensual."
+    },
+    "payoutMethod": {
+      "title": "Método de cobro"
     }
   },
   "saving": {

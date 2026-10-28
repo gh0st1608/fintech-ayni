@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, ScrollView, StyleSheet, View } from 'react-native';
 
 import type { InstallmentOption } from '@/domain/circles/value-objects/InstallmentOption';
 import type { Money } from '@/domain/shared/value-objects/Money';
@@ -8,13 +8,13 @@ import { useFormatMoney } from '@/presentation/formatters/formatMoney';
 import { errorMessage } from '@/presentation/i18n/errorMessageKey';
 import { AppText } from '@/presentation/shared/components/AppText';
 import { Button } from '@/presentation/shared/components/Button';
-import { Card } from '@/presentation/shared/components/Card';
 import { InfoBanner } from '@/presentation/shared/components/InfoBanner';
 import { RadioCard, RadioGroup } from '@/presentation/shared/components/RadioCard';
 import { Screen } from '@/presentation/shared/components/Screen';
 import { Stepper } from '@/presentation/shared/components/Stepper';
-import { colors, spacing } from '@/presentation/theme/tokens';
+import { spacing } from '@/presentation/theme/tokens';
 
+import { JoinSummary } from '../components/JoinSummary';
 import { useInstallmentOptions } from '../hooks/useInstallmentOptions';
 import { useJoinFlow } from '../JoinFlowProvider';
 import { JOIN_FLOW_STEPS } from './PayoutAmountScreen';
@@ -29,6 +29,7 @@ interface MonthlyPayInScreenProps {
 /** Paso 2 de 4 (Figma 55:9334): combinaciones cuota × meses calculadas por el backend. */
 export function MonthlyPayInScreen({ onEdit, onNext }: MonthlyPayInScreenProps) {
   const { t } = useTranslation();
+  const formatMoney = useFormatMoney();
   const { draft } = useJoinFlow();
   const payout = draft.payoutAmount;
   const options = useInstallmentOptions(payout);
@@ -66,34 +67,20 @@ export function MonthlyPayInScreen({ onEdit, onNext }: MonthlyPayInScreenProps) 
         total={JOIN_FLOW_STEPS}
         accessibilityLabel={t('join.step', { current: 2, total: JOIN_FLOW_STEPS })}
       />
-      {payout && <PayoutSummary payout={payout} onEdit={onEdit} />}
+      {payout && (
+        <JoinSummary
+          rows={[
+            {
+              label: t('join.monthlyPayIn.summaryLabel'),
+              value: formatMoney(payout, { trimZeroDecimals: true }),
+              editLabel: t('join.monthlyPayIn.editA11y'),
+              onEdit,
+            },
+          ]}
+        />
+      )}
       {body}
     </Screen>
-  );
-}
-
-function PayoutSummary({ payout, onEdit }: { payout: Money; onEdit: () => void }) {
-  const { t } = useTranslation();
-  const formatMoney = useFormatMoney();
-  return (
-    <Card style={styles.summary} testID="payout-summary">
-      <View style={styles.summaryText}>
-        <AppText variant="caption" color={colors.neutral500}>
-          {t('join.monthlyPayIn.summaryLabel')}
-        </AppText>
-        <AppText weight="semibold">{formatMoney(payout, { trimZeroDecimals: true })}</AppText>
-      </View>
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel={t('join.monthlyPayIn.editA11y')}
-        onPress={onEdit}
-        hitSlop={spacing.sm}
-      >
-        <AppText weight="semibold" color={colors.primary}>
-          {t('join.monthlyPayIn.edit')}
-        </AppText>
-      </Pressable>
-    </Card>
   );
 }
 
@@ -161,6 +148,4 @@ const styles = StyleSheet.create({
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: spacing.lg },
   centerText: { textAlign: 'center' },
   content: { gap: spacing.l, paddingVertical: spacing.l },
-  summary: { flexDirection: 'row', alignItems: 'center', marginTop: spacing.l },
-  summaryText: { flex: 1, gap: spacing.xxs },
 });
