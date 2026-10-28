@@ -1,8 +1,10 @@
 import { randomUUID } from 'node:crypto';
 
+import { Logger } from '@nestjs/common';
 import { type DataSource } from 'typeorm';
 
-import { JoinCircleUseCase } from '@src/modules/circles/application/use-cases/join-circle.use-case';
+import { IdempotencyKeyExistsError } from '@src/modules/circles/application/ports/circle-repository.port';
+import { type JoinCircleUseCase } from '@src/modules/circles/application/use-cases/join-circle.use-case';
 import { Circle } from '@src/modules/circles/domain/entities/circle';
 import { CircleTerms } from '@src/modules/circles/domain/value-objects/circle-terms';
 import { CircleMembershipEntity } from '@src/modules/circles/infrastructure/persistence/typeorm/circle-membership.entity';
@@ -10,15 +12,23 @@ import { CircleEntity } from '@src/modules/circles/infrastructure/persistence/ty
 import { TypeOrmCircleRepository } from '@src/modules/circles/infrastructure/persistence/typeorm/typeorm-circle.repository';
 import { Money } from '@src/shared/domain/value-objects/money';
 import { Period } from '@src/shared/domain/value-objects/period';
+import { createJoinCircleUseCase } from '@test/support/join-circle.fixture';
 import { insertTestUser, openTestDatabase } from '@test/support/test-database';
 
 const MONTHS = 12;
+const TERMS = { payoutAmount: 2_400_000, months: MONTHS };
 
 /**
  * El adaptador contra PostgreSQL real: mapeo, índices únicos y las mismas carreras que
  * join-circle.concurrency.spec.ts, ahora con la base como barrera final.
  */
 describe('TypeOrmCircleRepository', () => {
+  beforeAll(() => {
+    jest.spyOn(Logger.prototype, 'log').mockImplementation(() => undefined);
+  });
+
+  afterAll(() => jest.restoreAllMocks());
+
   let dataSource: DataSource;
   let repository: TypeOrmCircleRepository;
   let useCase: JoinCircleUseCase;
@@ -30,7 +40,7 @@ describe('TypeOrmCircleRepository', () => {
       dataSource.getRepository(CircleEntity),
       dataSource.getRepository(CircleMembershipEntity),
     );
-    useCase = new JoinCircleUseCase(repository);
+    useCase = createJoinCircleUseCase(repository);
   });
 
   afterAll(() => dataSource.destroy());
@@ -51,7 +61,7 @@ describe('TypeOrmCircleRepository', () => {
 
   const user = (): Promise<string> => insertTestUser(dataSource);
   const join = (userId: string, position: number, idempotencyKey = `key-${userId}`) =>
-    useCase.execute({ circleId, userId, position, idempotencyKey });
+    useCase.execute({ circleId, ...TERMS, userId, position, idempotencyKey });
   const membershipCount = () =>
     dataSource.getRepository(CircleMembershipEntity).countBy({ circleId });
 
@@ -176,6 +186,67 @@ describe('TypeOrmCircleRepository', () => {
     ).rejects.toThrow(/check constraint/);
   });
 
+  describe('unión a un círculo nuevo (COPAYNI-31)', () => {
+    const newCircle = (userId: string, idempotencyKey: string) =>
+      Circle.restore({
+        id: randomUUID(),
+        terms: CircleTerms.create({
+          payout: Money.of(2_400_000, 'PEN'),
+          months: MONTHS,
+          startsOn: Period.of(2026, 11),
+        }),
+        memberships: [{ userId, position: 1, idempotencyKey }],
+      });
+    const circleCount = (ids: string[]) =>
+      dataSource.getRepository(CircleEntity).countBy(ids.map((id) => ({ id })));
+
+    it('encuentra el círculo por la clave del usuario', async () => {
+      const ana = await user();
+      await join(ana, 2, 'clave-ana');
+
+      await expect(repository.findByMembershipKey(ana, 'clave-ana')).resolves.toMatchObject({
+        id: circleId,
+      });
+      await expect(repository.findByMembershipKey(ana, 'otra')).resolves.toBeNull();
+      await expect(repository.findByMembershipKey(await user(), 'clave-ana')).resolves.toBeNull();
+      await expect(repository.findByMembershipKey('user-1', 'clave-ana')).resolves.toBeNull();
+    });
+
+    it('la misma clave del usuario en otro círculo no deja un círculo a medias', async () => {
+      const ana = await user();
+      const first = newCircle(ana, 'clave-nueva');
+      const second = newCircle(ana, 'clave-nueva');
+      const results = await Promise.allSettled([
+        repository.create(first),
+        repository.create(second),
+      ]);
+
+      expect(results.find(({ status }) => status === 'rejected')).toMatchObject({
+        reason: expect.any(IdempotencyKeyExistsError),
+      });
+      await expect(circleCount([first.id, second.id])).resolves.toBe(1);
+    });
+
+    it('una membresía con una clave que el usuario ya usó en otro círculo se rechaza', async () => {
+      const ana = await user();
+      await repository.create(newCircle(ana, 'clave-usada'));
+
+      await expect(
+        repository.addMembership(circleId, {
+          userId: ana,
+          position: 1,
+          idempotencyKey: 'clave-usada',
+        }),
+      ).rejects.toBeInstanceOf(IdempotencyKeyExistsError);
+    });
+
+    it('propaga los errores de create que no son de la clave', async () => {
+      await expect(repository.create(newCircle(randomUUID(), 'k'))).rejects.toThrow(
+        /fk_circle_memberships_user/,
+      );
+    });
+  });
+
   describe('findOldestJoinable', () => {
     // Un payout propio para no cruzarse con los círculos de las demás pruebas.
     const payout = Money.of(7_350_000, 'PEN');
@@ -188,7 +259,7 @@ describe('TypeOrmCircleRepository', () => {
           memberships: members.map((userId, index) => ({
             userId,
             position: index + 1,
-            idempotencyKey: `k-${index}`,
+            idempotencyKey: `k-${id}-${index}`,
           })),
         }),
       );

@@ -10,6 +10,7 @@ import {
   type PayoutSettings,
 } from './application/ports/payout.ports';
 import {
+  GetSelectedPayoutMethodUseCase,
   ListPayoutMethodsUseCase,
   SelectPayoutMethodUseCase,
 } from './application/use-cases/payout-method.use-cases';
@@ -20,12 +21,13 @@ import {
 } from './infrastructure/persistence/payout.adapters';
 import { PayoutMethodController } from './presentation/http/controllers/payout-method.controller';
 
-/** Métodos de cobro del payout (COPAYNI-37). Exporta el repositorio para la unión (COPAYNI-31). */
+/** Métodos de cobro del payout (COPAYNI-37). Exporta el método elegido para la unión (COPAYNI-31). */
 @Module({
   controllers: [PayoutMethodController],
   providers: [
     ListPayoutMethodsUseCase,
     SelectPayoutMethodUseCase,
+    GetSelectedPayoutMethodUseCase,
     { provide: PAYOUT_METHOD_CATALOG, useClass: ConfigPayoutMethodCatalog },
     { provide: PAYOUT_METHOD_REPOSITORY, useClass: SqlPayoutMethodRepository },
     { provide: PAYOUT_SCHEDULE, useClass: SqlPayoutSchedule },
@@ -37,6 +39,6 @@ import { PayoutMethodController } from './presentation/http/controllers/payout-m
       }),
     },
   ],
-  exports: [PAYOUT_METHOD_REPOSITORY],
+  exports: [GetSelectedPayoutMethodUseCase],
 })
 export class PayoutsModule {}

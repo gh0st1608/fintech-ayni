@@ -128,7 +128,7 @@ Queda abierto en R2: si los círculos los arma un administrador, el tamaño máx
 
 | Campo          | Notas                                                                          |
 | -------------- | ------------------------------------------------------------------------------ |
-| `circleId`     | Círculo ofrecido; `null` si es uno nuevo. Lo usará la unión (COPAYNI-31).      |
+| `circleId`     | Círculo ofrecido; `null` si es uno nuevo. Se envía igual a `POST /join`.       |
 | `startsOn`     | Mes de inicio del círculo (`YYYY-MM`).                                         |
 | `position`     | 1 = cobra el primer mes. Un slot por mes del círculo.                          |
 | `payoutPeriod` | Mes de cobro en formato `YYYY-MM`.                                             |
@@ -144,6 +144,85 @@ Comportamiento de la app:
 - Esa comprobación no reserva el slot: la reserva atómica es la unión al círculo (COPAYNI-31), con la unicidad por (círculo, slot) del repositorio.
 
 Errores: los mismos que `installment-options`, más `VALIDATION_ERROR` si `months` no es una duración ofrecida para ese payout.
+
+## `POST /v1/circles/join`
+
+**Estado:** implementado en el backend (COPAYNI-31), con **reglas de elegibilidad provisionales y configurables**: el KYC (COPAYNI-47) y el límite mensual (R5) todavía no existen. No hay diseño de la pantalla de confirmación (D2).
+
+Confirma la unión al círculo que ofreció `slots` y reserva el slot de forma **atómica e idempotente**.
+
+Cabeceras:
+
+- `Authorization: Bearer <accessToken>`.
+- `Idempotency-Key`: de 16 a 255 caracteres `[A-Za-z0-9_-]`. La app genera una (un UUID) por borrador y la repite en cada reintento.
+
+```json
+{ "circleId": null, "payoutAmount": 3000000, "months": 10, "position": 3 }
+```
+
+| Campo                     | Notas                                                                                                      |
+| ------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| `circleId`                | El `circleId` de `slots`. `null` abre el círculo nuevo que ofreció `slots`, con el mismo mes de inicio.    |
+| `payoutAmount` / `months` | La combinación de `installment-options`. Si hay `circleId`, tienen que ser las condiciones de ese círculo. |
+| `position`                | El slot elegido.                                                                                           |
+
+**201** (unión creada) o **200** (reintento con la misma clave: la unión ya existía):
+
+```json
+{
+  "circleId": "6f1c…",
+  "startsOn": "2026-11",
+  "payout": { "amount": 3000000, "currency": "PEN" },
+  "months": 10,
+  "position": 3,
+  "payoutPeriod": "2027-01",
+  "type": "lowest_fees",
+  "installments": [{ "amount": 336000, "currency": "PEN" }, "…"],
+  "netPayout": { "amount": 3000000, "currency": "PEN" },
+  "created": true
+}
+```
+
+- `installments` trae una cuota por mes, en orden; la app la usa como resumen confirmado.
+- `created: false` indica un reintento. La app lo trata como éxito.
+
+### Idempotencia y concurrencia
+
+- **Reintento con la misma clave y los mismos datos:** responde la unión ya hecha, aunque la elegibilidad haya cambiado desde entonces.
+- **La misma clave con otro slot, otro payout u otro círculo:** responde `IDEMPOTENCY_KEY_REUSED`.
+- **Clave única por usuario en todos sus círculos** (índice `uq_circle_memberships_user_idempotency_key`): el mismo pedido enviado dos veces a la vez con `circleId: null` abre un solo círculo.
+- **Dos usuarios por el mismo slot:** uno lo obtiene; el otro recibe `SLOT_TAKEN` y la app vuelve al paso 3.
+- **Dos usuarios que piden un círculo nuevo a la vez:** cada uno abre el suyo. Con `fill_oldest` (R2), los siguientes llenan primero el más antiguo.
+- **Si la unión se rechaza** (por elegibilidad, validación o slot ocupado), no se guarda nada y la misma clave sirve para volver a intentar.
+
+### Elegibilidad (provisional)
+
+Se comprueba en este orden, que es el orden en que la app resuelve cada caso:
+
+| Requisito                                   | Regla provisional                                                                                                                                                        | Error                          |
+| ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------ |
+| National ID válido ("Central Bank")         | `JOIN_IDENTITY_CHECK`: `assume_verified` (defecto) deja unirse a todos; `assume_unverified` los trata como no verificados, para probar la redirección. Hasta COPAYNI-47. | `NATIONAL_ID_REQUIRED`         |
+| Cuota bajo el límite mensual de pay-in (R5) | `JOIN_MONTHLY_PAYIN_LIMIT`, en unidades menores; 0 (defecto) = sin límite. Se compara con cada cuota del slot, sin sumar las de otros círculos.                          | `MONTHLY_LIMIT_EXCEEDED`       |
+| Método de cobro elegido (COPAYNI-37)        | El método guardado tiene que seguir disponible en el catálogo.                                                                                                           | `PAYOUT_METHOD_REQUIRED`       |
+| Payout dentro del límite del método         | Por ejemplo, la tarjeta prepago (`PAYOUT_PREPAID_CARD_LIMIT`).                                                                                                           | `PAYOUT_METHOD_LIMIT_EXCEEDED` |
+
+Cada unión queda registrada en el log como `circles.joined`, con el usuario, el círculo, el slot y si abrió un círculo nuevo.
+
+### Errores
+
+| Error                    | HTTP | Cuándo                                                                                                                                         |
+| ------------------------ | ---- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| `VALIDATION_ERROR`       | 400  | Cuerpo inválido; `Idempotency-Key` ausente o inválida; `months: not_offered`; `circleId: terms_mismatch` (el círculo tiene otras condiciones). |
+| `CIRCLE_NOT_FOUND`       | 404  | El `circleId` no existe.                                                                                                                       |
+| `SLOT_TAKEN`             | 409  | Otro miembro tomó el slot.                                                                                                                     |
+| `ALREADY_MEMBER`         | 409  | El usuario ya tiene un slot en ese círculo.                                                                                                    |
+| `CIRCLE_ALREADY_STARTED` | 409  | El círculo empezó: el cobro de los primeros slots ya pasó.                                                                                     |
+| `IDEMPOTENCY_KEY_REUSED` | 409  | La clave ya se usó con otros datos.                                                                                                            |
+| `PAYOUT_NOT_ALLOWED`     | 422  | Payout fuera del rango, del salto o del límite del usuario.                                                                                    |
+| `SLOT_OUT_OF_RANGE`      | 422  | `position` mayor que la duración.                                                                                                              |
+| Elegibilidad             | 422  | `NATIONAL_ID_REQUIRED`, `MONTHLY_LIMIT_EXCEEDED`, `PAYOUT_METHOD_REQUIRED`, `PAYOUT_METHOD_LIMIT_EXCEEDED`.                                    |
+
+Fuera de alcance, pendientes del diseño o del PO: la firma del contrato y del pagaré (D3, T9) y el primer pago (D1).
 
 ## Valores pendientes (pending-scope M6, R5 y R15)
 

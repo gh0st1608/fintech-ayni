@@ -33,6 +33,7 @@ const UNIQUE_CONSTRAINT_ERRORS: Record<string, () => Error> = {
   uq_circle_memberships_position: () => new SlotTakenError(),
   uq_circle_memberships_user: () => new AlreadyMemberError(),
   uq_circle_memberships_idempotency_key: () => new IdempotencyKeyExistsError(),
+  uq_circle_memberships_user_idempotency_key: () => new IdempotencyKeyExistsError(),
 };
 
 const toStartsOn = (period: Period): string => `${period.toString()}-01`;
@@ -51,6 +52,15 @@ export class TypeOrmCircleRepository implements CircleRepositoryPort {
     if (!isUuid(id)) return null;
     const row = await this.circles.findOne({ where: { id }, relations: { memberships: true } });
     return row ? TypeOrmCircleRepository.toDomain(row) : null;
+  }
+
+  async findByMembershipKey(userId: string, idempotencyKey: string): Promise<Circle | null> {
+    if (!isUuid(userId)) return null;
+    const row = await this.memberships.findOne({
+      select: { circleId: true },
+      where: { userId, idempotencyKey },
+    });
+    return row ? this.findById(row.circleId) : null;
   }
 
   async findOldestJoinable(criteria: JoinableCircleCriteria): Promise<Circle | null> {
@@ -81,8 +91,22 @@ export class TypeOrmCircleRepository implements CircleRepositoryPort {
     return row ? this.findById(row.id) : null;
   }
 
-  /** Guarda un círculo nuevo con sus membresías (alta de círculos y datos de prueba). */
   async create(circle: Circle): Promise<void> {
+    try {
+      await this.insertCircle(circle);
+    } catch (error) {
+      // El círculo es nuevo: solo puede chocar con otra membresía del usuario con la misma clave.
+      if (
+        violatedConstraint(error, PG_UNIQUE_VIOLATION) ===
+        'uq_circle_memberships_user_idempotency_key'
+      ) {
+        throw new IdempotencyKeyExistsError();
+      }
+      throw error;
+    }
+  }
+
+  private async insertCircle(circle: Circle): Promise<void> {
     await this.circles.manager.transaction(async (manager) => {
       await manager.insert(CircleEntity, {
         id: circle.id,
@@ -110,7 +134,7 @@ export class TypeOrmCircleRepository implements CircleRepositoryPort {
         // Si el mismo pedido llega dos veces a la vez, PostgreSQL puede reportar primero el
         // índice del slot o del usuario: la clave ya guardada indica que es un reintento.
         const sameKey = await this.memberships.existsBy({
-          circleId,
+          userId: membership.userId,
           idempotencyKey: membership.idempotencyKey,
         });
         throw sameKey ? new IdempotencyKeyExistsError() : mapped();

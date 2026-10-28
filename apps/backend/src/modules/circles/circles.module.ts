@@ -4,7 +4,9 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 
 import { type AppConfigService } from '../../config/configuration';
 import { CIRCLE_REPOSITORY } from './application/ports/circle-repository.port';
+import { PayoutsModule } from '../payouts/payouts.module';
 import { JOIN_CONFIG_REPOSITORY } from './application/ports/join-config-repository.port';
+import { JOIN_ELIGIBILITY } from './application/ports/join-eligibility.port';
 import {
   CIRCLE_ASSIGNMENT,
   type CircleAssignmentSettings,
@@ -13,8 +15,10 @@ import {
 } from './application/use-cases/get-available-slots.use-case';
 import { GetInstallmentOptionsUseCase } from './application/use-cases/get-installment-options.use-case';
 import { GetJoinConfigUseCase } from './application/use-cases/get-join-config.use-case';
+import { JoinCircleUseCase } from './application/use-cases/join-circle.use-case';
 import { SlotPricing } from './domain/services/slot-pricing';
 import { SlotPricingRules } from './domain/value-objects/slot-pricing-rules';
+import { ProvisionalJoinEligibility } from './infrastructure/eligibility/provisional-join-eligibility';
 import { ConfigJoinConfigRepository } from './infrastructure/persistence/config-join-config.repository';
 import { CircleMembershipEntity } from './infrastructure/persistence/typeorm/circle-membership.entity';
 import { CircleEntity } from './infrastructure/persistence/typeorm/circle.entity';
@@ -22,12 +26,15 @@ import { TypeOrmCircleRepository } from './infrastructure/persistence/typeorm/ty
 import { CirclesController } from './presentation/http/controllers/circles.controller';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([CircleEntity, CircleMembershipEntity])],
+  imports: [TypeOrmModule.forFeature([CircleEntity, CircleMembershipEntity]), PayoutsModule],
   controllers: [CirclesController],
   providers: [
     GetJoinConfigUseCase,
     GetInstallmentOptionsUseCase,
     GetAvailableSlotsUseCase,
+    JoinCircleUseCase,
+    // Reglas provisionales de elegibilidad (KYC COPAYNI-47 y pending-scope R5).
+    { provide: JOIN_ELIGIBILITY, useClass: ProvisionalJoinEligibility },
     ConfigJoinConfigRepository,
     { provide: JOIN_CONFIG_REPOSITORY, useExisting: ConfigJoinConfigRepository },
     TypeOrmCircleRepository,

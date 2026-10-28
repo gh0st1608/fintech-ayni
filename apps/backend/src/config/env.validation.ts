@@ -30,6 +30,8 @@ export const PAYOUT_METHOD_TYPES = [
   'bank_transfer',
   'fawry',
 ] as const;
+/** Cómo se trata el National ID al unirse mientras no exista el KYC (COPAYNI-47). */
+export const JOIN_IDENTITY_CHECKS = ['assume_verified', 'assume_unverified'] as const;
 
 interface RawValue {
   key: string;
@@ -265,6 +267,22 @@ export class EnvironmentVariables {
   @IsInt()
   @Min(1)
   PAYOUT_PREPAID_CARD_LIMIT: number = 10_000_000;
+
+  /**
+   * National ID al unirse a un Game'ya (COPAYNI-31). Provisional hasta el KYC (COPAYNI-47):
+   * `assume_verified` deja unirse a todos; `assume_unverified` los trata como no verificados, para
+   * probar la redirección a Scan National ID.
+   */
+  @IsIn(JOIN_IDENTITY_CHECKS)
+  JOIN_IDENTITY_CHECK: (typeof JOIN_IDENTITY_CHECKS)[number] = 'assume_verified';
+
+  /**
+   * Límite mensual de pay-in, en unidades menores de DEFAULT_CURRENCY (pending-scope R5,
+   * provisional): ninguna cuota del slot elegido puede superarlo. 0 = sin límite.
+   */
+  @IsInt()
+  @Min(0)
+  JOIN_MONTHLY_PAYIN_LIMIT: number = 0;
 
   /** PostgreSQL (ADR 2, docs/architecture.md). */
   @IsString()

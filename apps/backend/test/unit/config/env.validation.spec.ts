@@ -223,4 +223,32 @@ describe('validateEnvironment', () => {
       );
     });
   });
+
+  describe('elegibilidad para unirse', () => {
+    it('por defecto asume el National ID y no limita el pay-in mensual', () => {
+      expect(validateEnvironment({ ...REQUIRED })).toMatchObject({
+        JOIN_IDENTITY_CHECK: 'assume_verified',
+        JOIN_MONTHLY_PAYIN_LIMIT: 0,
+      });
+      expect(
+        validateEnvironment({
+          ...REQUIRED,
+          JOIN_IDENTITY_CHECK: 'assume_unverified',
+          JOIN_MONTHLY_PAYIN_LIMIT: '500000',
+        }),
+      ).toMatchObject({
+        JOIN_IDENTITY_CHECK: 'assume_unverified',
+        JOIN_MONTHLY_PAYIN_LIMIT: 500_000,
+      });
+    });
+
+    it('rechaza valores fuera del contrato', () => {
+      expect(() => validateEnvironment({ ...REQUIRED, JOIN_IDENTITY_CHECK: 'kyc' })).toThrow(
+        /JOIN_IDENTITY_CHECK/,
+      );
+      expect(() => validateEnvironment({ ...REQUIRED, JOIN_MONTHLY_PAYIN_LIMIT: '-1' })).toThrow(
+        /JOIN_MONTHLY_PAYIN_LIMIT/,
+      );
+    });
+  });
 });

@@ -205,6 +205,8 @@ Se validan al arrancar ([src/config/env.validation.ts](src/config/env.validation
 | `PAYOUT_METHODS`                                          | `digital_wallet,prepaid_card,bank_transfer` | Métodos de cobro que se muestran, en orden (T5, provisional).                                   |
 | `PAYOUT_METHODS_UNAVAILABLE` / `PAYOUT_METHODS_NO_CHARGE` | vacío / `prepaid_card,bank_transfer`        | Deshabilitados y con badge "No Charge".                                                         |
 | `PAYOUT_PREPAID_CARD_LIMIT`                               | `10000000`                                  | Límite de la tarjeta prepago, en unidades menores.                                              |
+| `JOIN_IDENTITY_CHECK`                                     | `assume_verified`                           | National ID al unirse, hasta el KYC (COPAYNI-47): `assume_verified` o `assume_unverified`.      |
+| `JOIN_MONTHLY_PAYIN_LIMIT`                                | `0`                                         | Límite mensual de pay-in (R5, provisional), en unidades menores; 0 = sin límite.                |
 | `JWT_PRIVATE_KEY`                                         | efímera fuera de prd                        | **Secreto.** PEM P-256 para firmar los access tokens. Obligatoria en production.                |
 | `JWT_KEY_ID` / `ISSUER` / `AUDIENCE`                      | `ayni-1` / `ayni-api` / `ayni-mobile`       | `kid`, `iss` y `aud` del JWT.                                                                   |
 | `ACCESS_TOKEN_TTL_SECONDS`                                | `900`                                       | Vida del access token.                                                                          |

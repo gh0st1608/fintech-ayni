@@ -1,11 +1,14 @@
-import { JoinCircleUseCase } from '@src/modules/circles/application/use-cases/join-circle.use-case';
+import { Logger } from '@nestjs/common';
+import { type JoinCircleUseCase } from '@src/modules/circles/application/use-cases/join-circle.use-case';
 import { Circle } from '@src/modules/circles/domain/entities/circle';
 import { CircleTerms } from '@src/modules/circles/domain/value-objects/circle-terms';
 import { Money } from '@src/shared/domain/value-objects/money';
 import { Period } from '@src/shared/domain/value-objects/period';
 import { InMemoryCircleRepository } from '@test/support/in-memory-circle.repository';
+import { createJoinCircleUseCase } from '@test/support/join-circle.fixture';
 
 const MONTHS = 12;
+const TERMS = { payoutAmount: 2_400_000, months: MONTHS };
 
 /**
  * Concurrencia de la reserva de slots: las solicitudes se intercalan entre la lectura y la
@@ -13,6 +16,12 @@ const MONTHS = 12;
  * con PostgreSQL (COPAYNI-12) esta prueba se repite contra la base real.
  */
 describe('JoinCircleUseCase: solicitudes simultáneas', () => {
+  beforeAll(() => {
+    jest.spyOn(Logger.prototype, 'log').mockImplementation(() => undefined);
+  });
+
+  afterAll(() => jest.restoreAllMocks());
+
   let repository: InMemoryCircleRepository;
   let useCase: JoinCircleUseCase;
 
@@ -28,11 +37,11 @@ describe('JoinCircleUseCase: solicitudes simultáneas', () => {
         }),
       }),
     );
-    useCase = new JoinCircleUseCase(repository);
+    useCase = createJoinCircleUseCase(repository);
   });
 
   const join = (userId: string, position: number, idempotencyKey = `key-${userId}`) =>
-    useCase.execute({ circleId: 'c-1', userId, position, idempotencyKey });
+    useCase.execute({ circleId: 'c-1', ...TERMS, userId, position, idempotencyKey });
 
   it('dos usuarios por el mismo slot: uno lo obtiene y el otro recibe SLOT_TAKEN', async () => {
     const results = await Promise.allSettled([join('ana', 1), join('beto', 1)]);
@@ -92,7 +101,13 @@ describe('JoinCircleUseCase: solicitudes simultáneas', () => {
 
   it('un círculo inexistente responde CIRCLE_NOT_FOUND', async () => {
     await expect(
-      useCase.execute({ circleId: 'nope', userId: 'ana', position: 1, idempotencyKey: 'k' }),
+      useCase.execute({
+        circleId: 'nope',
+        ...TERMS,
+        userId: 'ana',
+        position: 1,
+        idempotencyKey: 'k',
+      }),
     ).rejects.toMatchObject({ code: 'CIRCLE_NOT_FOUND', kind: 'not_found' });
   });
 

@@ -78,3 +78,20 @@ export class SelectPayoutMethodUseCase {
     return { methods: catalog.methods, selected: method.type };
   }
 }
+
+/** Método elegido si sigue disponible en el catálogo; unirse a un círculo lo exige (COPAYNI-31). */
+@Injectable()
+export class GetSelectedPayoutMethodUseCase {
+  constructor(
+    @Inject(PAYOUT_METHOD_CATALOG) private readonly catalogs: PayoutMethodCatalogPort,
+    @Inject(PAYOUT_METHOD_REPOSITORY) private readonly selections: PayoutMethodRepositoryPort,
+  ) {}
+
+  async execute(userId: string): Promise<PayoutMethod | null> {
+    const [catalog, selected] = await Promise.all([
+      this.catalogs.forUser(userId),
+      this.selections.selectedBy(userId),
+    ]);
+    return catalog.methods.find((method) => method.type === selected && method.available) ?? null;
+  }
+}

@@ -26,6 +26,8 @@ export interface JoinableCircleCriteria {
 
 export interface CircleRepositoryPort {
   findById(id: string): Promise<Circle | null>;
+  /** El círculo donde el usuario se unió con esa clave de idempotencia, o `null`. */
+  findByMembershipKey(userId: string, idempotencyKey: string): Promise<Circle | null>;
   /** El más antiguo (por alta) que cumple los criterios y no está lleno, o `null`. */
   findOldestJoinable(criteria: JoinableCircleCriteria): Promise<Circle | null>;
   /**
@@ -35,7 +37,13 @@ export interface CircleRepositoryPort {
    * índices únicos: solo chocan las solicitudes que compiten por lo mismo.
    *
    * Si otra solicitud ganó, rechaza con SlotTakenError, AlreadyMemberError o
-   * IdempotencyKeyExistsError.
+   * IdempotencyKeyExistsError. La clave también es única por usuario en todos sus círculos.
    */
   addMembership(circleId: string, membership: Membership): Promise<void>;
+  /**
+   * Guarda un círculo nuevo con sus membresías en una sola transacción. Si el usuario ya usó la
+   * clave (el mismo pedido llegó dos veces), rechaza con IdempotencyKeyExistsError y no queda
+   * ningún círculo a medias.
+   */
+  create(circle: Circle): Promise<void>;
 }

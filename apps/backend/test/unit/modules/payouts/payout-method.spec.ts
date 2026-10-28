@@ -1,5 +1,6 @@
 import { type PayoutMethodRepositoryPort } from '@src/modules/payouts/application/ports/payout.ports';
 import {
+  GetSelectedPayoutMethodUseCase,
   ListPayoutMethodsUseCase,
   SelectPayoutMethodUseCase,
 } from '@src/modules/payouts/application/use-cases/payout-method.use-cases';
@@ -107,5 +108,26 @@ describe('Métodos de cobro', () => {
     await expect(
       setup({ payoutPeriods: [Period.of(2026, 11)] }).select.execute(ANA, 'digital_wallet'),
     ).resolves.toMatchObject({ selected: 'digital_wallet' });
+  });
+});
+
+describe('GetSelectedPayoutMethodUseCase', () => {
+  const selected = (type: PayoutMethodType | null) =>
+    new GetSelectedPayoutMethodUseCase(
+      { forUser: () => Promise.resolve(CATALOG) },
+      { selectedBy: () => Promise.resolve(type), select: () => Promise.resolve() },
+    ).execute('ana');
+
+  it('devuelve el método elegido con su límite', async () => {
+    await expect(selected('prepaid_card')).resolves.toMatchObject({
+      type: 'prepaid_card',
+      limit: Money.of(10_000_000, 'PEN'),
+    });
+  });
+
+  it('sin método, o con uno que ya no está disponible, devuelve null', async () => {
+    await expect(selected(null)).resolves.toBeNull();
+    await expect(selected('fawry')).resolves.toBeNull();
+    await expect(selected('bank_transfer')).resolves.toBeNull();
   });
 });

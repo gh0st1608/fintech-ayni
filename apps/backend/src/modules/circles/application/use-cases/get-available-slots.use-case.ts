@@ -2,10 +2,7 @@ import { Inject, Injectable } from '@nestjs/common';
 
 import { type Principal } from '../../../../shared/application/ports/access-token-verifier.port';
 import { CLOCK, type ClockPort } from '../../../../shared/application/ports/clock.port';
-import { Money } from '../../../../shared/domain/value-objects/money';
 import { Period } from '../../../../shared/domain/value-objects/period';
-import { ValidationError } from '../../../../shared/errors/app-error';
-import { installmentOptions } from '../../domain/services/installment-options';
 import { type SlotPricing, type SlotQuote } from '../../domain/services/slot-pricing';
 import { CircleTerms } from '../../domain/value-objects/circle-terms';
 import { CIRCLE_REPOSITORY, type CircleRepositoryPort } from '../ports/circle-repository.port';
@@ -13,7 +10,7 @@ import {
   JOIN_CONFIG_REPOSITORY,
   type JoinConfigRepositoryPort,
 } from '../ports/join-config-repository.port';
-import { PayoutNotAllowedError } from './get-installment-options.use-case';
+import { offeredPayout } from './offered-payout';
 
 export const CIRCLE_ASSIGNMENT = Symbol('CIRCLE_ASSIGNMENT');
 export const SLOT_PRICING = Symbol('SLOT_PRICING');
@@ -61,14 +58,7 @@ export class GetAvailableSlotsUseCase {
     months: number,
   ): Promise<AvailableSlotsResult> {
     const joinConfig = await this.joinConfigs.getForUser(principal.userId);
-    const payout = Money.of(payoutAmount, joinConfig.payoutRange.currency);
-    if (!joinConfig.allowsPayout(payout)) throw new PayoutNotAllowedError();
-    const offered = installmentOptions(payout, joinConfig.durationOptions);
-    if (!offered.some((option) => option.months === months)) {
-      throw new ValidationError('La duración no es una opción para ese payout', {
-        months: 'not_offered',
-      });
-    }
+    const payout = offeredPayout(joinConfig, payoutAmount, months);
 
     const currentPeriod = Period.fromDate(this.clock.now(), this.assignment.timeZone);
     const circle =

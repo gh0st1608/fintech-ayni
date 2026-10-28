@@ -1,0 +1,66 @@
+import { type CircleRepositoryPort } from '@src/modules/circles/application/ports/circle-repository.port';
+import { type CircleAssignmentSettings } from '@src/modules/circles/application/use-cases/get-available-slots.use-case';
+import { JoinCircleUseCase } from '@src/modules/circles/application/use-cases/join-circle.use-case';
+import { JoinConfig } from '@src/modules/circles/domain/entities/join-config';
+import { type JoinApplicant } from '@src/modules/circles/domain/services/join-eligibility';
+import { SlotPricing } from '@src/modules/circles/domain/services/slot-pricing';
+import { PayoutRange } from '@src/modules/circles/domain/value-objects/payout-range';
+import { SlotPricingRules } from '@src/modules/circles/domain/value-objects/slot-pricing-rules';
+import { Money } from '@src/shared/domain/value-objects/money';
+
+import { TestClock } from './create-test-app';
+
+const pen = (major: number) => Money.of(major * 100, 'PEN');
+
+/** Los valores por defecto de la configuración (iguales al adaptador falso de mobile). */
+export const TEST_PRICING = new SlotPricing(
+  SlotPricingRules.create({
+    fastestShareBps: 2_500,
+    highestShareBps: 2_500,
+    maxFeeBps: 1_000,
+    maxDiscountBps: 500,
+    adminFeeBps: 1_200,
+    adminFeeMode: 'added_to_installments',
+  }),
+);
+
+export const TEST_JOIN_CONFIG = JoinConfig.create({
+  payoutRange: PayoutRange.create({ min: pen(3_000), max: pen(120_000), step: pen(500) }),
+  savingProgramMax: pen(1_000_000),
+  userPayoutLimit: null,
+  durationOptions: [6, 10, 12],
+});
+
+/** Usuario con National ID, sin límite mensual y con método de cobro elegido. */
+export const ELIGIBLE: JoinApplicant = {
+  identityVerified: true,
+  monthlyPayInLimit: null,
+  payoutMethod: { type: 'bank_transfer', limit: null },
+};
+
+/** 15 de octubre de 2026 en Lima: los círculos que empiezan en noviembre todavía admiten miembros. */
+export const JOIN_NOW = new Date('2026-10-15T15:00:00Z');
+
+export function createJoinCircleUseCase(
+  circles: CircleRepositoryPort,
+  options: {
+    applicant?: JoinApplicant;
+    now?: Date;
+    assignment?: Partial<CircleAssignmentSettings>;
+  } = {},
+): JoinCircleUseCase {
+  const applicant = options.applicant ?? ELIGIBLE;
+  return new JoinCircleUseCase(
+    { getForUser: () => Promise.resolve(TEST_JOIN_CONFIG) },
+    circles,
+    TEST_PRICING,
+    {
+      strategy: 'fill_oldest',
+      startOffsetMonths: 1,
+      timeZone: 'America/Lima',
+      ...options.assignment,
+    },
+    { applicantFor: () => Promise.resolve(applicant) },
+    new TestClock(options.now ?? JOIN_NOW),
+  );
+}

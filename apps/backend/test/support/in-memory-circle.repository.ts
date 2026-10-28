@@ -31,6 +31,20 @@ export class InMemoryCircleRepository implements CircleRepositoryPort {
     return stored ? Circle.restore({ id, ...stored }) : null;
   }
 
+  async findByMembershipKey(userId: string, idempotencyKey: string): Promise<Circle | null> {
+    await roundTrip();
+    for (const [id, stored] of this.circles) {
+      if (
+        stored.memberships.some(
+          (member) => member.userId === userId && member.idempotencyKey === idempotencyKey,
+        )
+      ) {
+        return Circle.restore({ id, ...stored });
+      }
+    }
+    return null;
+  }
+
   /** Mismo criterio que el adaptador de PostgreSQL; el orden de alta es el de inserción. */
   async findOldestJoinable(criteria: JoinableCircleCriteria): Promise<Circle | null> {
     await roundTrip();
@@ -56,7 +70,10 @@ export class InMemoryCircleRepository implements CircleRepositoryPort {
     const stored = this.circles.get(circleId);
     if (!stored) throw new Error('Círculo inexistente');
     const { memberships } = stored;
-    if (memberships.some(({ idempotencyKey }) => idempotencyKey === membership.idempotencyKey)) {
+    if (
+      memberships.some(({ idempotencyKey }) => idempotencyKey === membership.idempotencyKey) ||
+      this.usedKey(membership)
+    ) {
       throw new IdempotencyKeyExistsError();
     }
     if (memberships.some(({ position }) => position === membership.position)) {
@@ -66,6 +83,27 @@ export class InMemoryCircleRepository implements CircleRepositoryPort {
       throw new AlreadyMemberError();
     }
     memberships.push({ ...membership });
+  }
+
+  async create(circle: Circle): Promise<void> {
+    await roundTrip();
+    if (circle.memberships.some((membership) => this.usedKey(membership))) {
+      throw new IdempotencyKeyExistsError();
+    }
+    this.add(circle);
+  }
+
+  /** Índice único (usuario, clave) en todos los círculos. */
+  private usedKey({ userId, idempotencyKey }: Membership): boolean {
+    return [...this.circles.values()].some(({ memberships }) =>
+      memberships.some(
+        (member) => member.userId === userId && member.idempotencyKey === idempotencyKey,
+      ),
+    );
+  }
+
+  get size(): number {
+    return this.circles.size;
   }
 
   membershipsOf(circleId: string): Membership[] {
