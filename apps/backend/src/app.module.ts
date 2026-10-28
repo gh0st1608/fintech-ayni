@@ -7,6 +7,7 @@ import { type AppConfigService, configModuleOptions } from './config/configurati
 import { CirclesModule } from './modules/circles/circles.module';
 import { HealthModule } from './modules/health/health.module';
 import { ACCESS_TOKEN_VERIFIER } from './shared/application/ports/access-token-verifier.port';
+import { DatabaseModule } from './shared/infrastructure/persistence/database.module';
 import { DenyAllAccessTokenVerifier } from './shared/infrastructure/auth/deny-all-access-token-verifier';
 import { TelemetryShutdown } from './shared/infrastructure/observability/telemetry-shutdown';
 import { AllExceptionsFilter } from './shared/presentation/filters/all-exceptions.filter';
@@ -29,6 +30,7 @@ import { createValidationPipe } from './shared/presentation/pipes/validation.pip
         },
       ],
     }),
+    DatabaseModule,
     HealthModule,
     CirclesModule,
   ],

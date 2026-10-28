@@ -168,6 +168,46 @@ export class EnvironmentVariables {
   @IsInt({ each: true })
   @Min(2, { each: true })
   CIRCLE_DURATION_OPTIONS!: number[];
+
+  /** PostgreSQL (ADR 2, docs/architecture.md). */
+  @IsString()
+  @IsNotEmpty()
+  DB_HOST!: string;
+
+  @IsInt()
+  @Min(1)
+  @Max(65535)
+  DB_PORT: number = 5432;
+
+  @IsString()
+  @IsNotEmpty()
+  DB_NAME!: string;
+
+  @IsString()
+  @IsNotEmpty()
+  DB_USERNAME!: string;
+
+  /** Es un secreto: llega del gestor de secretos y nunca se registra. */
+  @IsString()
+  @IsNotEmpty()
+  DB_PASSWORD!: string;
+
+  /** TLS verificando el certificado del servidor. RDS lo exige (`rds.force_ssl`). */
+  @Transform(toBoolean)
+  @IsBoolean()
+  DB_SSL: boolean = false;
+
+  /** CA en PEM para verificar el servidor (bundle de RDS). Sin valor, se usan las CA del sistema. */
+  @IsOptional()
+  @IsString()
+  @IsNotEmpty()
+  DB_SSL_CA?: string;
+
+  /** Conexiones máximas del pool por instancia de la API. */
+  @IsInt()
+  @Min(1)
+  @Max(100)
+  DB_POOL_MAX: number = 10;
 }
 
 /** Si se exporta alguna señal de telemetría (y por tanto se necesita el endpoint OTLP). */

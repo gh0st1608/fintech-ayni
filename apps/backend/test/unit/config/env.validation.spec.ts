@@ -7,6 +7,10 @@ const REQUIRED = {
   JOIN_PAYOUT_STEP: '50000',
   SAVING_PROGRAM_MAX: '100000000',
   CIRCLE_DURATION_OPTIONS: '6,10,12',
+  DB_HOST: 'localhost',
+  DB_NAME: 'ayni',
+  DB_USERNAME: 'ayni',
+  DB_PASSWORD: 'secreto',
 };
 
 describe('validateEnvironment', () => {
@@ -135,6 +139,23 @@ describe('validateEnvironment', () => {
       expect(() => validateEnvironment({ ...REQUIRED, CIRCLE_DURATION_OPTIONS: value })).toThrow(
         /CIRCLE_DURATION_OPTIONS/,
       );
+    });
+  });
+  describe('base de datos', () => {
+    it('aplica los valores por defecto de puerto, TLS y pool', () => {
+      expect(validateEnvironment({ ...REQUIRED })).toMatchObject({
+        DB_PORT: 5432,
+        DB_SSL: false,
+        DB_POOL_MAX: 10,
+      });
+    });
+
+    it.each(['DB_HOST', 'DB_NAME', 'DB_USERNAME', 'DB_PASSWORD'])('exige %s', (key) => {
+      expect(() => validateEnvironment({ ...REQUIRED, [key]: '' })).toThrow(new RegExp(key));
+    });
+
+    it('nunca incluye la contraseña en el mensaje de error', () => {
+      expect(() => validateEnvironment({ ...REQUIRED, DB_PORT: 'x' })).not.toThrow(/secreto/);
     });
   });
 });

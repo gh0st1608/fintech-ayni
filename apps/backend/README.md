@@ -7,18 +7,21 @@ API REST de Ayni: NestJS 11 + TypeScript strict con arquitectura hexagonal por m
 - Fundaciones (COPAYNI-8) y el primer endpoint real, `GET /v1/circles/join-config`, que consume la app mobile.
 - CI, Husky y commitlint (COPAYNI-9): ver el README de la raíz.
 - Observabilidad (COPAYNI-10): OpenTelemetry con exportación OTLP a New Relic, logs JSON correlacionados y health checks.
-- Dominio de círculos (COPAYNI-24, sin persistencia): términos, precio por slot, cronograma de cuotas, reserva atómica e idempotente, y `GET /v1/circles/installment-options`.
-- Pendiente: despliegue en AWS y base de datos (COPAYNI-11 y COPAYNI-12).
+- Dominio de círculos (COPAYNI-24): términos, precio por slot, cronograma de cuotas, reserva atómica e idempotente, y `GET /v1/circles/installment-options`.
+- Persistencia (COPAYNI-24): PostgreSQL con TypeORM, migraciones versionadas y readiness de la base de datos.
+- Pendiente: despliegue en AWS (COPAYNI-12) y el módulo auth (COPAYNI-19, 20 y 21).
 
 ## Requisitos
 
 - Node.js 22.13 o superior (`.nvmrc`) y npm 10.
-- Sin servicios externos: todavía no hay base de datos.
+- Docker, para PostgreSQL 17 ([compose.yaml](compose.yaml)). Las pruebas de integración y e2e lo necesitan.
 
 ```bash
 cd apps/backend
 npm install
 cp .env.example .env   # valores de desarrollo, sin secretos
+npm run db:up          # PostgreSQL en 127.0.0.1:5432 con las bases ayni y ayni_test
+npm run migrate:dev    # aplica las migraciones a la base de desarrollo
 npm run start:dev      # http://localhost:3000, Swagger en /docs si ENABLE_SWAGGER=true
 ```
 
@@ -28,6 +31,8 @@ npm run start:dev      # http://localhost:3000, Swagger en /docs si ENABLE_SWAGG
 | --------------------------- | -------------------------------------------------------------------------------------- |
 | `start:dev` / `start:debug` | Compila en modo watch y reinicia la API (`--inspect` en debug).                        |
 | `build`                     | Compila `src` a `dist` con `tsconfig.build.json`.                                      |
+| `db:up` / `db:down`         | Levanta o detiene el PostgreSQL local (los datos quedan en un volumen).                |
+| `migrate` / `migrate:dev`   | Aplica las migraciones pendientes con `dist/migrate.js` (`migrate:dev` compila antes). |
 | `start` / `start:prod`      | Ejecuta `dist/main.js`.                                                                |
 | `test` / `test:watch`       | Pruebas unitarias y de integración.                                                    |
 | `test:e2e`                  | Pruebas e2e: la API completa en memoria con supertest.                                 |
@@ -182,6 +187,11 @@ Se validan al arrancar ([src/config/env.validation.ts](src/config/env.validation
 | `DEFAULT_CURRENCY`                  | obligatoria          | ISO 4217 (pending-scope M1; PEN propuesto).                                              |
 | `JOIN_PAYOUT_MIN` / `MAX` / `STEP`  | obligatorias         | Rango del payout, en unidades menores. Debe ser alcanzable en saltos completos.          |
 | `SAVING_PROGRAM_MAX`                | obligatoria          | Máximo del programa de ahorro, en unidades menores.                                      |
+| `DB_HOST` / `DB_NAME`               | obligatorias         | PostgreSQL.                                                                              |
+| `DB_PORT`                           | `5432`               |                                                                                          |
+| `DB_USERNAME` / `DB_PASSWORD`       | obligatorias         | **`DB_PASSWORD` es secreto.** En AWS llegan de Secrets Manager.                          |
+| `DB_SSL` / `DB_SSL_CA`              | `false` / vacío      | TLS verificando el servidor (RDS lo exige). `DB_SSL_CA`: bundle de CA de RDS en PEM.     |
+| `DB_POOL_MAX`                       | `10`                 | Conexiones máximas por instancia de la API.                                              |
 
 **Secretos:**
 
@@ -272,7 +282,7 @@ Sin cuenta de New Relic, el mismo flujo funciona contra un collector OTLP local 
 - Readiness consulta los `ReadinessIndicator` registrados en [HealthModule](src/modules/health/health.module.ts):
   - en paralelo, con 2 segundos como máximo cada uno;
   - qué indicador falló queda en un log `warn`, nunca en la respuesta.
-- Todavía no hay indicadores. El de la base de datos llega con COPAYNI-12.
+- Indicadores: PostgreSQL (`SELECT 1`).
 
 ## Dominio de círculos (COPAYNI-24)
 
@@ -310,14 +320,36 @@ Cambiar una fórmula toca `SlotPricing` y sus pruebas, sin afectar al resto del 
 - El agregado valida contra el estado leído.
 - La barrera final es la inserción del repositorio con unicidad por (círculo, slot), (círculo, usuario) y (círculo, clave). Así solo chocan las solicitudes que compiten por lo mismo: doce usuarios pueden unirse a la vez a slots distintos.
 - Si gana otra solicitud con la misma clave, el caso de uso relee y devuelve esa membresía.
-- [La prueba de concurrencia](test/integration/modules/circles/join-circle.concurrency.spec.ts) usa un doble con esa semántica. Se repite contra PostgreSQL cuando exista el adaptador.
+- [La prueba de concurrencia](test/integration/modules/circles/join-circle.concurrency.spec.ts) usa un doble con esa semántica, y [la del adaptador](test/integration/modules/circles/typeorm-circle.repository.spec.ts) repite las mismas carreras contra PostgreSQL.
+- Si el mismo pedido llega dos veces a la vez, PostgreSQL puede reportar primero el índice del slot o del usuario. El adaptador comprueba la clave antes de traducir el error, así el reintento se trata como tal.
 
 **Pendiente:**
 
-- Persistencia y migraciones: dependen de la base de datos (COPAYNI-11 y 12).
-- Endpoints de círculos recomendados y slots disponibles, y la unión por HTTP (COPAYNI-31): necesitan la persistencia.
+- Endpoints de círculos recomendados y slots disponibles, y la unión por HTTP (COPAYNI-31).
 - Origen de los parámetros de precio: por círculo en la base de datos o por configuración.
 - Formación de los círculos (R2) y mora (R3).
+
+## Persistencia
+
+PostgreSQL 17 (ADR 2, [docs/architecture.md](../../docs/architecture.md)) con **TypeORM**.
+
+- **Capas:** las entidades TypeORM viven en `infrastructure/persistence/typeorm` de cada módulo y se convierten al dominio en el repositorio. El dominio y la aplicación no importan TypeORM (lo verifica ESLint).
+- **Conexión:** [DatabaseModule](src/shared/infrastructure/persistence/database.module.ts), global. Cada módulo registra sus entidades con `TypeOrmModule.forFeature`.
+- **Esquema:** solo cambia con migraciones en [migrations](src/shared/infrastructure/persistence/migrations), listadas en orden en `index.ts`. Nunca `synchronize`. El historial está en la tabla `schema_migrations`.
+- **Migraciones en AWS:** `node dist/migrate.js` como tarea ECS de una sola vez antes de actualizar el servicio. Cada migración corre en su propia transacción.
+- **Restricciones en la base:** montos positivos, cuota exacta, mes de inicio el día 1 y los índices únicos de las membresías. La base rechaza un dato inválido aunque un adaptador falle.
+- **Sin logs de consultas:** pueden llevar datos personales. Cada consulta tiene un máximo de 10 s (`statement_timeout`).
+
+**Pruebas:**
+
+- [global-setup.ts](test/global-setup.ts) vacía la base `ayni_test` y aplica todas las migraciones desde cero en cada corrida, así también se prueban las migraciones.
+- Las pruebas usan ids aleatorios y no comparten filas: los archivos corren en paralelo sin limpiar entre ellos.
+- En CI, PostgreSQL corre como service del job `backend`.
+
+**Pendiente (COPAYNI-12):**
+
+- Pasar `DB_*` a la task definition: la contraseña desde Secrets Manager y `DB_SSL_CA` con el bundle de RDS.
+- Crear el usuario de la API con permisos mínimos, distinto del administrador, y la tarea ECS de migraciones en el pipeline.
 
 ## Imagen de contenedor
 
@@ -341,7 +373,8 @@ docker build -t ayni-api:local .
 - **TypeScript 6.0:** ts-jest y typescript-eslint todavía no soportan TypeScript 7.
 - **`overrides` en package.json:** fuerzan `multer` 2.5 y `js-yaml` 5.4+, que corrigen vulnerabilidades (GHSA-q7qp-rjg7-q26m, GHSA-r3ph-w7gj-g6xm) de las dependencias de `@nestjs/platform-express` y `@nestjs/swagger` 11. Se pueden quitar cuando esos paquetes publiquen versiones corregidas.
 - **Rate limit en memoria:** sirve para una sola instancia. Con varias réplicas o con Lambda necesita un almacenamiento compartido (COPAYNI-11).
-- **Montos desde configuración:** `join-config` se lee de variables validadas mientras no haya base de datos. `userPayoutLimit` es `null` hasta definir el límite por usuario (pending-scope R5).
+- **`@nestjs/typeorm` 11 en lugar de 12:** la 12 se publica solo como ESM, igual que NestJS 12. La 11 admite TypeORM 1.x.
+- **Montos desde configuración:** `join-config` se lee de variables validadas hasta que los montos pasen a la base de datos. `userPayoutLimit` es `null` hasta definir el límite por usuario (pending-scope R5).
 - **OpenTelemetry 2.x (SDK 2.12, instrumentaciones 0.223):**
   - La línea 3.x exige Node 22.15 o superior, y el proyecto fija 22.13.
   - `@opentelemetry/api` queda en 1.9 porque el SDK 2.12 no admite 1.10.

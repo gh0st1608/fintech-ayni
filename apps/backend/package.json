@@ -12,6 +12,10 @@
     "start:dev": "tsc-watch -p tsconfig.build.json --onSuccess \"node dist/main.js\"",
     "start:debug": "tsc-watch -p tsconfig.build.json --onSuccess \"node --inspect dist/main.js\"",
     "start:prod": "node dist/main.js",
+    "db:up": "docker compose up -d --wait postgres",
+    "db:down": "docker compose down",
+    "migrate": "node dist/migrate.js",
+    "migrate:dev": "npm run build && node dist/migrate.js",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
@@ -54,7 +58,8 @@
     "collectCoverageFrom": [
       "src/**/*.ts",
       "!src/main.ts",
-      "!src/instrumentation.ts"
+      "!src/instrumentation.ts",
+      "!src/migrate.ts"
     ],
     "coverageThreshold": {
       "global": {
@@ -63,7 +68,8 @@
         "functions": 90,
         "lines": 90
       }
-    }
+    },
+    "globalSetup": "<rootDir>/test/global-setup.ts"
   },
   "dependencies": {
     "@nestjs/common": "^11.2.8",
@@ -72,6 +78,7 @@
     "@nestjs/platform-express": "^11.2.8",
     "@nestjs/swagger": "^11.4.7",
     "@nestjs/throttler": "^6.7.1",
+    "@nestjs/typeorm": "^11.0.3",
     "@opentelemetry/api": "~1.9.0",
     "@opentelemetry/api-logs": "^0.223.0",
     "@opentelemetry/core": "^2.12.0",
@@ -94,9 +101,11 @@
     "class-transformer": "^0.5.1",
     "class-validator": "^0.15.1",
     "helmet": "^8.3.0",
+    "pg": "^8.23.1",
     "pino": "^10.4.0",
     "reflect-metadata": "^0.2.2",
-    "rxjs": "^7.8.2"
+    "rxjs": "^7.8.2",
+    "typeorm": "^1.1.2"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
@@ -104,6 +113,7 @@
     "@types/express": "^5.0.6",
     "@types/jest": "^30.0.0",
     "@types/node": "^22.20.5",
+    "@types/pg": "^8.23.1",
     "@types/supertest": "^7.2.1",
     "eslint": "^10.13.0",
     "eslint-config-prettier": "^10.1.8",

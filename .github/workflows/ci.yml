@@ -61,6 +61,22 @@ jobs:
     defaults:
       run:
         working-directory: apps/backend
+    # Las pruebas de integración y e2e usan PostgreSQL real, la misma versión que RDS y que
+    # compose.yaml. Credenciales solo de prueba (test/setup-env.ts).
+    services:
+      postgres:
+        image: postgres:17.6-alpine
+        ports:
+          - 5432:5432
+        env:
+          POSTGRES_USER: ayni
+          POSTGRES_PASSWORD: ayni
+          POSTGRES_DB: ayni_test
+        options: >-
+          --health-cmd "pg_isready -U ayni -d ayni_test"
+          --health-interval 2s
+          --health-timeout 3s
+          --health-retries 30
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -98,7 +114,7 @@ jobs:
         working-directory: infra/terraform
     env:
       TF_PLUGIN_CACHE_DIR: ${{ github.workspace }}/.terraform-plugin-cache
-      TF_IN_AUTOMATION: 'true'
+      TF_IN_AUTOMATION: "true"
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:

@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 
+import { DatabaseReadinessIndicator } from '../../shared/infrastructure/persistence/database-readiness.indicator';
 import {
   READINESS_INDICATORS,
   type ReadinessIndicator,
@@ -7,11 +8,16 @@ import {
 import { CheckReadinessUseCase } from './application/use-cases/check-readiness.use-case';
 import { HealthController } from './presentation/http/controllers/health.controller';
 
-/** Todavía no hay dependencias externas; el indicador de la base de datos llega con COPAYNI-12. */
-const indicators: ReadinessIndicator[] = [];
-
 @Module({
   controllers: [HealthController],
-  providers: [CheckReadinessUseCase, { provide: READINESS_INDICATORS, useValue: indicators }],
+  providers: [
+    CheckReadinessUseCase,
+    // Dependencias sin las que la API no atiende: hoy, PostgreSQL (DatabaseModule es global).
+    {
+      provide: READINESS_INDICATORS,
+      inject: [DatabaseReadinessIndicator],
+      useFactory: (database: DatabaseReadinessIndicator): ReadinessIndicator[] => [database],
+    },
+  ],
 })
 export class HealthModule {}
