@@ -7,6 +7,7 @@ import { type AppConfigService, configModuleOptions } from './config/configurati
 import { AuthModule } from './modules/auth/auth.module';
 import { CirclesModule } from './modules/circles/circles.module';
 import { HealthModule } from './modules/health/health.module';
+import { PayoutsModule } from './modules/payouts/payouts.module';
 import { ClockModule } from './shared/infrastructure/clock/clock.module';
 import { DatabaseModule } from './shared/infrastructure/persistence/database.module';
 import { TelemetryShutdown } from './shared/infrastructure/observability/telemetry-shutdown';
@@ -36,6 +37,7 @@ import { createValidationPipe } from './shared/presentation/pipes/validation.pip
     // Exporta ACCESS_TOKEN_VERIFIER, que usa BearerAuthGuard.
     AuthModule,
     CirclesModule,
+    PayoutsModule,
   ],
   providers: [
     TelemetryShutdown,

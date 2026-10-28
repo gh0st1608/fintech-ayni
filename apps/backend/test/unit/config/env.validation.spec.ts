@@ -203,4 +203,24 @@ describe('validateEnvironment', () => {
       );
     });
   });
+
+  describe('métodos de cobro', () => {
+    it('trae el catálogo provisional por defecto', () => {
+      expect(validateEnvironment({ ...REQUIRED })).toMatchObject({
+        PAYOUT_METHODS: ['digital_wallet', 'prepaid_card', 'bank_transfer'],
+        PAYOUT_METHODS_UNAVAILABLE: [],
+        PAYOUT_METHODS_NO_CHARGE: ['prepaid_card', 'bank_transfer'],
+        PAYOUT_PREPAID_CARD_LIMIT: 10_000_000,
+      });
+    });
+
+    it('rechaza métodos desconocidos', () => {
+      expect(() => validateEnvironment({ ...REQUIRED, PAYOUT_METHODS: 'cheque' })).toThrow(
+        /PAYOUT_METHODS/,
+      );
+      expect(() => validateEnvironment({ ...REQUIRED, PAYOUT_METHODS: '' })).toThrow(
+        /PAYOUT_METHODS/,
+      );
+    });
+  });
 });

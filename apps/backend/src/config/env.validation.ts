@@ -23,6 +23,13 @@ export const LOG_LEVELS = ['debug', 'info', 'warn', 'error', 'fatal'] as const;
 export const CIRCLE_ASSIGNMENT_STRATEGIES = ['fill_oldest', 'always_new'] as const;
 /** Igual que `ADMIN_FEE_MODES` del dominio de círculos (pending-scope R4). */
 export const ADMIN_FEE_MODES = ['added_to_installments', 'deducted_from_payout'] as const;
+/** Igual que `PAYOUT_METHOD_TYPES` del dominio de payouts (Figma 55:9520). */
+export const PAYOUT_METHOD_TYPES = [
+  'digital_wallet',
+  'prepaid_card',
+  'bank_transfer',
+  'fawry',
+] as const;
 
 interface RawValue {
   key: string;
@@ -224,6 +231,40 @@ export class EnvironmentVariables {
 
   @IsIn(ADMIN_FEE_MODES)
   ADMIN_FEE_MODE: (typeof ADMIN_FEE_MODES)[number] = 'added_to_installments';
+
+  /**
+   * Métodos de cobro que se muestran, en orden (Payout Method, 55:9520). Provisional hasta definir
+   * los proveedores locales (pending-scope T5): Fawry es egipcio y queda fuera por defecto.
+   */
+  @Transform(toList)
+  @ArrayNotEmpty()
+  @ArrayUnique()
+  @IsIn(PAYOUT_METHOD_TYPES, { each: true })
+  PAYOUT_METHODS: (typeof PAYOUT_METHOD_TYPES)[number][] = [
+    'digital_wallet',
+    'prepaid_card',
+    'bank_transfer',
+  ];
+
+  /** Métodos que se muestran deshabilitados ("Not available"). */
+  @Transform(toList)
+  @ArrayUnique()
+  @IsIn(PAYOUT_METHOD_TYPES, { each: true })
+  PAYOUT_METHODS_UNAVAILABLE: (typeof PAYOUT_METHOD_TYPES)[number][] = [];
+
+  /** Métodos con el badge "No Charge" (en el Figma, la tarjeta prepago y la transferencia). */
+  @Transform(toList)
+  @ArrayUnique()
+  @IsIn(PAYOUT_METHOD_TYPES, { each: true })
+  PAYOUT_METHODS_NO_CHARGE: (typeof PAYOUT_METHOD_TYPES)[number][] = [
+    'prepaid_card',
+    'bank_transfer',
+  ];
+
+  /** Límite de la tarjeta prepago, en unidades menores de DEFAULT_CURRENCY (Figma: 100.000). */
+  @IsInt()
+  @Min(1)
+  PAYOUT_PREPAID_CARD_LIMIT: number = 10_000_000;
 
   /** PostgreSQL (ADR 2, docs/architecture.md). */
   @IsString()
