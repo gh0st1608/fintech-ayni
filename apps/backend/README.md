@@ -427,6 +427,7 @@ EXPO_PUBLIC_API_URL=http://<host>:3000/v1
 EXPO_PUBLIC_AUTH_API=http
 EXPO_PUBLIC_CIRCLES_API=http
 EXPO_PUBLIC_PROFILE_API=http
+EXPO_PUBLIC_PAYOUTS_API=http
 ```
 
 - `<host>`: `localhost` en iOS Simulator o web, `10.0.2.2` en el emulador de Android, o la IP de la máquina en la red local con un teléfono físico (Expo Go).

@@ -133,6 +133,32 @@ describe('JoinCircleDraft', () => {
     expect(draft.withPayoutAmount(pen(7000)).slot).toBeNull();
   });
 
+  it('el método de cobro va después del turno y se conserva al cambiar los pasos previos', () => {
+    const slot = Slot.create({
+      position: 2,
+      payoutPeriod: '2026-12',
+      type: 'fastestPayout',
+      fee: pen(50),
+      discount: pen(0),
+      available: true,
+    });
+    const withInstallment = JoinCircleDraft.empty()
+      .withPayoutAmount(pen(6000))
+      .withInstallment(sixMonths);
+    expect(() => withInstallment.withPayoutMethod('bankTransfer')).toThrow(
+      IncompleteJoinDraftError,
+    );
+
+    const complete = withInstallment.withSlot(slot).withPayoutMethod('bankTransfer');
+    expect(complete.payoutMethod).toBe('bankTransfer');
+    expect(complete.isComplete()).toBe(true);
+    expect(withInstallment.isComplete()).toBe(false);
+    // Es una preferencia del usuario: no depende del monto, la cuota ni el turno.
+    const otherAmount = complete.withPayoutAmount(pen(7000));
+    expect(otherAmount.payoutMethod).toBe('bankTransfer');
+    expect(otherAmount.isComplete()).toBe(false);
+  });
+
   it('cambiar el monto descarta la cuota; repetir el mismo la conserva', () => {
     const draft = JoinCircleDraft.empty().withPayoutAmount(pen(6000)).withInstallment(sixMonths);
     expect(draft.withPayoutAmount(pen(6000)).installment).toBe(sixMonths);

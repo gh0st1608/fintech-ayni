@@ -175,7 +175,7 @@ describe('RadioCard y RadioGroup', () => {
     // El grupo no es `accessible` (agruparía a sus hijos en iOS); se anuncia por rol y etiqueta.
     expect(screen.getByLabelText('Método de cobro').props.accessibilityRole).toBe('radiogroup');
     expect(screen.getByRole('radio', { name: 'Digital Wallets' })).toBeChecked();
-    await fireEvent.press(screen.getByRole('radio', { name: 'Bank Transfer' }));
+    await fireEvent.press(screen.getByRole('radio', { name: 'Bank Transfer. No Charge' }));
     expect(onSelect).toHaveBeenCalledTimes(1);
   });
 

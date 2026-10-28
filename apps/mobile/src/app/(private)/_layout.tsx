@@ -26,6 +26,7 @@ export default function PrivateLayout() {
         <Stack.Screen name="join/monthly-pay-in" options={joinOptions.monthlyPayIn} />
         <Stack.Screen name="join/slot" options={joinOptions.slot} />
         <Stack.Screen name="join/payout-method" options={joinOptions.payoutMethod} />
+        <Stack.Screen name="join/confirm" options={joinOptions.confirm} />
         <Stack.Screen name="join/saving-program" options={joinOptions.savingProgram} />
         <Stack.Protected guard={isDev}>
           <Stack.Screen name="catalog" options={catalogOptions} />

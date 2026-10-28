@@ -10,6 +10,10 @@ import { ConfirmSlotSelectionUseCase } from '@/application/circles/usecases/Conf
 import { GetJoinConfigUseCase } from '@/application/circles/usecases/GetJoinConfigUseCase';
 import { ListAvailableSlotsUseCase } from '@/application/circles/usecases/ListAvailableSlotsUseCase';
 import { ListInstallmentOptionsUseCase } from '@/application/circles/usecases/ListInstallmentOptionsUseCase';
+import {
+  ListPayoutMethodsUseCase,
+  SelectPayoutMethodUseCase,
+} from '@/application/payouts/usecases/payoutMethodUseCases';
 import { ChangeLanguageUseCase } from '@/application/i18n/usecases/ChangeLanguageUseCase';
 import { ResolveLanguageUseCase } from '@/application/i18n/usecases/ResolveLanguageUseCase';
 import { SyncLanguagePreferenceUseCase } from '@/application/i18n/usecases/SyncLanguagePreferenceUseCase';
@@ -21,6 +25,7 @@ import type { DeviceLocalePort } from '@/domain/i18n/ports/DeviceLocalePort';
 import type { LanguagePreferencePort } from '@/domain/i18n/ports/LanguagePreferencePort';
 import type { LanguageSyncStatePort } from '@/domain/i18n/ports/LanguageSyncStatePort';
 import type { LayoutDirectionPort } from '@/domain/i18n/ports/LayoutDirectionPort';
+import type { PayoutMethodRepositoryPort } from '@/domain/payouts/ports/PayoutMethodRepositoryPort';
 import type { UserProfileRepositoryPort } from '@/domain/profile/ports/UserProfileRepositoryPort';
 import { AuthApiRepository } from '@/infrastructure/auth/AuthApiRepository';
 import { InMemoryAuthApi } from '@/infrastructure/auth/InMemoryAuthApi';
@@ -31,6 +36,8 @@ import { JoinConfigApiRepository } from '@/infrastructure/circles/JoinConfigApiR
 import { ExpoDeviceLocale } from '@/infrastructure/device/ExpoDeviceLocale';
 import { ReactNativeLayoutDirection } from '@/infrastructure/device/ReactNativeLayoutDirection';
 import { FetchHttpClient } from '@/infrastructure/http/FetchHttpClient';
+import { InMemoryPayoutMethodRepository } from '@/infrastructure/payouts/InMemoryPayoutMethodRepository';
+import { PayoutMethodApiRepository } from '@/infrastructure/payouts/PayoutMethodApiRepository';
 import { InMemoryUserProfileRepository } from '@/infrastructure/profile/InMemoryUserProfileRepository';
 import { UserProfileApiRepository } from '@/infrastructure/profile/UserProfileApiRepository';
 import { AsyncStorageLanguagePreference } from '@/infrastructure/storage/AsyncStorageLanguagePreference';
@@ -50,6 +57,7 @@ export interface ContainerAdapters {
   joinConfig: JoinConfigRepositoryPort;
   circleQuote: CircleQuoteRepositoryPort;
   userProfile: UserProfileRepositoryPort;
+  payoutMethods: PayoutMethodRepositoryPort;
 }
 
 /** Raíz de composición: único lugar que conoce las implementaciones concretas. */
@@ -87,6 +95,10 @@ export function createContainer(
       env.profileApi === 'fake'
         ? new InMemoryUserProfileRepository()
         : new UserProfileApiRepository(http),
+    payoutMethods:
+      env.payoutsApi === 'fake'
+        ? new InMemoryPayoutMethodRepository(env.defaultCurrency)
+        : new PayoutMethodApiRepository(http),
     ...overrides,
   };
 
@@ -119,6 +131,10 @@ export function createContainer(
       listInstallmentOptions: new ListInstallmentOptionsUseCase(adapters.circleQuote),
       listAvailableSlots: new ListAvailableSlotsUseCase(adapters.circleQuote),
       confirmSlotSelection: new ConfirmSlotSelectionUseCase(adapters.circleQuote),
+    },
+    payouts: {
+      listPayoutMethods: new ListPayoutMethodsUseCase(adapters.payoutMethods),
+      selectPayoutMethod: new SelectPayoutMethodUseCase(adapters.payoutMethods),
     },
     i18n: {
       resolveLanguage: new ResolveLanguageUseCase(

@@ -102,7 +102,26 @@
       "missingSteps": "Choose the payout amount and the monthly pay-in first."
     },
     "payoutMethod": {
-      "title": "Payout Method"
+      "title": "Payout Method",
+      "question": "How do you want to receive your payout?",
+      "optionsLabel": "Payout methods",
+      "types": {
+        "digitalWallet": "Digital Wallets",
+        "prepaidCard": "Prepaid Card",
+        "bankTransfer": "Bank Transfer",
+        "fawry": "Fawry"
+      },
+      "noCharge": "No Charge",
+      "limit": "Limit of {{amount}} per payout",
+      "notAvailable": "Not available",
+      "changeRule": "You can change it until your payout month.",
+      "changeNotAllowed": "You are in your payout month: you can no longer change the payout method.",
+      "continue": "Continue",
+      "missingSteps": "Choose the amount, the monthly pay-in and your slot first.",
+      "startOver": "Choose the amount"
+    },
+    "confirm": {
+      "title": "Confirm"
     }
   },
   "saving": {

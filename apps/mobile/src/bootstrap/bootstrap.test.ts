@@ -14,10 +14,11 @@ describe('parseEnv', () => {
       authApi: 'http',
       circlesApi: 'http',
       profileApi: 'http',
+      payoutsApi: 'http',
     });
   });
 
-  it.each(['authApi', 'circlesApi', 'profileApi'] as const)(
+  it.each(['authApi', 'circlesApi', 'profileApi', 'payoutsApi'] as const)(
     'solo admite %s falsa en dev',
     (key) => {
       const base = { apiUrl: 'https://api.example.com/v1', [key]: 'fake' };

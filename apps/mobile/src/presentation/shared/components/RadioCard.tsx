@@ -34,7 +34,8 @@ export function RadioCard({
   disabledReason,
   testID,
 }: RadioCardProps) {
-  const accessibilityLabel = [title, description, disabled ? disabledReason : undefined]
+  // El badge se ve, así que también se anuncia (p. ej. "Sin costo").
+  const accessibilityLabel = [title, badge, description, disabled ? disabledReason : undefined]
     .filter(Boolean)
     .join('. ');
 

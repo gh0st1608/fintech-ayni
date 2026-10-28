@@ -118,7 +118,8 @@ El cambio LTR↔RTL requiere reiniciar la app y no funciona en Expo Go.
 - "Guardar" se habilita solo si cambia la selección; si cambia la dirección de lectura, avisa que el diseño se actualiza al reiniciar.
 - Al guardar, `useLanguage` aplica el idioma y, sin esperar, lo envía al perfil (`SyncLanguagePreferenceUseCase` → `PATCH /v1/me` con `preferredLanguage`).
 - Si el envío falla, el idioma local se mantiene y queda pendiente en AsyncStorage (`pref.language.syncPending`). Se reintenta al entrar a la zona privada en el siguiente arranque.
-- Mientras el backend no tenga `PATCH /v1/me`, la API falsa se elige con `EXPO_PUBLIC_PROFILE_API=fake` (solo `dev`).
+- `PATCH /v1/me` ya existe en el backend; la API falsa sigue disponible con `EXPO_PUBLIC_PROFILE_API=fake` (solo `dev`).
+- Los métodos de cobro (paso 4, COPAYNI-37) usan `GET/PUT /v1/me/payout-method` ([docs/api/payouts.md](../../docs/api/payouts.md)); la API falsa se elige con `EXPO_PUBLIC_PAYOUTS_API=fake` (solo `dev`).
 - El diseño del sheet (Figma 55:10285) no se pudo leer por el límite de la integración de Figma: usa `BottomSheet`, `RadioCard` y `Button` del design system y queda pendiente de validar con UX.
 
 ## Moneda configurable (COPAYNI-17)

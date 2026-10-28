@@ -9,6 +9,10 @@ import type { ConfirmSlotSelectionUseCase } from '@/application/circles/usecases
 import type { GetJoinConfigUseCase } from '@/application/circles/usecases/GetJoinConfigUseCase';
 import type { ListAvailableSlotsUseCase } from '@/application/circles/usecases/ListAvailableSlotsUseCase';
 import type { ListInstallmentOptionsUseCase } from '@/application/circles/usecases/ListInstallmentOptionsUseCase';
+import type {
+  ListPayoutMethodsUseCase,
+  SelectPayoutMethodUseCase,
+} from '@/application/payouts/usecases/payoutMethodUseCases';
 import type { ChangeLanguageUseCase } from '@/application/i18n/usecases/ChangeLanguageUseCase';
 import type { ResolveLanguageUseCase } from '@/application/i18n/usecases/ResolveLanguageUseCase';
 import type { SyncLanguagePreferenceUseCase } from '@/application/i18n/usecases/SyncLanguagePreferenceUseCase';
@@ -40,6 +44,10 @@ export interface AppContainer {
     listInstallmentOptions: ListInstallmentOptionsUseCase;
     listAvailableSlots: ListAvailableSlotsUseCase;
     confirmSlotSelection: ConfirmSlotSelectionUseCase;
+  };
+  payouts: {
+    listPayoutMethods: ListPayoutMethodsUseCase;
+    selectPayoutMethod: SelectPayoutMethodUseCase;
   };
   i18n: {
     resolveLanguage: ResolveLanguageUseCase;

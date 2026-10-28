@@ -83,6 +83,12 @@ describe('shell de navegación', () => {
     await fireEvent.press(await screen.findByTestId('slot-1', {}, { timeout: 5000 }));
     await fireEvent.press(screen.getByRole('button', { name: /^Continuar con / }));
     await waitFor(() => expect(screen).toHavePathname('/join/payout-method'));
+
+    await fireEvent.press(
+      await screen.findByTestId('payout-method-bankTransfer', {}, { timeout: 5000 }),
+    );
+    await fireEvent.press(screen.getByRole('button', { name: 'Continuar' }));
+    await waitFor(() => expect(screen).toHavePathname('/join/confirm'));
   });
 
   it('Elige un servicio → programa de ahorro', async () => {
@@ -152,12 +158,14 @@ describe('shell de navegación', () => {
       process.env.EXPO_PUBLIC_AUTH_API = 'http';
       process.env.EXPO_PUBLIC_CIRCLES_API = 'http';
       process.env.EXPO_PUBLIC_PROFILE_API = 'http';
+      process.env.EXPO_PUBLIC_PAYOUTS_API = 'http';
     });
     afterEach(() => {
       process.env.EXPO_PUBLIC_APP_ENV = original.EXPO_PUBLIC_APP_ENV;
       process.env.EXPO_PUBLIC_AUTH_API = original.EXPO_PUBLIC_AUTH_API;
       process.env.EXPO_PUBLIC_CIRCLES_API = original.EXPO_PUBLIC_CIRCLES_API;
       process.env.EXPO_PUBLIC_PROFILE_API = original.EXPO_PUBLIC_PROFILE_API;
+      process.env.EXPO_PUBLIC_PAYOUTS_API = original.EXPO_PUBLIC_PAYOUTS_API;
     });
 
     it('el catálogo no existe ni se ofrece en el perfil', async () => {

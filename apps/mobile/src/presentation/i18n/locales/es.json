@@ -102,7 +102,26 @@
       "missingSteps": "Primero elige el monto y la cuota mensual."
     },
     "payoutMethod": {
-      "title": "Método de cobro"
+      "title": "Método de cobro",
+      "question": "¿Cómo quieres recibir tu payout?",
+      "optionsLabel": "Métodos de cobro",
+      "types": {
+        "digitalWallet": "Billetera digital",
+        "prepaidCard": "Tarjeta prepago",
+        "bankTransfer": "Transferencia bancaria",
+        "fawry": "Fawry"
+      },
+      "noCharge": "Sin costo",
+      "limit": "Límite de {{amount}} por payout",
+      "notAvailable": "No disponible",
+      "changeRule": "Puedes cambiarlo hasta antes de tu mes de payout.",
+      "changeNotAllowed": "Estás en tu mes de payout: ya no puedes cambiar el método de cobro.",
+      "continue": "Continuar",
+      "missingSteps": "Primero elige el monto, la cuota y tu turno.",
+      "startOver": "Elegir el monto"
+    },
+    "confirm": {
+      "title": "Confirmar"
     }
   },
   "saving": {

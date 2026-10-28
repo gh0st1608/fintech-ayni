@@ -12,6 +12,7 @@ export function useJoinScreenOptions() {
     monthlyPayIn: options(t('join.monthlyPayIn.title')),
     slot: options(t('join.slot.title')),
     payoutMethod: options(t('join.payoutMethod.title')),
+    confirm: options(t('join.confirm.title')),
     savingProgram: options(t('saving.chooseCircle.title')),
   };
 }
