@@ -49,6 +49,35 @@ Comportamiento de la app:
 - Si es menor que `payout.min`, no se ofrece el slider: el usuario aún no puede unirse.
 - Una respuesta que no cumple el esquema se rechaza (`INVALID_RESPONSE`).
 
+## `GET /v1/circles/installment-options?payoutAmount=<entero>`
+
+Cuotas y duraciones posibles para el payout elegido (Monthly Pay-in, COPAYNI-29). Implementado en el backend (COPAYNI-24).
+
+- `payoutAmount`: en unidades menores. Tiene que estar en el rango de `join-config`, caer en un salto del slider y no superar `userPayoutLimit`.
+- Las duraciones salen de la configuración (`CIRCLE_DURATION_OPTIONS`; provisional: 6, 10 y 12 meses, como en el Figma).
+- Solo se ofrecen las duraciones que dan cuotas exactas en céntimos.
+
+**200**:
+
+```json
+{
+  "payout": { "amount": 3000000, "currency": "PEN" },
+  "options": [
+    { "months": 6, "installment": { "amount": 500000, "currency": "PEN" } },
+    { "months": 10, "installment": { "amount": 300000, "currency": "PEN" } },
+    { "months": 12, "installment": { "amount": 250000, "currency": "PEN" } }
+  ]
+}
+```
+
+- `installment` es la **cuota base** (payout / meses). La del slot elegido varía con su fee, su descuento y las Admin Fees: es el aviso de la pantalla.
+- `options` va de menor a mayor duración y puede venir vacío si ninguna duración da cuotas exactas.
+
+| Error                | HTTP | Cuándo                                                         |
+| -------------------- | ---- | -------------------------------------------------------------- |
+| `VALIDATION_ERROR`   | 400  | Falta `payoutAmount`, no es un entero o hay parámetros de más. |
+| `PAYOUT_NOT_ALLOWED` | 422  | Fuera del rango, fuera del salto o sobre el límite del usuario. |
+
 ## Valores pendientes (pending-scope M6, R5 y R15)
 
 El adaptador falso usa los valores del Figma como provisionales:

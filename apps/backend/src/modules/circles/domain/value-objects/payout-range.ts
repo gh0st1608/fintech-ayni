@@ -37,4 +37,14 @@ export class PayoutRange {
   get currency(): string {
     return this.min.currency;
   }
+
+  /** Si `amount` está en el rango y cae en un salto completo desde `min`. */
+  contains(amount: Money): boolean {
+    return (
+      amount.currency === this.currency &&
+      amount.amount >= this.min.amount &&
+      amount.amount <= this.max.amount &&
+      (amount.amount - this.min.amount) % this.step.amount === 0
+    );
+  }
 }

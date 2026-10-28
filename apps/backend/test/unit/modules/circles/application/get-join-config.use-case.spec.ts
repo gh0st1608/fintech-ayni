@@ -15,6 +15,7 @@ const joinConfig = JoinConfig.create({
   payoutRange: PayoutRange.create({ min: pen(300_000), max: pen(600_000), step: pen(50_000) }),
   savingProgramMax: pen(1_000_000),
   userPayoutLimit: pen(400_000),
+  durationOptions: [6, 12],
 });
 
 describe('GetJoinConfigUseCase', () => {

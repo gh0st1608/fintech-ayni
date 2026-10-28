@@ -45,10 +45,10 @@ El Figma está localizado para Marruecos/Egipto (MAD, árabe, Fawry). El backlog
 
 | # | Pregunta | Afecta a |
 |---|---|---|
-| R1 | Fórmula de **fees de los primeros slots** y **descuentos de los últimos** | T3.1, H3.6 |
+| R1 | Fórmula de **fees de los primeros slots** y **descuentos de los últimos**. Implementado con parámetros y una fórmula lineal provisional (`SlotPricingRules`, README del backend) | T3.1, H3.6 |
 | R2 | Cómo se **forman los círculos** (admin o automático), número de miembros, qué pasa si no se llenan | T3.1, H3.1, H3.7 |
 | R3 | **Mora e impago:** penalidades, uso del seguro y del pagaré, exclusión del círculo | T3.1, D1, D3 |
-| R4 | ¿Las **Admin Fees** se suman a la cuota o se descuentan del payout? (24.000 frente a 2.880) | T3.1, H3.5 |
+| R4 | ¿Las **Admin Fees** se suman a la cuota o se descuentan del payout? (24.000 frente a 2.880). Los dos modos están implementados (`adminFeeMode`) | T3.1, H3.5 |
 | R5 | Fórmula del **límite mensual de pay-in** según ingresos y documentos | H6.1, H6.5, H3.7 |
 | R6 | Fórmula del **cashback** del ahorro (el diseño muestra 20% y 5%) y nombres de los planes | H4.1, H4.2 |
 | R7 | Reglas de **referidos:** tope de invitaciones, expiración del saldo, moneda | H7.1–H7.3 |

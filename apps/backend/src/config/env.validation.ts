@@ -1,5 +1,6 @@
 import { plainToInstance, Transform } from 'class-transformer';
 import {
+  ArrayNotEmpty,
   ArrayUnique,
   IsBoolean,
   IsIn,
@@ -45,6 +46,12 @@ const toList = (params: RawValue): unknown => {
         .map((item) => item.trim())
         .filter(Boolean)
     : value;
+};
+
+/** Lista de enteros separada por comas; un elemento no numérico queda como NaN y falla IsInt. */
+const toIntList = (params: RawValue): unknown => {
+  const list = toList(params);
+  return Array.isArray(list) ? list.map(Number) : list;
 };
 
 /**
@@ -153,6 +160,14 @@ export class EnvironmentVariables {
 
   @IsInt()
   SAVING_PROGRAM_MAX!: number;
+
+  /** Duraciones del Game'ya en meses, separadas por comas (Monthly Pay-in, 55:9334). */
+  @Transform(toIntList)
+  @ArrayNotEmpty()
+  @ArrayUnique()
+  @IsInt({ each: true })
+  @Min(2, { each: true })
+  CIRCLE_DURATION_OPTIONS!: number[];
 }
 
 /** Si se exporta alguna señal de telemetría (y por tanto se necesita el endpoint OTLP). */

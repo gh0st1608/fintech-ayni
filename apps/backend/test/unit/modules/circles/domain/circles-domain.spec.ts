@@ -65,13 +65,16 @@ describe('JoinConfig', () => {
       payoutRange: range(),
       savingProgramMax: pen(100_000_000),
       userPayoutLimit: pen(2_000_000),
+      durationOptions: [12, 6, 10, 6],
     });
     expect(config.userPayoutLimit?.amount).toBe(2_000_000);
+    expect(config.durationOptions).toEqual([6, 10, 12]);
     expect(
       JoinConfig.create({
         payoutRange: range(),
         savingProgramMax: pen(100_000_000),
         userPayoutLimit: null,
+        durationOptions: [12],
       }).userPayoutLimit,
     ).toBeNull();
   });
@@ -81,9 +84,18 @@ describe('JoinConfig', () => {
     ['ahorro en otra moneda', { savingProgramMax: Money.of(1, 'USD'), userPayoutLimit: null }],
     ['límite en otra moneda', { savingProgramMax: pen(1), userPayoutLimit: Money.of(1, 'USD') }],
     ['límite negativo', { savingProgramMax: pen(1), userPayoutLimit: pen(-1) }],
+    ['sin duraciones', { savingProgramMax: pen(1), userPayoutLimit: null, durationOptions: [] }],
+    [
+      'duración de 1 mes',
+      { savingProgramMax: pen(1), userPayoutLimit: null, durationOptions: [1] },
+    ],
+    [
+      'duración no entera',
+      { savingProgramMax: pen(1), userPayoutLimit: null, durationOptions: [6.5] },
+    ],
   ])('rechaza %s', (_case, props) => {
-    expect(() => JoinConfig.create({ payoutRange: range(), ...props })).toThrow(
-      expect.objectContaining({ code: 'INVALID_JOIN_CONFIG' }),
-    );
+    expect(() =>
+      JoinConfig.create({ payoutRange: range(), durationOptions: [12], ...props }),
+    ).toThrow(expect.objectContaining({ code: 'INVALID_JOIN_CONFIG' }));
   });
 });

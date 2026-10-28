@@ -11,6 +11,7 @@ describe('JoinConfigResponse', () => {
       payoutRange: PayoutRange.create({ min: usd(1_000), max: usd(5_000), step: usd(1_000) }),
       savingProgramMax: usd(9_000),
       userPayoutLimit: usd(3_000),
+      durationOptions: [6, 12],
     });
 
     expect(JoinConfigResponse.from(config)).toEqual({

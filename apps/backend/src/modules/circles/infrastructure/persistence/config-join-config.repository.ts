@@ -27,6 +27,7 @@ export class ConfigJoinConfigRepository implements JoinConfigRepositoryPort {
       }),
       savingProgramMax: money(config.get('SAVING_PROGRAM_MAX', { infer: true })),
       userPayoutLimit: null,
+      durationOptions: config.get('CIRCLE_DURATION_OPTIONS', { infer: true }),
     });
   }
 

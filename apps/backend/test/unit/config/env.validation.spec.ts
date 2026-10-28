@@ -6,6 +6,7 @@ const REQUIRED = {
   JOIN_PAYOUT_MAX: '12000000',
   JOIN_PAYOUT_STEP: '50000',
   SAVING_PROGRAM_MAX: '100000000',
+  CIRCLE_DURATION_OPTIONS: '6,10,12',
 };
 
 describe('validateEnvironment', () => {
@@ -113,6 +114,27 @@ describe('validateEnvironment', () => {
           NEW_RELIC_LICENSE_KEY: 'secreta-123',
         }),
       ).toThrow(expect.objectContaining({ message: expect.not.stringContaining('secreta-123') }));
+    });
+  });
+
+  describe('CIRCLE_DURATION_OPTIONS', () => {
+    it('convierte la lista en enteros', () => {
+      expect(
+        validateEnvironment({ ...REQUIRED, CIRCLE_DURATION_OPTIONS: '6, 12,24' })
+          .CIRCLE_DURATION_OPTIONS,
+      ).toEqual([6, 12, 24]);
+    });
+
+    it.each([
+      ['vacía', ''],
+      ['con texto', '6,doce'],
+      ['con 1 mes', '1,6'],
+      ['con repetidos', '6,6'],
+      ['con decimales', '6.5'],
+    ])('rechaza una lista %s', (_case, value) => {
+      expect(() => validateEnvironment({ ...REQUIRED, CIRCLE_DURATION_OPTIONS: value })).toThrow(
+        /CIRCLE_DURATION_OPTIONS/,
+      );
     });
   });
 });

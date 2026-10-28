@@ -7,6 +7,7 @@ API REST de Ayni: NestJS 11 + TypeScript strict con arquitectura hexagonal por m
 - Fundaciones (COPAYNI-8) y el primer endpoint real, `GET /v1/circles/join-config`, que consume la app mobile.
 - CI, Husky y commitlint (COPAYNI-9): ver el README de la raíz.
 - Observabilidad (COPAYNI-10): OpenTelemetry con exportación OTLP a New Relic, logs JSON correlacionados y health checks.
+- Dominio de círculos (COPAYNI-24, sin persistencia): términos, precio por slot, cronograma de cuotas, reserva atómica e idempotente, y `GET /v1/circles/installment-options`.
 - Pendiente: despliegue en AWS y base de datos (COPAYNI-11 y COPAYNI-12).
 
 ## Requisitos
@@ -272,6 +273,51 @@ Sin cuenta de New Relic, el mismo flujo funciona contra un collector OTLP local 
   - en paralelo, con 2 segundos como máximo cada uno;
   - qué indicador falló queda en un log `warn`, nunca en la respuesta.
 - Todavía no hay indicadores. El de la base de datos llega con COPAYNI-12.
+
+## Dominio de círculos (COPAYNI-24)
+
+Código en [src/modules/circles/domain](src/modules/circles/domain); `Money` y `Period` están en `src/shared/domain`.
+
+| Pieza                | Responsabilidad                                                                                         |
+| -------------------- | ------------------------------------------------------------------------------------------------------- |
+| `Money`              | Céntimos enteros, porcentajes en puntos básicos y `allocate(n)`: reparto exacto, sin céntimos perdidos. |
+| `Period`             | Mes calendario (`YYYY-MM`) para cuotas y payouts.                                                       |
+| `CircleTerms`        | Payout, meses y mes de inicio. Hay un slot por mes y la cuota base es `payout / meses`, exacta.         |
+| `installmentOptions` | Combinaciones cuota × meses de un payout.                                                               |
+| `SlotPricingRules`   | **Todos los parámetros que pueden cambiar** (pending-scope R1 y R4), en puntos básicos.                 |
+| `SlotPricing`        | Tipo de cada slot, fee, descuento, Admin Fees, las cuotas de cada mes, total pagado y payout neto.      |
+| `Circle`             | Agregado: un miembro por slot, un slot por usuario, unión idempotente por clave.                        |
+| `JoinCircleUseCase`  | Valida con el círculo y delega la atomicidad en `CircleRepositoryPort.addMembership`.                   |
+
+**Reglas del Figma (55:9444):**
+
+- Los primeros slots (Fastest Payout) pagan fee; los intermedios (Lowest Fees), no; los últimos (Highest Return) reciben descuento.
+- Las Admin Fees se reparten en partes iguales hasta el mes de payout.
+
+**Supuestos provisionales, a validar con el PO:**
+
+- **Fee y descuento:**
+  - El fee del primer slot es `maxFeeBps` del payout y baja linealmente hasta el último slot Fastest.
+  - El descuento sube linealmente hasta `maxDiscountBps` en el último slot.
+- **Reparto:** el fee del slot se reparte, como las Admin Fees, en las cuotas hasta el mes de payout. El descuento se reparte entre todas las cuotas.
+- **Admin Fees** (`adminFeeMode`): sumadas a las cuotas (`added_to_installments`) o descontadas del payout (`deducted_from_payout`), según se resuelva R4. Con 12 %, 24.000 da 2.880, como en la tarjeta del Figma.
+- **Duraciones:** solo se ofrecen las que dan cuotas exactas en céntimos.
+
+Cambiar una fórmula toca `SlotPricing` y sus pruebas, sin afectar al resto del dominio.
+
+**Concurrencia:**
+
+- El agregado valida contra el estado leído.
+- La barrera final es la inserción del repositorio con unicidad por (círculo, slot), (círculo, usuario) y (círculo, clave). Así solo chocan las solicitudes que compiten por lo mismo: doce usuarios pueden unirse a la vez a slots distintos.
+- Si gana otra solicitud con la misma clave, el caso de uso relee y devuelve esa membresía.
+- [La prueba de concurrencia](test/integration/modules/circles/join-circle.concurrency.spec.ts) usa un doble con esa semántica. Se repite contra PostgreSQL cuando exista el adaptador.
+
+**Pendiente:**
+
+- Persistencia y migraciones: dependen de la base de datos (COPAYNI-11 y 12).
+- Endpoints de círculos recomendados y slots disponibles, y la unión por HTTP (COPAYNI-31): necesitan la persistencia.
+- Origen de los parámetros de precio: por círculo en la base de datos o por configuración.
+- Formación de los círculos (R2) y mora (R3).
 
 ## Decisiones y limitaciones
 

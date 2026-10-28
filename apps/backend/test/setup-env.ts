@@ -17,6 +17,7 @@ export const TEST_ENV = {
   JOIN_PAYOUT_MAX: '12000000',
   JOIN_PAYOUT_STEP: '50000',
   SAVING_PROGRAM_MAX: '100000000',
+  CIRCLE_DURATION_OPTIONS: '6,10,12',
 } as const;
 
 Object.assign(process.env, TEST_ENV);
