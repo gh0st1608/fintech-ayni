@@ -9,6 +9,7 @@ API REST de Ayni: NestJS 11 + TypeScript strict con arquitectura hexagonal por m
 - Observabilidad (COPAYNI-10): OpenTelemetry con exportación OTLP a New Relic, logs JSON correlacionados y health checks.
 - Dominio de círculos (COPAYNI-24): términos, precio por slot, cronograma de cuotas, reserva atómica e idempotente, y `GET /v1/circles/installment-options`.
 - Persistencia (COPAYNI-24): PostgreSQL con TypeORM, migraciones versionadas y readiness de la base de datos.
+- Perfil (COPAYNI-50): `PATCH /v1/me` con el idioma preferido ([docs/api/me.md](../../docs/api/me.md)).
 - Autenticación (COPAYNI-19, 20 y 21): OTP, JWT ES256 y refresh tokens rotativos con detección de reutilización ([docs/api/auth.md](../../docs/api/auth.md)).
 - Pendiente: despliegue en AWS (COPAYNI-12) y el proveedor de envío de OTP (pending-scope T6).
 
