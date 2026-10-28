@@ -65,8 +65,8 @@ El Figma está localizado para Marruecos/Egipto (MAD, árabe, Fawry). El backlog
 
 | # | Decisión | Issue relacionado |
 |---|---|---|
-| T1 | Despliegue: AWS Lambda + API Gateway o contenedores (ECS/Fargate) | T1.4 (spike) |
-| T2 | Base de datos (relacional recomendada por la naturaleza transaccional) | T1.4 (spike) |
+| T1 | Despliegue: AWS Lambda + API Gateway o contenedores (ECS/Fargate). **Propuesto: ECS Fargate** ([architecture.md](architecture.md)), pendiente de aprobación | T1.4 (spike) |
+| T2 | Base de datos (relacional recomendada por la naturaleza transaccional). **Propuesto: RDS for PostgreSQL** ([architecture.md](architecture.md)), pendiente de aprobación | T1.4 (spike) |
 | T3 | Pasarela de pago y tokenización (PCI-DSS) disponible en el país | T5.1 (spike) |
 | T4 | Proveedor de verificación de identidad y OCR | T6.1 (spike) |
 | T5 | Proveedores de payout: bancos, wallets locales (p. ej. Yape/Plin si es Perú), prepago | H5.3, D4 |
