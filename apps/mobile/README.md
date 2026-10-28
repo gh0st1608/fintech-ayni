@@ -230,6 +230,8 @@ MonthlyPayInScreen → useInstallmentOptions → ListInstallmentOptionsUseCase �
 SlotScreen → useAvailableSlots / useConfirmSlot
            → ListAvailableSlotsUseCase / ConfirmSlotSelectionUseCase → CircleQuoteRepositoryPort
                                 → JoinFlowProvider (JoinCircleDraft en memoria)
+PayoutMethodScreen → usePayoutMethods / useSelectPayoutMethod → PayoutMethodRepositoryPort
+JoinConfirmScreen → useJoinCircle → JoinCircleUseCase → CircleMembershipRepositoryPort + IdGeneratorPort
 ```
 
 - Botón central "+" → **Elige un servicio** (`/join`) → Game'ya (`/join/payout-amount`) o programa de ahorro (`/join/saving-program`, COPAYNI-32).
@@ -243,13 +245,20 @@ SlotScreen → useAvailableSlots / useConfirmSlot
   - Una cuota con `withinMonthlyLimit: false` aparece deshabilitada con el motivo. El campo es una propuesta para R5: si el backend no lo envía, ninguna cuota se restringe.
   - Cambiar el monto en el paso 1 descarta la cuota elegida; volver desde el paso 3 la conserva.
   - El diseño (Figma 55:9334) no se pudo leer por el límite de la integración de Figma: se armó con el inventario de `docs/product-context.md` y queda pendiente de validar con UX.
-- **Turno de cobro** (`/join/slot`, paso 3): los slots llegan de `GET /circles/slots`, una propuesta que el backend todavía no implementa ([docs/api/circles.md](../../docs/api/circles.md)).
+- **Turno de cobro** (`/join/slot`, paso 3): los slots llegan de `GET /circles/slots` ([docs/api/circles.md](../../docs/api/circles.md)), con el `circleId` del círculo ofrecido (`null` si es uno nuevo), que cada `Slot` guarda para la unión.
   - Resumen editable del monto y de la cuota; pestañas por tipo (Cobro más rápido, Menos fees, Mayor retorno) con el rango de meses y la etiqueta del tipo seleccionado.
   - Cada mes muestra su posición y el fee o el descuento. Los slots ocupados aparecen deshabilitados.
   - El botón dice "Continuar con <mes>". Antes de avanzar, `ConfirmSlotSelectionUseCase` revalida el slot; si se ocupó, avisa, invalida la query y quita la selección.
   - Cambiar la cuota o el monto descarta el turno elegido.
-  - El paso 4 (`/join/payout-method`) es un placeholder hasta COPAYNI-37 y COPAYNI-31.
   - "Learn More" del aviso de Admin Fees no tiene destino diseñado y no se muestra (igual que en el paso 1, pending-scope D16). El diseño (Figma 55:9377 y 55:9444) tampoco se pudo leer; se armó con el inventario y queda pendiente de validar con UX.
+- **Método de cobro** (`/join/payout-method`, paso 4, COPAYNI-37): ver más arriba.
+- **Confirmar** (`/join/confirm`, COPAYNI-31): sin diseño (pending-scope D2), armado con los componentes del flujo.
+  - Resume los cuatro pasos con "Editar", que vuelve a cada paso conservando el borrador.
+  - "Confirmar y unirme" llama a `POST /circles/join`. `JoinCircleUseCase` genera la `Idempotency-Key` (UUID de `expo-crypto`) una vez por pedido (círculo, payout, duración y slot) y la repite en los reintentos, también al volver atrás sin cambiar nada: si una respuesta se perdió, el backend devuelve la misma unión.
+  - Cada rechazo se traduce a un error tipado con su mensaje y su acción: método de cobro → paso 4; turno ocupado, círculo iniciado o ya miembro → paso 3, con la lista de slots invalidada.
+  - National ID (COPAYNI-47) y límite mensual (Proof of Income, R5) todavía no tienen ruta: se muestra el motivo sin botón. La pantalla acepta `onVerifyIdentity` y `onIncreaseLimit` para cuando existan.
+  - Tras unirse muestra el mes de cobro y la primera cuota, invalida `['circles','mine','active']`, y "Ver mis círculos" lleva a Circles con el borrador reiniciado.
+  - La API falsa (`EXPO_PUBLIC_CIRCLES_API=fake`) repite la unión con la misma clave y simula rechazos con `rejectWith`. La firma del contrato (D3) y el primer pago (D1) quedan fuera hasta que se diseñen.
 
 ## Pendientes conocidos
 

@@ -121,7 +121,34 @@
       "startOver": "Elegir el monto"
     },
     "confirm": {
-      "title": "Confirmar"
+      "title": "Confirmar",
+      "question": "Revisa y confirma tu unión",
+      "slotLabel": "Turno de cobro",
+      "slotValue": "{{month}} · Turno {{position}} · {{type}}",
+      "editSlotA11y": "Editar el turno de cobro",
+      "editPayoutMethodA11y": "Editar el método de cobro",
+      "info": "Al confirmar reservas tu turno. Las cuotas finales incluyen los fees, descuentos y Admin Fees de tu slot.",
+      "submit": "Confirmar y unirme",
+      "missingSteps": "Primero completa los cuatro pasos: monto, cuota, turno y método de cobro.",
+      "errors": {
+        "nationalIdRequired": "Para unirte necesitas verificar tu National ID. Lo pide el Banco Central.",
+        "monthlyLimitExceeded": "Las cuotas de este turno superan tu límite mensual de pay-in.",
+        "payoutMethodRequired": "Elige cómo quieres recibir tu payout antes de unirte.",
+        "payoutMethodLimitExceeded": "El payout supera el límite de tu método de cobro. Elige otro método.",
+        "slotNoLongerAvailable": "Ese turno ya no está disponible. Elige otro."
+      },
+      "actions": {
+        "verifyIdentity": "Verificar mi National ID",
+        "increaseLimit": "Aumentar mi límite",
+        "choosePayoutMethod": "Elegir el método de cobro",
+        "chooseSlot": "Elegir otro turno"
+      },
+      "success": {
+        "title": "¡Ya eres parte del Game'ya!",
+        "payout": "Recibirás {{amount}} en {{month}} (turno {{position}} de {{months}}).",
+        "firstInstallment": "Tu primera cuota es de {{amount}} en {{month}}.",
+        "viewCircles": "Ver mis círculos"
+      }
     }
   },
   "saving": {

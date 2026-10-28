@@ -14,6 +14,8 @@ export interface InMemoryCircleQuoteOptions {
   takenPositions?: number[];
   /** Primer mes del círculo (YYYY-MM); por defecto, el mes siguiente al actual. */
   startsOn?: string;
+  /** Círculo ofrecido; por defecto `null`, uno nuevo, como el backend sin círculos abiertos. */
+  circleId?: string | null;
 }
 
 /**
@@ -98,6 +100,7 @@ export class InMemoryCircleQuoteRepository implements CircleQuoteRepositoryPort 
             ? share(payout, MAX_DISCOUNT_BPS, position - (months - highest), highest)
             : zero,
         available: !takenPositions.includes(position),
+        circleId: this.options.circleId ?? null,
       });
     });
   }

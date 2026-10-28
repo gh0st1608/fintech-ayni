@@ -21,14 +21,16 @@ const installmentOptionsDto = z.object({
   ),
 });
 
-const SLOT_TYPE_BY_DTO = {
+export const SLOT_TYPE_BY_DTO = {
   fastest_payout: 'fastestPayout',
   lowest_fees: 'lowestFees',
   highest_return: 'highestReturn',
 } as const satisfies Record<string, SlotType>;
 
-/** DTO propuesto de GET /circles/slots (docs/api/circles.md). */
+/** DTO de GET /circles/slots (docs/api/circles.md). */
 const slotsDto = z.object({
+  /** Círculo ofrecido; `null` si es uno nuevo. */
+  circleId: z.string().min(1).nullable(),
   payout: moneyDto,
   months: z.number().int().positive(),
   slots: z.array(
@@ -76,6 +78,7 @@ export class CircleQuoteApiRepository implements CircleQuoteRepositoryPort {
         fee: toMoney(slot.fee),
         discount: toMoney(slot.discount),
         available: slot.available,
+        circleId: dto.circleId,
       }),
     );
   }

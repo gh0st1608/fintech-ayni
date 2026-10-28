@@ -106,6 +106,7 @@ describe('InMemoryCircleQuoteRepository', () => {
 });
 
 const SLOTS = {
+  circleId: 'c-1',
   payout: money(3_000_000),
   months: 10,
   slots: [
@@ -141,12 +142,20 @@ describe('CircleQuoteApiRepository.listSlots', () => {
       [10, 'highestReturn', true],
     ]);
     expect(slots[1]?.discount.equals(pen(1_500))).toBe(true);
+    expect(slots.every(({ circleId }) => circleId === 'c-1')).toBe(true);
+  });
+
+  it('un círculo nuevo llega con circleId null', async () => {
+    const { repository } = setup({ ...SLOTS, circleId: null });
+    const slots = await repository.listSlots(pen(30_000), 10);
+    expect(slots[0]?.circleId).toBeNull();
   });
 
   it.each([
     [{ ...SLOTS, slots: [{ ...SLOTS.slots[0], type: 'vip' }] }],
     [{ ...SLOTS, slots: [{ ...SLOTS.slots[0], payoutPeriod: 'noviembre' }] }],
     [{ ...SLOTS, slots: [{ ...SLOTS.slots[0], available: undefined }] }],
+    [{ ...SLOTS, circleId: undefined }],
   ])('rechaza una respuesta que no cumple el contrato', async (body) => {
     const { repository } = setup(body);
     await expect(repository.listSlots(pen(30_000), 10)).rejects.toThrow();

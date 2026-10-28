@@ -121,7 +121,34 @@
       "startOver": "Choose the amount"
     },
     "confirm": {
-      "title": "Confirm"
+      "title": "Confirm",
+      "question": "Review and confirm your join",
+      "slotLabel": "Payout slot",
+      "slotValue": "{{month}} · Slot {{position}} · {{type}}",
+      "editSlotA11y": "Edit the payout slot",
+      "editPayoutMethodA11y": "Edit the payout method",
+      "info": "Confirming reserves your slot. Final installments include your slot fees, discounts and Admin Fees.",
+      "submit": "Confirm and join",
+      "missingSteps": "First complete the four steps: amount, installment, slot and payout method.",
+      "errors": {
+        "nationalIdRequired": "To join you need to verify your National ID. The Central Bank requires it.",
+        "monthlyLimitExceeded": "This slot's installments exceed your monthly pay-in limit.",
+        "payoutMethodRequired": "Choose how you want to receive your payout before joining.",
+        "payoutMethodLimitExceeded": "The payout exceeds your payout method limit. Choose another method.",
+        "slotNoLongerAvailable": "That slot is no longer available. Choose another one."
+      },
+      "actions": {
+        "verifyIdentity": "Verify my National ID",
+        "increaseLimit": "Increase my limit",
+        "choosePayoutMethod": "Choose payout method",
+        "chooseSlot": "Choose another slot"
+      },
+      "success": {
+        "title": "You're part of the Game'ya!",
+        "payout": "You'll receive {{amount}} in {{month}} (slot {{position}} of {{months}}).",
+        "firstInstallment": "Your first installment is {{amount}} in {{month}}.",
+        "viewCircles": "View my circles"
+      }
     }
   },
   "saving": {

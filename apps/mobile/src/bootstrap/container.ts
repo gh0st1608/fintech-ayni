@@ -9,6 +9,7 @@ import { VerifyOtpUseCase } from '@/application/auth/usecases/VerifyOtpUseCase';
 import { ConfirmSlotSelectionUseCase } from '@/application/circles/usecases/ConfirmSlotSelectionUseCase';
 import { GetJoinConfigUseCase } from '@/application/circles/usecases/GetJoinConfigUseCase';
 import { ListAvailableSlotsUseCase } from '@/application/circles/usecases/ListAvailableSlotsUseCase';
+import { JoinCircleUseCase } from '@/application/circles/usecases/JoinCircleUseCase';
 import { ListInstallmentOptionsUseCase } from '@/application/circles/usecases/ListInstallmentOptionsUseCase';
 import {
   ListPayoutMethodsUseCase,
@@ -19,6 +20,7 @@ import { ResolveLanguageUseCase } from '@/application/i18n/usecases/ResolveLangu
 import { SyncLanguagePreferenceUseCase } from '@/application/i18n/usecases/SyncLanguagePreferenceUseCase';
 import type { AuthApiPort } from '@/domain/auth/ports/AuthApiPort';
 import type { TokenStoragePort } from '@/domain/auth/ports/TokenStoragePort';
+import type { CircleMembershipRepositoryPort } from '@/domain/circles/ports/CircleMembershipRepositoryPort';
 import type { CircleQuoteRepositoryPort } from '@/domain/circles/ports/CircleQuoteRepositoryPort';
 import type { JoinConfigRepositoryPort } from '@/domain/circles/ports/JoinConfigRepositoryPort';
 import type { DeviceLocalePort } from '@/domain/i18n/ports/DeviceLocalePort';
@@ -27,12 +29,16 @@ import type { LanguageSyncStatePort } from '@/domain/i18n/ports/LanguageSyncStat
 import type { LayoutDirectionPort } from '@/domain/i18n/ports/LayoutDirectionPort';
 import type { PayoutMethodRepositoryPort } from '@/domain/payouts/ports/PayoutMethodRepositoryPort';
 import type { UserProfileRepositoryPort } from '@/domain/profile/ports/UserProfileRepositoryPort';
+import type { IdGeneratorPort } from '@/domain/shared/ports/IdGeneratorPort';
 import { AuthApiRepository } from '@/infrastructure/auth/AuthApiRepository';
 import { InMemoryAuthApi } from '@/infrastructure/auth/InMemoryAuthApi';
+import { CircleMembershipApiRepository } from '@/infrastructure/circles/CircleMembershipApiRepository';
 import { CircleQuoteApiRepository } from '@/infrastructure/circles/CircleQuoteApiRepository';
+import { InMemoryCircleMembershipRepository } from '@/infrastructure/circles/InMemoryCircleMembershipRepository';
 import { InMemoryCircleQuoteRepository } from '@/infrastructure/circles/InMemoryCircleQuoteRepository';
 import { InMemoryJoinConfigRepository } from '@/infrastructure/circles/InMemoryJoinConfigRepository';
 import { JoinConfigApiRepository } from '@/infrastructure/circles/JoinConfigApiRepository';
+import { ExpoCryptoIdGenerator } from '@/infrastructure/device/ExpoCryptoIdGenerator';
 import { ExpoDeviceLocale } from '@/infrastructure/device/ExpoDeviceLocale';
 import { ReactNativeLayoutDirection } from '@/infrastructure/device/ReactNativeLayoutDirection';
 import { FetchHttpClient } from '@/infrastructure/http/FetchHttpClient';
@@ -56,8 +62,10 @@ export interface ContainerAdapters {
   authApi: AuthApiPort;
   joinConfig: JoinConfigRepositoryPort;
   circleQuote: CircleQuoteRepositoryPort;
+  circleMembership: CircleMembershipRepositoryPort;
   userProfile: UserProfileRepositoryPort;
   payoutMethods: PayoutMethodRepositoryPort;
+  ids: IdGeneratorPort;
 }
 
 /** Raíz de composición: único lugar que conoce las implementaciones concretas. */
@@ -91,6 +99,10 @@ export function createContainer(
       env.circlesApi === 'fake'
         ? new InMemoryCircleQuoteRepository()
         : new CircleQuoteApiRepository(http),
+    circleMembership:
+      env.circlesApi === 'fake'
+        ? new InMemoryCircleMembershipRepository()
+        : new CircleMembershipApiRepository(http),
     userProfile:
       env.profileApi === 'fake'
         ? new InMemoryUserProfileRepository()
@@ -99,6 +111,7 @@ export function createContainer(
       env.payoutsApi === 'fake'
         ? new InMemoryPayoutMethodRepository(env.defaultCurrency)
         : new PayoutMethodApiRepository(http),
+    ids: new ExpoCryptoIdGenerator(),
     ...overrides,
   };
 
@@ -131,6 +144,7 @@ export function createContainer(
       listInstallmentOptions: new ListInstallmentOptionsUseCase(adapters.circleQuote),
       listAvailableSlots: new ListAvailableSlotsUseCase(adapters.circleQuote),
       confirmSlotSelection: new ConfirmSlotSelectionUseCase(adapters.circleQuote),
+      joinCircle: new JoinCircleUseCase(adapters.circleMembership, adapters.ids),
     },
     payouts: {
       listPayoutMethods: new ListPayoutMethodsUseCase(adapters.payoutMethods),

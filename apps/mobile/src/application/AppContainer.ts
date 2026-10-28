@@ -8,6 +8,7 @@ import type { VerifyOtpUseCase } from '@/application/auth/usecases/VerifyOtpUseC
 import type { ConfirmSlotSelectionUseCase } from '@/application/circles/usecases/ConfirmSlotSelectionUseCase';
 import type { GetJoinConfigUseCase } from '@/application/circles/usecases/GetJoinConfigUseCase';
 import type { ListAvailableSlotsUseCase } from '@/application/circles/usecases/ListAvailableSlotsUseCase';
+import type { JoinCircleUseCase } from '@/application/circles/usecases/JoinCircleUseCase';
 import type { ListInstallmentOptionsUseCase } from '@/application/circles/usecases/ListInstallmentOptionsUseCase';
 import type {
   ListPayoutMethodsUseCase,
@@ -44,6 +45,7 @@ export interface AppContainer {
     listInstallmentOptions: ListInstallmentOptionsUseCase;
     listAvailableSlots: ListAvailableSlotsUseCase;
     confirmSlotSelection: ConfirmSlotSelectionUseCase;
+    joinCircle: JoinCircleUseCase;
   };
   payouts: {
     listPayoutMethods: ListPayoutMethodsUseCase;

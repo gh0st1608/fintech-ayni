@@ -5,6 +5,7 @@ import type { DeviceLocalePort } from '@/domain/i18n/ports/DeviceLocalePort';
 import type { LanguagePreferencePort } from '@/domain/i18n/ports/LanguagePreferencePort';
 import type { LanguageSyncStatePort } from '@/domain/i18n/ports/LanguageSyncStatePort';
 import type { LayoutDirectionPort } from '@/domain/i18n/ports/LayoutDirectionPort';
+import type { IdGeneratorPort } from '@/domain/shared/ports/IdGeneratorPort';
 
 export class InMemoryTokenStorage implements TokenStoragePort {
   tokens: AuthTokens | null = null;
@@ -76,5 +77,16 @@ export class InMemoryLanguageSyncState implements LanguageSyncStatePort {
 
   async clear() {
     this.stored = null;
+  }
+}
+
+/** Ids predecibles: `key-1`, `key-2`… */
+export class FakeIdGenerator implements IdGeneratorPort {
+  issued: string[] = [];
+
+  next() {
+    const id = `key-${this.issued.length + 1}`;
+    this.issued.push(id);
+    return id;
   }
 }

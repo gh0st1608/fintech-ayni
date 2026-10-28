@@ -1,6 +1,10 @@
 import { Money } from '@/domain/shared/value-objects/Money';
 
-import { IncompleteJoinDraftError, JoinCircleDraft } from './JoinCircleDraft';
+import {
+  IncompleteJoinDraftError,
+  JoinCircleDraft,
+  joinRequestFingerprint,
+} from './JoinCircleDraft';
 import { availablePayoutRange, type JoinConfig } from './JoinConfig';
 import {
   InstallmentOption,
@@ -159,6 +163,28 @@ describe('JoinCircleDraft', () => {
     expect(otherAmount.isComplete()).toBe(false);
   });
 
+  it('el pedido de unión sale del borrador completo, con el círculo del slot', () => {
+    const slot = Slot.create({
+      position: 3,
+      payoutPeriod: '2027-01',
+      type: 'lowestFees',
+      fee: pen(0),
+      discount: pen(0),
+      available: true,
+      circleId: 'c-1',
+    });
+    const incomplete = JoinCircleDraft.empty()
+      .withPayoutAmount(pen(6000))
+      .withInstallment(sixMonths)
+      .withSlot(slot);
+    expect(() => incomplete.joinRequest()).toThrow(IncompleteJoinDraftError);
+
+    const request = incomplete.withPayoutMethod('bankTransfer').joinRequest();
+    expect(request).toEqual({ circleId: 'c-1', payout: pen(6000), months: 6, position: 3 });
+    expect(joinRequestFingerprint(request)).toBe('c-1|PEN|600000|6|3');
+    expect(joinRequestFingerprint({ ...request, circleId: null })).toBe('new|PEN|600000|6|3');
+  });
+
   it('cambiar el monto descarta la cuota; repetir el mismo la conserva', () => {
     const draft = JoinCircleDraft.empty().withPayoutAmount(pen(6000)).withInstallment(sixMonths);
     expect(draft.withPayoutAmount(pen(6000)).installment).toBe(sixMonths);
@@ -179,6 +205,11 @@ describe('Slot', () => {
   it('expone el primer día del mes de cobro', () => {
     const date = Slot.create(base).payoutDate;
     expect([date.getFullYear(), date.getMonth(), date.getDate()]).toEqual([2027, 0, 1]);
+  });
+
+  it('sin círculo es un slot de un círculo nuevo', () => {
+    expect(Slot.create(base).circleId).toBeNull();
+    expect(Slot.create({ ...base, circleId: 'c-1' }).circleId).toBe('c-1');
   });
 
   it.each([

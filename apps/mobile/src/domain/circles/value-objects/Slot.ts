@@ -32,6 +32,8 @@ export class Slot {
     /** Descuento en los pay-ins por cobrar al final (Highest Return); cero en los demás. */
     readonly discount: Money,
     readonly available: boolean,
+    /** Círculo al que pertenece; `null` si es uno nuevo, que el backend abre al unirse. */
+    readonly circleId: string | null,
   ) {}
 
   static create(props: {
@@ -41,6 +43,7 @@ export class Slot {
     fee: Money;
     discount: Money;
     available: boolean;
+    circleId?: string | null;
   }): Slot {
     const { position, payoutPeriod, type, fee, discount, available } = props;
     if (!Number.isInteger(position) || position < 1) {
@@ -52,7 +55,7 @@ export class Slot {
     if (fee.currency !== discount.currency || fee.amount < 0 || discount.amount < 0) {
       throw new InvalidSlotError('Slot fee and discount must be non-negative in one currency');
     }
-    return new Slot(position, payoutPeriod, type, fee, discount, available);
+    return new Slot(position, payoutPeriod, type, fee, discount, available, props.circleId ?? null);
   }
 
   /** Primer día del mes de cobro, para formatearlo con el idioma activo. */

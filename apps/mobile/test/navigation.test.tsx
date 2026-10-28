@@ -89,6 +89,13 @@ describe('shell de navegación', () => {
     );
     await fireEvent.press(screen.getByRole('button', { name: 'Continuar' }));
     await waitFor(() => expect(screen).toHavePathname('/join/confirm'));
+
+    // Confirmar une al usuario y lleva a Mis círculos con el flujo reiniciado.
+    await fireEvent.press(await screen.findByRole('button', { name: 'Confirmar y unirme' }));
+    await fireEvent.press(
+      await screen.findByRole('button', { name: 'Ver mis círculos' }, { timeout: 5000 }),
+    );
+    await waitFor(() => expect(screen).toHavePathname('/circles'));
   });
 
   it('Elige un servicio → programa de ahorro', async () => {

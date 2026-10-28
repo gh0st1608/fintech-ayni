@@ -2,6 +2,7 @@ import type { PayoutMethodType } from '@/domain/payouts/value-objects/PayoutMeth
 import { DomainError } from '@/domain/shared/errors/DomainError';
 import type { Money } from '@/domain/shared/value-objects/Money';
 
+import type { JoinCircleRequest } from './JoinedCircle';
 import type { InstallmentOption } from './value-objects/InstallmentOption';
 import type { Slot } from './value-objects/Slot';
 
@@ -68,4 +69,26 @@ export class JoinCircleDraft {
       this.payoutMethod !== null
     );
   }
+
+  /**
+   * Lo que se envía al unirse. El método de cobro no va: el backend usa el que tiene guardado
+   * (COPAYNI-37), que el paso 4 ya guardó.
+   */
+  joinRequest(): JoinCircleRequest {
+    if (!this.isComplete()) {
+      throw new IncompleteJoinDraftError('Complete the four steps before joining');
+    }
+    return {
+      circleId: this.slot!.circleId,
+      payout: this.payoutAmount!,
+      months: this.installment!.months,
+      position: this.slot!.position,
+    };
+  }
+}
+
+/** Dos borradores con la misma huella piden la misma unión: comparten la clave de idempotencia. */
+export function joinRequestFingerprint(request: JoinCircleRequest): string {
+  const { circleId, payout, months, position } = request;
+  return [circleId ?? 'new', payout.currency, payout.amount, months, position].join('|');
 }
