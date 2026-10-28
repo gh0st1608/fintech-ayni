@@ -1,11 +1,14 @@
-# Contrato de API: autenticación sin contraseña (propuesta)
+# Contrato de API: autenticación sin contraseña
 
-**Estado:** propuesta _contract-first_ para COPAYNI-19, COPAYNI-20 y COPAYNI-21.
+**Estado:** **implementado en el backend** (COPAYNI-19, 20 y 21; `apps/backend/src/modules/auth`).
 
 - La app mobile ya la consume:
   - `AuthApiRepository` usa el backend real.
   - `InMemoryAuthApi` es el adaptador falso de dev.
-- El backend (COPAYNI-8) debe confirmarla o ajustarla antes de implementar los endpoints.
+- **Envío del OTP pendiente (pending-scope T6):** no hay proveedor de SMS ni email.
+  - Sin proveedor, `start` y `resend` responden **503**.
+  - En desarrollo, `OTP_DEV_CODE` fija el código y no se envía nada. Está prohibido en production.
+- El access token es un JWT **ES256** (claims `sub`, `iss`, `aud`, `iat`, `exp`; cabecera con `kid`).
 
 Todas las respuestas usan el contrato común del backend:
 
@@ -129,9 +132,12 @@ Comportamiento de la app (COPAYNI-21):
 
 Duración del código, del contador de reenvío, máximo de intentos y máximo de reenvíos.
 
-El adaptador falso usa estos valores provisionales:
+El backend y el adaptador falso usan los mismos valores provisionales, configurables por variables (`OTP_*`, README del backend):
 
 - Código: 300 s.
 - Reenvío: 30 s.
 - 5 intentos.
-- Código de prueba `1234`.
+- 3 reenvíos por desafío (solo backend). Sin reenvíos, `resend` responde 429 hasta que el código vence.
+- 5 inicios por identificador cada 15 minutos (solo backend).
+- Código de prueba `1234` (`OTP_DEV_CODE` en el backend).
+- Access token de 15 minutos y refresh token de 30 días (duración de sesiones pendiente, COPAYNI-21).

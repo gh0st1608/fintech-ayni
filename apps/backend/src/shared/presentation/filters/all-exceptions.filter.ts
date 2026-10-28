@@ -9,7 +9,12 @@ import {
 } from '@nestjs/common';
 import { type Response } from 'express';
 
-import { AppError, type ErrorDetails, type ErrorKind } from '../../errors/app-error';
+import {
+  AppError,
+  type ErrorDetails,
+  type ErrorKind,
+  RateLimitedError,
+} from '../../errors/app-error';
 import { type AppRequest, traceIdOf } from '../http/app-request';
 
 export interface ErrorBody {
@@ -32,6 +37,7 @@ const STATUS_BY_KIND: Record<ErrorKind, number> = {
   not_found: HttpStatus.NOT_FOUND,
   conflict: HttpStatus.CONFLICT,
   domain: HttpStatus.UNPROCESSABLE_ENTITY,
+  rate_limited: HttpStatus.TOO_MANY_REQUESTS,
   infrastructure: HttpStatus.SERVICE_UNAVAILABLE,
 };
 
@@ -123,6 +129,12 @@ export class AllExceptionsFilter implements ExceptionFilter {
       },
       traceId,
     };
+    if (exception instanceof RateLimitedError) {
+      response.setHeader(
+        'Retry-After',
+        String(Math.max(1, Math.ceil(exception.retryAfterSeconds))),
+      );
+    }
     response.status(error.status).json(body);
   }
 

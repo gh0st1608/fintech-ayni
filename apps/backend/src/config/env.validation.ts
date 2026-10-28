@@ -12,6 +12,7 @@ import {
   Matches,
   Max,
   Min,
+  MinLength,
   ValidateIf,
   validateSync,
 } from 'class-validator';
@@ -208,6 +209,87 @@ export class EnvironmentVariables {
   @Min(1)
   @Max(100)
   DB_POOL_MAX: number = 10;
+
+  /**
+   * Clave privada P-256 en PEM para firmar los access tokens (ES256). Es un secreto: en AWS llega
+   * de Secrets Manager. Obligatoria en production; en desarrollo y pruebas, sin valor se genera una
+   * efímera al arrancar (los tokens dejan de valer al reiniciar). Admite `\n` escapados.
+   */
+  @ValidateIf((env: EnvironmentVariables) => env.NODE_ENV === 'production' || !!env.JWT_PRIVATE_KEY)
+  @IsString()
+  @Matches(/-----BEGIN (EC )?PRIVATE KEY-----/, {
+    message: 'JWT_PRIVATE_KEY debe ser una clave PEM',
+  })
+  JWT_PRIVATE_KEY?: string;
+
+  /** `kid` de la cabecera del JWT: permite rotar la clave aceptando la anterior un tiempo. */
+  @Matches(/^[A-Za-z0-9._-]{1,64}$/)
+  JWT_KEY_ID: string = 'ayni-1';
+
+  @IsString()
+  @IsNotEmpty()
+  JWT_ISSUER: string = 'ayni-api';
+
+  @IsString()
+  @IsNotEmpty()
+  JWT_AUDIENCE: string = 'ayni-mobile';
+
+  /** Vida del access token, en segundos (pendiente: duración de las sesiones, COPAYNI-21). */
+  @IsInt()
+  @Min(60)
+  @Max(3600)
+  ACCESS_TOKEN_TTL_SECONDS: number = 900;
+
+  /** Vida del refresh token rotativo, en días. */
+  @IsInt()
+  @Min(1)
+  @Max(365)
+  REFRESH_TOKEN_TTL_DAYS: number = 30;
+
+  /**
+   * Secreto con el que se guarda el hash (HMAC) de cada OTP: sin él, un código de 4 dígitos se
+   * revierte probando las 10.000 combinaciones. Obligatorio en production; en desarrollo, efímero.
+   */
+  @ValidateIf((env: EnvironmentVariables) => env.NODE_ENV === 'production' || !!env.OTP_PEPPER)
+  @IsString()
+  @MinLength(32)
+  OTP_PEPPER?: string;
+
+  /** Política de OTP provisional (pending-scope R10), igual que el adaptador falso de mobile. */
+  @IsInt()
+  @Min(60)
+  OTP_CODE_TTL_SECONDS: number = 300;
+
+  @IsInt()
+  @Min(1)
+  OTP_RESEND_COOLDOWN_SECONDS: number = 30;
+
+  @IsInt()
+  @Min(1)
+  @Max(10)
+  OTP_MAX_ATTEMPTS: number = 5;
+
+  @IsInt()
+  @Min(0)
+  @Max(10)
+  OTP_MAX_RESENDS: number = 3;
+
+  /** Inicios de sesión por identificador dentro de la ventana; los siguientes responden 429. */
+  @IsInt()
+  @Min(1)
+  OTP_START_MAX_PER_WINDOW: number = 5;
+
+  @IsInt()
+  @Min(60)
+  OTP_START_WINDOW_SECONDS: number = 900;
+
+  /**
+   * Solo desarrollo: todos los OTP valen este código y no se envían (aún no hay proveedor,
+   * pending-scope T6). Prohibido en production. Sin valor, el envío responde 503.
+   */
+  @IsOptional()
+  @Matches(/^\d{4}$/, { message: 'OTP_DEV_CODE debe tener 4 dígitos' })
+  OTP_DEV_CODE?: string;
 }
 
 /** Si se exporta alguna señal de telemetría (y por tanto se necesita el endpoint OTLP). */
@@ -227,6 +309,9 @@ export function validateEnvironment(config: Record<string, unknown>): Environmen
     excludeExtraneousValues: false,
   });
   const errors = validateSync(env, { skipMissingProperties: false, forbidUnknownValues: true });
+  if (env.NODE_ENV === 'production' && env.OTP_DEV_CODE !== undefined) {
+    throw new Error('Configuración inválida:\n- OTP_DEV_CODE: no se admite en production');
+  }
   if (errors.length > 0) {
     const problems = errors.map(
       ({ property, constraints }) =>

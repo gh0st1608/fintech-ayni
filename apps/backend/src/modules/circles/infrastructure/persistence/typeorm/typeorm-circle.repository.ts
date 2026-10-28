@@ -86,7 +86,10 @@ export class TypeOrmCircleRepository implements CircleRepositoryPort {
         });
         throw sameKey ? new IdempotencyKeyExistsError() : mapped();
       }
-      if (violatedConstraint(error, PG_FOREIGN_KEY_VIOLATION) !== undefined) {
+      // Nombre que PostgreSQL da a la clave foránea de la migración CreateCircles.
+      if (
+        violatedConstraint(error, PG_FOREIGN_KEY_VIOLATION) === 'circle_memberships_circle_id_fkey'
+      ) {
         throw new NotFoundError('No se encontró el círculo', 'CIRCLE_NOT_FOUND');
       }
       throw error;

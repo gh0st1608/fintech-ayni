@@ -25,6 +25,9 @@ export const TEST_ENV = {
   DB_USERNAME: 'ayni',
   DB_PASSWORD: 'ayni',
   DB_POOL_MAX: '5',
+  // Sin proveedor de OTP (T6): las pruebas usan el código fijo de desarrollo. La clave JWT y el
+  // secreto de los OTP se generan al arrancar.
+  OTP_DEV_CODE: '1234',
 } as const;
 
 Object.assign(process.env, TEST_ENV);

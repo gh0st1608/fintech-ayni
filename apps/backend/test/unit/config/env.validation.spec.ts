@@ -158,4 +158,49 @@ describe('validateEnvironment', () => {
       expect(() => validateEnvironment({ ...REQUIRED, DB_PORT: 'x' })).not.toThrow(/secreto/);
     });
   });
+  describe('autenticación', () => {
+    const PRODUCTION = {
+      ...REQUIRED,
+      NODE_ENV: 'production',
+      JWT_PRIVATE_KEY: '-----BEGIN PRIVATE KEY-----\nabc\n-----END PRIVATE KEY-----',
+      OTP_PEPPER: 'p'.repeat(32),
+    };
+
+    it('fuera de production no exige la clave JWT ni el secreto de los OTP', () => {
+      expect(validateEnvironment({ ...REQUIRED })).toMatchObject({
+        JWT_KEY_ID: 'ayni-1',
+        ACCESS_TOKEN_TTL_SECONDS: 900,
+        REFRESH_TOKEN_TTL_DAYS: 30,
+        OTP_CODE_TTL_SECONDS: 300,
+        OTP_RESEND_COOLDOWN_SECONDS: 30,
+        OTP_MAX_ATTEMPTS: 5,
+      });
+    });
+
+    it('en production los exige', () => {
+      expect(() => validateEnvironment(PRODUCTION)).not.toThrow();
+      expect(() => validateEnvironment({ ...PRODUCTION, JWT_PRIVATE_KEY: undefined })).toThrow(
+        /JWT_PRIVATE_KEY/,
+      );
+      expect(() => validateEnvironment({ ...PRODUCTION, OTP_PEPPER: 'corto' })).toThrow(
+        /OTP_PEPPER/,
+      );
+    });
+
+    it('rechaza una clave que no es PEM', () => {
+      expect(() => validateEnvironment({ ...REQUIRED, JWT_PRIVATE_KEY: 'clave' })).toThrow(
+        /JWT_PRIVATE_KEY/,
+      );
+    });
+
+    it('OTP_DEV_CODE tiene 4 dígitos y nunca se admite en production', () => {
+      expect(validateEnvironment({ ...REQUIRED, OTP_DEV_CODE: '1234' }).OTP_DEV_CODE).toBe('1234');
+      expect(() => validateEnvironment({ ...REQUIRED, OTP_DEV_CODE: '12' })).toThrow(
+        /OTP_DEV_CODE/,
+      );
+      expect(() => validateEnvironment({ ...PRODUCTION, OTP_DEV_CODE: '1234' })).toThrow(
+        /OTP_DEV_CODE: no se admite en production/,
+      );
+    });
+  });
 });

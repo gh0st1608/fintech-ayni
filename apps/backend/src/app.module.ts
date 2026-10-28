@@ -4,11 +4,11 @@ import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR, APP_PIPE } from '@nestjs/core';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 
 import { type AppConfigService, configModuleOptions } from './config/configuration';
+import { AuthModule } from './modules/auth/auth.module';
 import { CirclesModule } from './modules/circles/circles.module';
 import { HealthModule } from './modules/health/health.module';
-import { ACCESS_TOKEN_VERIFIER } from './shared/application/ports/access-token-verifier.port';
+import { ClockModule } from './shared/infrastructure/clock/clock.module';
 import { DatabaseModule } from './shared/infrastructure/persistence/database.module';
-import { DenyAllAccessTokenVerifier } from './shared/infrastructure/auth/deny-all-access-token-verifier';
 import { TelemetryShutdown } from './shared/infrastructure/observability/telemetry-shutdown';
 import { AllExceptionsFilter } from './shared/presentation/filters/all-exceptions.filter';
 import { BearerAuthGuard } from './shared/presentation/guards/bearer-auth.guard';
@@ -30,13 +30,15 @@ import { createValidationPipe } from './shared/presentation/pipes/validation.pip
         },
       ],
     }),
+    ClockModule,
     DatabaseModule,
     HealthModule,
+    // Exporta ACCESS_TOKEN_VERIFIER, que usa BearerAuthGuard.
+    AuthModule,
     CirclesModule,
   ],
   providers: [
     TelemetryShutdown,
-    { provide: ACCESS_TOKEN_VERIFIER, useClass: DenyAllAccessTokenVerifier },
     { provide: APP_FILTER, useClass: AllExceptionsFilter },
     { provide: APP_PIPE, useFactory: createValidationPipe },
     // Orden: primero el rate limit (también protege las rutas públicas), luego la autenticación.

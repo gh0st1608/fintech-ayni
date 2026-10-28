@@ -9,6 +9,7 @@ export type ErrorKind =
   | 'forbidden'
   | 'not_found'
   | 'conflict'
+  | 'rate_limited'
   | 'infrastructure';
 
 /** Detalles seguros de mostrar al cliente (p. ej. qué campo falló). Nunca datos sensibles. */
@@ -76,6 +77,18 @@ export class ConflictError extends AppError {
 
   constructor(code: string, message: string, details?: ErrorDetails) {
     super(code, message, details);
+  }
+}
+
+/** Límite de solicitudes superado. `retryAfterSeconds` llega al cliente como `Retry-After`. */
+export class RateLimitedError extends AppError {
+  readonly kind = 'rate_limited';
+
+  constructor(
+    readonly retryAfterSeconds: number,
+    message = 'Demasiadas solicitudes, intenta más tarde',
+  ) {
+    super('RATE_LIMITED', message);
   }
 }
 

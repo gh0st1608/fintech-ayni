@@ -6,7 +6,6 @@ import { UnauthorizedError } from '@src/shared/errors/app-error';
 import { principalOf } from '@src/shared/presentation/decorators/current-principal.decorator';
 import { BearerAuthGuard } from '@src/shared/presentation/guards/bearer-auth.guard';
 import { type AppRequest } from '@src/shared/presentation/http/app-request';
-import { DenyAllAccessTokenVerifier } from '@src/shared/infrastructure/auth/deny-all-access-token-verifier';
 
 function contextFor(request: Partial<AppRequest>): ExecutionContext {
   return {
@@ -64,13 +63,5 @@ describe('BearerAuthGuard', () => {
 describe('principalOf', () => {
   it('exige un usuario autenticado', () => {
     expect(() => principalOf({} as AppRequest)).toThrow(UnauthorizedError);
-  });
-});
-
-describe('DenyAllAccessTokenVerifier', () => {
-  it('rechaza cualquier token mientras no exista el módulo auth', async () => {
-    await expect(new DenyAllAccessTokenVerifier().verify()).rejects.toBeInstanceOf(
-      UnauthorizedError,
-    );
   });
 });

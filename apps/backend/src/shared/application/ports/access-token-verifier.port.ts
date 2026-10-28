@@ -7,7 +7,7 @@ export interface Principal {
 
 /**
  * Valida un access token y devuelve su usuario. Lanza `UnauthorizedError` si el token
- * no es válido. La implementación con JWT llega con el módulo auth (COPAYNI-19, 20).
+ * no es válido. Implementación: `Es256JwtVerifier` del módulo auth.
  */
 export interface AccessTokenVerifierPort {
   verify(accessToken: string): Promise<Principal>;

@@ -9,7 +9,8 @@ API REST de Ayni: NestJS 11 + TypeScript strict con arquitectura hexagonal por m
 - Observabilidad (COPAYNI-10): OpenTelemetry con exportación OTLP a New Relic, logs JSON correlacionados y health checks.
 - Dominio de círculos (COPAYNI-24): términos, precio por slot, cronograma de cuotas, reserva atómica e idempotente, y `GET /v1/circles/installment-options`.
 - Persistencia (COPAYNI-24): PostgreSQL con TypeORM, migraciones versionadas y readiness de la base de datos.
-- Pendiente: despliegue en AWS (COPAYNI-12) y el módulo auth (COPAYNI-19, 20 y 21).
+- Autenticación (COPAYNI-19, 20 y 21): OTP, JWT ES256 y refresh tokens rotativos con detección de reutilización ([docs/api/auth.md](../../docs/api/auth.md)).
+- Pendiente: despliegue en AWS (COPAYNI-12) y el proveedor de envío de OTP (pending-scope T6).
 
 ## Requisitos
 
@@ -166,32 +167,40 @@ Se validan al arrancar ([src/config/env.validation.ts](src/config/env.validation
 - el error nombra cada variable y la regla que incumple;
 - nunca muestra su valor.
 
-| Variable                            | Defecto              | Uso                                                                                      |
-| ----------------------------------- | -------------------- | ---------------------------------------------------------------------------------------- |
-| `NODE_ENV`                          | `development`        | `development`, `test` o `production`.                                                    |
-| `PORT`                              | `3000`               |                                                                                          |
-| `APP_NAME` / `APP_VERSION`          | `ayni-api` / `0.1.0` | Título y versión de OpenAPI.                                                             |
-| `LOG_LEVEL`                         | `info`               | `debug`, `info`, `warn`, `error` o `fatal`.                                              |
-| `CORS_ALLOWED_ORIGINS`              | vacío                | URLs separadas por comas. La app mobile no usa CORS.                                     |
-| `TRUST_PROXY`                       | `false`              | `true` detrás de API Gateway o de un balanceador, para que el rate limit vea la IP real. |
-| `REQUEST_TIMEOUT`                   | `30000`              | Milisegundos.                                                                            |
-| `BODY_LIMIT`                        | `100kb`              | Tamaño máximo del JSON.                                                                  |
-| `RATE_LIMIT_TTL` / `RATE_LIMIT_MAX` | `60000` / `100`      | Ventana en ms y solicitudes por IP.                                                      |
-| `ENABLE_SWAGGER`                    | `false`              | Expone `/docs`.                                                                          |
-| `DEPLOYMENT_ENVIRONMENT`            | `local`              | Ambiente en trazas, métricas y logs: `local`, `dev`, `staging`, `prod`.                  |
-| `ENABLE_TRACING`                    | `false`              | Exporta trazas por OTLP.                                                                 |
-| `ENABLE_METRICS`                    | `false`              | Exporta métricas (duración de peticiones HTTP) por OTLP.                                 |
-| `ENABLE_LOGGING`                    | `false`              | Exporta los logs por OTLP. Los logs JSON por stdout se escriben siempre.                 |
-| `OTEL_EXPORTER_OTLP_ENDPOINT`       | vacío                | Endpoint OTLP/HTTP base. Obligatorio si algún `ENABLE_*` es `true`.                      |
-| `NEW_RELIC_LICENSE_KEY`             | vacío                | **Secreto.** License key de ingesta; se envía como cabecera `api-key`.                   |
-| `DEFAULT_CURRENCY`                  | obligatoria          | ISO 4217 (pending-scope M1; PEN propuesto).                                              |
-| `JOIN_PAYOUT_MIN` / `MAX` / `STEP`  | obligatorias         | Rango del payout, en unidades menores. Debe ser alcanzable en saltos completos.          |
-| `SAVING_PROGRAM_MAX`                | obligatoria          | Máximo del programa de ahorro, en unidades menores.                                      |
-| `DB_HOST` / `DB_NAME`               | obligatorias         | PostgreSQL.                                                                              |
-| `DB_PORT`                           | `5432`               |                                                                                          |
-| `DB_USERNAME` / `DB_PASSWORD`       | obligatorias         | **`DB_PASSWORD` es secreto.** En AWS llegan de Secrets Manager.                          |
-| `DB_SSL` / `DB_SSL_CA`              | `false` / vacío      | TLS verificando el servidor (RDS lo exige). `DB_SSL_CA`: bundle de CA de RDS en PEM.     |
-| `DB_POOL_MAX`                       | `10`                 | Conexiones máximas por instancia de la API.                                              |
+| Variable                                      | Defecto                               | Uso                                                                                      |
+| --------------------------------------------- | ------------------------------------- | ---------------------------------------------------------------------------------------- |
+| `NODE_ENV`                                    | `development`                         | `development`, `test` o `production`.                                                    |
+| `PORT`                                        | `3000`                                |                                                                                          |
+| `APP_NAME` / `APP_VERSION`                    | `ayni-api` / `0.1.0`                  | Título y versión de OpenAPI.                                                             |
+| `LOG_LEVEL`                                   | `info`                                | `debug`, `info`, `warn`, `error` o `fatal`.                                              |
+| `CORS_ALLOWED_ORIGINS`                        | vacío                                 | URLs separadas por comas. La app mobile no usa CORS.                                     |
+| `TRUST_PROXY`                                 | `false`                               | `true` detrás de API Gateway o de un balanceador, para que el rate limit vea la IP real. |
+| `REQUEST_TIMEOUT`                             | `30000`                               | Milisegundos.                                                                            |
+| `BODY_LIMIT`                                  | `100kb`                               | Tamaño máximo del JSON.                                                                  |
+| `RATE_LIMIT_TTL` / `RATE_LIMIT_MAX`           | `60000` / `100`                       | Ventana en ms y solicitudes por IP.                                                      |
+| `ENABLE_SWAGGER`                              | `false`                               | Expone `/docs`.                                                                          |
+| `DEPLOYMENT_ENVIRONMENT`                      | `local`                               | Ambiente en trazas, métricas y logs: `local`, `dev`, `staging`, `prod`.                  |
+| `ENABLE_TRACING`                              | `false`                               | Exporta trazas por OTLP.                                                                 |
+| `ENABLE_METRICS`                              | `false`                               | Exporta métricas (duración de peticiones HTTP) por OTLP.                                 |
+| `ENABLE_LOGGING`                              | `false`                               | Exporta los logs por OTLP. Los logs JSON por stdout se escriben siempre.                 |
+| `OTEL_EXPORTER_OTLP_ENDPOINT`                 | vacío                                 | Endpoint OTLP/HTTP base. Obligatorio si algún `ENABLE_*` es `true`.                      |
+| `NEW_RELIC_LICENSE_KEY`                       | vacío                                 | **Secreto.** License key de ingesta; se envía como cabecera `api-key`.                   |
+| `DEFAULT_CURRENCY`                            | obligatoria                           | ISO 4217 (pending-scope M1; PEN propuesto).                                              |
+| `JOIN_PAYOUT_MIN` / `MAX` / `STEP`            | obligatorias                          | Rango del payout, en unidades menores. Debe ser alcanzable en saltos completos.          |
+| `SAVING_PROGRAM_MAX`                          | obligatoria                           | Máximo del programa de ahorro, en unidades menores.                                      |
+| `DB_HOST` / `DB_NAME`                         | obligatorias                          | PostgreSQL.                                                                              |
+| `DB_PORT`                                     | `5432`                                |                                                                                          |
+| `DB_USERNAME` / `DB_PASSWORD`                 | obligatorias                          | **`DB_PASSWORD` es secreto.** En AWS llegan de Secrets Manager.                          |
+| `DB_SSL` / `DB_SSL_CA`                        | `false` / vacío                       | TLS verificando el servidor (RDS lo exige). `DB_SSL_CA`: bundle de CA de RDS en PEM.     |
+| `DB_POOL_MAX`                                 | `10`                                  | Conexiones máximas por instancia de la API.                                              |
+| `JWT_PRIVATE_KEY`                             | efímera fuera de prd                  | **Secreto.** PEM P-256 para firmar los access tokens. Obligatoria en production.         |
+| `JWT_KEY_ID` / `ISSUER` / `AUDIENCE`          | `ayni-1` / `ayni-api` / `ayni-mobile` | `kid`, `iss` y `aud` del JWT.                                                            |
+| `ACCESS_TOKEN_TTL_SECONDS`                    | `900`                                 | Vida del access token.                                                                   |
+| `REFRESH_TOKEN_TTL_DAYS`                      | `30`                                  | Vida del refresh token.                                                                  |
+| `OTP_PEPPER`                                  | efímero fuera de prd                  | **Secreto** (32+ caracteres) para el hash de los OTP. Obligatorio en production.         |
+| `OTP_CODE_TTL_SECONDS` … `OTP_MAX_RESENDS`    | `300`, `30`, `5`, `3`                 | Vigencia, plazo de reenvío, intentos y reenvíos (R10, provisionales).                    |
+| `OTP_START_MAX_PER_WINDOW` / `WINDOW_SECONDS` | `5` / `900`                           | Inicios por identificador en la ventana.                                                 |
+| `OTP_DEV_CODE`                                | vacío                                 | Solo desarrollo: código fijo y sin envío. Prohibido en production.                       |
 
 **Secretos:**
 
@@ -328,6 +337,42 @@ Cambiar una fórmula toca `SlotPricing` y sus pruebas, sin afectar al resto del 
 - Endpoints de círculos recomendados y slots disponibles, y la unión por HTTP (COPAYNI-31).
 - Origen de los parámetros de precio: por círculo en la base de datos o por configuración.
 - Formación de los círculos (R2) y mora (R3).
+
+## Autenticación (COPAYNI-19, 20 y 21)
+
+Módulo [auth](src/modules/auth), sobre el módulo [users](src/modules/users). Contrato: [docs/api/auth.md](../../docs/api/auth.md).
+
+| Pieza                         | Responsabilidad                                                                                                           |
+| ----------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| `LoginIdentifier`             | Email en minúsculas o teléfono E.164; enmascarado para la respuesta. Mismas reglas que mobile.                            |
+| `AuthChallenge`               | Intentos, bloqueo al agotarlos, vencimiento y reenvíos con plazo. El código solo existe como hash.                        |
+| `HmacOtpHasher`               | HMAC-SHA256 con `OTP_PEPPER` sobre desafío y código; comparación en tiempo constante.                                     |
+| `Es256JwtIssuer` / `Verifier` | JWT ES256 con `node:crypto`. Solo acepta `alg: ES256` y su `kid`; valida emisor, audiencia y vigencia (30 s de margen).   |
+| Refresh tokens                | 32 bytes aleatorios; en la base, su SHA-256. Rotación en un `UPDATE` condicional; un token reutilizado revoca la familia. |
+
+**Concurrencia:**
+
+- Los intentos sobre un desafío se serializan con `SELECT … FOR UPDATE`: diez intentos simultáneos descuentan exactamente los cinco disponibles.
+- De dos renovaciones simultáneas con el mismo refresh token, una vale y la otra se trata como reutilización.
+- Dos inicios simultáneos con el mismo email obtienen el mismo usuario (índice único).
+
+**Seguridad:**
+
+- La respuesta de `start` es igual exista o no el usuario.
+- Los logs registran eventos (`auth.challenge_issued`, `auth.otp_verified`, `auth.otp_rejected`, `auth.refresh_reuse_detected`) con el id del usuario, nunca el identificador, el código ni los tokens.
+- `RATE_LIMITED` lleva `Retry-After` en segundos; el límite por identificador vive en la base, no en memoria.
+
+**Secretos:** `JWT_PRIVATE_KEY` (PEM P-256) y `OTP_PEPPER` son obligatorios en production y llegan de Secrets Manager. Fuera de production, si faltan, se generan al arrancar y dejan de valer al reiniciar. Para fijar una clave local:
+
+```bash
+openssl ecparam -name prime256v1 -genkey -noout | openssl pkcs8 -topk8 -nocrypt
+```
+
+**Pendiente:**
+
+- Proveedor de envío de OTP (T6): mientras tanto, sin `OTP_DEV_CODE` el envío responde 503.
+- "Remember Me" y la duración de las sesiones (R10, COPAYNI-21).
+- Rotación de la clave JWT: hoy se acepta un solo `kid`.
 
 ## Persistencia
 

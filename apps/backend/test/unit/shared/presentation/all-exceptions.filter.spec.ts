@@ -15,6 +15,7 @@ import {
   ForbiddenError,
   InfrastructureError,
   NotFoundError,
+  RateLimitedError,
   UnauthorizedError,
   ValidationError,
 } from '@src/shared/errors/app-error';
@@ -22,7 +23,11 @@ import { AllExceptionsFilter } from '@src/shared/presentation/filters/all-except
 import { type AppRequest } from '@src/shared/presentation/http/app-request';
 
 function catchWith(exception: unknown, request: Partial<AppRequest> = { traceId: 'trace-1' }) {
-  const response = { status: jest.fn().mockReturnThis(), json: jest.fn() };
+  const response = {
+    status: jest.fn().mockReturnThis(),
+    json: jest.fn(),
+    setHeader: jest.fn(),
+  };
   const host = {
     switchToHttp: () => ({
       getRequest: () => ({ method: 'GET', path: '/v1/x', ...request }),
@@ -32,7 +37,7 @@ function catchWith(exception: unknown, request: Partial<AppRequest> = { traceId:
   new AllExceptionsFilter().catch(exception, host);
   const [[status]] = response.status.mock.calls as [[number]];
   const [[body]] = response.json.mock.calls as [[Record<string, unknown>]];
-  return { status, body };
+  return { status, body, response };
 }
 
 describe('AllExceptionsFilter', () => {
@@ -67,6 +72,14 @@ describe('AllExceptionsFilter', () => {
       traceId: 'trace-1',
     });
     expect(logError).not.toHaveBeenCalled();
+  });
+
+  it('un límite superado responde 429 con Retry-After en segundos enteros', () => {
+    const result = catchWith(new RateLimitedError(29.2));
+
+    expect(result.status).toBe(429);
+    expect(result.body).toMatchObject({ error: { code: 'RATE_LIMITED' } });
+    expect(result.response.setHeader).toHaveBeenCalledWith('Retry-After', '30');
   });
 
   it('un error de infraestructura responde 503 genérico y registra la causa', () => {

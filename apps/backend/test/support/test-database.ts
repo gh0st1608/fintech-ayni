@@ -1,3 +1,5 @@
+import { randomUUID } from 'node:crypto';
+
 import { DataSource, type EntitySchema } from 'typeorm';
 
 import { validateEnvironment } from '@src/config/env.validation';
@@ -18,4 +20,14 @@ export async function openTestDatabase(entities: EntityTarget[]): Promise<DataSo
     entities,
   });
   return dataSource.initialize();
+}
+
+/** Inserta un usuario activo y devuelve su id (las membresías referencian usuarios reales). */
+export async function insertTestUser(dataSource: DataSource): Promise<string> {
+  const id = randomUUID();
+  await dataSource.query(`INSERT INTO users (id, email, status) VALUES ($1, $2, 'active')`, [
+    id,
+    `${id}@test.ayni`,
+  ]);
+  return id;
 }
