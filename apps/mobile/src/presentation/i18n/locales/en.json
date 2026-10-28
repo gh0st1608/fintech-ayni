@@ -58,7 +58,22 @@
       "info": "Your monthly pay-in is deducted automatically."
     },
     "monthlyPayIn": {
-      "title": "Monthly Pay-in"
+      "title": "Monthly Pay-in",
+      "question": "How much do you want to pay each month?",
+      "summaryLabel": "Payout amount",
+      "edit": "Edit",
+      "editA11y": "Edit the payout amount",
+      "optionsLabel": "Available pay-ins",
+      "option": "{{amount}} per month",
+      "optionMonths": "For {{months}} months",
+      "exceedsLimit": "Exceeds your monthly pay-in limit.",
+      "info": "Your monthly pay-in may vary depending on your slot fees or discounts.",
+      "empty": "There are no pay-ins available for this amount. Try another payout amount.",
+      "missingPayout": "Choose the payout amount first.",
+      "choosePayout": "Choose the amount"
+    },
+    "slot": {
+      "title": "Payout Slot"
     }
   },
   "saving": {

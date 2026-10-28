@@ -221,10 +221,11 @@ Petición → 401 → ¿endpoint de auth (skipSessionRefresh)? ─ sí → error
 - La renovación conserva la elección de Remember Me: `save` sin `persist` mantiene el modo actual.
 - **Cerrar sesión** borra la sesión local de inmediato. La revocación del refresh token (`/auth/logout`) va en segundo plano y no bloquea si no hay red.
 
-## Unirse a un círculo (COPAYNI-27, 28)
+## Unirse a un círculo (COPAYNI-27, 28, 29)
 
 ```
 JoinScreen / PayoutAmountScreen → useJoinConfig → GetJoinConfigUseCase → JoinConfigRepositoryPort
+MonthlyPayInScreen → useInstallmentOptions → ListInstallmentOptionsUseCase → CircleQuoteRepositoryPort
                                 → JoinFlowProvider (JoinCircleDraft en memoria)
 ```
 
@@ -234,6 +235,11 @@ JoinScreen / PayoutAmountScreen → useJoinConfig → GetJoinConfigUseCase → J
 - `PayoutRange` (dominio) ajusta cualquier monto al salto y lo limita al máximo del usuario (`capTo`).
 - `JoinCircleDraft` es inmutable y vive en `JoinFlowProvider` (nunca en disco). "Unirme a un Game'ya" empieza un borrador limpio; "Join now" de Home podrá empezarlo con un monto (`start(amount)`).
 - `Slider` del design system: se arrastra o se toca la pista; con lector de pantalla es `adjustable` y sube o baja de a un salto, anunciando el monto formateado.
+- **Cuota mensual** (`/join/monthly-pay-in`, paso 2): las combinaciones cuota × meses llegan de `GET /circles/installment-options`; la app no las calcula.
+  - Resumen del monto con "Editar", que vuelve al paso 1 conservando el monto.
+  - Una cuota con `withinMonthlyLimit: false` aparece deshabilitada con el motivo. El campo es una propuesta para R5: si el backend no lo envía, ninguna cuota se restringe.
+  - Cambiar el monto en el paso 1 descarta la cuota elegida; volver desde el paso 3 la conserva.
+  - El diseño (Figma 55:9334) no se pudo leer por el límite de la integración de Figma: se armó con el inventario de `docs/product-context.md` y queda pendiente de validar con UX.
 
 ## Pendientes conocidos
 

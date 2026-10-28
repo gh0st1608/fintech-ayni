@@ -60,7 +60,7 @@ describe('shell de navegación', () => {
     await waitFor(() => expect(screen).toHavePathname('/join'));
   });
 
-  it('Elige un servicio → Game’ya → monto (paso 1) → paso 2', async () => {
+  it('Elige un servicio → Game’ya → monto (paso 1) → cuota (paso 2) → turno (paso 3)', async () => {
     await storeSession();
     await renderRouter(APP_DIR, { initialUrl: '/join' });
     await fireEvent.press(await screen.findByRole('button', { name: /Unirme a un Game'ya/ }));
@@ -69,6 +69,16 @@ describe('shell de navegación', () => {
     expect(await screen.findByTestId('payout-slider', {}, { timeout: 5000 })).toBeTruthy();
     await fireEvent.press(screen.getByRole('button', { name: 'Siguiente' }));
     await waitFor(() => expect(screen).toHavePathname('/join/monthly-pay-in'));
+
+    // Editar vuelve al paso 1 con el monto conservado.
+    await fireEvent.press(await screen.findByRole('button', { name: 'Editar el monto de payout' }));
+    await waitFor(() => expect(screen).toHavePathname('/join/payout-amount'));
+    await fireEvent.press(await screen.findByRole('button', { name: 'Siguiente' }));
+    await waitFor(() => expect(screen).toHavePathname('/join/monthly-pay-in'));
+
+    await fireEvent.press(await screen.findByRole('radio', { name: /6 meses/ }, { timeout: 5000 }));
+    await fireEvent.press(screen.getByRole('button', { name: 'Siguiente' }));
+    await waitFor(() => expect(screen).toHavePathname('/join/slot'));
   });
 
   it('Elige un servicio → programa de ahorro', async () => {

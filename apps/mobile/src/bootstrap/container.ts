@@ -7,11 +7,13 @@ import { SignOutUseCase } from '@/application/auth/usecases/SignOutUseCase';
 import { StartAuthenticationUseCase } from '@/application/auth/usecases/StartAuthenticationUseCase';
 import { VerifyOtpUseCase } from '@/application/auth/usecases/VerifyOtpUseCase';
 import { GetJoinConfigUseCase } from '@/application/circles/usecases/GetJoinConfigUseCase';
+import { ListInstallmentOptionsUseCase } from '@/application/circles/usecases/ListInstallmentOptionsUseCase';
 import { ChangeLanguageUseCase } from '@/application/i18n/usecases/ChangeLanguageUseCase';
 import { ResolveLanguageUseCase } from '@/application/i18n/usecases/ResolveLanguageUseCase';
 import { SyncLanguagePreferenceUseCase } from '@/application/i18n/usecases/SyncLanguagePreferenceUseCase';
 import type { AuthApiPort } from '@/domain/auth/ports/AuthApiPort';
 import type { TokenStoragePort } from '@/domain/auth/ports/TokenStoragePort';
+import type { CircleQuoteRepositoryPort } from '@/domain/circles/ports/CircleQuoteRepositoryPort';
 import type { JoinConfigRepositoryPort } from '@/domain/circles/ports/JoinConfigRepositoryPort';
 import type { DeviceLocalePort } from '@/domain/i18n/ports/DeviceLocalePort';
 import type { LanguagePreferencePort } from '@/domain/i18n/ports/LanguagePreferencePort';
@@ -20,6 +22,8 @@ import type { LayoutDirectionPort } from '@/domain/i18n/ports/LayoutDirectionPor
 import type { UserProfileRepositoryPort } from '@/domain/profile/ports/UserProfileRepositoryPort';
 import { AuthApiRepository } from '@/infrastructure/auth/AuthApiRepository';
 import { InMemoryAuthApi } from '@/infrastructure/auth/InMemoryAuthApi';
+import { CircleQuoteApiRepository } from '@/infrastructure/circles/CircleQuoteApiRepository';
+import { InMemoryCircleQuoteRepository } from '@/infrastructure/circles/InMemoryCircleQuoteRepository';
 import { InMemoryJoinConfigRepository } from '@/infrastructure/circles/InMemoryJoinConfigRepository';
 import { JoinConfigApiRepository } from '@/infrastructure/circles/JoinConfigApiRepository';
 import { ExpoDeviceLocale } from '@/infrastructure/device/ExpoDeviceLocale';
@@ -42,6 +46,7 @@ export interface ContainerAdapters {
   layoutDirection: LayoutDirectionPort;
   authApi: AuthApiPort;
   joinConfig: JoinConfigRepositoryPort;
+  circleQuote: CircleQuoteRepositoryPort;
   userProfile: UserProfileRepositoryPort;
 }
 
@@ -72,6 +77,10 @@ export function createContainer(
       env.circlesApi === 'fake'
         ? new InMemoryJoinConfigRepository(env.defaultCurrency)
         : new JoinConfigApiRepository(http),
+    circleQuote:
+      env.circlesApi === 'fake'
+        ? new InMemoryCircleQuoteRepository()
+        : new CircleQuoteApiRepository(http),
     userProfile:
       env.profileApi === 'fake'
         ? new InMemoryUserProfileRepository()
@@ -105,6 +114,7 @@ export function createContainer(
     },
     circles: {
       getJoinConfig: new GetJoinConfigUseCase(adapters.joinConfig),
+      listInstallmentOptions: new ListInstallmentOptionsUseCase(adapters.circleQuote),
     },
     i18n: {
       resolveLanguage: new ResolveLanguageUseCase(

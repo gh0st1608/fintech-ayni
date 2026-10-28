@@ -58,7 +58,22 @@
       "info": "Tu cuota mensual se descuenta automáticamente."
     },
     "monthlyPayIn": {
-      "title": "Cuota mensual"
+      "title": "Cuota mensual",
+      "question": "¿Cuánto quieres pagar cada mes?",
+      "summaryLabel": "Monto de payout",
+      "edit": "Editar",
+      "editA11y": "Editar el monto de payout",
+      "optionsLabel": "Cuotas disponibles",
+      "option": "{{amount}} al mes",
+      "optionMonths": "Durante {{months}} meses",
+      "exceedsLimit": "Supera tu límite mensual de pay-in.",
+      "info": "La cuota mensual puede variar según los fees o descuentos de tu slot.",
+      "empty": "No hay cuotas disponibles para este monto. Prueba con otro monto de payout.",
+      "missingPayout": "Primero elige el monto de payout.",
+      "choosePayout": "Elegir el monto"
+    },
+    "slot": {
+      "title": "Turno de cobro"
     }
   },
   "saving": {

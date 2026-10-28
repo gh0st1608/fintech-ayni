@@ -6,6 +6,7 @@ import type { SignOutUseCase } from '@/application/auth/usecases/SignOutUseCase'
 import type { StartAuthenticationUseCase } from '@/application/auth/usecases/StartAuthenticationUseCase';
 import type { VerifyOtpUseCase } from '@/application/auth/usecases/VerifyOtpUseCase';
 import type { GetJoinConfigUseCase } from '@/application/circles/usecases/GetJoinConfigUseCase';
+import type { ListInstallmentOptionsUseCase } from '@/application/circles/usecases/ListInstallmentOptionsUseCase';
 import type { ChangeLanguageUseCase } from '@/application/i18n/usecases/ChangeLanguageUseCase';
 import type { ResolveLanguageUseCase } from '@/application/i18n/usecases/ResolveLanguageUseCase';
 import type { SyncLanguagePreferenceUseCase } from '@/application/i18n/usecases/SyncLanguagePreferenceUseCase';
@@ -34,6 +35,7 @@ export interface AppContainer {
   };
   circles: {
     getJoinConfig: GetJoinConfigUseCase;
+    listInstallmentOptions: ListInstallmentOptionsUseCase;
   };
   i18n: {
     resolveLanguage: ResolveLanguageUseCase;

@@ -1,6 +1,7 @@
 import { createContext, useContext, useMemo, useState } from 'react';
 
 import { JoinCircleDraft } from '@/domain/circles/JoinCircleDraft';
+import type { InstallmentOption } from '@/domain/circles/value-objects/InstallmentOption';
 import type { Money } from '@/domain/shared/value-objects/Money';
 
 interface JoinFlowValue {
@@ -8,6 +9,7 @@ interface JoinFlowValue {
   /** Empieza un flujo nuevo; "Join now" de Home pasa el monto del círculo (COPAYNI-25). */
   start: (payoutAmount?: Money) => void;
   setPayoutAmount: (amount: Money) => void;
+  setInstallment: (option: InstallmentOption) => void;
 }
 
 const JoinFlowContext = createContext<JoinFlowValue | null>(null);
@@ -24,6 +26,7 @@ export function JoinFlowProvider({ children }: { children: React.ReactNode }) {
         setDraft(payoutAmount ? empty.withPayoutAmount(payoutAmount) : empty);
       },
       setPayoutAmount: (amount) => setDraft((current) => current.withPayoutAmount(amount)),
+      setInstallment: (option) => setDraft((current) => current.withInstallment(option)),
     }),
     [draft],
   );

@@ -2,6 +2,7 @@ import { createContainer } from '@/bootstrap/container';
 import { parseEnv } from '@/bootstrap/env';
 
 import { InMemoryAuthApi } from '@/infrastructure/auth/InMemoryAuthApi';
+import { InMemoryCircleQuoteRepository } from '@/infrastructure/circles/InMemoryCircleQuoteRepository';
 import { InMemoryJoinConfigRepository } from '@/infrastructure/circles/InMemoryJoinConfigRepository';
 import { InMemoryUserProfileRepository } from '@/infrastructure/profile/InMemoryUserProfileRepository';
 
@@ -21,6 +22,7 @@ interface TestAdapters {
   layoutDirection: FakeLayoutDirection;
   authApi: InMemoryAuthApi;
   joinConfig: InMemoryJoinConfigRepository;
+  circleQuote: InMemoryCircleQuoteRepository;
   userProfile: InMemoryUserProfileRepository;
 }
 
@@ -34,6 +36,7 @@ export function createTestContainer(overrides: Partial<TestAdapters> = {}) {
     layoutDirection: new FakeLayoutDirection(),
     authApi: new InMemoryAuthApi({ latencyMs: 0 }),
     joinConfig: new InMemoryJoinConfigRepository('PEN', { latencyMs: 0 }),
+    circleQuote: new InMemoryCircleQuoteRepository({ latencyMs: 0 }),
     userProfile: new InMemoryUserProfileRepository({ latencyMs: 0 }),
     ...overrides,
   };

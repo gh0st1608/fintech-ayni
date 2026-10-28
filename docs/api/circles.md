@@ -72,6 +72,7 @@ Cuotas y duraciones posibles para el payout elegido (Monthly Pay-in, COPAYNI-29)
 
 - `installment` es la **cuota base** (payout / meses). La del slot elegido varía con su fee, su descuento y las Admin Fees: es el aviso de la pantalla.
 - `options` va de menor a mayor duración y puede venir vacío si ninguna duración da cuotas exactas.
+- **Propuesto (R5, no implementado en el backend):** `withinMonthlyLimit` (boolean, opcional) en cada opción. Con `false`, la cuota supera el límite mensual de pay-in del usuario y la app la muestra deshabilitada con el motivo (COPAYNI-29). Si falta, la app no restringe la opción.
 
 | Error                | HTTP | Cuándo                                                         |
 | -------------------- | ---- | -------------------------------------------------------------- |
