@@ -88,6 +88,50 @@ jobs:
           retention-days: 14
           if-no-files-found: ignore
 
+  # Infraestructura como código (COPAYNI-12). Sin credenciales: nada de esto llega a AWS.
+  infra:
+    name: infra
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: infra/terraform
+    env:
+      TF_PLUGIN_CACHE_DIR: ${{ github.workspace }}/.terraform-plugin-cache
+      TF_IN_AUTOMATION: 'true'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
+        with:
+          terraform_version: 1.13.0
+          terraform_wrapper: false
+      - run: mkdir -p "$TF_PLUGIN_CACHE_DIR"
+      - run: terraform fmt -check -recursive -diff
+      # Módulos: validate y pruebas con provider simulado. Stacks: validate (y las pruebas de prd).
+      - name: validate y terraform test
+        run: |
+          for dir in modules/*/ live/*/*/*/ bootstrap/; do
+            echo "::group::$dir"
+            terraform -chdir="$dir" init -backend=false -input=false
+            terraform -chdir="$dir" validate
+            if [ -d "$dir/tests" ]; then terraform -chdir="$dir" test; fi
+            echo "::endgroup::"
+          done
+      - name: tflint
+        run: >
+          docker run --rm -v "$PWD:/data" -w /data --entrypoint sh
+          ghcr.io/terraform-linters/tflint:v0.64.0
+          -c 'tflint --init --config /data/.tflint.hcl && tflint --recursive --config /data/.tflint.hcl'
+      - name: checkov
+        run: >
+          docker run --rm -v "$PWD:/tf" -w /tf bridgecrew/checkov:3.3.28
+          --config-file /tf/.checkov.yaml -d /tf
+      - name: La imagen de la API compila
+        working-directory: apps/backend
+        run: docker build --tag ayni-api:ci .
+
   mobile:
     name: mobile
     runs-on: ubuntu-latest
