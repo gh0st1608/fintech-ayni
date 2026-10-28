@@ -8,6 +8,7 @@ import type { VerifyOtpUseCase } from '@/application/auth/usecases/VerifyOtpUseC
 import type { GetJoinConfigUseCase } from '@/application/circles/usecases/GetJoinConfigUseCase';
 import type { ChangeLanguageUseCase } from '@/application/i18n/usecases/ChangeLanguageUseCase';
 import type { ResolveLanguageUseCase } from '@/application/i18n/usecases/ResolveLanguageUseCase';
+import type { SyncLanguagePreferenceUseCase } from '@/application/i18n/usecases/SyncLanguagePreferenceUseCase';
 
 /**
  * Lo que la capa de presentación puede usar. Se construye en bootstrap/container.ts;
@@ -37,5 +38,7 @@ export interface AppContainer {
   i18n: {
     resolveLanguage: ResolveLanguageUseCase;
     changeLanguage: ChangeLanguageUseCase;
+    /** Envía el idioma al perfil del backend sin bloquear la UI. */
+    syncLanguagePreference: SyncLanguagePreferenceUseCase;
   };
 }

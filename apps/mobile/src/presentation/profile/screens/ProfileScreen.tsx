@@ -1,6 +1,9 @@
+import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
+import { useLanguage } from '@/presentation/i18n/useLanguage';
+import { LanguageSheet } from '@/presentation/profile/components/LanguageSheet';
 import { useContainer } from '@/presentation/providers/ContainerProvider';
 import { useSession } from '@/presentation/providers/SessionProvider';
 import { AppText } from '@/presentation/shared/components/AppText';
@@ -13,17 +16,27 @@ interface ProfileScreenProps {
   onOpenCatalog?: () => void;
 }
 
-/** Perfil: el contenido completo se implementa en COPAYNI-44; aquí solo el cierre de sesión. */
+/** Perfil: el contenido completo se implementa en COPAYNI-44; aquí, idioma y cierre de sesión. */
 export function ProfileScreen({ onOpenCatalog }: ProfileScreenProps) {
   const { t } = useTranslation();
   const { signOut } = useSession();
   const { environment } = useContainer().config;
+  const { language, languages } = useLanguage();
+  const [languageSheetOpen, setLanguageSheetOpen] = useState(false);
+  const currentLanguage = languages.find(({ code }) => code === language)?.nativeName;
 
   return (
     <Screen>
       <AppText variant="title" weight="semibold" accessibilityRole="header">
         {t('tabs.profile')}
       </AppText>
+      <ListItem
+        title={t('profile.language.item')}
+        description={currentLanguage}
+        icon="language-outline"
+        onPress={() => setLanguageSheetOpen(true)}
+        testID="profile-language"
+      />
       {environment === 'dev' && onOpenCatalog && (
         <ListItem
           title={t('profile.devCatalog')}
@@ -34,6 +47,7 @@ export function ProfileScreen({ onOpenCatalog }: ProfileScreenProps) {
       <View style={styles.footer}>
         <Button variant="secondary" label={t('profile.logout')} onPress={signOut} />
       </View>
+      <LanguageSheet visible={languageSheetOpen} onClose={() => setLanguageSheetOpen(false)} />
     </Screen>
   );
 }

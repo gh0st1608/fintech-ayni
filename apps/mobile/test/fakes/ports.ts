@@ -3,6 +3,7 @@ import type { AuthTokens } from '@/domain/auth/value-objects/AuthTokens';
 import type { TextDirection } from '@/domain/i18n/Language';
 import type { DeviceLocalePort } from '@/domain/i18n/ports/DeviceLocalePort';
 import type { LanguagePreferencePort } from '@/domain/i18n/ports/LanguagePreferencePort';
+import type { LanguageSyncStatePort } from '@/domain/i18n/ports/LanguageSyncStatePort';
 import type { LayoutDirectionPort } from '@/domain/i18n/ports/LayoutDirectionPort';
 
 export class InMemoryTokenStorage implements TokenStoragePort {
@@ -59,5 +60,21 @@ export class FakeLayoutDirection implements LayoutDirectionPort {
   apply(direction: TextDirection) {
     this.direction = direction;
     this.applied.push(direction);
+  }
+}
+
+export class InMemoryLanguageSyncState implements LanguageSyncStatePort {
+  constructor(public stored: string | null = null) {}
+
+  async pending() {
+    return this.stored;
+  }
+
+  async markPending(languageCode: string) {
+    this.stored = languageCode;
+  }
+
+  async clear() {
+    this.stored = null;
   }
 }

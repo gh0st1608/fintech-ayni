@@ -13,14 +13,18 @@ describe('parseEnv', () => {
       httpTimeoutMs: 15000,
       authApi: 'http',
       circlesApi: 'http',
+      profileApi: 'http',
     });
   });
 
-  it.each(['authApi', 'circlesApi'] as const)('solo admite %s falsa en dev', (key) => {
-    const base = { apiUrl: 'https://api.example.com/v1', [key]: 'fake' };
-    expect(parseEnv({ ...base, appEnv: 'dev' })[key]).toBe('fake');
-    expect(() => parseEnv({ ...base, appEnv: 'prod' })).toThrow(new RegExp(key));
-  });
+  it.each(['authApi', 'circlesApi', 'profileApi'] as const)(
+    'solo admite %s falsa en dev',
+    (key) => {
+      const base = { apiUrl: 'https://api.example.com/v1', [key]: 'fake' };
+      expect(parseEnv({ ...base, appEnv: 'dev' })[key]).toBe('fake');
+      expect(() => parseEnv({ ...base, appEnv: 'prod' })).toThrow(new RegExp(key));
+    },
+  );
 
   it('los enlaces legales deben ser https; vacíos cuentan como no definidos', () => {
     const base = { apiUrl: 'https://api.example.com/v1' };

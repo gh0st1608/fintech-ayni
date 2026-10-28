@@ -137,11 +137,13 @@ describe('shell de navegación', () => {
       process.env.EXPO_PUBLIC_APP_ENV = 'prod';
       process.env.EXPO_PUBLIC_AUTH_API = 'http';
       process.env.EXPO_PUBLIC_CIRCLES_API = 'http';
+      process.env.EXPO_PUBLIC_PROFILE_API = 'http';
     });
     afterEach(() => {
       process.env.EXPO_PUBLIC_APP_ENV = original.EXPO_PUBLIC_APP_ENV;
       process.env.EXPO_PUBLIC_AUTH_API = original.EXPO_PUBLIC_AUTH_API;
       process.env.EXPO_PUBLIC_CIRCLES_API = original.EXPO_PUBLIC_CIRCLES_API;
+      process.env.EXPO_PUBLIC_PROFILE_API = original.EXPO_PUBLIC_PROFILE_API;
     });
 
     it('el catálogo no existe ni se ofrece en el perfil', async () => {

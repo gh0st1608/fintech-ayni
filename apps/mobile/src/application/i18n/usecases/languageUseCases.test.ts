@@ -1,13 +1,17 @@
 import { UnsupportedLanguageError, type SupportedLanguage } from '@/domain/i18n/Language';
+import { AppError } from '@/domain/shared/errors/AppError';
+import { InMemoryUserProfileRepository } from '@/infrastructure/profile/InMemoryUserProfileRepository';
 
 import {
   FakeDeviceLocale,
   FakeLayoutDirection,
   InMemoryLanguagePreference,
+  InMemoryLanguageSyncState,
 } from '@test/fakes/ports';
 
 import { ChangeLanguageUseCase } from './ChangeLanguageUseCase';
 import { ResolveLanguageUseCase } from './ResolveLanguageUseCase';
+import { SyncLanguagePreferenceUseCase } from './SyncLanguagePreferenceUseCase';
 
 const SUPPORTED: SupportedLanguage[] = [
   { code: 'es', direction: 'ltr' },
@@ -90,5 +94,60 @@ describe('ChangeLanguageUseCase', () => {
 
     await expect(useCase.execute('fr')).rejects.toThrow(UnsupportedLanguageError);
     expect(preference.stored).toBe('es');
+  });
+});
+
+describe('SyncLanguagePreferenceUseCase', () => {
+  function setup(pending: string | null = null) {
+    const profile = new InMemoryUserProfileRepository({ latencyMs: 0 });
+    const state = new InMemoryLanguageSyncState(pending);
+    return { profile, state, useCase: new SyncLanguagePreferenceUseCase(profile, state) };
+  }
+
+  it('envía el idioma al perfil y no deja nada pendiente', async () => {
+    const { profile, state, useCase } = setup();
+    await expect(useCase.execute('en')).resolves.toBe('synced');
+    expect(profile.preferredLanguage).toBe('en');
+    expect(state.stored).toBeNull();
+  });
+
+  it('sin conexión no lanza y deja el idioma pendiente', async () => {
+    const { profile, state, useCase } = setup();
+    profile.updatePreferredLanguage = jest
+      .fn()
+      .mockRejectedValue(new AppError('network', 'offline'));
+    await expect(useCase.execute('en')).resolves.toBe('pending');
+    expect(state.stored).toBe('en');
+  });
+
+  it('no borra un idioma elegido mientras se sincronizaba el anterior', async () => {
+    const { profile, state, useCase } = setup();
+    profile.updatePreferredLanguage = jest.fn(async () => {
+      state.stored = 'es';
+    });
+    await expect(useCase.execute('en')).resolves.toBe('synced');
+    expect(state.stored).toBe('es');
+  });
+
+  it('reintenta el idioma pendiente en el siguiente arranque', async () => {
+    const { profile, state, useCase } = setup('en');
+    await expect(useCase.retryPending()).resolves.toBe('synced');
+    expect(profile.preferredLanguage).toBe('en');
+    expect(state.stored).toBeNull();
+  });
+
+  it('sin idioma pendiente no llama al backend', async () => {
+    const { profile, useCase } = setup();
+    profile.updatePreferredLanguage = jest.fn();
+    await expect(useCase.retryPending()).resolves.toBe('nothing_pending');
+    expect(profile.updatePreferredLanguage).not.toHaveBeenCalled();
+  });
+
+  it('tolera un almacenamiento ilegible', async () => {
+    const { state, useCase } = setup();
+    state.pending = jest.fn().mockRejectedValue(new Error('io'));
+    await expect(useCase.retryPending()).resolves.toBe('pending');
+    state.markPending = jest.fn().mockRejectedValue(new Error('io'));
+    await expect(useCase.execute('en')).resolves.toBe('pending');
   });
 });

@@ -4,6 +4,7 @@ import * as SecureStore from 'expo-secure-store';
 import { AuthTokens } from '@/domain/auth/value-objects/AuthTokens';
 
 import { AsyncStorageLanguagePreference } from './AsyncStorageLanguagePreference';
+import { AsyncStorageLanguageSyncState } from './AsyncStorageLanguageSyncState';
 import { SecureStoreTokenStorage } from './SecureStoreTokenStorage';
 
 describe('SecureStoreTokenStorage', () => {
@@ -69,5 +70,17 @@ describe('AsyncStorageLanguagePreference', () => {
     await expect(preference.read()).resolves.toBeNull();
     await preference.save('en');
     await expect(preference.read()).resolves.toBe('en');
+  });
+});
+
+describe('AsyncStorageLanguageSyncState', () => {
+  it('guarda y limpia el idioma pendiente de sincronizar', async () => {
+    await AsyncStorage.clear();
+    const state = new AsyncStorageLanguageSyncState();
+    await expect(state.pending()).resolves.toBeNull();
+    await state.markPending('en');
+    await expect(state.pending()).resolves.toBe('en');
+    await state.clear();
+    await expect(state.pending()).resolves.toBeNull();
   });
 });

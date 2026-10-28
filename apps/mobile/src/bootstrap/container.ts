@@ -9,12 +9,15 @@ import { VerifyOtpUseCase } from '@/application/auth/usecases/VerifyOtpUseCase';
 import { GetJoinConfigUseCase } from '@/application/circles/usecases/GetJoinConfigUseCase';
 import { ChangeLanguageUseCase } from '@/application/i18n/usecases/ChangeLanguageUseCase';
 import { ResolveLanguageUseCase } from '@/application/i18n/usecases/ResolveLanguageUseCase';
+import { SyncLanguagePreferenceUseCase } from '@/application/i18n/usecases/SyncLanguagePreferenceUseCase';
 import type { AuthApiPort } from '@/domain/auth/ports/AuthApiPort';
 import type { TokenStoragePort } from '@/domain/auth/ports/TokenStoragePort';
 import type { JoinConfigRepositoryPort } from '@/domain/circles/ports/JoinConfigRepositoryPort';
 import type { DeviceLocalePort } from '@/domain/i18n/ports/DeviceLocalePort';
 import type { LanguagePreferencePort } from '@/domain/i18n/ports/LanguagePreferencePort';
+import type { LanguageSyncStatePort } from '@/domain/i18n/ports/LanguageSyncStatePort';
 import type { LayoutDirectionPort } from '@/domain/i18n/ports/LayoutDirectionPort';
+import type { UserProfileRepositoryPort } from '@/domain/profile/ports/UserProfileRepositoryPort';
 import { AuthApiRepository } from '@/infrastructure/auth/AuthApiRepository';
 import { InMemoryAuthApi } from '@/infrastructure/auth/InMemoryAuthApi';
 import { InMemoryJoinConfigRepository } from '@/infrastructure/circles/InMemoryJoinConfigRepository';
@@ -22,7 +25,10 @@ import { JoinConfigApiRepository } from '@/infrastructure/circles/JoinConfigApiR
 import { ExpoDeviceLocale } from '@/infrastructure/device/ExpoDeviceLocale';
 import { ReactNativeLayoutDirection } from '@/infrastructure/device/ReactNativeLayoutDirection';
 import { FetchHttpClient } from '@/infrastructure/http/FetchHttpClient';
+import { InMemoryUserProfileRepository } from '@/infrastructure/profile/InMemoryUserProfileRepository';
+import { UserProfileApiRepository } from '@/infrastructure/profile/UserProfileApiRepository';
 import { AsyncStorageLanguagePreference } from '@/infrastructure/storage/AsyncStorageLanguagePreference';
+import { AsyncStorageLanguageSyncState } from '@/infrastructure/storage/AsyncStorageLanguageSyncState';
 import { SecureStoreTokenStorage } from '@/infrastructure/storage/SecureStoreTokenStorage';
 import { SUPPORTED_LANGUAGES } from '@/presentation/i18n/languages';
 
@@ -31,10 +37,12 @@ import type { Env } from './env';
 export interface ContainerAdapters {
   tokenStorage: TokenStoragePort;
   languagePreference: LanguagePreferencePort;
+  languageSyncState: LanguageSyncStatePort;
   deviceLocale: DeviceLocalePort;
   layoutDirection: LayoutDirectionPort;
   authApi: AuthApiPort;
   joinConfig: JoinConfigRepositoryPort;
+  userProfile: UserProfileRepositoryPort;
 }
 
 /** Raíz de composición: único lugar que conoce las implementaciones concretas. */
@@ -56,6 +64,7 @@ export function createContainer(
   const adapters: ContainerAdapters = {
     tokenStorage,
     languagePreference: new AsyncStorageLanguagePreference(),
+    languageSyncState: new AsyncStorageLanguageSyncState(),
     deviceLocale: new ExpoDeviceLocale(),
     layoutDirection: new ReactNativeLayoutDirection(),
     authApi: env.authApi === 'fake' ? new InMemoryAuthApi() : new AuthApiRepository(http),
@@ -63,6 +72,10 @@ export function createContainer(
       env.circlesApi === 'fake'
         ? new InMemoryJoinConfigRepository(env.defaultCurrency)
         : new JoinConfigApiRepository(http),
+    userProfile:
+      env.profileApi === 'fake'
+        ? new InMemoryUserProfileRepository()
+        : new UserProfileApiRepository(http),
     ...overrides,
   };
 
@@ -104,6 +117,10 @@ export function createContainer(
         adapters.languagePreference,
         adapters.layoutDirection,
         SUPPORTED_LANGUAGES,
+      ),
+      syncLanguagePreference: new SyncLanguagePreferenceUseCase(
+        adapters.userProfile,
+        adapters.languageSyncState,
       ),
     },
   };

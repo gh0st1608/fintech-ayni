@@ -68,7 +68,14 @@
   },
   "profile": {
     "logout": "Cerrar sesión",
-    "devCatalog": "Catálogo de componentes (dev)"
+    "devCatalog": "Catálogo de componentes (dev)",
+    "language": {
+      "item": "Idioma",
+      "title": "Cambiar idioma",
+      "close": "Cerrar",
+      "save": "Guardar",
+      "restartNotice": "El diseño de la app se actualizará a la nueva dirección de lectura cuando la reinicies."
+    }
   },
   "catalog": {
     "title": "Catálogo de componentes"

@@ -1,5 +1,6 @@
 import { Stack } from 'expo-router';
 
+import { useRetryPendingLanguageSync } from '@/presentation/i18n/useLanguage';
 import { JoinFlowProvider } from '@/presentation/join/JoinFlowProvider';
 
 import {
@@ -12,6 +13,8 @@ export default function PrivateLayout() {
   const joinOptions = useJoinScreenOptions();
   const catalogOptions = useCatalogScreenOptions();
   const isDev = useIsDevEnvironment();
+  // El perfil del backend exige sesión: el idioma pendiente se reintenta al entrar a la zona privada.
+  useRetryPendingLanguageSync();
 
   // El borrador de unión vive mientras dure la sesión privada; cada flujo lo reinicia al empezar.
   return (
