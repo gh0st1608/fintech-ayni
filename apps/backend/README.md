@@ -319,6 +319,18 @@ Cambiar una fórmula toca `SlotPricing` y sus pruebas, sin afectar al resto del 
 - Origen de los parámetros de precio: por círculo en la base de datos o por configuración.
 - Formación de los círculos (R2) y mora (R3).
 
+## Imagen de contenedor
+
+El [Dockerfile](Dockerfile) genera la imagen que corre en ECS Fargate, tanto en dev (emulador floci) como en prd ([infra/terraform](../../infra/terraform/README.md)).
+
+```bash
+docker build -t ayni-api:local .
+```
+
+- **Etapas:** `build` compila e instala solo las dependencias de producción; `runtime` contiene `node_modules`, `dist` y el usuario `node` (sin root).
+- **Configuración:** llega por variables de entorno y secretos de la task definition. La imagen no incluye ningún `.env`.
+- **Sistema de archivos:** la task definition lo monta como solo lectura. El health check del contenedor usa `/health/live`.
+
 ## Decisiones y limitaciones
 
 - **NestJS 11 en lugar de 12:**
