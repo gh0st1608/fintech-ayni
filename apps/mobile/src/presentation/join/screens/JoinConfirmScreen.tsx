@@ -12,7 +12,10 @@ import {
   PayoutMethodLimitExceededError,
   PayoutMethodRequiredError,
 } from '@/domain/circles/JoinedCircle';
-import { SlotNoLongerAvailableError } from '@/domain/circles/value-objects/Slot';
+import {
+  SlotNoLongerAvailableError,
+  SlotNotAllowedError,
+} from '@/domain/circles/value-objects/Slot';
 import type { Money } from '@/domain/shared/value-objects/Money';
 import { useFormatDate } from '@/presentation/formatters/formatDate';
 import { useFormatMoney } from '@/presentation/formatters/formatMoney';
@@ -146,6 +149,16 @@ function Review({
           {t('join.confirm.question')}
         </AppText>
         <JoinSummary rows={rows} />
+        {slot!.retention.amount > 0 && (
+          // La retención se muestra antes de unirse (pending-scope §3.1, COPAYNI-60).
+          <InfoBanner
+            message={t('join.confirm.retention', {
+              amount: money(slot!.retention),
+              count: Math.round(slot!.retention.amount / installment!.installment.amount),
+            })}
+            testID="join-retention"
+          />
+        )}
         <InfoBanner message={t('join.confirm.info')} />
         {join.isError && (
           <View style={styles.error}>
@@ -221,6 +234,12 @@ function recoveryFor(
       message: error.amountDue
         ? t('join.confirm.errors.memberBlocked', { amount: money(error.amountDue) })
         : t('join.confirm.errors.memberBlockedNoAmount'),
+    };
+  }
+  if (error instanceof SlotNotAllowedError) {
+    return {
+      message: t('join.confirm.errors.slotNotAllowed'),
+      action: withAction(t('join.confirm.actions.chooseSlot'), actions.onEditSlot),
     };
   }
   if (error instanceof SlotNoLongerAvailableError) {

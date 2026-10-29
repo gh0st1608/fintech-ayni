@@ -147,7 +147,7 @@ export class CirclesController {
   })
   @ApiUnprocessableEntityResponse({
     description:
-      'PAYOUT_NOT_ALLOWED, SLOT_OUT_OF_RANGE, NATIONAL_ID_REQUIRED, MONTHLY_LIMIT_EXCEEDED, PAYOUT_METHOD_REQUIRED o PAYOUT_METHOD_LIMIT_EXCEEDED',
+      'PAYOUT_NOT_ALLOWED, SLOT_OUT_OF_RANGE, NATIONAL_ID_REQUIRED, MONTHLY_LIMIT_EXCEEDED, PAYOUT_METHOD_REQUIRED, PAYOUT_METHOD_LIMIT_EXCEEDED o SLOT_NOT_ALLOWED (details: reason)',
   })
   @ApiUnauthorizedResponse({ description: 'Sin token o token inválido (UNAUTHORIZED)' })
   async join(

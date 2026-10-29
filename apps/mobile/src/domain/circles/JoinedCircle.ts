@@ -63,6 +63,8 @@ export interface JoinedCircle {
   netPayout: Money;
   /** Puesta al día incluida en las cuotas al tomar una vacante (COPAYNI-59); cero si no. */
   catchUp: Money;
+  /** Retención del payout que paga sus últimas cuotas (COPAYNI-60); cero si no. */
+  retention: Money;
   /** false: era un reintento de una unión ya hecha. */
   created: boolean;
 }

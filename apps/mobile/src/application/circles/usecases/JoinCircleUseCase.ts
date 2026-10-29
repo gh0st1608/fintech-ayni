@@ -8,7 +8,10 @@ import {
   PayoutMethodRequiredError,
 } from '@/domain/circles/JoinedCircle';
 import type { CircleMembershipRepositoryPort } from '@/domain/circles/ports/CircleMembershipRepositoryPort';
-import { SlotNoLongerAvailableError } from '@/domain/circles/value-objects/Slot';
+import {
+  SlotNoLongerAvailableError,
+  SlotNotAllowedError,
+} from '@/domain/circles/value-objects/Slot';
 import { AppError } from '@/domain/shared/errors/AppError';
 import type { DomainError } from '@/domain/shared/errors/DomainError';
 import type { IdGeneratorPort } from '@/domain/shared/ports/IdGeneratorPort';
@@ -24,6 +27,8 @@ const TYPED_ERRORS: Record<string, new (message: string) => DomainError> = {
   SLOT_TAKEN: SlotNoLongerAvailableError,
   ALREADY_MEMBER: SlotNoLongerAvailableError,
   CIRCLE_ALREADY_STARTED: SlotNoLongerAvailableError,
+  // La regla de confianza no le permite ese tipo de turno (COPAYNI-60): elige otro.
+  SLOT_NOT_ALLOWED: SlotNotAllowedError,
   // La vacante de un círculo en curso ya no se puede tomar (COPAYNI-59).
   VACANCY_CLOSED: SlotNoLongerAvailableError,
   CIRCLE_NOT_FOUND: SlotNoLongerAvailableError,

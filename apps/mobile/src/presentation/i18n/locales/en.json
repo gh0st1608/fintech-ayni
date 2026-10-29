@@ -108,7 +108,13 @@
       "continueWith": "Continue with {{month}}",
       "noLongerAvailable": "That slot was just taken. Choose another month.",
       "missingSteps": "Choose the payout amount and the monthly pay-in first.",
-      "catchUp": "Includes {{amount}} catch-up"
+      "catchUp": "Includes {{amount}} catch-up",
+      "retention": "{{amount}} withheld from the payout",
+      "notAllowed": {
+        "trustRequired": "Available after you complete your first circle",
+        "identityRequired": "Verify your identity to choose it",
+        "incomeRequired": "Declare your income to choose it"
+      }
     },
     "payoutMethod": {
       "title": "Payout Method",
@@ -146,7 +152,8 @@
         "payoutMethodLimitExceeded": "The payout exceeds your payout method limit. Choose another method.",
         "slotNoLongerAvailable": "That slot is no longer available. Choose another one.",
         "memberBlocked": "You were removed from a circle for missing an installment. Pay the overdue amount plus the late fee ({{amount}}) to join another one.",
-        "memberBlockedNoAmount": "You were removed from a circle for missing an installment. Pay the overdue amount plus the late fee to join another one."
+        "memberBlockedNoAmount": "You were removed from a circle for missing an installment. Pay the overdue amount plus the late fee to join another one.",
+        "slotNotAllowed": "You can't take this type of slot yet. Choose another one."
       },
       "actions": {
         "verifyIdentity": "Verify my National ID",
@@ -160,7 +167,8 @@
         "firstInstallment": "Your first installment is {{amount}} in {{month}}.",
         "viewCircles": "View my circles",
         "catchUp": "Your installments include {{amount}} to catch up on past months, until {{month}}."
-      }
+      },
+      "retention": "{{amount}} of your payout will be withheld to pay your last {{count}} installments automatically."
     }
   },
   "circles": {

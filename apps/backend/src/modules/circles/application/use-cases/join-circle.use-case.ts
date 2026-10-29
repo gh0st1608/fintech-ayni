@@ -14,6 +14,7 @@ import {
   type Membership,
 } from '../../domain/entities/circle';
 import { assertCanJoin } from '../../domain/services/join-eligibility';
+import { assertSlotAllowed } from '../../domain/services/trust-policy';
 import { priceOf, type SlotPricing, type SlotQuote } from '../../domain/services/slot-pricing';
 import { joinQuote } from '../../domain/services/vacancy';
 import { CircleTerms } from '../../domain/value-objects/circle-terms';
@@ -24,7 +25,9 @@ import {
 } from '../ports/circle-repository.port';
 import { JOIN_ELIGIBILITY, type JoinEligibilityPort } from '../ports/join-eligibility.port';
 import { MEMBER_DEBTS, type MemberDebtsPort } from '../ports/member-debts.port';
+import { MEMBER_HISTORY, type MemberHistoryPort } from '../ports/member-history.port';
 import { CIRCLE_CYCLE, type CircleCycleSettings } from './cycle-settings';
+import { TRUST_SETTINGS, type TrustSettings, trustProfileOf } from './trust';
 import {
   JOIN_CONFIG_REPOSITORY,
   type JoinConfigRepositoryPort,
@@ -76,6 +79,8 @@ export interface JoinCircleResult {
  * - Valida las condiciones como `slots` (COPAYNI-30) y la elegibilidad del usuario: National ID,
  *   límite mensual y método de cobro (`assertCanJoin`).
  * - Con `circleId: null` abre el círculo nuevo que ofreció `slots`, con el mismo inicio.
+ * - Rechaza un tipo de turno que la regla de confianza no le permite (SLOT_NOT_ALLOWED,
+ *   COPAYNI-60).
  * - En un círculo en curso solo se toma un turno vacante, con la puesta al día en las cuotas
  *   (COPAYNI-59); el límite mensual se valida con esas cuotas.
  * - Guarda con la membresía el precio del slot (COPAYNI-55): un reintento responde ese precio
@@ -95,6 +100,8 @@ export class JoinCircleUseCase {
     @Inject(JOIN_ELIGIBILITY) private readonly eligibility: JoinEligibilityPort,
     @Inject(MEMBER_DEBTS) private readonly debts: MemberDebtsPort,
     @Inject(CIRCLE_CYCLE) private readonly cycle: Pick<CircleCycleSettings, 'dueDay'>,
+    @Inject(MEMBER_HISTORY) private readonly history: MemberHistoryPort,
+    @Inject(TRUST_SETTINGS) private readonly trust: TrustSettings,
     @Inject(CLOCK) private readonly clock: ClockPort,
   ) {}
 
@@ -109,6 +116,8 @@ export class JoinCircleUseCase {
     const today = LocalDate.fromDate(this.clock.now(), this.assignment.timeZone);
     const quote = joinQuote(this.pricing, circle, command.position, today, this.cycle.dueDay);
     assertCanJoin(await this.eligibility.applicantFor(command.userId), payout, quote.installments);
+    const profile = await trustProfileOf(command.userId, this.eligibility, this.history);
+    assertSlotAllowed(quote.type, profile, this.trust);
 
     const { userId, position, idempotencyKey } = command;
     const { membership } = circle.join({

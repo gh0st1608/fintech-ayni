@@ -26,6 +26,8 @@ const joinedCircleDto = z.object({
   netPayout: moneyDto,
   /** COPAYNI-59; un backend anterior no lo envía. */
   catchUp: moneyDto.optional(),
+  /** COPAYNI-60; un backend anterior no lo envía. */
+  retention: moneyDto.optional(),
   created: z.boolean(),
 });
 
@@ -74,6 +76,7 @@ export class CircleMembershipApiRepository implements CircleMembershipRepository
       installments: dto.installments.map(toMoney),
       netPayout: toMoney(dto.netPayout),
       catchUp: dto.catchUp ? toMoney(dto.catchUp) : Money.of(0, dto.payout.currency),
+      retention: dto.retention ? toMoney(dto.retention) : Money.of(0, dto.payout.currency),
     };
   }
 

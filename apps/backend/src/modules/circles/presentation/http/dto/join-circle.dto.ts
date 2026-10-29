@@ -61,8 +61,18 @@ export class JoinCircleResponse {
   @ApiProperty({ type: [MoneyResponse], description: 'Una cuota por mes del círculo, en orden' })
   installments!: MoneyResponse[];
 
-  @ApiProperty({ type: MoneyResponse, description: 'Lo que recibe en su mes de cobro' })
+  @ApiProperty({
+    type: MoneyResponse,
+    description: 'Lo que recibe en su mes de cobro, sin la retención',
+  })
   netPayout!: MoneyResponse;
+
+  @ApiProperty({
+    type: MoneyResponse,
+    description:
+      'Retención del payout que paga sus últimas cuotas (COPAYNI-60); cero fuera de la primera mitad',
+  })
+  retention!: MoneyResponse;
 
   @ApiProperty({
     type: MoneyResponse,
@@ -86,6 +96,7 @@ export class JoinCircleResponse {
       installments: quote.installments.map((installment) => MoneyResponse.from(installment)),
       netPayout: MoneyResponse.from(quote.netPayout),
       catchUp: MoneyResponse.from(catchUpTotal(quote)),
+      retention: MoneyResponse.from(quote.retention),
       created,
     };
   }

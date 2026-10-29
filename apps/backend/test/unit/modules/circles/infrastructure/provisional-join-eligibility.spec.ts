@@ -30,6 +30,7 @@ describe('ProvisionalJoinEligibility', () => {
     await expect(eligibility({}).applicantFor('ana')).resolves.toEqual({
       identityVerified: true,
       monthlyPayInLimit: null,
+      incomeDeclared: true,
       payoutMethod: { type: 'prepaid_card', limit: Money.of(10_000_000, 'PEN') },
     });
   });
@@ -43,6 +44,7 @@ describe('ProvisionalJoinEligibility', () => {
     expect(applicant).toEqual({
       identityVerified: false,
       monthlyPayInLimit: Money.of(500_000, 'PEN'),
+      incomeDeclared: true,
       payoutMethod: null,
     });
   });

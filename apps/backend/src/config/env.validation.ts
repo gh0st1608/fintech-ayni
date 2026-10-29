@@ -254,6 +254,21 @@ export class EnvironmentVariables {
   @Max(12)
   GUARANTEE_FUND_MIN_INSTALLMENTS_PER_CIRCLE: number = 2;
 
+  /** Círculos completados sin expulsión que pide un turno Fastest Payout (COPAYNI-60, R18). */
+  @IsInt()
+  @Min(0)
+  @Max(12)
+  TRUST_FASTEST_MIN_COMPLETED_CIRCLES: number = 1;
+
+  /**
+   * Cuotas base retenidas del payout de los turnos de la primera mitad, que pagan sus últimas
+   * cuotas (COPAYNI-60, R18 propuesto). 0 desactiva la retención.
+   */
+  @IsInt()
+  @Min(0)
+  @Max(12)
+  PAYOUT_RETENTION_INSTALLMENTS: number = 2;
+
   /**
    * Cobro de cuotas y pago de payouts del ciclo mensual. `fake` simula ambos (desarrollo y
    * pruebas) y está prohibido en production; sin valor, el ciclo falla al intentar cobrar

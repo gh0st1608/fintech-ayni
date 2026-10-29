@@ -1,7 +1,7 @@
 import type { CircleQuoteRepositoryPort } from '@/domain/circles/ports/CircleQuoteRepositoryPort';
 import type { RecommendedCircle } from '@/domain/circles/RecommendedCircle';
 import { InstallmentOption } from '@/domain/circles/value-objects/InstallmentOption';
-import { Slot, type SlotType } from '@/domain/circles/value-objects/Slot';
+import { Slot, type SlotRestriction, type SlotType } from '@/domain/circles/value-objects/Slot';
 import { Money } from '@/domain/shared/value-objects/Money';
 import { simulateLatency } from '@/infrastructure/fake/simulateLatency';
 
@@ -19,6 +19,8 @@ export interface InMemoryCircleQuoteOptions {
   circleId?: string | null;
   /** Recomendados; por defecto ninguno, como el backend sin círculos abiertos. */
   recommended?: RecommendedCircle[];
+  /** Tipos de turno que la regla de confianza no permite (COPAYNI-60); por defecto, ninguno. */
+  notAllowed?: Partial<Record<SlotType, SlotRestriction>>;
 }
 
 /**
@@ -104,6 +106,7 @@ export class InMemoryCircleQuoteRepository implements CircleQuoteRepositoryPort 
             : zero,
         available: !takenPositions.includes(position),
         circleId: this.options.circleId ?? null,
+        notAllowedReason: this.options.notAllowed?.[type] ?? null,
       });
     });
   }

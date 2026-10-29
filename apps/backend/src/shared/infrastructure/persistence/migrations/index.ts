@@ -7,6 +7,7 @@ import { CreateCircleCycle1762084800000 } from './1762084800000-create-circle-cy
 import { AddDelinquency1762171200000 } from './1762171200000-add-delinquency';
 import { CreateGuaranteeFund1762257600000 } from './1762257600000-create-guarantee-fund';
 import { AllowTurnReplacement1762344000000 } from './1762344000000-allow-turn-replacement';
+import { AddPayoutRetention1762430400000 } from './1762430400000-add-payout-retention';
 
 /** Migraciones en orden. Se listan explícitamente: el build no depende de globs. */
 export const MIGRATIONS = [
@@ -19,4 +20,5 @@ export const MIGRATIONS = [
   AddDelinquency1762171200000,
   CreateGuaranteeFund1762257600000,
   AllowTurnReplacement1762344000000,
+  AddPayoutRetention1762430400000,
 ];

@@ -15,9 +15,11 @@ import { InMemoryCircleRepository } from '@test/support/in-memory-circle.reposit
 import {
   createJoinCircleUseCase,
   ELIGIBLE,
+  historyWith,
   TEST_DUE_DAY,
   TEST_JOIN_CONFIG,
   TEST_PRICING,
+  TEST_TRUST,
 } from '@test/support/join-circle.fixture';
 
 const pen = (major: number) => Money.of(major * 100, 'PEN');
@@ -212,6 +214,9 @@ describe('Vacantes en slots y recomendados', () => {
         TEST_PRICING,
         assignment,
         cycle,
+        { applicantFor: () => Promise.resolve(ELIGIBLE) },
+        historyWith(1),
+        TEST_TRUST,
         clock,
       ),
       recommended: new ListRecommendedCirclesUseCase(

@@ -110,6 +110,8 @@ describe('Puesta al día', () => {
           fee: money(0),
           discount: money(0),
           catchUp: money(1_500_000),
+          retention: money(0),
+          notAllowedReason: 'income_required',
           available: true,
         },
       ],
@@ -119,6 +121,9 @@ describe('Puesta al día', () => {
       'https://api.test/v1/circles/slots?payoutAmount=3000000&months=10&circleId=v-1',
     );
     expect(slot?.catchUp.equals(pen(15_000))).toBe(true);
+    // Regla de confianza (COPAYNI-60): libre, pero no se puede elegir.
+    expect(slot).toMatchObject({ notAllowedReason: 'incomeRequired', allowed: false });
+    expect(slot?.selectable).toBe(false);
 
     const recommended = api({
       items: [

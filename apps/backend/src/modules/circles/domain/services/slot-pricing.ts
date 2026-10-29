@@ -36,8 +36,13 @@ export interface SlotQuote {
   /** Una cuota por mes del círculo, en orden. */
   installments: Money[];
   totalPaid: Money;
-  /** Lo que recibe el miembro en su mes de cobro. */
+  /** Lo que recibe el miembro en su mes de cobro, sin la retención. */
   netPayout: Money;
+  /**
+   * Parte del payout que se retiene en los turnos de la primera mitad y paga sus últimas cuotas
+   * (COPAYNI-60, pending-scope §3.1). Cero en los demás.
+   */
+  retention: Money;
   /**
    * Puesta al día de quien toma una vacante (COPAYNI-59): la parte de cada cuota que paga los
    * meses ya transcurridos y va al fondo de garantía. Falta en un slot normal.
@@ -52,7 +57,9 @@ export interface SlotQuote {
 export type SlotPrice = Pick<
   SlotQuote,
   'type' | 'fee' | 'discount' | 'adminFee' | 'installments' | 'netPayout' | 'catchUp'
->;
+> &
+  /** Falta en las membresías anteriores a COPAYNI-60: sin retención. */
+  Partial<Pick<SlotQuote, 'retention'>>;
 
 export const priceOf = ({
   type,
@@ -62,6 +69,7 @@ export const priceOf = ({
   installments,
   netPayout,
   catchUp,
+  retention,
 }: SlotQuote): SlotPrice => ({
   type,
   fee,
@@ -70,7 +78,14 @@ export const priceOf = ({
   installments,
   netPayout,
   ...(catchUp && { catchUp }),
+  ...(retention.isPositive() && { retention }),
 });
+
+/** Cuántas de las últimas cuotas paga la retención del slot. */
+export const retainedInstallments = (
+  quote: Pick<SlotQuote, 'retention'>,
+  baseInstallment: Money,
+): number => quote.retention.amount / baseInstallment.amount;
 
 /** Total de la puesta al día de un slot; cero si no la tiene. */
 export const catchUpTotal = (quote: Pick<SlotQuote, 'catchUp' | 'netPayout'>): Money =>
@@ -133,7 +148,8 @@ export class SlotPricing {
     if (!Number.isInteger(position) || position < 1 || position > months) {
       throw new SlotOutOfRangeError(months);
     }
-    const { maxFeeBps, maxDiscountBps, adminFeeBps, adminFeeMode } = this.rules.props;
+    const { maxFeeBps, maxDiscountBps, adminFeeBps, adminFeeMode, retentionInstallments } =
+      this.rules.props;
     const { fastest, highest } = this.tiers(months);
     const type = this.typeOf(position, months);
 
@@ -166,6 +182,14 @@ export class SlotPricing {
             .subtract(share(discountShares, month, months)),
     );
 
+    // Retención (COPAYNI-60): turnos de la primera mitad, hasta sus cuotas posteriores al cobro.
+    const retained =
+      position <= Math.floor(months / 2)
+        ? Math.min(retentionInstallments ?? 0, months - position)
+        : 0;
+    const retention = terms.baseInstallment.times(retained);
+    const fullPayout = adminFeeMode === 'deducted_from_payout' ? payout.subtract(adminFee) : payout;
+
     return {
       position,
       payoutPeriod: terms.payoutPeriodOf(position),
@@ -175,7 +199,8 @@ export class SlotPricing {
       adminFee,
       installments,
       totalPaid: installments.reduce((sum, installment) => sum.add(installment)),
-      netPayout: adminFeeMode === 'deducted_from_payout' ? payout.subtract(adminFee) : payout,
+      netPayout: fullPayout.subtract(retention),
+      retention,
       ...(joinMonth > 0 && { catchUp }),
     };
   }
@@ -191,6 +216,7 @@ export class SlotPricing {
       position,
       payoutPeriod: terms.payoutPeriodOf(position),
       totalPaid: price.installments.reduce((sum, installment) => sum.add(installment)),
+      retention: price.retention ?? Money.zero(terms.currency),
     };
   }
 

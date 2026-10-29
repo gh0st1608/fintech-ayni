@@ -23,7 +23,7 @@ const SLOT = Slot.create({
 });
 
 /** Precarga los cuatro pasos del borrador. */
-function Draft({ complete = true }: { complete?: boolean }) {
+function Draft({ complete = true, slot = SLOT }: { complete?: boolean; slot?: Slot }) {
   const { draft, start, setInstallment, setSlot, setPayoutMethod } = useJoinFlow();
   const started = useRef(false);
   useEffect(() => {
@@ -35,11 +35,11 @@ function Draft({ complete = true }: { complete?: boolean }) {
     if (draft.payoutAmount && !draft.installment) {
       setInstallment(InstallmentOption.create({ months: 10, installment: pen(3_000) }));
     } else if (draft.installment && !draft.slot) {
-      setSlot(SLOT);
+      setSlot(slot);
     } else if (draft.slot && !draft.payoutMethod) {
       setPayoutMethod('bankTransfer');
     }
-  }, [draft, setInstallment, setSlot, setPayoutMethod]);
+  }, [draft, slot, setInstallment, setSlot, setPayoutMethod]);
   return null;
 }
 
@@ -47,10 +47,12 @@ async function renderConfirm({
   circleMembership = new InMemoryCircleMembershipRepository({ latencyMs: 0, startsOn: '2026-11' }),
   complete = true,
   withRoutes = false,
+  slot = SLOT,
 }: {
   circleMembership?: InMemoryCircleMembershipRepository;
   complete?: boolean;
   withRoutes?: boolean;
+  slot?: Slot;
 } = {}) {
   const handlers = {
     onStartOver: jest.fn(),
@@ -64,7 +66,7 @@ async function renderConfirm({
   const test = createTestContainer({ circleMembership });
   const view = await renderWithProviders(
     <JoinFlowProvider>
-      <Draft complete={complete} />
+      <Draft complete={complete} slot={slot} />
       <JoinConfirmScreen {...handlers} />
     </JoinFlowProvider>,
     test,
@@ -218,6 +220,42 @@ describe('JoinConfirmScreen', () => {
       expect((view as unknown as Record<string, jest.Mock>)[handler]).toHaveBeenCalled();
     },
   );
+
+  it('muestra la retención del payout antes de unirse (COPAYNI-60)', async () => {
+    await renderConfirm({
+      slot: Slot.create({
+        position: 3,
+        payoutPeriod: '2027-01',
+        type: 'lowestFees',
+        fee: pen(0),
+        discount: pen(0),
+        available: true,
+        retention: pen(6_000),
+      }),
+    });
+    expect(await screen.findByTestId('join-retention')).toHaveTextContent(
+      /Se retendrán .*6\.?000.* para pagar automáticamente tus últimas 2 cuotas/,
+    );
+  });
+
+  it('sin retención no la menciona', async () => {
+    await renderConfirm();
+    await screen.findByTestId('join-summary');
+    expect(screen.queryByTestId('join-retention')).toBeNull();
+  });
+
+  it('con SLOT_NOT_ALLOWED pide elegir otro turno (COPAYNI-60)', async () => {
+    const { onEditSlot } = await renderConfirm({
+      circleMembership: new InMemoryCircleMembershipRepository({
+        latencyMs: 0,
+        rejectWith: 'SLOT_NOT_ALLOWED',
+      }),
+    });
+    await fireEvent.press(await submit());
+    expect(await screen.findByRole('alert')).toHaveTextContent(/Todavía no puedes tomar/);
+    await fireEvent.press(screen.getByRole('button', { name: 'Elegir otro turno' }));
+    expect(onEditSlot).toHaveBeenCalled();
+  });
 
   it('con MEMBER_BLOCKED explica que debe pagar lo vencido más la mora y cuánto (COPAYNI-57)', async () => {
     await renderConfirm({

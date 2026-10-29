@@ -97,6 +97,18 @@ describe('SlotScreen', () => {
     expect(await slot(2)).toBeEnabled();
   });
 
+  it('un turno que la regla de confianza no permite aparece deshabilitado con su motivo (COPAYNI-60)', async () => {
+    await renderSlot({
+      circleQuote: new InMemoryCircleQuoteRepository({
+        latencyMs: 0,
+        startsOn: '2026-11',
+        notAllowed: { fastestPayout: 'trustRequired' },
+      }),
+    });
+    expect(await slot(1)).toBeDisabled();
+    expect(await slot(1)).toHaveAccessibleName(/Disponible al completar tu primer círculo/);
+  });
+
   it('al elegir un mes lo resalta, el botón lo nombra y continuar lo guarda', async () => {
     const { onNext } = await renderSlot();
     await slot(1);

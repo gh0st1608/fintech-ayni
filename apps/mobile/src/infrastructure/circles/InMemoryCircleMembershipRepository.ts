@@ -14,6 +14,7 @@ const REJECTIONS = {
   SLOT_TAKEN: 'conflict',
   CIRCLE_ALREADY_STARTED: 'conflict',
   VACANCY_CLOSED: 'conflict',
+  SLOT_NOT_ALLOWED: 'validation',
   MEMBER_BLOCKED: 'conflict',
 } as const satisfies Record<string, AppErrorKind>;
 
@@ -118,6 +119,7 @@ export class InMemoryCircleMembershipRepository implements CircleMembershipRepos
       installments: Array.from({ length: months }, () => installment),
       netPayout: payout,
       catchUp: Money.of(0, payout.currency),
+      retention: Money.of(0, payout.currency),
       created: true,
     };
     this.joins.set(idempotencyKey, joined);

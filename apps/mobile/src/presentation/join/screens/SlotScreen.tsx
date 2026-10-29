@@ -127,10 +127,10 @@ function SlotPicker({
 
   // Al volver del paso 4 se parte del slot del borrador si sigue libre.
   const all = groups.flatMap((group) => group.slots);
-  const previous = all.find((slot) => slot.available && slot.position === draft.slot?.position);
+  const previous = all.find((slot) => slot.selectable && slot.position === draft.slot?.position);
   const [pickedPosition, setPickedPosition] = useState<number | null>(null);
   const selected =
-    all.find((slot) => slot.available && slot.position === pickedPosition) ??
+    all.find((slot) => slot.selectable && slot.position === pickedPosition) ??
     (pickedPosition === null ? previous : undefined) ??
     null;
   const [type, setType] = useState<SlotType>(
@@ -146,6 +146,9 @@ function SlotPicker({
     else parts.push(t('join.slot.zeroFees'));
     if (slot.discount.amount > 0) {
       parts.push(t('join.slot.discount', { amount: money(slot.discount) }));
+    }
+    if (slot.retention.amount > 0) {
+      parts.push(t('join.slot.retention', { amount: money(slot.retention) }));
     }
     if (slot.catchUp.amount > 0) {
       parts.push(t('join.slot.catchUp', { amount: money(slot.catchUp) }));
@@ -201,8 +204,12 @@ function SlotPicker({
                     confirm.reset();
                     setPickedPosition(slot.position);
                   }}
-                  disabled={!slot.available}
-                  disabledReason={t('join.slot.taken')}
+                  disabled={!slot.selectable}
+                  disabledReason={
+                    slot.notAllowedReason
+                      ? t(`join.slot.notAllowed.${slot.notAllowedReason}`)
+                      : t('join.slot.taken')
+                  }
                   testID={`slot-${slot.position}`}
                 />
               ))}

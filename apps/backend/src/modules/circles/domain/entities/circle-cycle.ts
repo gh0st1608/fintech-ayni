@@ -3,9 +3,9 @@ import { Money } from '../../../../shared/domain/value-objects/money';
 import { type Period } from '../../../../shared/domain/value-objects/period';
 import { DomainError } from '../../../../shared/errors/app-error';
 import { refundTransactions, settlePeriod } from '../services/period-settlement';
-import { type SlotQuote } from '../services/slot-pricing';
+import { retainedInstallments, type SlotQuote } from '../services/slot-pricing';
 import { type CircleTerms } from '../value-objects/circle-terms';
-import { type LedgerTransaction } from '../value-objects/ledger-transaction';
+import { LedgerTransaction } from '../value-objects/ledger-transaction';
 
 /**
  * Estados que se guardan. Los pasos Checking, Setting Receiver, Distributing y Distributed del
@@ -16,9 +16,16 @@ export type CycleState = (typeof CYCLE_STATES)[number];
 
 /**
  * `overdue`: el cobro falló y la cuota sigue en gracia. `defaulted`: no se pagó en la gracia y el
- * miembro fue expulsado; la cubre el fondo de garantía (COPAYNI-58).
+ * miembro fue expulsado; la cubre el fondo de garantía (COPAYNI-58). `retained`: la paga la
+ * retención de su payout, sin cobrarse (COPAYNI-60).
  */
-export const INSTALLMENT_STATUSES = ['pending', 'paid', 'overdue', 'defaulted'] as const;
+export const INSTALLMENT_STATUSES = [
+  'pending',
+  'paid',
+  'overdue',
+  'defaulted',
+  'retained',
+] as const;
 export type InstallmentStatus = (typeof INSTALLMENT_STATUSES)[number];
 
 /** Reglas de impago del PO (pending-scope R3 y R18, §3.1), parametrizables. */
@@ -75,6 +82,8 @@ export interface Expulsion {
   readonly paid: Money | null;
   /** Lo pagado menos la penalidad, a devolver al cerrar el círculo; `null` si ya cobró. */
   readonly refund: Money | null;
+  /** Su retención, que fue al fondo y ya está descontada de `overdue` (COPAYNI-60). */
+  readonly retentionApplied: Money;
 }
 
 /** Fondo de garantía (COPAYNI-58): su saldo y la parte de las Admin Fees que recibe. */
@@ -296,7 +305,7 @@ export class CircleCycle {
   recordCollection(installmentId: string, outcome: CollectionOutcome): Installment {
     const index = this.touched.findIndex(({ id }) => id === installmentId);
     const installment = this.touched[index];
-    if (!installment || installment.status === 'paid' || installment.status === 'defaulted') {
+    if (!installment || (installment.status !== 'pending' && installment.status !== 'overdue')) {
       throw new InvalidCycleTransitionError('La cuota no existe o ya no se cobra');
     }
     const updated = { ...installment, status: outcome === 'paid' ? 'paid' : 'overdue' } as const;
@@ -323,7 +332,8 @@ export class CircleCycle {
    * Expulsa al miembro de una cuota impaga después de la gracia (pending-scope §3.1): la cuota
    * pasa a `defaulted` y el miembro sale del ciclo, así que no se le abren más cuotas y su turno,
    * si no cobró, queda libre.
-   * - Debe lo vencido más el cargo por mora; si ya cobró, también sus cuotas restantes.
+   * - Debe lo vencido más el cargo por mora; si ya cobró, también sus cuotas restantes, menos su
+   *   retención, que va al fondo (COPAYNI-60).
    * - Si no cobró, se le devuelve lo pagado menos la penalidad al cerrar el círculo.
    */
   expel(installmentId: string, today: LocalDate): Expulsion {
@@ -338,18 +348,36 @@ export class CircleCycle {
     // Los meses anteriores cerraron con todas sus cuotas pagadas: cobró si su turno ya pasó.
     const alreadyPaidOut = member.position <= month;
     const paid = sum(member.quote.installments.slice(0, month));
+    const remaining = sum(member.quote.installments.slice(month));
+    const retentionApplied = alreadyPaidOut
+      ? Money.of(Math.min(member.quote.retention.amount, remaining.amount), this.terms.currency)
+      : Money.zero(this.terms.currency);
     const expulsion: Expulsion = {
       userId: member.userId,
       position: member.position,
       period: installment.period,
       expelledOn: today,
-      overdue: alreadyPaidOut ? sum(member.quote.installments.slice(month)) : installment.amount,
+      overdue: alreadyPaidOut ? remaining.subtract(retentionApplied) : installment.amount,
       lateFee: installment.amount.percentage(this.delinquency.lateFeeBps),
       paid: alreadyPaidOut ? null : paid,
       refund: alreadyPaidOut
         ? null
         : paid.subtract(paid.percentage(this.delinquency.refundPenaltyBps)),
+      retentionApplied,
     };
+    const toFund = LedgerTransaction.transfer({
+      key: `retention_to_fund:${this.circleId}:${member.userId}`,
+      kind: 'retention_to_fund',
+      from: { account: 'retention_held', userId: member.userId },
+      to: { account: 'guarantee_fund' },
+      amount: retentionApplied,
+      circleId: this.circleId,
+      period: installment.period,
+    });
+    if (toFund) {
+      this.entries.push(toFund);
+      this.fundBalance = this.fundBalance.add(retentionApplied);
+    }
 
     this.touched[this.touched.indexOf(installment)] = { ...installment, status: 'defaulted' };
     this.active.splice(this.active.indexOf(member), 1);
@@ -367,7 +395,7 @@ export class CircleCycle {
       !LocalDate.of(this.period!, this.dueDay).isAfter(today) &&
       this.touched
         .filter(({ period }) => period.equals(this.period!))
-        .every(({ status }) => status === 'paid' || status === 'defaulted')
+        .every(({ status }) => status === 'paid' || status === 'defaulted' || status === 'retained')
     );
   }
 
@@ -401,16 +429,23 @@ export class CircleCycle {
       const share = this.active.find((member) => member.userId === userId)?.quote.catchUp?.[month];
       return share ? sum.add(share) : sum;
     }, Money.zero(this.terms.currency));
+    const retained = this.touched
+      .filter(
+        (installment) => installment.period.equals(period) && installment.status === 'retained',
+      )
+      .map(({ userId, amount }) => ({ userId, amount }));
     const settlement = settlePeriod({
       circleId: this.circleId,
       terms: this.terms,
       period,
       paid: paid.map(({ amount }) => amount),
       catchUp,
+      retained,
       receiver: receiver && {
         userId: receiver.userId,
         netPayout: receiver.quote.netPayout,
         adminFee: receiver.quote.adminFee,
+        retention: receiver.quote.retention,
       },
       fundBalance: this.fundBalance,
       feeShareBps: this.feeShareBps,
@@ -469,6 +504,9 @@ export class CircleCycle {
 
   private openInstallment(member: CycleMember, period: Period, newId: () => string): void {
     const month = this.terms.startsOn.monthsUntil(period);
+    // Sus últimas cuotas las paga la retención de su payout (COPAYNI-60).
+    const retainedFrom =
+      this.terms.months - retainedInstallments(member.quote, this.terms.baseInstallment);
     this.touched.push({
       id: newId(),
       userId: member.userId,
@@ -476,7 +514,7 @@ export class CircleCycle {
       period,
       dueOn: LocalDate.of(period, this.dueDay),
       amount: member.quote.installments[month]!,
-      status: 'pending',
+      status: month >= retainedFrom ? 'retained' : 'pending',
     });
   }
 }

@@ -23,6 +23,11 @@ export interface SlotPricingRulesProps {
   /** Admin Fees sobre el payout, iguales para todos los slots. */
   adminFeeBps: number;
   adminFeeMode: AdminFeeMode;
+  /**
+   * Cuotas base que se retienen del payout de los turnos de la primera mitad y pagan sus últimas
+   * cuotas (COPAYNI-60, R18 propuesto: 2). 0 o ausente: sin retención.
+   */
+  retentionInstallments?: number;
 }
 
 const RATE_FIELDS = [
@@ -56,6 +61,12 @@ export class SlotPricingRules {
     if (!ADMIN_FEE_MODES.includes(props.adminFeeMode)) {
       throw new InvalidSlotPricingRulesError('adminFeeMode inválido');
     }
-    return new SlotPricingRules({ ...props });
+    const retention = props.retentionInstallments ?? 0;
+    if (!Number.isInteger(retention) || retention < 0 || retention > 12) {
+      throw new InvalidSlotPricingRulesError(
+        'retentionInstallments debe ser un entero entre 0 y 12',
+      );
+    }
+    return new SlotPricingRules({ ...props, retentionInstallments: retention });
   }
 }

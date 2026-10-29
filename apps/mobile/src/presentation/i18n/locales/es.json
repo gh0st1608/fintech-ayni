@@ -108,7 +108,13 @@
       "continueWith": "Continuar con {{month}}",
       "noLongerAvailable": "Ese turno acaba de ocuparse. Elige otro mes.",
       "missingSteps": "Primero elige el monto y la cuota mensual.",
-      "catchUp": "Incluye {{amount}} de puesta al día"
+      "catchUp": "Incluye {{amount}} de puesta al día",
+      "retention": "Se retienen {{amount}} del payout",
+      "notAllowed": {
+        "trustRequired": "Disponible al completar tu primer círculo",
+        "identityRequired": "Verifica tu identidad para elegirlo",
+        "incomeRequired": "Declara tu ingreso para elegirlo"
+      }
     },
     "payoutMethod": {
       "title": "Método de cobro",
@@ -146,7 +152,8 @@
         "payoutMethodLimitExceeded": "El payout supera el límite de tu método de cobro. Elige otro método.",
         "slotNoLongerAvailable": "Ese turno ya no está disponible. Elige otro.",
         "memberBlocked": "Fuiste expulsado de un círculo por no pagar una cuota. Paga lo vencido más el cargo por mora ({{amount}}) para unirte a otro.",
-        "memberBlockedNoAmount": "Fuiste expulsado de un círculo por no pagar una cuota. Paga lo vencido más el cargo por mora para unirte a otro."
+        "memberBlockedNoAmount": "Fuiste expulsado de un círculo por no pagar una cuota. Paga lo vencido más el cargo por mora para unirte a otro.",
+        "slotNotAllowed": "Todavía no puedes tomar ese tipo de turno. Elige otro."
       },
       "actions": {
         "verifyIdentity": "Verificar mi National ID",
@@ -160,7 +167,8 @@
         "firstInstallment": "Tu primera cuota es de {{amount}} en {{month}}.",
         "viewCircles": "Ver mis círculos",
         "catchUp": "Tus cuotas incluyen {{amount}} de puesta al día de los meses ya transcurridos, hasta {{month}}."
-      }
+      },
+      "retention": "Se retendrán {{amount}} de tu payout para pagar automáticamente tus últimas {{count}} cuotas."
     }
   },
   "circles": {

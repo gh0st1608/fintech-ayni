@@ -9,6 +9,9 @@ import { CONTRIBUTIONS, DISBURSEMENTS } from './application/ports/cycle-payments
 import { PayoutsModule } from '../payouts/payouts.module';
 import { JOIN_CONFIG_REPOSITORY } from './application/ports/join-config-repository.port';
 import { JOIN_ELIGIBILITY } from './application/ports/join-eligibility.port';
+import { MEMBER_HISTORY } from './application/ports/member-history.port';
+import { TRUST_SETTINGS, type TrustSettings } from './application/use-cases/trust';
+import { TypeOrmMemberHistory } from './infrastructure/persistence/typeorm/typeorm-member-history.repository';
 import { MEMBER_DEBTS } from './application/ports/member-debts.port';
 import { FUND_METRICS, GUARANTEE_FUND } from './application/ports/guarantee-fund.port';
 import {
@@ -122,6 +125,18 @@ import { MyCirclesController } from './presentation/http/controllers/my-circles.
         limit: config.get('RECOMMENDED_CIRCLES_LIMIT', { infer: true }),
       }),
     },
+    // Regla de confianza por tipo de turno (COPAYNI-60, valores propuestos de R18).
+    TypeOrmMemberHistory,
+    { provide: MEMBER_HISTORY, useExisting: TypeOrmMemberHistory },
+    {
+      provide: TRUST_SETTINGS,
+      inject: [ConfigService],
+      useFactory: (config: AppConfigService): TrustSettings => ({
+        fastestMinCompletedCircles: config.get('TRUST_FASTEST_MIN_COMPLETED_CIRCLES', {
+          infer: true,
+        }),
+      }),
+    },
     // Reglas provisionales de elegibilidad (KYC COPAYNI-47 y pending-scope R5).
     { provide: JOIN_ELIGIBILITY, useClass: ProvisionalJoinEligibility },
     ConfigJoinConfigRepository,
@@ -141,6 +156,7 @@ import { MyCirclesController } from './presentation/http/controllers/my-circles.
             maxDiscountBps: config.get('SLOT_MAX_DISCOUNT_BPS', { infer: true }),
             adminFeeBps: config.get('ADMIN_FEE_BPS', { infer: true }),
             adminFeeMode: config.get('ADMIN_FEE_MODE', { infer: true }),
+            retentionInstallments: config.get('PAYOUT_RETENTION_INSTALLMENTS', { infer: true }),
           }),
         ),
     },

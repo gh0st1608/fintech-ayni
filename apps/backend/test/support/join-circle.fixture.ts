@@ -1,7 +1,9 @@
 import { type CircleRepositoryPort } from '@src/modules/circles/application/ports/circle-repository.port';
 import { type MemberDebtsPort } from '@src/modules/circles/application/ports/member-debts.port';
+import { type MemberHistoryPort } from '@src/modules/circles/application/ports/member-history.port';
 import { type CircleAssignmentSettings } from '@src/modules/circles/application/use-cases/get-available-slots.use-case';
 import { JoinCircleUseCase } from '@src/modules/circles/application/use-cases/join-circle.use-case';
+import { type TrustSettings } from '@src/modules/circles/application/use-cases/trust';
 import { type DelinquencyPolicy } from '@src/modules/circles/domain/entities/circle-cycle';
 import { JoinConfig } from '@src/modules/circles/domain/entities/join-config';
 import { type JoinApplicant } from '@src/modules/circles/domain/services/join-eligibility';
@@ -52,6 +54,14 @@ export const SEED_CAPITAL_SCENARIOS = [
   { name: 'expansión', circles: 20, seed: pen(120_000) },
 ] as const;
 
+/** El valor por defecto de la regla de confianza: Fastest Payout pide 1 círculo completado. */
+export const TEST_TRUST: TrustSettings = { fastestMinCompletedCircles: 1 };
+
+/** Historial de un usuario con `completed` círculos completados sin expulsión. */
+export const historyWith = (completed: number): MemberHistoryPort => ({
+  completedCirclesOf: () => Promise.resolve(completed),
+});
+
 /** Sin deudas por impago: nadie está bloqueado. */
 export const NO_DEBTS: MemberDebtsPort = {
   openDebtsOf: () => Promise.resolve([]),
@@ -69,6 +79,7 @@ export const TEST_JOIN_CONFIG = JoinConfig.create({
 export const ELIGIBLE: JoinApplicant = {
   identityVerified: true,
   monthlyPayInLimit: null,
+  incomeDeclared: true,
   payoutMethod: { type: 'bank_transfer', limit: null },
 };
 
@@ -83,6 +94,8 @@ export function createJoinCircleUseCase(
     assignment?: Partial<CircleAssignmentSettings>;
     pricing?: SlotPricing;
     debts?: MemberDebtsPort;
+    /** Círculos completados sin expulsión; por defecto 1, así puede tomar cualquier turno. */
+    completedCircles?: number;
   } = {},
 ): JoinCircleUseCase {
   const applicant = options.applicant ?? ELIGIBLE;
@@ -99,6 +112,8 @@ export function createJoinCircleUseCase(
     { applicantFor: () => Promise.resolve(applicant) },
     options.debts ?? NO_DEBTS,
     { dueDay: TEST_DUE_DAY },
+    historyWith(options.completedCircles ?? 1),
+    TEST_TRUST,
     new TestClock(options.now ?? JOIN_NOW),
   );
 }

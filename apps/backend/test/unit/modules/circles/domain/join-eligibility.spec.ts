@@ -8,6 +8,7 @@ const pen = (major: number) => Money.of(major * 100, 'PEN');
 const ELIGIBLE: JoinApplicant = {
   identityVerified: true,
   monthlyPayInLimit: null,
+  incomeDeclared: true,
   payoutMethod: { type: 'bank_transfer', limit: null },
 };
 const PAYOUT = pen(30_000);

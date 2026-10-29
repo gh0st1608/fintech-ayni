@@ -4,6 +4,7 @@ import { IsInt, IsOptional, IsUUID, Max, Min } from 'class-validator';
 
 import { type AvailableSlotsResult } from '../../../application/use-cases/get-available-slots.use-case';
 import { catchUpTotal, SLOT_TYPES, type SlotType } from '../../../domain/services/slot-pricing';
+import { SLOT_RESTRICTIONS, type SlotRestriction } from '../../../domain/services/trust-policy';
 import { MoneyResponse } from './join-config.response';
 
 export class SlotsQuery {
@@ -54,6 +55,24 @@ export class SlotResponse {
   catchUp!: MoneyResponse;
 
   @ApiProperty({
+    type: MoneyResponse,
+    description:
+      'Retención del payout en los turnos de la primera mitad, que paga sus últimas cuotas (COPAYNI-60)',
+  })
+  retention!: MoneyResponse;
+
+  @ApiProperty({ description: 'false si la regla de confianza no le permite este tipo de turno' })
+  allowed!: boolean;
+
+  @ApiProperty({
+    enum: SLOT_RESTRICTIONS,
+    nullable: true,
+    type: String,
+    description: 'Por qué no se permite (COPAYNI-60); null si se permite',
+  })
+  notAllowedReason!: SlotRestriction | null;
+
+  @ApiProperty({
     description:
       'false si otro miembro ya ocupa el slot; en un círculo en curso, true solo en sus vacantes abiertas',
   })
@@ -94,7 +113,10 @@ export class SlotsResponse {
         fee: MoneyResponse.from(slot.fee),
         discount: MoneyResponse.from(slot.discount),
         catchUp: MoneyResponse.from(catchUpTotal(slot)),
+        retention: MoneyResponse.from(slot.retention),
         available: slot.available,
+        allowed: slot.restriction === null,
+        notAllowedReason: slot.restriction,
       })),
     };
   }

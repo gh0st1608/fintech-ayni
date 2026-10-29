@@ -31,6 +31,8 @@ export interface JoinApplicant {
   readonly identityVerified: boolean;
   /** Límite mensual de pay-in del Perfil (R5), o `null` si no lo restringe. */
   readonly monthlyPayInLimit: Money | null;
+  /** Declaró su ingreso (R5); lo pide el turno Lowest Fees (COPAYNI-60). */
+  readonly incomeDeclared: boolean;
   /** Método de cobro elegido y todavía disponible, con su límite por payout; `null` si no hay. */
   readonly payoutMethod: { readonly type: string; readonly limit: Money | null } | null;
 }

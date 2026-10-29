@@ -151,6 +151,22 @@ describe('POST /v1/circles/join', () => {
     await join(token, { ...NEW_CIRCLE, payoutAmount: 9_000_000 }, key).expect(201);
   });
 
+  it('un usuario nuevo no puede tomar Fastest Payout: SLOT_NOT_ALLOWED (COPAYNI-60)', async () => {
+    const token = await signIn();
+    await join(token, { ...NEW_CIRCLE, payoutAmount: 9_500_000, position: 1 })
+      .expect(422)
+      .expect(({ body }) => {
+        expect(body.error.code).toBe('SLOT_NOT_ALLOWED');
+        expect(body.error.details).toEqual(expect.objectContaining({ reason: 'trust_required' }));
+      });
+    // El turno 3 está en la primera mitad: el payout neto ya descuenta la retención.
+    const joined = await join(token, { ...NEW_CIRCLE, payoutAmount: 9_500_000 }).expect(201);
+    expect(joined.body.data).toMatchObject({
+      netPayout: { amount: 9_500_000 - 2 * 950_000, currency: 'PEN' },
+      retention: { amount: 2 * 950_000, currency: 'PEN' },
+    });
+  });
+
   it('con la tarjeta prepago, un payout sobre su límite responde PAYOUT_METHOD_LIMIT_EXCEEDED', async () => {
     const token = await signIn('prepaid_card');
     await join(token, { ...NEW_CIRCLE, payoutAmount: 11_000_000 })

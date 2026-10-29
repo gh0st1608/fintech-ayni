@@ -5,8 +5,17 @@ import { LedgerTransaction } from '../value-objects/ledger-transaction';
 
 export interface PeriodReceiver {
   userId: string;
+  /** Sin la retención. */
   netPayout: Money;
   adminFee: Money;
+  /** Lo que se le retiene del payout (COPAYNI-60); cero si no. */
+  retention?: Money;
+}
+
+/** Cuota de un mes que paga la retención de su miembro (COPAYNI-60). */
+export interface RetainedInstallment {
+  userId: string;
+  amount: Money;
 }
 
 export interface PeriodSettlementInput {
@@ -17,6 +26,8 @@ export interface PeriodSettlementInput {
   paid: readonly Money[];
   /** La parte de esas cuotas que es puesta al día de una vacante (COPAYNI-59): va al fondo. */
   catchUp?: Money;
+  /** Cuotas del mes que paga la retención del miembro en vez de cobrarse (COPAYNI-60). */
+  retained?: readonly RetainedInstallment[];
   /** Quien tiene el turno del mes, o `undefined` si está libre. */
   receiver: PeriodReceiver | undefined;
   /** Saldo del fondo antes de cerrar el mes. */
@@ -48,8 +59,10 @@ const min = (a: Money, b: Money): Money => (a.amount <= b.amount ? a : b);
  * 1. El fondo cubre lo que falta para el payout completo, o para el payout del círculo si el
  *    turno del expulsado está libre. Solo puede cubrir con el saldo que tiene. No hay turnos que
  *    nunca se llenaron: el círculo solo empieza completo (pending-scope R2).
- * 2. Con quien cobra: se le paga el payout y el fondo recibe su aporte de las Admin Fees. Si el
- *    fondo no alcanzó, el pozo se reduce y el fondo le debe la diferencia.
+ * 2. Con quien cobra: se le retiene la retención de su turno (COPAYNI-60), se le paga el resto
+ *    del payout y el fondo recibe su aporte de las Admin Fees. Si el fondo no alcanzó, se reduce
+ *    lo que se le paga y el fondo le debe la diferencia.
+ * Las cuotas que paga una retención entran al pozo desde `retention_held`.
  * 3. Sin quien cobra: el pozo entero vuelve al fondo.
  * 4. Lo que queda en el pozo va a `operator`: el pozo siempre cierra en cero.
  *
@@ -70,7 +83,23 @@ export function settlePeriod(input: PeriodSettlementInput): PeriodSettlement {
   };
 
   const collected = paid.reduce((sum, amount) => sum.add(amount), zero);
-  const base = terms.baseInstallment.times(paid.length);
+  const retained = input.retained ?? [];
+  for (const { userId, amount } of retained) {
+    add(
+      LedgerTransaction.create({
+        key: `retention_applied:${at}:${userId}`,
+        kind: 'retention_applied',
+        entries: [
+          { account: 'retention_held', userId, amount: zero.subtract(amount) },
+          { ...pot, amount: terms.baseInstallment },
+          { ...operator, amount: amount.subtract(terms.baseInstallment) },
+        ],
+        ...common,
+      }),
+    );
+  }
+  const base = terms.baseInstallment.times(paid.length + retained.length);
+  const collectedBase = terms.baseInstallment.times(paid.length);
   const catchUp = input.catchUp ?? zero;
   if (paid.length > 0) {
     add(
@@ -79,9 +108,9 @@ export function settlePeriod(input: PeriodSettlementInput): PeriodSettlement {
         kind: 'collection',
         entries: [
           { account: 'external', amount: zero.subtract(collected) },
-          { ...pot, amount: base },
+          { ...pot, amount: collectedBase },
           { ...fund, amount: catchUp },
-          { ...operator, amount: collected.subtract(base).subtract(catchUp) },
+          { ...operator, amount: collected.subtract(collectedBase).subtract(catchUp) },
         ],
         ...common,
       }),
@@ -89,7 +118,8 @@ export function settlePeriod(input: PeriodSettlementInput): PeriodSettlement {
   }
   const fundAfterCollection = input.fundBalance.add(catchUp);
 
-  const target = receiver ? receiver.netPayout : terms.payout;
+  const retention = receiver?.retention ?? zero;
+  const target = receiver ? receiver.netPayout.add(retention) : terms.payout;
   const need = max(zero, target.subtract(base));
   const coverage = min(need, max(zero, fundAfterCollection));
   const shortfall = need.subtract(coverage);
@@ -109,7 +139,19 @@ export function settlePeriod(input: PeriodSettlementInput): PeriodSettlement {
   let payout: Money | null = null;
   let returned = zero;
   if (receiver) {
-    payout = min(target, potBalance);
+    // La retención va completa: paga cuotas del miembro. Si el pozo se redujo, se reduce el payout.
+    const held = min(retention, potBalance);
+    add(
+      LedgerTransaction.transfer({
+        key: `retention_held:${at}`,
+        kind: 'retention_held',
+        from: pot,
+        to: { account: 'retention_held', userId: receiver.userId },
+        amount: held,
+        ...common,
+      }),
+    );
+    payout = min(receiver.netPayout, potBalance.subtract(held));
     add(
       LedgerTransaction.transfer({
         key: `payout:${at}`,
@@ -163,7 +205,10 @@ export function settlePeriod(input: PeriodSettlementInput): PeriodSettlement {
       kind: 'operator_residual',
       from: pot,
       to: operator,
-      amount: potBalance.subtract(payout ?? zero).subtract(returned),
+      amount: potBalance
+        .subtract(payout ?? zero)
+        .subtract(returned)
+        .subtract(receiver ? min(retention, potBalance) : zero),
       ...common,
     }),
   );

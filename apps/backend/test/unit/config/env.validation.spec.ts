@@ -249,6 +249,19 @@ describe('validateEnvironment', () => {
         validateEnvironment({ ...REQUIRED, GUARANTEE_FUND_MIN_INSTALLMENTS_PER_CIRCLE: '13' }),
       ).toThrow(/GUARANTEE_FUND_MIN_INSTALLMENTS_PER_CIRCLE/);
     });
+
+    it('trae los valores propuestos de la regla de confianza y la retención (COPAYNI-60)', () => {
+      expect(validateEnvironment({ ...REQUIRED })).toMatchObject({
+        TRUST_FASTEST_MIN_COMPLETED_CIRCLES: 1,
+        PAYOUT_RETENTION_INSTALLMENTS: 2,
+      });
+      expect(() =>
+        validateEnvironment({ ...REQUIRED, PAYOUT_RETENTION_INSTALLMENTS: '13' }),
+      ).toThrow(/PAYOUT_RETENTION_INSTALLMENTS/);
+      expect(() =>
+        validateEnvironment({ ...REQUIRED, TRUST_FASTEST_MIN_COMPLETED_CIRCLES: '-1' }),
+      ).toThrow(/TRUST_FASTEST_MIN_COMPLETED_CIRCLES/);
+    });
   });
 
   describe('métodos de cobro', () => {

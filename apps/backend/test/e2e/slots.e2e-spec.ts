@@ -44,7 +44,17 @@ describe('GET /v1/circles/slots', () => {
       fee: { amount: 300_000, currency: 'PEN' },
       discount: { amount: 0, currency: 'PEN' },
       catchUp: { amount: 0, currency: 'PEN' },
+      // Primera mitad: se retienen 2 cuotas base (COPAYNI-60).
+      retention: { amount: 600_000, currency: 'PEN' },
       available: true,
+      // Un usuario sin círculos completados no puede tomar Fastest Payout.
+      allowed: false,
+      notAllowedReason: 'trust_required',
+    });
+    expect(response.body.data.slots[5]).toMatchObject({
+      retention: { amount: 0, currency: 'PEN' },
+      allowed: true,
+      notAllowedReason: null,
     });
     expect(response.body.data.slots[9]).toMatchObject({
       type: 'highest_return',

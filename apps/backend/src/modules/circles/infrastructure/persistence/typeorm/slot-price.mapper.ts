@@ -12,6 +12,8 @@ export interface StoredSlotPrice {
   installments: number[];
   /** Puesta al día de quien tomó una vacante (COPAYNI-59). */
   catchUp?: number[];
+  /** Retención del payout (COPAYNI-60). */
+  retention?: number;
 }
 
 export const toStoredPrice = (price: SlotPrice): StoredSlotPrice => ({
@@ -23,6 +25,7 @@ export const toStoredPrice = (price: SlotPrice): StoredSlotPrice => ({
   netPayout: price.netPayout.amount,
   installments: price.installments.map(({ amount }) => amount),
   ...(price.catchUp && { catchUp: price.catchUp.map(({ amount }) => amount) }),
+  ...(price.retention && { retention: price.retention.amount }),
 });
 
 /** Money.of rechaza montos que no son enteros; el círculo valida moneda y número de cuotas. */
@@ -43,5 +46,6 @@ export function fromStoredPrice(stored: StoredSlotPrice): SlotPrice {
     netPayout: money(stored.netPayout),
     installments: stored.installments.map(money),
     ...(stored.catchUp && { catchUp: stored.catchUp.map(money) }),
+    ...(stored.retention !== undefined && { retention: money(stored.retention) }),
   };
 }

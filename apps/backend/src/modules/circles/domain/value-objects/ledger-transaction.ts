@@ -10,6 +10,8 @@ import { DomainError } from '../../../../shared/errors/app-error';
  * - `operator`: la cooperativa (Admin Fees, fees y descuentos de los slots).
  * - `member_payable`: lo que el fondo le debe a un miembro por un pozo reducido.
  * - `refunds_payable`: la devolución pendiente de un expulsado.
+ * - `retention_held`: la retención del payout de un miembro, que paga sus últimas cuotas
+ *   (COPAYNI-60).
  * - `external`: fuera de Ayni (pasarela, cuentas de los miembros).
  */
 export const LEDGER_ACCOUNTS = [
@@ -18,6 +20,7 @@ export const LEDGER_ACCOUNTS = [
   'operator',
   'member_payable',
   'refunds_payable',
+  'retention_held',
   'external',
 ] as const;
 export type LedgerAccount = (typeof LEDGER_ACCOUNTS)[number];
@@ -43,6 +46,12 @@ export const LEDGER_KINDS = [
   'refund_paid',
   /** El expulsado pagó lo vencido más el cargo por mora: vuelve al fondo. */
   'debt_recovered',
+  /** Retención del payout de quien cobra en la primera mitad (COPAYNI-60). */
+  'retention_held',
+  /** La retención paga sus últimas cuotas. */
+  'retention_applied',
+  /** Expulsado después de cobrar: su retención va al fondo y reduce su deuda. */
+  'retention_to_fund',
   /** Movimientos manuales del back-office, con motivo. */
   'seed_capital',
   'adjustment',
@@ -55,7 +64,7 @@ export interface LedgerEntry {
   readonly account: LedgerAccount;
   /** Positivo: entra dinero a la cuenta; negativo: sale. */
   readonly amount: Money;
-  /** El miembro, en las cuentas `member_payable`, `refunds_payable` y `external`. */
+  /** El miembro, en `member_payable`, `refunds_payable`, `retention_held` y `external`. */
   readonly userId?: string;
 }
 

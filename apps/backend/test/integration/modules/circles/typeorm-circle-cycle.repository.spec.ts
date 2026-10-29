@@ -7,16 +7,18 @@ import { type ContributionsPort } from '@src/modules/circles/application/ports/c
 import { AdvanceCircleCyclesUseCase } from '@src/modules/circles/application/use-cases/advance-circle-cycles.use-case';
 import { Circle } from '@src/modules/circles/domain/entities/circle';
 import { CircleCycle } from '@src/modules/circles/domain/entities/circle-cycle';
-import { priceOf } from '@src/modules/circles/domain/services/slot-pricing';
+import { priceOf, SlotPricing } from '@src/modules/circles/domain/services/slot-pricing';
 import { joinQuote } from '@src/modules/circles/domain/services/vacancy';
 import { CircleTerms } from '@src/modules/circles/domain/value-objects/circle-terms';
 import { LedgerTransaction } from '@src/modules/circles/domain/value-objects/ledger-transaction';
+import { SlotPricingRules } from '@src/modules/circles/domain/value-objects/slot-pricing-rules';
 import { FakeCyclePayments } from '@src/modules/circles/infrastructure/payments/cycle-payments';
 import { CircleMembershipEntity } from '@src/modules/circles/infrastructure/persistence/typeorm/circle-membership.entity';
 import { CircleEntity } from '@src/modules/circles/infrastructure/persistence/typeorm/circle.entity';
 import { TypeOrmCircleCycleRepository } from '@src/modules/circles/infrastructure/persistence/typeorm/typeorm-circle-cycle.repository';
 import { TypeOrmCircleRepository } from '@src/modules/circles/infrastructure/persistence/typeorm/typeorm-circle.repository';
 import { TypeOrmMemberDebts } from '@src/modules/circles/infrastructure/persistence/typeorm/typeorm-member-debts.repository';
+import { TypeOrmMemberHistory } from '@src/modules/circles/infrastructure/persistence/typeorm/typeorm-member-history.repository';
 import { LocalDate } from '@src/shared/domain/value-objects/local-date';
 import { Money } from '@src/shared/domain/value-objects/money';
 import { Period } from '@src/shared/domain/value-objects/period';
@@ -25,6 +27,7 @@ import {
   TEST_DELINQUENCY,
   TEST_FUND_SHARE_BPS,
   TEST_PRICING,
+  TEST_PRICING_RULES,
 } from '@test/support/join-circle.fixture';
 import { insertTestUser, openTestDatabase } from '@test/support/test-database';
 
@@ -61,7 +64,7 @@ describe('TypeOrmCircleCycleRepository', () => {
   });
 
   /** Un círculo lleno de 6 meses desde `startsOn`, con el precio congelado de cada miembro. */
-  async function fullCircle(startsOn = Period.of(2026, 11)) {
+  async function fullCircle(startsOn = Period.of(2026, 11), pricing = TEST_PRICING) {
     const id = randomUUID();
     const terms = CircleTerms.create({
       payout: Money.of(600_000, 'PEN'),
@@ -74,7 +77,7 @@ describe('TypeOrmCircleCycleRepository', () => {
         userId: await insertTestUser(dataSource),
         position,
         idempotencyKey: `k-${id}-${position}`,
-        price: priceOf(TEST_PRICING.quote(terms, position)),
+        price: priceOf(pricing.quote(terms, position)),
       });
     }
     await circles.create(Circle.restore({ id, terms, memberships: members }));
@@ -250,6 +253,50 @@ describe('TypeOrmCircleCycleRepository', () => {
     await expect(debts.openDebtsOf(defaulter.userId)).resolves.toEqual([]);
     await expect(debts.openDebtsOf('no-es-uuid')).resolves.toEqual([]);
     await expect(debts.settle('no-es-uuid', id, recovery)).resolves.toBeNull();
+  });
+
+  it('la retención paga las últimas cuotas de la primera mitad y cuenta la confianza (COPAYNI-60)', async () => {
+    const retaining = new SlotPricing(
+      SlotPricingRules.create({ ...TEST_PRICING_RULES.props, retentionInstallments: 2 }),
+    );
+    const { id, members } = await fullCircle(Period.of(2026, 11), retaining);
+    const history = new TypeOrmMemberHistory(dataSource.getRepository(CircleEntity));
+    await expect(history.completedCirclesOf(members[0]!.userId)).resolves.toBe(0);
+    const runOn = job([id]);
+    for (const month of [11, 12, 1, 2, 3, 4]) {
+      await runOn(`${month > 10 ? 2026 : 2027}-${String(month).padStart(2, '0')}-05`);
+    }
+
+    // Turnos 1 a 3 (primera mitad): sus 2 últimas cuotas las paga la retención.
+    const retained = await dataSource.query<{ position: number; period: string }[]>(
+      `SELECT position, to_char(period, 'YYYY-MM') AS period FROM circle_installments
+        WHERE circle_id = $1 AND status = 'retained' ORDER BY position, period`,
+      [id],
+    );
+    expect(retained).toEqual(
+      [1, 2, 3].flatMap((position) => [
+        { position, period: '2027-03' },
+        { position, period: '2027-04' },
+      ]),
+    );
+    const kinds = await dataSource.query<{ kind: string; total: number }[]>(
+      `SELECT kind, count(*)::int AS total FROM ledger_transactions
+        WHERE circle_id = $1 AND kind LIKE 'retention%' GROUP BY kind ORDER BY kind`,
+      [id],
+    );
+    expect(kinds).toEqual([
+      { kind: 'retention_applied', total: 6 },
+      { kind: 'retention_held', total: 3 },
+    ]);
+    const [held] = await dataSource.query<{ total: string }[]>(
+      `SELECT COALESCE(sum(e.amount), 0)::text AS total FROM ledger_entries e
+         JOIN ledger_transactions t ON t.key = e.transaction_key
+        WHERE t.circle_id = $1 AND e.account = 'retention_held'`,
+      [id],
+    );
+    expect(held?.total).toBe('0');
+    await expect(history.completedCirclesOf(members[0]!.userId)).resolves.toBe(1);
+    await expect(history.completedCirclesOf('no-es-uuid')).resolves.toBe(0);
   });
 
   it('un miembro nuevo toma la vacante del expulsado y cobra su turno (COPAYNI-59)', async () => {

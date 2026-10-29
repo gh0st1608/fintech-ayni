@@ -3,7 +3,7 @@ import { z } from 'zod';
 import type { CircleQuoteRepositoryPort } from '@/domain/circles/ports/CircleQuoteRepositoryPort';
 import type { RecommendedCircle } from '@/domain/circles/RecommendedCircle';
 import { InstallmentOption } from '@/domain/circles/value-objects/InstallmentOption';
-import { Slot, type SlotType } from '@/domain/circles/value-objects/Slot';
+import { Slot, type SlotRestriction, type SlotType } from '@/domain/circles/value-objects/Slot';
 import type { HttpClientPort } from '@/domain/shared/ports/HttpClientPort';
 import type { Money } from '@/domain/shared/value-objects/Money';
 
@@ -28,6 +28,12 @@ export const SLOT_TYPE_BY_DTO = {
   highest_return: 'highestReturn',
 } as const satisfies Record<string, SlotType>;
 
+const RESTRICTION_BY_DTO = {
+  trust_required: 'trustRequired',
+  identity_required: 'identityRequired',
+  income_required: 'incomeRequired',
+} as const satisfies Record<string, SlotRestriction>;
+
 /** DTO de GET /circles/slots (docs/api/circles.md). */
 const slotsDto = z.object({
   /** Círculo ofrecido; `null` si es uno nuevo. */
@@ -43,6 +49,12 @@ const slotsDto = z.object({
       discount: moneyDto,
       /** COPAYNI-59; un backend anterior no lo envía. */
       catchUp: moneyDto.optional(),
+      /** COPAYNI-60; un backend anterior no los envía. */
+      retention: moneyDto.optional(),
+      notAllowedReason: z
+        .enum(['trust_required', 'identity_required', 'income_required'])
+        .nullable()
+        .optional(),
       available: z.boolean(),
     }),
   ),
@@ -127,6 +139,8 @@ export class CircleQuoteApiRepository implements CircleQuoteRepositoryPort {
         available: slot.available,
         circleId: dto.circleId,
         ...(slot.catchUp && { catchUp: toMoney(slot.catchUp) }),
+        ...(slot.retention && { retention: toMoney(slot.retention) }),
+        notAllowedReason: slot.notAllowedReason ? RESTRICTION_BY_DTO[slot.notAllowedReason] : null,
       }),
     );
   }

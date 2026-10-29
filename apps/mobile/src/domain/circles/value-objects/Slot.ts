@@ -5,6 +5,15 @@ import { Money } from '@/domain/shared/value-objects/Money';
 export const SLOT_TYPES = ['fastestPayout', 'lowestFees', 'highestReturn'] as const;
 export type SlotType = (typeof SLOT_TYPES)[number];
 
+/** Por qué la regla de confianza no le permite el turno al usuario (COPAYNI-60). */
+export const SLOT_RESTRICTIONS = ['trustRequired', 'identityRequired', 'incomeRequired'] as const;
+export type SlotRestriction = (typeof SLOT_RESTRICTIONS)[number];
+
+/** El backend rechazó el turno por la regla de confianza (SLOT_NOT_ALLOWED). */
+export class SlotNotAllowedError extends DomainError {
+  readonly code = 'SLOT_NOT_ALLOWED';
+}
+
 export class InvalidSlotError extends DomainError {
   readonly code = 'INVALID_SLOT';
 }
@@ -39,7 +48,21 @@ export class Slot {
      * repartidas en sus cuotas hasta el mes de cobro. Cero en un turno normal.
      */
     readonly catchUp: Money,
+    /** Parte del payout que se retiene y paga sus últimas cuotas (COPAYNI-60); cero si no. */
+    readonly retention: Money,
+    /** Motivo por el que el usuario no puede tomarlo; `null` si puede. */
+    readonly notAllowedReason: SlotRestriction | null,
   ) {}
+
+  /** La regla de confianza le permite tomarlo. */
+  get allowed(): boolean {
+    return this.notAllowedReason === null;
+  }
+
+  /** Se puede elegir: está libre y la regla de confianza lo permite. */
+  get selectable(): boolean {
+    return this.available && this.allowed;
+  }
 
   static create(props: {
     position: number;
@@ -50,6 +73,8 @@ export class Slot {
     available: boolean;
     circleId?: string | null;
     catchUp?: Money;
+    retention?: Money;
+    notAllowedReason?: SlotRestriction | null;
   }): Slot {
     const { position, payoutPeriod, type, fee, discount, available } = props;
     if (!Number.isInteger(position) || position < 1) {
@@ -62,8 +87,13 @@ export class Slot {
       throw new InvalidSlotError('Slot fee and discount must be non-negative in one currency');
     }
     const catchUp = props.catchUp ?? Money.of(0, fee.currency);
-    if (catchUp.currency !== fee.currency || catchUp.amount < 0) {
-      throw new InvalidSlotError('Slot catch-up must be non-negative in the slot currency');
+    const retention = props.retention ?? Money.of(0, fee.currency);
+    for (const amount of [catchUp, retention]) {
+      if (amount.currency !== fee.currency || amount.amount < 0) {
+        throw new InvalidSlotError(
+          'Slot catch-up and retention must be non-negative in one currency',
+        );
+      }
     }
     return new Slot(
       position,
@@ -74,6 +104,8 @@ export class Slot {
       available,
       props.circleId ?? null,
       catchUp,
+      retention,
+      props.notAllowedReason ?? null,
     );
   }
 

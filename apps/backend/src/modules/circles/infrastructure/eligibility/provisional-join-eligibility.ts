@@ -35,6 +35,8 @@ export class ProvisionalJoinEligibility implements JoinEligibilityPort {
     return {
       identityVerified: this.identityVerified,
       monthlyPayInLimit: this.monthlyPayInLimit,
+      // La app todavía no pide el ingreso (pending-scope R5): se asume declarado.
+      incomeDeclared: true,
       payoutMethod: method ? { type: method.type, limit: method.limit } : null,
     };
   }

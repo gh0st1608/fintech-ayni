@@ -122,23 +122,29 @@ Queda abierto en R2: si los círculos los arma un administrador y el tamaño má
       "fee": { "amount": 300000, "currency": "PEN" },
       "discount": { "amount": 0, "currency": "PEN" },
       "catchUp": { "amount": 0, "currency": "PEN" },
-      "available": false
+      "retention": { "amount": 600000, "currency": "PEN" },
+      "available": false,
+      "allowed": false,
+      "notAllowedReason": "trust_required"
     }
   ]
 }
 ```
 
-| Campo          | Notas                                                                          |
-| -------------- | ------------------------------------------------------------------------------ |
-| `circleId`     | Círculo ofrecido; `null` si es uno nuevo. Se envía igual a `POST /join`.       |
-| `startsOn`     | Mes de inicio del círculo (`YYYY-MM`).                                         |
-| `position`     | 1 = cobra el primer mes. Un slot por mes del círculo.                          |
-| `payoutPeriod` | Mes de cobro en formato `YYYY-MM`.                                             |
-| `type`         | `fastest_payout`, `lowest_fees` o `highest_return` (`SLOT_TYPES` del dominio). |
-| `fee`          | Fee por cobrar antes; cero salvo en `fastest_payout`.                          |
-| `discount`     | Descuento en los pay-ins por cobrar al final; cero salvo en `highest_return`.  |
-| `catchUp`      | Puesta al día incluida en las cuotas al tomar una vacante; cero si no.         |
-| `available`    | `false` si otro miembro ya ocupa el slot. La app lo muestra deshabilitado.     |
+| Campo              | Notas                                                                          |
+| ------------------ | ------------------------------------------------------------------------------ |
+| `circleId`         | Círculo ofrecido; `null` si es uno nuevo. Se envía igual a `POST /join`.       |
+| `startsOn`         | Mes de inicio del círculo (`YYYY-MM`).                                         |
+| `position`         | 1 = cobra el primer mes. Un slot por mes del círculo.                          |
+| `payoutPeriod`     | Mes de cobro en formato `YYYY-MM`.                                             |
+| `type`             | `fastest_payout`, `lowest_fees` o `highest_return` (`SLOT_TYPES` del dominio). |
+| `fee`              | Fee por cobrar antes; cero salvo en `fastest_payout`.                          |
+| `discount`         | Descuento en los pay-ins por cobrar al final; cero salvo en `highest_return`.  |
+| `catchUp`          | Puesta al día incluida en las cuotas al tomar una vacante; cero si no.         |
+| `retention`        | Parte del payout que se retiene y paga sus últimas cuotas (COPAYNI-60).        |
+| `allowed`          | `false` si la regla de confianza no le permite ese tipo de turno.              |
+| `notAllowedReason` | `trust_required`, `identity_required`, `income_required` o `null`.             |
+| `available`        | `false` si otro miembro ya ocupa el slot. La app lo muestra deshabilitado.     |
 
 Comportamiento de la app:
 
@@ -213,6 +219,21 @@ Se comprueba en este orden, que es el orden en que la app resuelve cada caso:
 | Método de cobro elegido (COPAYNI-37)        | El método guardado tiene que seguir disponible en el catálogo.                                                                                                           | `PAYOUT_METHOD_REQUIRED`       |
 | Payout dentro del límite del método         | Por ejemplo, la tarjeta prepago (`PAYOUT_PREPAID_CARD_LIMIT`).                                                                                                           | `PAYOUT_METHOD_LIMIT_EXCEEDED` |
 
+### Regla de confianza y retención (COPAYNI-60, valores propuestos de R18)
+
+| Tipo de turno    | Requisito                                                                               | Motivo si no lo cumple |
+| ---------------- | --------------------------------------------------------------------------------------- | ---------------------- |
+| `fastest_payout` | `TRUST_FASTEST_MIN_COMPLETED_CIRCLES` círculos terminados sin expulsión (1 por defecto) | `trust_required`       |
+| `lowest_fees`    | Identidad verificada e ingreso declarado                                                | `income_required`      |
+| `highest_return` | Identidad verificada                                                                    | `identity_required`    |
+
+- `slots` marca cada turno con `allowed` y `notAllowedReason`; la unión rechaza un turno no permitido con `SLOT_NOT_ALLOWED` (422, `details.reason`).
+- **Ingreso declarado:** la app todavía no lo pide (R5), así que la elegibilidad provisional lo da por declarado.
+- **Retención:** en los turnos de la primera mitad (`position ≤ months / 2`) se retienen `PAYOUT_RETENTION_INSTALLMENTS` cuotas base del payout (2 por defecto, como mucho las cuotas que le quedan después de cobrar). `netPayout` ya la descuenta, y `retention` la muestra en `slots` y en la unión, antes de unirse.
+- **Cómo se aplica:** al cobrar, la retención pasa a la cuenta `retention_held` del miembro. Sus últimas cuotas quedan `retained`: no se cobran y las paga la retención (`retention_applied`). Ejemplo: payout de 30.000 en 10 meses, turno 3: recibe 24.000 y sus cuotas de los meses 9 y 10 quedan pagadas.
+- **Si deja de pagar después de cobrar,** su retención va al fondo (`retention_to_fund`) y se descuenta de su deuda; el fondo cubre el resto.
+- La deducción del pay-in desde el payout de COPAYNI-38 debe usar este mismo mecanismo.
+
 Cada unión queda registrada en el log como `circles.joined`, con el usuario, el círculo, el slot, si abrió un círculo nuevo y si tomó una vacante (`replacement`). La respuesta incluye `catchUp`: la puesta al día incluida en las cuotas (cero en un turno normal).
 
 ### Errores
@@ -230,6 +251,7 @@ Cada unión queda registrada en el log como `circles.joined`, con el usuario, el
 | `PAYOUT_NOT_ALLOWED`     | 422  | Payout fuera del rango, del salto o del límite del usuario.                                                                                                                    |
 | `SLOT_OUT_OF_RANGE`      | 422  | `position` mayor que la duración.                                                                                                                                              |
 | Elegibilidad             | 422  | `NATIONAL_ID_REQUIRED`, `MONTHLY_LIMIT_EXCEEDED`, `PAYOUT_METHOD_REQUIRED`, `PAYOUT_METHOD_LIMIT_EXCEEDED`.                                                                    |
+| `SLOT_NOT_ALLOWED`       | 422  | La regla de confianza no le permite ese tipo de turno (COPAYNI-60). `details.reason`: `trust_required`, `identity_required` o `income_required`.                               |
 
 Fuera de alcance, pendientes del diseño o del PO: la firma del contrato y del pagaré (D3, T9) y el primer pago (D1).
 
@@ -361,7 +383,7 @@ Al expulsar a un miembro que todavía no cobró, su turno queda **vacante** y lo
 
 - **Ventana:** se ofrece hasta el **día anterior** al vencimiento de cada mes. Antes, quien la toma paga la cuota de ese mes; desde el vencimiento, empieza el mes siguiente y el fondo cubre el mes en curso. Deja de ofrecerse desde el vencimiento de su mes de cobro: ese pozo vuelve al fondo.
 - **Puesta al día:** las cuotas base de los meses ya transcurridos, repartidas en partes iguales entre sus cuotas hasta su mes de cobro, igual que el fee y las Admin Fees (`SlotPricing.replacementQuote`). Las cuotas de los meses anteriores a su ingreso son cero. Se congela con la membresía (`price.catchUp`) y, al cobrarse, va al fondo (`collection`).
-- **Mismas reglas de unión:** el límite mensual se valida con las cuotas que incluyen la puesta al día. La regla de confianza del tipo de turno llega con COPAYNI-60.
+- **Mismas reglas de unión:** el límite mensual se valida con las cuotas que incluyen la puesta al día, y aplica la regla de confianza del tipo de turno (COPAYNI-60).
 - **Concurrencia:** el turno es único entre quienes siguen en el círculo (índice parcial `uq_circle_memberships_position`). La unión toma el bloqueo del ciclo, así que no se intercala con la tarea diaria. Si dos usuarios toman la misma vacante, el segundo recibe `SLOT_TAKEN`.
 - **Ciclo:** si alguien toma la vacante después de abrirse el mes, la tarea diaria le abre la cuota de ese mes (`circles.cycle.replacement_admitted`). En su mes de cobro recibe el payout completo.
 - **Caso de §3.1:** si un nuevo toma el turno 7 en el mes 6, el fondo cubre solo el mes 5, recibe 15.000 de puesta al día y termina en +600. Quien tomó el turno cobra 30.000 en el mes 7. Hay un test para ese caso.

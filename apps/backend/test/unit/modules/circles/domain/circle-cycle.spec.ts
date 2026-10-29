@@ -230,6 +230,7 @@ describe('CircleCycle', () => {
       const expulsion = subject.expel(unpaid.id, day('2026-12-09'));
 
       expect(expulsion).toEqual({
+        retentionApplied: Money.zero('PEN'),
         userId: 'caro',
         position: 3,
         period: Period.of(2026, 12),
