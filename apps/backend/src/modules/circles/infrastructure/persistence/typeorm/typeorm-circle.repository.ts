@@ -31,6 +31,7 @@ import {
 import { CircleTerms } from '../../../domain/value-objects/circle-terms';
 import { CircleMembershipEntity } from './circle-membership.entity';
 import { CircleEntity } from './circle.entity';
+import { fromStoredPrice, type StoredSlotPrice, toStoredPrice } from './slot-price.mapper';
 
 /** Cada índice único de circle_memberships corresponde a un error del puerto. */
 const UNIQUE_CONSTRAINT_ERRORS: Record<string, () => Error> = {
@@ -47,6 +48,7 @@ interface MemberCircleRow {
   /** `created_at::text`: conserva los microsegundos, que un Date de JS perdería en el cursor. */
   joined_at: string;
   position: number;
+  price: StoredSlotPrice | null;
   circle_id: string;
   payout_amount: string;
   currency: string;
@@ -115,7 +117,7 @@ export class TypeOrmCircleRepository implements CircleRepositoryPort {
       keyset = 'AND (m.created_at, m.id) < ($4::timestamptz, $5::uuid)';
     }
     const rows = await this.memberships.query<MemberCircleRow[]>(
-      `SELECT m.id AS membership_id, m.created_at::text AS joined_at, m.position,
+      `SELECT m.id AS membership_id, m.created_at::text AS joined_at, m.position, m.price,
               c.id AS circle_id, c.payout_amount::text AS payout_amount, c.currency, c.months,
               to_char(c.starts_on, 'YYYY-MM') AS starts_on
          FROM circle_memberships m
@@ -137,6 +139,7 @@ export class TypeOrmCircleRepository implements CircleRepositoryPort {
           startsOn: Period.parse(row.starts_on),
         }),
         position: row.position,
+        ...(row.price && { price: fromStoredPrice(row.price) }),
         joinedAt: new Date(row.joined_at),
       })),
       nextCursor:
@@ -263,6 +266,7 @@ export class TypeOrmCircleRepository implements CircleRepositoryPort {
       userId: membership.userId,
       position: membership.position,
       idempotencyKey: membership.idempotencyKey,
+      price: membership.price ? toStoredPrice(membership.price) : null,
     });
   }
 
@@ -274,10 +278,11 @@ export class TypeOrmCircleRepository implements CircleRepositoryPort {
         months: row.months,
         startsOn: toPeriod(row.startsOn),
       }),
-      memberships: (row.memberships ?? []).map(({ userId, position, idempotencyKey }) => ({
+      memberships: (row.memberships ?? []).map(({ userId, position, idempotencyKey, price }) => ({
         userId,
         position,
         idempotencyKey,
+        ...(price && { price: fromStoredPrice(price) }),
       })),
     });
   }

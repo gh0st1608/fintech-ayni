@@ -37,8 +37,8 @@ export interface MyCirclesPage {
  * Un círculo terminó cuando su último mes ya pasó en `BUSINESS_TIME_ZONE`; uno que todavía no
  * empezó está activo.
  *
- * Supuesto provisional (pending-scope R1 y R4): el precio del slot se recalcula con la
- * configuración actual; todavía no se guarda con la membresía al unirse.
+ * El precio es el congelado al unirse (COPAYNI-55); las membresías anteriores se cotizan con las
+ * reglas vigentes.
  */
 @Injectable()
 export class ListMyCirclesUseCase {
@@ -61,11 +61,11 @@ export class ListMyCirclesUseCase {
       cursor: query.cursor,
     });
     return {
-      items: page.items.map(({ circleId, terms, position, joinedAt }) => ({
+      items: page.items.map(({ circleId, terms, position, price, joinedAt }) => ({
         circleId,
         status: query.status,
         terms,
-        quote: this.pricing.quote(terms, position),
+        quote: this.pricing.quoteOf(terms, position, price),
         joinedAt,
       })),
       nextCursor: page.nextCursor,

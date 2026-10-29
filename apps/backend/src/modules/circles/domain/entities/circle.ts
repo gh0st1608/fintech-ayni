@@ -1,5 +1,5 @@
 import { ConflictError, DomainError } from '../../../../shared/errors/app-error';
-import { SlotOutOfRangeError } from '../services/slot-pricing';
+import { SlotOutOfRangeError, type SlotPrice } from '../services/slot-pricing';
 import { type CircleTerms } from '../value-objects/circle-terms';
 
 export class SlotTakenError extends ConflictError {
@@ -32,6 +32,11 @@ export interface Membership {
   readonly position: number;
   /** Clave que envía el cliente al unirse; reintentar con la misma no crea otra membresía. */
   readonly idempotencyKey: string;
+  /**
+   * Precio del slot congelado al unirse (COPAYNI-55). Solo falta en las membresías anteriores,
+   * que se cotizan con las reglas vigentes (`SlotPricing.quoteOf`).
+   */
+  readonly price?: SlotPrice;
 }
 
 export interface JoinResult {
@@ -76,7 +81,8 @@ export class Circle {
       memberships.some(({ position }) => position < 1 || position > terms.months) ||
       !unique(memberships.map(({ position }) => position)) ||
       !unique(memberships.map(({ userId }) => userId)) ||
-      !unique(memberships.map(({ idempotencyKey }) => idempotencyKey))
+      !unique(memberships.map(({ idempotencyKey }) => idempotencyKey)) ||
+      memberships.some(({ price }) => price && !Circle.fitsTerms(price, terms))
     ) {
       throw new InvalidCircleError('Las membresías guardadas no son consistentes');
     }
@@ -84,6 +90,17 @@ export class Circle {
       id,
       terms,
       memberships.map((membership) => ({ ...membership })),
+    );
+  }
+
+  /** Una cuota por mes, todo en la moneda del círculo. */
+  private static fitsTerms(price: SlotPrice, terms: CircleTerms): boolean {
+    const { fee, discount, adminFee, netPayout, installments } = price;
+    return (
+      installments.length === terms.months &&
+      [fee, discount, adminFee, netPayout, ...installments].every(
+        (money) => money.currency === terms.currency,
+      )
     );
   }
 
@@ -111,7 +128,7 @@ export class Circle {
   }
 
   join(request: Membership): JoinResult {
-    const { userId, position, idempotencyKey } = request;
+    const { userId, position, idempotencyKey, price } = request;
     const previous = this.members.find((member) => member.idempotencyKey === idempotencyKey);
     if (previous) {
       if (previous.userId !== userId || previous.position !== position) {
@@ -124,8 +141,13 @@ export class Circle {
     }
     if (this.members.some((member) => member.userId === userId)) throw new AlreadyMemberError();
     if (this.members.some((member) => member.position === position)) throw new SlotTakenError();
+    if (price && !Circle.fitsTerms(price, this.terms)) {
+      throw new InvalidCircleError(
+        'El precio del slot no corresponde a las condiciones del círculo',
+      );
+    }
 
-    const membership: Membership = { userId, position, idempotencyKey };
+    const membership: Membership = { userId, position, idempotencyKey, ...(price && { price }) };
     this.members.push(membership);
     return { membership: { ...membership }, created: true };
   }

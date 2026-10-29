@@ -106,4 +106,43 @@ describe('Circle', () => {
       expect.objectContaining({ code: 'INVALID_CIRCLE' }),
     );
   });
+
+  describe('precio congelado (COPAYNI-55)', () => {
+    const price = (months: number, currency = 'PEN') => {
+      const money = (amount: number) => Money.of(amount, currency);
+      return {
+        type: 'lowest_fees' as const,
+        fee: money(0),
+        discount: money(0),
+        adminFee: money(36_000),
+        netPayout: money(300_000 * months),
+        installments: Array.from({ length: months }, () => money(300_000)),
+      };
+    };
+
+    it('guarda el precio con la membresía', () => {
+      const circle = Circle.open({ id: 'c-1', terms: terms() });
+      const { membership } = circle.join({ ...request('ana', 2), price: price(3) });
+
+      expect(membership.price).toEqual(price(3));
+      expect(circle.memberships[0]?.price).toEqual(price(3));
+    });
+
+    it('rechaza un precio con otro número de cuotas o en otra moneda', () => {
+      const circle = Circle.open({ id: 'c-1', terms: terms() });
+      for (const wrong of [price(2), price(3, 'USD')]) {
+        expect(() => circle.join({ ...request('ana', 2), price: wrong })).toThrow(
+          expect.objectContaining({ code: 'INVALID_CIRCLE' }),
+        );
+        expect(() =>
+          Circle.restore({
+            id: 'c-1',
+            terms: terms(),
+            memberships: [{ ...request('ana', 2), price: wrong }],
+          }),
+        ).toThrow(expect.objectContaining({ code: 'INVALID_CIRCLE' }));
+      }
+      expect(circle.memberships).toEqual([]);
+    });
+  });
 });

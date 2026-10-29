@@ -6,13 +6,19 @@ import { type DataSource } from 'typeorm';
 import { IdempotencyKeyExistsError } from '@src/modules/circles/application/ports/circle-repository.port';
 import { type JoinCircleUseCase } from '@src/modules/circles/application/use-cases/join-circle.use-case';
 import { Circle } from '@src/modules/circles/domain/entities/circle';
+import { priceOf, SlotPricing } from '@src/modules/circles/domain/services/slot-pricing';
 import { CircleTerms } from '@src/modules/circles/domain/value-objects/circle-terms';
+import { SlotPricingRules } from '@src/modules/circles/domain/value-objects/slot-pricing-rules';
 import { CircleMembershipEntity } from '@src/modules/circles/infrastructure/persistence/typeorm/circle-membership.entity';
 import { CircleEntity } from '@src/modules/circles/infrastructure/persistence/typeorm/circle.entity';
 import { TypeOrmCircleRepository } from '@src/modules/circles/infrastructure/persistence/typeorm/typeorm-circle.repository';
 import { Money } from '@src/shared/domain/value-objects/money';
 import { Period } from '@src/shared/domain/value-objects/period';
-import { createJoinCircleUseCase } from '@test/support/join-circle.fixture';
+import {
+  createJoinCircleUseCase,
+  TEST_PRICING,
+  TEST_PRICING_RULES,
+} from '@test/support/join-circle.fixture';
 import { insertTestUser, openTestDatabase } from '@test/support/test-database';
 
 const MONTHS = 12;
@@ -74,8 +80,59 @@ describe('TypeOrmCircleRepository', () => {
     expect(circle?.terms.months).toBe(MONTHS);
     expect(circle?.terms.startsOn.toString()).toBe('2026-11');
     expect(circle?.memberships).toEqual([
-      { userId: ana, position: 4, idempotencyKey: `key-${ana}` },
+      {
+        userId: ana,
+        position: 4,
+        idempotencyKey: `key-${ana}`,
+        price: priceOf(TEST_PRICING.quote(circle!.terms, 4)),
+      },
     ]);
+  });
+
+  it('el precio congelado sobrevive a un cambio de reglas y a la lectura de Mis círculos (COPAYNI-55)', async () => {
+    const ana = await user();
+    const accepted = (await join(ana, 1)).quote;
+
+    const stored = await dataSource
+      .getRepository(CircleMembershipEntity)
+      .findOneByOrFail({ circleId, userId: ana });
+    expect(stored.price).toMatchObject({ currency: 'PEN', type: 'fastest_payout' });
+    expect(stored.price?.installments).toHaveLength(MONTHS);
+
+    const later = new SlotPricing(
+      SlotPricingRules.create({ ...TEST_PRICING_RULES.props, adminFeeBps: 2_000 }),
+    );
+    const circle = await repository.findById(circleId);
+    const membership = circle!.memberships[0]!;
+    expect(later.quoteOf(circle!.terms, 1, membership.price)).toEqual(accepted);
+
+    const page = await repository.listMemberships({
+      userId: ana,
+      status: 'active',
+      currentPeriod: Period.of(2026, 10),
+      limit: 5,
+      cursor: null,
+    });
+    expect(page.items[0]?.price).toEqual(membership.price);
+  });
+
+  it('una membresía anterior a COPAYNI-55 se lee sin precio', async () => {
+    const ana = await user();
+    await join(ana, 2);
+    await dataSource
+      .getRepository(CircleMembershipEntity)
+      .update({ circleId, userId: ana }, { price: null });
+
+    const circle = await repository.findById(circleId);
+    expect(circle?.memberships[0]).not.toHaveProperty('price');
+    const page = await repository.listMemberships({
+      userId: ana,
+      status: 'active',
+      currentPeriod: Period.of(2026, 10),
+      limit: 5,
+      cursor: null,
+    });
+    expect(page.items[0]).not.toHaveProperty('price');
   });
 
   it('guarda un círculo con membresías iniciales', async () => {

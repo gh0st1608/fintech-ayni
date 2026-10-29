@@ -1,6 +1,7 @@
 import { Logger } from '@nestjs/common';
 import { type JoinCircleUseCase } from '@src/modules/circles/application/use-cases/join-circle.use-case';
 import { Circle } from '@src/modules/circles/domain/entities/circle';
+import { priceOf } from '@src/modules/circles/domain/services/slot-pricing';
 import { CircleTerms } from '@src/modules/circles/domain/value-objects/circle-terms';
 import { Money } from '@src/shared/domain/value-objects/money';
 import { Period } from '@src/shared/domain/value-objects/period';
@@ -69,7 +70,7 @@ describe('JoinCircleUseCase: solicitudes simultáneas', () => {
     expect([first.created, second.created].sort()).toEqual([false, true]);
     expect(first.membership).toEqual(second.membership);
     expect(repository.membershipsOf('c-1')).toEqual([
-      { userId: 'ana', position: 3, idempotencyKey: 'key-ana' },
+      { userId: 'ana', position: 3, idempotencyKey: 'key-ana', price: priceOf(first.quote) },
     ]);
   });
 

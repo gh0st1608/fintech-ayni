@@ -4,11 +4,18 @@ import { IdempotencyKeyExistsError } from '@src/modules/circles/application/port
 import { type JoinCircleCommand } from '@src/modules/circles/application/use-cases/join-circle.use-case';
 import { Circle } from '@src/modules/circles/domain/entities/circle';
 import { type JoinApplicant } from '@src/modules/circles/domain/services/join-eligibility';
+import { priceOf, SlotPricing } from '@src/modules/circles/domain/services/slot-pricing';
+import { SlotPricingRules } from '@src/modules/circles/domain/value-objects/slot-pricing-rules';
 import { CircleTerms } from '@src/modules/circles/domain/value-objects/circle-terms';
 import { Money } from '@src/shared/domain/value-objects/money';
 import { Period } from '@src/shared/domain/value-objects/period';
 import { InMemoryCircleRepository } from '@test/support/in-memory-circle.repository';
-import { createJoinCircleUseCase, ELIGIBLE, TEST_PRICING } from '@test/support/join-circle.fixture';
+import {
+  createJoinCircleUseCase,
+  ELIGIBLE,
+  TEST_PRICING,
+  TEST_PRICING_RULES,
+} from '@test/support/join-circle.fixture';
 
 const pen = (major: number) => Money.of(major * 100, 'PEN');
 
@@ -61,8 +68,14 @@ describe('JoinCircleUseCase', () => {
     expect(result.terms.startsOn).toEqual(Period.of(2026, 11));
     expect(result.terms.payout).toEqual(pen(30_000));
     expect(result.quote).toEqual(TEST_PRICING.quote(result.terms, 3));
+    // El precio queda congelado con la membresía (COPAYNI-55).
     expect(circles.membershipsOf(result.circleId)).toEqual([
-      { userId: 'ana', position: 3, idempotencyKey: NEW_CIRCLE.idempotencyKey },
+      {
+        userId: 'ana',
+        position: 3,
+        idempotencyKey: NEW_CIRCLE.idempotencyKey,
+        price: priceOf(result.quote),
+      },
     ]);
     // Auditoría: quién se unió, a qué círculo y en qué slot.
     expect(log).toHaveBeenCalledWith({
@@ -94,6 +107,24 @@ describe('JoinCircleUseCase', () => {
     expect(retry.quote).toEqual(first.quote);
     expect(circles.size).toBe(1);
     expect(log).toHaveBeenCalledTimes(1);
+  });
+
+  it('un reintento después de cambiar las reglas responde el precio aceptado al unirse', async () => {
+    const { circles, useCase } = setup();
+    const first = await useCase.execute(NEW_CIRCLE);
+
+    const pricier = new SlotPricing(
+      SlotPricingRules.create({
+        ...TEST_PRICING_RULES.props,
+        adminFeeBps: 2_000,
+        maxFeeBps: 1_500,
+      }),
+    );
+    const afterChange = createJoinCircleUseCase(circles, { pricing: pricier });
+    const retry = await afterChange.execute(NEW_CIRCLE);
+
+    expect(retry.quote).toEqual(first.quote);
+    expect(pricier.quote(first.terms, 3)).not.toEqual(first.quote);
   });
 
   it('el mismo pedido enviado dos veces a la vez abre un solo círculo', async () => {

@@ -8,7 +8,7 @@ import { Period } from '../../../../shared/domain/value-objects/period';
 import { ConflictError, NotFoundError, ValidationError } from '../../../../shared/errors/app-error';
 import { Circle, IdempotencyKeyReusedError, type Membership } from '../../domain/entities/circle';
 import { assertCanJoin } from '../../domain/services/join-eligibility';
-import { type SlotPricing, type SlotQuote } from '../../domain/services/slot-pricing';
+import { priceOf, type SlotPricing, type SlotQuote } from '../../domain/services/slot-pricing';
 import { CircleTerms } from '../../domain/value-objects/circle-terms';
 import {
   CIRCLE_REPOSITORY,
@@ -59,6 +59,8 @@ export interface JoinCircleResult {
  * - Valida las condiciones como `slots` (COPAYNI-30) y la elegibilidad del usuario: National ID,
  *   límite mensual y método de cobro (`assertCanJoin`).
  * - Con `circleId: null` abre el círculo nuevo que ofreció `slots`, con el mismo inicio.
+ * - Guarda con la membresía el precio del slot (COPAYNI-55): un reintento responde ese precio
+ *   aunque las reglas hayan cambiado.
  * - El repositorio inserta con unicidad: si otra solicitud tomó el slot entre la lectura y la
  *   escritura, responde SLOT_TAKEN; si el mismo pedido llegó dos veces, responde la unión que ganó.
  */
@@ -86,7 +88,12 @@ export class JoinCircleUseCase {
     assertCanJoin(await this.eligibility.applicantFor(command.userId), payout, quote.installments);
 
     const { userId, position, idempotencyKey } = command;
-    const { membership } = circle.join({ userId, position, idempotencyKey });
+    const { membership } = circle.join({
+      userId,
+      position,
+      idempotencyKey,
+      price: priceOf(quote),
+    });
     try {
       if (isNew) await this.circles.create(circle);
       else await this.circles.addMembership(circle.id, membership);
@@ -129,7 +136,7 @@ export class JoinCircleUseCase {
       circleId: circle.id,
       terms: circle.terms,
       membership,
-      quote: this.pricing.quote(circle.terms, membership.position),
+      quote: this.pricing.quoteOf(circle.terms, membership.position, membership.price),
       created: false,
     };
   }

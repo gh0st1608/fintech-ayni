@@ -1,6 +1,7 @@
 import { Column, CreateDateColumn, Entity, JoinColumn, ManyToOne, PrimaryColumn } from 'typeorm';
 
 import { CircleEntity } from './circle.entity';
+import { type StoredSlotPrice } from './slot-price.mapper';
 
 @Entity({ name: 'circle_memberships' })
 export class CircleMembershipEntity {
@@ -22,6 +23,10 @@ export class CircleMembershipEntity {
 
   @Column('varchar', { name: 'idempotency_key', length: 255 })
   idempotencyKey!: string;
+
+  /** `NULL` en las membresías anteriores a COPAYNI-55. */
+  @Column('jsonb', { nullable: true })
+  price!: StoredSlotPrice | null;
 
   @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
   createdAt!: Date;

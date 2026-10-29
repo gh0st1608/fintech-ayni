@@ -67,7 +67,7 @@ Reglas de los parámetros **[I]**:
 
 - **Versiones con vigencia:** cada cambio crea una versión nueva con `effectiveFrom`, autor, motivo y aprobador. No se sobrescribe la versión anterior.
 - **Doble aprobación (4-eyes)** para los parámetros financieros (precio, fees, límites, cashback, referidos, mora y riesgo). Quien propone no puede aprobar.
-- **Sin efecto retroactivo:** un cambio de precio no altera círculos ya formados. Las condiciones se congelan al unirse; para eso hay que persistir el precio del slot al unirse, que hoy falta (R1/R4 y el pendiente de COPAYNI-31).
+- **Sin efecto retroactivo:** un cambio de precio no altera círculos ya formados. Las condiciones se congelan al unirse: el precio del slot se guarda con la membresía (COPAYNI-55).
 - **Validación cruzada:** se aplican las mismas validaciones que hoy hace `env.validation.ts` (p. ej. `min ≤ max`, el salto divide el rango, las duraciones son positivas). Además, el back-office muestra una **vista previa** del efecto, como la tabla de cuotas por slot para un payout de ejemplo.
 - **Lectura en el backend:** el backend lee los parámetros con una caché corta e invalidación al publicar. Si la tabla no está disponible, usa la última versión conocida y nunca valores por defecto silenciosos.
 
@@ -198,7 +198,7 @@ Son story points relativos al backlog actual. **Confianza baja**: no hay diseño
 | ----------------------------------- | ---------- | --------------------------------------------------------- |
 | 1 Fundaciones                       | 21–34      | Lo más incierto: proveedor de identidad e infraestructura |
 | 2 Contenido de Home                 | 13–21      | Incluye endpoint público y secciones en mobile            |
-| 3 Parámetros de negocio             | 13–21      | Riesgo: congelar condiciones al unirse (R1/R4)            |
+| 3 Parámetros de negocio             | 13–21      | Las condiciones ya se congelan al unirse (COPAYNI-55)     |
 | 4 Círculos y usuarios               | 13–21      | Depende de R2                                             |
 | 5 KYC                               | 13–21      | Depende del proveedor T4                                  |
 | 6 Pagos, referidos, notif., legales | 34–55      | Sujeto a D1, T3, R3, R7                                   |

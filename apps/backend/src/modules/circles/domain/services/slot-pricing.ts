@@ -32,6 +32,24 @@ export interface SlotQuote {
 }
 
 /**
+ * Precio del slot congelado al unirse (COPAYNI-55): lo que el miembro aceptó. Un cambio posterior
+ * de `SlotPricingRules` no lo altera. El resto de `SlotQuote` se deriva de las condiciones.
+ */
+export type SlotPrice = Pick<
+  SlotQuote,
+  'type' | 'fee' | 'discount' | 'adminFee' | 'installments' | 'netPayout'
+>;
+
+export const priceOf = ({
+  type,
+  fee,
+  discount,
+  adminFee,
+  installments,
+  netPayout,
+}: SlotQuote): SlotPrice => ({ type, fee, discount, adminFee, installments, netPayout });
+
+/**
  * Precio de cada slot según `SlotPricingRules`. Reglas visibles en el Figma (55:9444):
  * los primeros slots pagan fee, los intermedios no, los últimos reciben descuento, y las
  * Admin Fees se reparten en partes iguales hasta el mes de payout.
@@ -98,6 +116,20 @@ export class SlotPricing {
       installments,
       totalPaid: installments.reduce((sum, installment) => sum.add(installment)),
       netPayout: adminFeeMode === 'deducted_from_payout' ? payout.subtract(adminFee) : payout,
+    };
+  }
+
+  /**
+   * El precio de una membresía: el congelado al unirse o, si no lo tiene (membresías anteriores
+   * a COPAYNI-55), el que resulta de las reglas vigentes.
+   */
+  quoteOf(terms: CircleTerms, position: number, price: SlotPrice | undefined): SlotQuote {
+    if (!price) return this.quote(terms, position);
+    return {
+      ...price,
+      position,
+      payoutPeriod: terms.payoutPeriodOf(position),
+      totalPaid: price.installments.reduce((sum, installment) => sum.add(installment)),
     };
   }
 

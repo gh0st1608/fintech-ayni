@@ -13,16 +13,16 @@ import { TestClock } from './create-test-app';
 const pen = (major: number) => Money.of(major * 100, 'PEN');
 
 /** Los valores por defecto de la configuración (iguales al adaptador falso de mobile). */
-export const TEST_PRICING = new SlotPricing(
-  SlotPricingRules.create({
-    fastestShareBps: 2_500,
-    highestShareBps: 2_500,
-    maxFeeBps: 1_000,
-    maxDiscountBps: 500,
-    adminFeeBps: 1_200,
-    adminFeeMode: 'added_to_installments',
-  }),
-);
+export const TEST_PRICING_RULES = SlotPricingRules.create({
+  fastestShareBps: 2_500,
+  highestShareBps: 2_500,
+  maxFeeBps: 1_000,
+  maxDiscountBps: 500,
+  adminFeeBps: 1_200,
+  adminFeeMode: 'added_to_installments',
+});
+
+export const TEST_PRICING = new SlotPricing(TEST_PRICING_RULES);
 
 export const TEST_JOIN_CONFIG = JoinConfig.create({
   payoutRange: PayoutRange.create({ min: pen(3_000), max: pen(120_000), step: pen(500) }),
@@ -47,13 +47,14 @@ export function createJoinCircleUseCase(
     applicant?: JoinApplicant;
     now?: Date;
     assignment?: Partial<CircleAssignmentSettings>;
+    pricing?: SlotPricing;
   } = {},
 ): JoinCircleUseCase {
   const applicant = options.applicant ?? ELIGIBLE;
   return new JoinCircleUseCase(
     { getForUser: () => Promise.resolve(TEST_JOIN_CONFIG) },
     circles,
-    TEST_PRICING,
+    options.pricing ?? TEST_PRICING,
     {
       strategy: 'fill_oldest',
       startOffsetMonths: 1,

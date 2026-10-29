@@ -2,6 +2,7 @@ import { type Money } from '../../../../shared/domain/value-objects/money';
 import { type Period } from '../../../../shared/domain/value-objects/period';
 import { ValidationError } from '../../../../shared/errors/app-error';
 import { type Circle, type Membership } from '../../domain/entities/circle';
+import { type SlotPrice } from '../../domain/services/slot-pricing';
 import { type CircleTerms } from '../../domain/value-objects/circle-terms';
 
 export const CIRCLE_REPOSITORY = Symbol('CIRCLE_REPOSITORY');
@@ -50,6 +51,8 @@ export interface MemberCircle {
   circleId: string;
   terms: CircleTerms;
   position: number;
+  /** Precio congelado al unirse; falta en las membresías anteriores a COPAYNI-55. */
+  price?: SlotPrice;
   joinedAt: Date;
 }
 

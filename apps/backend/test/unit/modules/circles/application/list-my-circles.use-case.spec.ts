@@ -1,14 +1,20 @@
 import { ListMyCirclesUseCase } from '@src/modules/circles/application/use-cases/list-my-circles.use-case';
 import { Circle } from '@src/modules/circles/domain/entities/circle';
+import { priceOf, SlotPricing } from '@src/modules/circles/domain/services/slot-pricing';
 import { CircleTerms } from '@src/modules/circles/domain/value-objects/circle-terms';
+import { SlotPricingRules } from '@src/modules/circles/domain/value-objects/slot-pricing-rules';
 import { Money } from '@src/shared/domain/value-objects/money';
 import { Period } from '@src/shared/domain/value-objects/period';
 import { TestClock } from '@test/support/create-test-app';
 import { InMemoryCircleRepository } from '@test/support/in-memory-circle.repository';
-import { TEST_PRICING } from '@test/support/join-circle.fixture';
+import { TEST_PRICING, TEST_PRICING_RULES } from '@test/support/join-circle.fixture';
 
 const pen = (major: number) => Money.of(major * 100, 'PEN');
 const ANA = { userId: 'ana' };
+/** Reglas con las que se unió un miembro antes de un cambio de configuración. */
+const OTHER_PRICING = new SlotPricing(
+  SlotPricingRules.create({ ...TEST_PRICING_RULES.props, adminFeeBps: 2_000 }),
+);
 /** 15 de octubre de 2026 en Lima. */
 const NOW = new Date('2026-10-15T15:00:00Z');
 
@@ -28,7 +34,7 @@ function setup() {
         memberships: [{ userId: 'ana', position, idempotencyKey: `k-${id}` }],
       }),
     );
-  return { useCase, addCircle };
+  return { useCase, addCircle, circles };
 }
 
 describe('CircleTerms: fin del círculo', () => {
@@ -61,6 +67,35 @@ describe('ListMyCirclesUseCase', () => {
     const finished = await useCase.execute(ANA, { status: 'finished', cursor: null });
     expect(finished.items.map(({ circleId }) => circleId)).toEqual(['terminado']);
     expect(finished.nextCursor).toBeNull();
+  });
+
+  it('responde el precio congelado al unirse; sin él, cotiza con las reglas vigentes', async () => {
+    const { useCase, circles } = setup();
+    const terms = CircleTerms.create({
+      payout: pen(30_000),
+      months: 6,
+      startsOn: Period.of(2026, 11),
+    });
+    const frozen = priceOf(OTHER_PRICING.quote(terms, 2));
+    circles.add(
+      Circle.restore({
+        id: 'congelado',
+        terms,
+        memberships: [{ userId: 'ana', position: 2, idempotencyKey: 'k-1', price: frozen }],
+      }),
+    );
+    circles.add(
+      Circle.restore({
+        id: 'anterior',
+        terms,
+        memberships: [{ userId: 'ana', position: 2, idempotencyKey: 'k-2' }],
+      }),
+    );
+
+    const { items } = await useCase.execute(ANA, { status: 'active', cursor: null });
+    const quoteOf = (id: string) => items.find(({ circleId }) => circleId === id)?.quote;
+    expect(quoteOf('congelado')).toEqual(OTHER_PRICING.quote(terms, 2));
+    expect(quoteOf('anterior')).toEqual(TEST_PRICING.quote(terms, 2));
   });
 
   it('pagina con el cursor del repositorio', async () => {

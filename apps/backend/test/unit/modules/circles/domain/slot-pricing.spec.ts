@@ -1,5 +1,9 @@
 import { installmentOptions } from '@src/modules/circles/domain/services/installment-options';
-import { SlotPricing, type SlotQuote } from '@src/modules/circles/domain/services/slot-pricing';
+import {
+  priceOf,
+  SlotPricing,
+  type SlotQuote,
+} from '@src/modules/circles/domain/services/slot-pricing';
 import { CircleTerms } from '@src/modules/circles/domain/value-objects/circle-terms';
 import {
   SlotPricingRules,
@@ -175,5 +179,14 @@ describe('SlotPricing', () => {
     expect(() => pricing().quote(terms(), position)).toThrow(
       expect.objectContaining({ code: 'SLOT_OUT_OF_RANGE' }),
     );
+  });
+
+  it('quoteOf devuelve el precio congelado aunque las reglas cambien (COPAYNI-55)', () => {
+    const accepted = pricing().quote(terms(), 2);
+    const later = pricing({ adminFeeBps: 2_000, maxFeeBps: 1_500 });
+
+    expect(later.quoteOf(terms(), 2, priceOf(accepted))).toEqual(accepted);
+    expect(later.quoteOf(terms(), 2, undefined)).toEqual(later.quote(terms(), 2));
+    expect(later.quote(terms(), 2)).not.toEqual(accepted);
   });
 });

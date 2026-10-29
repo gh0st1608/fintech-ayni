@@ -186,6 +186,10 @@ Cabeceras:
 - `installments` trae una cuota por mes, en orden; la app la usa como resumen confirmado.
 - `created: false` indica un reintento. La app lo trata como éxito.
 
+### Precio congelado (COPAYNI-55)
+
+La unión guarda con la membresía el precio del slot: tipo, fee, descuento, Admin Fees, cuotas y payout neto (columna `circle_memberships.price`). Un reintento y `GET /v1/me/circles` responden ese precio aunque después cambien las reglas.
+
 ### Idempotencia y concurrencia
 
 - **Reintento con la misma clave y los mismos datos:** responde la unión ya hecha, aunque la elegibilidad haya cambiado desde entonces.
@@ -296,7 +300,7 @@ Mis círculos, de la unión más reciente a la más antigua, paginados por curso
 ```
 
 - `endsOn` es el mes del último cobro. `installments` y `adminFee` son los del slot del usuario.
-- **Supuesto provisional (R1 y R4):** el precio se recalcula con la configuración actual, porque todavía no se guarda con la membresía al unirse. Si cambian las variables `SLOT_*` o `ADMIN_FEE_*`, cambia también el precio de las uniones anteriores.
+- **Precio congelado (COPAYNI-55):** el precio es el que el miembro aceptó al unirse, guardado con la membresía. Un cambio posterior de `SLOT_*` o `ADMIN_FEE_*` no lo altera. Las membresías anteriores a COPAYNI-55 no lo tienen guardado y se siguen cotizando con la configuración vigente.
 - `nextCursor: null` indica que no hay más páginas. El orden es estable aunque dos uniones tengan la misma fecha (se desempata por id).
 
 | Error              | HTTP | Cuándo                                                                                                |

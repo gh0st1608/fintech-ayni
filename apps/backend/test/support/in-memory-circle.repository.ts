@@ -51,7 +51,8 @@ export class InMemoryCircleRepository implements CircleRepositoryPort {
       .map(({ circleId, joinedAt }) => {
         const stored = this.circles.get(circleId)!;
         const member = stored.memberships.find(({ userId }) => userId === query.userId)!;
-        return { circleId, terms: stored.terms, position: member.position, joinedAt };
+        const { position, price } = member;
+        return { circleId, terms: stored.terms, position, ...(price && { price }), joinedAt };
       })
       .filter(
         ({ terms }) => terms.isFinishedAt(query.currentPeriod) === (query.status === 'finished'),
