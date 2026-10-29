@@ -5,8 +5,8 @@ import request from 'supertest';
 
 import { createTestApp, VALID_TOKEN } from '@test/support/create-test-app';
 
-/** Sección Payment (COPAYNI-35): el contrato; los montos se prueban en el caso de uso. */
-describe('GET /v1/me/payments/summary', () => {
+/** Sección Payment (COPAYNI-35 y 41): el contrato; los montos se prueban en el caso de uso. */
+describe('Sección Payment', () => {
   let app: NestExpressApplication;
 
   beforeAll(async () => {
@@ -29,7 +29,31 @@ describe('GET /v1/me/payments/summary', () => {
     });
   });
 
+  it('el historial de un usuario sin movimientos viene vacío (COPAYNI-41)', async () => {
+    for (const type of ['payment', 'payout']) {
+      const response = await request(app.getHttpServer())
+        .get('/v1/me/transactions')
+        .query({ type })
+        .set('Authorization', `Bearer ${VALID_TOKEN}`)
+        .expect(200);
+      expect(response.body.data).toEqual({ items: [], nextCursor: null });
+    }
+  });
+
+  it.each([{}, { type: 'otro' }, { type: 'payment', limit: 51 }, { type: 'payment', cursor: 'x' }])(
+    'el historial rechaza %p con VALIDATION_ERROR',
+    async (query) => {
+      const response = await request(app.getHttpServer())
+        .get('/v1/me/transactions')
+        .query(query)
+        .set('Authorization', `Bearer ${VALID_TOKEN}`)
+        .expect(400);
+      expect(response.body.error.code).toBe('VALIDATION_ERROR');
+    },
+  );
+
   it('exige autenticación', async () => {
     await request(app.getHttpServer()).get('/v1/me/payments/summary').expect(401);
+    await request(app.getHttpServer()).get('/v1/me/transactions?type=payment').expect(401);
   });
 });

@@ -254,6 +254,17 @@ describe('TypeOrmCircleCycleRepository', () => {
     ]);
     await expect(debts.openDebtsOf(defaulter.userId)).resolves.toEqual([]);
     await expect(debts.openDebtsOf('no-es-uuid')).resolves.toEqual([]);
+    // La deuda saldada aparece en su historial de pagos (COPAYNI-41).
+    const history = await new TypeOrmPaymentsQuery(
+      dataSource.getRepository(CircleEntity),
+    ).transactionsOf({ userId: defaulter.userId, type: 'payment', limit: 10, cursor: null });
+    expect(history.items).toEqual([
+      expect.objectContaining({
+        kind: 'debt_settlement',
+        circleId: id,
+        amount: Money.of(total, 'PEN'),
+      }),
+    ]);
     await expect(debts.settle('no-es-uuid', id, recovery)).resolves.toBeNull();
   });
 
@@ -449,6 +460,53 @@ describe('TypeOrmCircleCycleRepository', () => {
       [id],
     );
     expect(payout).toEqual({ period: '2026-12' });
+  });
+
+  it('el historial lista pagos y cobros paginados, del más reciente al más antiguo (COPAYNI-41)', async () => {
+    const { id, members } = await fullCircle(Period.of(2026, 11));
+    const payments = new TypeOrmPaymentsQuery(dataSource.getRepository(CircleEntity));
+    const runOn = job([id]);
+    for (const date of ['2026-11-05', '2026-12-05', '2027-01-05', '2027-02-05', '2027-03-05']) {
+      await runOn(date);
+    }
+    await runOn('2027-04-05');
+    const [second] = members.slice(1);
+    const page = (cursor: string | null, type: 'payment' | 'payout' = 'payment') =>
+      payments.transactionsOf({ userId: second!.userId, type, limit: 4, cursor });
+
+    const first = await page(null);
+    expect(first.items).toHaveLength(4);
+    expect(
+      first.items.every(({ kind, circleId }) => kind === 'installment' && circleId === id),
+    ).toBe(true);
+    const next = await page(first.nextCursor);
+    expect(next).toMatchObject({ nextCursor: null });
+    const all = [...first.items, ...next.items];
+    expect(all.map(({ period }) => period?.toString()).sort()).toEqual([
+      '2026-11',
+      '2026-12',
+      '2027-01',
+      '2027-02',
+      '2027-03',
+      '2027-04',
+    ]);
+    expect(new Set(all.map(({ id: itemId }) => itemId)).size).toBe(6);
+    const times = all.map(({ occurredAt }) => occurredAt.getTime());
+    expect([...times].sort((a, b) => b - a)).toEqual(times);
+
+    const payouts = await page(null, 'payout');
+    expect(payouts.items).toEqual([
+      expect.objectContaining({
+        type: 'payout',
+        kind: 'payout',
+        period: Period.of(2026, 12),
+        amount: second!.price.netPayout,
+      }),
+    ]);
+    await expect(page('no-es-un-cursor')).rejects.toMatchObject({ code: 'VALIDATION_ERROR' });
+    await expect(
+      payments.transactionsOf({ userId: 'no-es-uuid', type: 'payment', limit: 4, cursor: null }),
+    ).resolves.toEqual({ items: [], nextCursor: null });
   });
 
   it('el resumen de pagos lista las cuotas por pagar hasta que se cobran (COPAYNI-35)', async () => {

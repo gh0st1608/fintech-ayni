@@ -16,7 +16,10 @@ const due = (circleId: string, dueOn: string, amount: number): DueInstallment =>
 });
 
 function useCase(dues: DueInstallment[], debts = NO_DEBTS) {
-  return new GetPaymentSummaryUseCase({ dueInstallmentsOf: () => Promise.resolve(dues) }, debts);
+  return new GetPaymentSummaryUseCase(
+    { dueInstallmentsOf: () => Promise.resolve(dues), transactionsOf: jest.fn() },
+    debts,
+  );
 }
 
 describe('GetPaymentSummaryUseCase (COPAYNI-35)', () => {

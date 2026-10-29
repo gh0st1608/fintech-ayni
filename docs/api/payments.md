@@ -39,3 +39,41 @@ Resumen de la pestaña Payment (COPAYNI-35): las cuotas que el usuario todavía 
 - Las cuotas se cobran con el débito automático del ciclo mensual (COPAYNI-56). Pagar una cuota desde la app (D1) y la pasarela real (COPAYNI-34) están pendientes.
 
 Errores: `UNAUTHORIZED` (401).
+
+## `GET /v1/me/transactions?type=payment|payout&cursor=<texto>&limit=<entero>`
+
+Historial de pagos y cobros (COPAYNI-41), del más reciente al más antiguo, paginado por cursor como `GET /v1/me/circles`.
+
+- `type`: `payment` (lo que el usuario pagó) o `payout` (lo que recibió). Obligatorio.
+- `limit`: de 1 a 50 (20 por defecto). `cursor`: el `nextCursor` de la página anterior.
+
+**200**:
+
+```json
+{
+  "items": [
+    {
+      "id": "0b9e…",
+      "type": "payment",
+      "kind": "installment",
+      "circleId": "6f1c…",
+      "period": "2026-12",
+      "amount": { "amount": 300000, "currency": "PEN" },
+      "occurredAt": "2026-12-05T17:00:00.000Z"
+    }
+  ],
+  "nextCursor": null
+}
+```
+
+| `kind`            | `type`    | Qué es                                                                              |
+| ----------------- | --------- | ----------------------------------------------------------------------------------- |
+| `installment`     | `payment` | Una cuota cobrada. Las que paga la retención del payout (COPAYNI-60) no se listan.  |
+| `debt_settlement` | `payment` | La deuda por impago saldada: lo vencido más el cargo por mora (COPAYNI-57).         |
+| `payout`          | `payout`  | El payout del mes de su turno, ya sin la retención.                                 |
+| `refund`          | `payout`  | La devolución al expulsado antes de su turno, al cerrar el círculo. `period: null`. |
+
+- `period` es el mes del círculo ("pagaste para el círculo del mes de…"); `occurredAt`, cuándo se cobró o pagó, en UTC.
+- El detalle de una transacción no tiene diseño (D8).
+
+Errores: `VALIDATION_ERROR` (400: `type` ausente o inválido, `limit` fuera de rango o cursor inválido) y `UNAUTHORIZED` (401).

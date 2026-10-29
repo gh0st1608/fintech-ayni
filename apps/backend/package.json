@@ -30,6 +30,7 @@
   "jest": {
     "testEnvironment": "node",
     "testTimeout": 20000,
+    "maxWorkers": "50%",
     "rootDir": ".",
     "testMatch": [
       "<rootDir>/test/**/*.spec.ts",

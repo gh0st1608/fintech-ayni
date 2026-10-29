@@ -41,7 +41,7 @@ class ProbeController {
 
   @Get('slow')
   async slow(): Promise<string> {
-    await new Promise((resolve) => setTimeout(resolve, 1500));
+    await new Promise((resolve) => setTimeout(resolve, 5500));
     return 'tarde';
   }
 }

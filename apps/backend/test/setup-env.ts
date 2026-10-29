@@ -7,7 +7,8 @@ export const TEST_ENV = {
   PORT: '3000',
   LOG_LEVEL: 'fatal',
   CORS_ALLOWED_ORIGINS: 'http://localhost:8081',
-  REQUEST_TIMEOUT: '1000',
+  // Holgado: con la suite en paralelo y cobertura, una unión real puede pasar 1 s.
+  REQUEST_TIMEOUT: '5000',
   BODY_LIMIT: '1kb',
   RATE_LIMIT_TTL: '60000',
   RATE_LIMIT_MAX: '5',
