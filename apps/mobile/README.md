@@ -260,6 +260,26 @@ JoinConfirmScreen → useJoinCircle → JoinCircleUseCase → CircleMembershipRe
   - Tras unirse muestra el mes de cobro y la primera cuota, invalida `['circles','mine','active']`, y "Ver mis círculos" lleva a Circles con el borrador reiniciado.
   - La API falsa (`EXPO_PUBLIC_CIRCLES_API=fake`) repite la unión con la misma clave y simula rechazos con `rejectWith`. La firma del contrato (D3) y el primer pago (D1) quedan fuera hasta que se diseñen.
 
+## Mis círculos (COPAYNI-26)
+
+```
+CirclesScreen → useMyCircles(status) (useInfiniteQuery) → ListMyCirclesUseCase → CircleMembershipRepositoryPort.listMine
+```
+
+- La pestaña Circles tiene dos pestañas, Activos y Finalizados, y abre en Activos. Los datos llegan de `GET /me/circles` ([docs/api/circles.md](../../docs/api/circles.md)).
+  - Activos incluye los círculos que todavía no empezaron.
+  - Cada pestaña tiene su query `['circles','mine',status]` y conserva su caché y sus páginas.
+- Cada círculo usa `CircleCard` con el badge "Unido". Muestra el monto total, la cuota del mes actual (`installmentFor`), "Tu turno" en el mes de cobro de la línea de meses, el inicio, el fin, la duración y las Admin Fees.
+- Lista virtualizada (`FlatList`): pide la página siguiente al llegar al final, con el cursor del backend, y se puede refrescar deslizando hacia abajo.
+- Estados:
+  - **Carga:** indicador mientras llega la primera página.
+  - **Error sin datos:** mensaje con "Reintentar".
+  - **Error con datos** (por ejemplo, sin conexión al refrescar): conserva la lista y muestra un aviso.
+  - **Vacío en Activos:** "¡Tus círculos activos aparecerán aquí!" con un botón que abre "Elige un servicio". Los recomendados de debajo llegan con COPAYNI-25.
+  - **Vacío en Finalizados:** un mensaje.
+- Unirse (COPAYNI-31) invalida la query de Activos. En la API falsa, lo que se une aparece en la lista.
+- El diseño (Figma 55:9572 y 55:9688) no se pudo leer por el límite de la integración. Se armó con el inventario y queda pendiente validarlo con UX. El detalle de un círculo no tiene diseño (D8).
+
 ## Pendientes conocidos
 
 - Cierre del `BottomSheet` deslizando hacia abajo: requiere `react-native-gesture-handler` + Reanimated; se evaluará cuando una historia lo necesite.

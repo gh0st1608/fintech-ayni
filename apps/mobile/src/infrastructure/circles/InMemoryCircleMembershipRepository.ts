@@ -1,4 +1,5 @@
 import type { JoinCircleRequest, JoinedCircle } from '@/domain/circles/JoinedCircle';
+import type { MyCircle, MyCirclesPage, MyCircleStatus } from '@/domain/circles/MyCircle';
 import type { CircleMembershipRepositoryPort } from '@/domain/circles/ports/CircleMembershipRepositoryPort';
 import { AppError, type AppErrorKind } from '@/domain/shared/errors/AppError';
 import { Money } from '@/domain/shared/value-objects/Money';
@@ -22,12 +23,21 @@ export interface InMemoryCircleMembershipOptions {
   rejectWith?: JoinRejection;
   /** Primer mes de un círculo nuevo (YYYY-MM); por defecto, el mes siguiente al actual. */
   startsOn?: string;
+  /** Mis círculos ya existentes (p. ej. finalizados), además de los que se unan. */
+  circles?: MyCircle[];
+  /** Mes actual (YYYY-MM) para separar activos de finalizados; por defecto, el del dispositivo. */
+  currentPeriod?: string;
+  /** Círculos por página de mis círculos; por defecto 20, como el backend. */
+  pageSize?: number;
 }
 
 function nextMonth(): string {
+  return addMonths(thisMonth(), 1);
+}
+
+function thisMonth(): string {
   const now = new Date();
-  const date = new Date(now.getFullYear(), now.getMonth() + 1, 1);
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
 }
 
 function addMonths(period: string, months: number): string {
@@ -37,17 +47,40 @@ function addMonths(period: string, months: number): string {
 }
 
 /**
- * Unión falsa (contract-first) con la idempotencia del backend: la misma clave devuelve la misma
- * unión con `created: false`. Las cuotas son la cuota base, sin fees ni Admin Fees.
+ * Membresías falsas (contract-first). Unirse tiene la idempotencia del backend: la misma clave
+ * devuelve la misma unión con `created: false`. Las cuotas son la cuota base, sin fees ni Admin
+ * Fees. Lo que se une aparece en mis círculos, de la unión más reciente a la más antigua.
  */
 export class InMemoryCircleMembershipRepository implements CircleMembershipRepositoryPort {
   private readonly latencyMs: number;
   private readonly joins = new Map<string, JoinedCircle>();
   private rejection: JoinRejection | undefined;
+  private readonly mine: MyCircle[];
 
   constructor(private readonly options: InMemoryCircleMembershipOptions = {}) {
     this.latencyMs = options.latencyMs ?? 400;
     this.rejection = options.rejectWith;
+    this.mine = [...(options.circles ?? [])];
+  }
+
+  async listMine(
+    status: MyCircleStatus,
+    cursor: string | null,
+    signal?: AbortSignal,
+  ): Promise<MyCirclesPage> {
+    await simulateLatency(this.latencyMs, signal);
+    const current = this.options.currentPeriod ?? thisMonth();
+    // Los períodos YYYY-MM se comparan como texto.
+    const matching = this.mine.filter(
+      ({ endsOn }) => (endsOn < current ? 'finished' : 'active') === status,
+    );
+    const offset = cursor === null ? 0 : Number(cursor);
+    const size = this.options.pageSize ?? 20;
+    const next = offset + size;
+    return {
+      items: matching.slice(offset, next).map((circle) => ({ ...circle, status })),
+      nextCursor: next < matching.length ? String(next) : null,
+    };
   }
 
   async join(request: JoinCircleRequest, idempotencyKey: string): Promise<JoinedCircle> {
@@ -76,6 +109,13 @@ export class InMemoryCircleMembershipRepository implements CircleMembershipRepos
       created: true,
     };
     this.joins.set(idempotencyKey, joined);
+    this.mine.unshift({
+      ...joined,
+      status: 'active',
+      endsOn: addMonths(startsOn, months - 1),
+      adminFee: Money.of(0, payout.currency),
+      joinedAt: new Date(),
+    });
     return joined;
   }
 

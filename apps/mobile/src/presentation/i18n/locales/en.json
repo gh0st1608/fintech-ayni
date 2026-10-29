@@ -151,6 +151,27 @@
       }
     }
   },
+  "circles": {
+    "tabs": {
+      "active": "Active",
+      "finished": "Finished"
+    },
+    "card": {
+      "perMonth": " /month",
+      "yourTurn": "Your Turn · {{month}}",
+      "duration": "{{months}} Months",
+      "adminFees": "Admin Fees:",
+      "joined": "Joined"
+    },
+    "empty": {
+      "active": "Your active circles will appear here!",
+      "activeDescription": "Join a Game'ya to start saving and choose your payout month.",
+      "join": "Join a circle",
+      "finished": "You don't have finished circles yet."
+    },
+    "stale": "We couldn't update your circles: {{reason}} Showing the last ones we loaded.",
+    "priceInfo": "The installment shown is this month's. It varies with your slot fees, discounts and Admin Fees."
+  },
   "saving": {
     "chooseCircle": {
       "title": "Choose a Saving Circle"

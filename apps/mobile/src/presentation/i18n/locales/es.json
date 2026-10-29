@@ -151,6 +151,27 @@
       }
     }
   },
+  "circles": {
+    "tabs": {
+      "active": "Activos",
+      "finished": "Finalizados"
+    },
+    "card": {
+      "perMonth": " /mes",
+      "yourTurn": "Tu turno · {{month}}",
+      "duration": "{{months}} meses",
+      "adminFees": "Admin Fees:",
+      "joined": "Unido"
+    },
+    "empty": {
+      "active": "¡Tus círculos activos aparecerán aquí!",
+      "activeDescription": "Únete a un Game'ya para empezar a ahorrar y elegir tu mes de cobro.",
+      "join": "Unirme a un círculo",
+      "finished": "Todavía no tienes círculos finalizados."
+    },
+    "stale": "No pudimos actualizar tus círculos: {{reason}} Te mostramos lo último que cargamos.",
+    "priceInfo": "La cuota es la de este mes. Varía según los fees, descuentos y Admin Fees de tu turno."
+  },
   "saving": {
     "chooseCircle": {
       "title": "Elige un círculo de ahorro"

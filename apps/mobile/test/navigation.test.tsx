@@ -43,14 +43,15 @@ describe('shell de navegación', () => {
   });
 
   it.each([
-    ['Círculos', '/circles'],
-    ['Pagos', '/payment'],
-  ])('la pestaña %s abre su pantalla', async (tab, pathname) => {
+    // Mis círculos (COPAYNI-26): pestañas Activos y Finalizados.
+    ['Círculos', '/circles', 'Activos'],
+    ['Pagos', '/payment', 'Próximamente'],
+  ])('la pestaña %s abre su pantalla', async (tab, pathname, content) => {
     await storeSession();
     await renderRouter(APP_DIR, { initialUrl: '/home' });
     await fireEvent.press(screen.getAllByText(tab)[0]!);
     await waitFor(() => expect(screen).toHavePathname(pathname));
-    expect(screen.getAllByText('Próximamente').length).toBeGreaterThan(0);
+    expect((await screen.findAllByText(content)).length).toBeGreaterThan(0);
   });
 
   it('el botón central abre "Elige un servicio"', async () => {
@@ -96,6 +97,8 @@ describe('shell de navegación', () => {
       await screen.findByRole('button', { name: 'Ver mis círculos' }, { timeout: 5000 }),
     );
     await waitFor(() => expect(screen).toHavePathname('/circles'));
+    // La unión invalida Circles > Active: el círculo nuevo aparece con su badge.
+    expect(await screen.findByText('Unido', {}, { timeout: 5000 })).toBeTruthy();
   });
 
   it('Elige un servicio → programa de ahorro', async () => {

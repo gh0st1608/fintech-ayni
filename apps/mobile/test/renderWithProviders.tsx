@@ -40,5 +40,5 @@ export async function renderWithProviders(
       </ContainerProvider>
     </SafeAreaProvider>,
   );
-  return { ...view, ...setup };
+  return { ...view, ...setup, queryClient };
 }

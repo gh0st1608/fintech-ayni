@@ -1,4 +1,5 @@
 import { Money } from '@/domain/shared/value-objects/Money';
+import { myCircle } from '@test/fakes/myCircles';
 
 import {
   IncompleteJoinDraftError,
@@ -6,6 +7,7 @@ import {
   joinRequestFingerprint,
 } from './JoinCircleDraft';
 import { availablePayoutRange, type JoinConfig } from './JoinConfig';
+import { installmentFor } from './MyCircle';
 import {
   InstallmentOption,
   InvalidInstallmentOptionError,
@@ -220,5 +222,19 @@ describe('Slot', () => {
     [{ ...base, discount: Money.fromMajor(1, 'USD') }],
   ])('rechaza slots inválidos', (input) => {
     expect(() => Slot.create(input)).toThrow(InvalidSlotError);
+  });
+});
+
+describe('installmentFor', () => {
+  const circle = myCircle({
+    startsOn: '2026-11',
+    installments: [pen(5_600), pen(5_600), pen(5_000)],
+  });
+
+  it('da la cuota del mes, la primera antes del inicio y la última al terminar', () => {
+    expect(installmentFor(circle, '2026-12').equals(pen(5_600))).toBe(true);
+    expect(installmentFor(circle, '2027-01').equals(pen(5_000))).toBe(true);
+    expect(installmentFor(circle, '2026-03').equals(pen(5_600))).toBe(true);
+    expect(installmentFor(circle, '2028-01').equals(pen(5_000))).toBe(true);
   });
 });

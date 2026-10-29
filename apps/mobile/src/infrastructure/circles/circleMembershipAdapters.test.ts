@@ -1,5 +1,6 @@
 import { Money } from '@/domain/shared/value-objects/Money';
 import { FetchHttpClient } from '@/infrastructure/http/FetchHttpClient';
+import { myCircle } from '@test/fakes/myCircles';
 
 import { CircleMembershipApiRepository } from './CircleMembershipApiRepository';
 import { InMemoryCircleMembershipRepository } from './InMemoryCircleMembershipRepository';
@@ -121,5 +122,95 @@ describe('InMemoryCircleMembershipRepository', () => {
     repository.rejectNextWith('SLOT_TAKEN');
     await expect(repository.join(REQUEST, 'k')).rejects.toMatchObject({ kind: 'conflict' });
     await expect(repository.join(REQUEST, 'k')).resolves.toMatchObject({ created: true });
+  });
+});
+
+const MY_CIRCLES = {
+  items: [
+    {
+      circleId: 'c-1',
+      status: 'active',
+      payout: money(3_000_000),
+      months: 6,
+      startsOn: '2026-11',
+      endsOn: '2027-04',
+      position: 3,
+      payoutPeriod: '2027-01',
+      type: 'lowest_fees',
+      installments: Array.from({ length: 6 }, () => money(560_000)),
+      adminFee: money(360_000),
+      netPayout: money(3_000_000),
+      joinedAt: '2026-10-28T23:10:00.000Z',
+    },
+  ],
+  nextCursor: 'cursor-2',
+};
+
+describe('CircleMembershipApiRepository.listMine', () => {
+  it('pide la página del estado y mapea montos, tipo y fecha de unión', async () => {
+    const { fetchImpl, repository } = setup({
+      status: 200,
+      body: { success: true, data: MY_CIRCLES },
+    });
+    const page = await repository.listMine('active', null);
+
+    expect(fetchImpl.mock.calls[0]?.[0]).toBe('https://api.test/v1/me/circles?status=active');
+    expect(page.nextCursor).toBe('cursor-2');
+    expect(page.items[0]).toMatchObject({ circleId: 'c-1', type: 'lowestFees', endsOn: '2027-04' });
+    expect(page.items[0]?.adminFee.toMajor()).toBe(3_600);
+    expect(page.items[0]?.joinedAt.toISOString()).toBe('2026-10-28T23:10:00.000Z');
+  });
+
+  it('envía el cursor de la página siguiente', async () => {
+    const { fetchImpl, repository } = setup({
+      status: 200,
+      body: { success: true, data: { items: [], nextCursor: null } },
+    });
+    await expect(repository.listMine('finished', 'cursor-2')).resolves.toEqual({
+      items: [],
+      nextCursor: null,
+    });
+    expect(fetchImpl.mock.calls[0]?.[0]).toBe(
+      'https://api.test/v1/me/circles?status=finished&cursor=cursor-2',
+    );
+  });
+
+  it.each([
+    [{ ...MY_CIRCLES, nextCursor: undefined }],
+    [{ ...MY_CIRCLES, items: [{ ...MY_CIRCLES.items[0], status: 'paused' }] }],
+    [{ ...MY_CIRCLES, items: [{ ...MY_CIRCLES.items[0], joinedAt: 'ayer' }] }],
+  ])('rechaza una respuesta que no cumple el contrato', async (data) => {
+    const { repository } = setup({ status: 200, body: { success: true, data } });
+    await expect(repository.listMine('active', null)).rejects.toMatchObject({
+      code: 'INVALID_RESPONSE',
+    });
+  });
+});
+
+describe('InMemoryCircleMembershipRepository.listMine', () => {
+  it('separa activos de finalizados y pagina, con lo unido primero', async () => {
+    const repository = new InMemoryCircleMembershipRepository({
+      latencyMs: 0,
+      startsOn: '2026-11',
+      currentPeriod: '2026-10',
+      pageSize: 2,
+      circles: [
+        myCircle({ circleId: 'viejo', startsOn: '2026-01', endsOn: '2026-06' }),
+        myCircle({ circleId: 'en-curso', startsOn: '2026-08', endsOn: '2027-01' }),
+        myCircle({ circleId: 'por-empezar' }),
+      ],
+    });
+    const joined = await repository.join(REQUEST, 'k');
+
+    const first = await repository.listMine('active', null);
+    expect(first.items.map(({ circleId }) => circleId)).toEqual([joined.circleId, 'en-curso']);
+    expect(first.items[0]).toMatchObject({ endsOn: '2027-08', status: 'active' });
+    const second = await repository.listMine('active', first.nextCursor);
+    expect(second).toMatchObject({ items: [{ circleId: 'por-empezar' }], nextCursor: null });
+
+    const finished = await repository.listMine('finished', null);
+    expect(finished.items).toEqual([
+      expect.objectContaining({ circleId: 'viejo', status: 'finished' }),
+    ]);
   });
 });

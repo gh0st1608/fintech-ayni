@@ -10,6 +10,7 @@ import type { GetJoinConfigUseCase } from '@/application/circles/usecases/GetJoi
 import type { ListAvailableSlotsUseCase } from '@/application/circles/usecases/ListAvailableSlotsUseCase';
 import type { JoinCircleUseCase } from '@/application/circles/usecases/JoinCircleUseCase';
 import type { ListInstallmentOptionsUseCase } from '@/application/circles/usecases/ListInstallmentOptionsUseCase';
+import type { ListMyCirclesUseCase } from '@/application/circles/usecases/ListMyCirclesUseCase';
 import type {
   ListPayoutMethodsUseCase,
   SelectPayoutMethodUseCase,
@@ -46,6 +47,7 @@ export interface AppContainer {
     listAvailableSlots: ListAvailableSlotsUseCase;
     confirmSlotSelection: ConfirmSlotSelectionUseCase;
     joinCircle: JoinCircleUseCase;
+    listMyCircles: ListMyCirclesUseCase;
   };
   payouts: {
     listPayoutMethods: ListPayoutMethodsUseCase;
