@@ -12,6 +12,7 @@ import { ListAvailableSlotsUseCase } from '@/application/circles/usecases/ListAv
 import { JoinCircleUseCase } from '@/application/circles/usecases/JoinCircleUseCase';
 import { ListInstallmentOptionsUseCase } from '@/application/circles/usecases/ListInstallmentOptionsUseCase';
 import { ListMyCirclesUseCase } from '@/application/circles/usecases/ListMyCirclesUseCase';
+import { ListRecommendedCirclesUseCase } from '@/application/circles/usecases/ListRecommendedCirclesUseCase';
 import {
   ListPayoutMethodsUseCase,
   SelectPayoutMethodUseCase,
@@ -147,6 +148,7 @@ export function createContainer(
       confirmSlotSelection: new ConfirmSlotSelectionUseCase(adapters.circleQuote),
       joinCircle: new JoinCircleUseCase(adapters.circleMembership, adapters.ids),
       listMyCircles: new ListMyCirclesUseCase(adapters.circleMembership),
+      listRecommended: new ListRecommendedCirclesUseCase(adapters.circleQuote),
     },
     payouts: {
       listPayoutMethods: new ListPayoutMethodsUseCase(adapters.payoutMethods),

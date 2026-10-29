@@ -2,8 +2,9 @@ import { fireEvent, screen, waitFor } from '@testing-library/react-native';
 
 import { AppError } from '@/domain/shared/errors/AppError';
 import { InMemoryCircleMembershipRepository } from '@/infrastructure/circles/InMemoryCircleMembershipRepository';
+import { InMemoryCircleQuoteRepository } from '@/infrastructure/circles/InMemoryCircleQuoteRepository';
 import { createTestContainer } from '@test/fakes/createTestContainer';
-import { myCircle } from '@test/fakes/myCircles';
+import { myCircle, recommendedCircle } from '@test/fakes/myCircles';
 import { colors } from '@/presentation/theme/tokens';
 import { renderWithProviders } from '@test/renderWithProviders';
 
@@ -11,13 +12,15 @@ import { CirclesScreen } from './screens/CirclesScreen';
 
 async function renderCircles(
   circleMembership = new InMemoryCircleMembershipRepository({ latencyMs: 0 }),
+  circleQuote = new InMemoryCircleQuoteRepository({ latencyMs: 0 }),
 ) {
   const onJoin = jest.fn();
+  const onJoinCircle = jest.fn();
   const view = await renderWithProviders(
-    <CirclesScreen onJoin={onJoin} />,
-    createTestContainer({ circleMembership }),
+    <CirclesScreen onJoin={onJoin} onJoinCircle={onJoinCircle} />,
+    createTestContainer({ circleMembership, circleQuote }),
   );
-  return { ...view, onJoin, circleMembership };
+  return { ...view, onJoin, onJoinCircle, circleMembership };
 }
 
 /** Un círculo activo para cualquier fecha de la prueba, lejos en el futuro. */
@@ -70,6 +73,16 @@ describe('CirclesScreen', () => {
 
     await fireEvent.press(screen.getByRole('tab', { name: 'Finalizados' }));
     expect(await screen.findByText('Todavía no tienes círculos finalizados.')).toBeTruthy();
+  });
+
+  it('sin círculos activos recomienda círculos abiertos debajo del estado vacío', async () => {
+    const { onJoinCircle } = await renderCircles(
+      undefined,
+      new InMemoryCircleQuoteRepository({ latencyMs: 0, recommended: [recommendedCircle()] }),
+    );
+    await screen.findByText('¡Tus círculos activos aparecerán aquí!');
+    await fireEvent.press(await screen.findByRole('button', { name: 'Únete ahora' }));
+    expect(onJoinCircle).toHaveBeenCalledWith(recommendedCircle().payout);
   });
 
   it('carga la página siguiente al llegar al final de la lista', async () => {

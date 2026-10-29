@@ -33,6 +33,14 @@
     "payment": "Payment",
     "profile": "Profile"
   },
+  "home": {
+    "title": "Discover ways to save",
+    "empty": {
+      "title": "There are no open circles for you yet",
+      "description": "Choose your amount and payout month: we'll open a new Game'ya for you.",
+      "join": "Join a Game'ya"
+    }
+  },
   "join": {
     "title": "Choose a service",
     "a11yButton": "Join a circle or a saving program",
@@ -170,7 +178,12 @@
       "finished": "You don't have finished circles yet."
     },
     "stale": "We couldn't update your circles: {{reason}} Showing the last ones we loaded.",
-    "priceInfo": "The installment shown is this month's. It varies with your slot fees, discounts and Admin Fees."
+    "priceInfo": "The installment shown is this month's. It varies with your slot fees, discounts and Admin Fees.",
+    "recommended": {
+      "title": "Recommended for you",
+      "joinNow": "Join now",
+      "stale": "We couldn't update the recommendations: {{reason}}"
+    }
   },
   "saving": {
     "chooseCircle": {

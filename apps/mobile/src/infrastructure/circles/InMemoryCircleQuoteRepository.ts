@@ -1,4 +1,5 @@
 import type { CircleQuoteRepositoryPort } from '@/domain/circles/ports/CircleQuoteRepositoryPort';
+import type { RecommendedCircle } from '@/domain/circles/RecommendedCircle';
 import { InstallmentOption } from '@/domain/circles/value-objects/InstallmentOption';
 import { Slot, type SlotType } from '@/domain/circles/value-objects/Slot';
 import { Money } from '@/domain/shared/value-objects/Money';
@@ -16,6 +17,8 @@ export interface InMemoryCircleQuoteOptions {
   startsOn?: string;
   /** Círculo ofrecido; por defecto `null`, uno nuevo, como el backend sin círculos abiertos. */
   circleId?: string | null;
+  /** Recomendados; por defecto ninguno, como el backend sin círculos abiertos. */
+  recommended?: RecommendedCircle[];
 }
 
 /**
@@ -103,6 +106,11 @@ export class InMemoryCircleQuoteRepository implements CircleQuoteRepositoryPort 
         circleId: this.options.circleId ?? null,
       });
     });
+  }
+
+  async listRecommended(signal?: AbortSignal): Promise<RecommendedCircle[]> {
+    await simulateLatency(this.latencyMs, signal);
+    return [...(this.options.recommended ?? [])];
   }
 
   /** Simula que otro usuario ocupó un slot (para probar la revalidación). */

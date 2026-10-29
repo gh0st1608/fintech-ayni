@@ -1,1 +1,18 @@
-export { HomeScreen as default } from '@/presentation/home/screens/HomeScreen';
+import { router } from 'expo-router';
+
+import { useJoinFlow } from '@/presentation/join/JoinFlowProvider';
+import { HomeScreen } from '@/presentation/home/screens/HomeScreen';
+
+export default function HomeRoute() {
+  const { start } = useJoinFlow();
+  return (
+    <HomeScreen
+      onJoinCircle={(payout) => {
+        // "Join now" empieza el flujo con el monto del círculo (paso 1 precargado).
+        start(payout);
+        router.push('/join/payout-amount');
+      }}
+      onJoin={() => router.push('/join')}
+    />
+  );
+}

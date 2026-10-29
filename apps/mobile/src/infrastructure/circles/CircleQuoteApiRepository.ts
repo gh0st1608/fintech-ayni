@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
 import type { CircleQuoteRepositoryPort } from '@/domain/circles/ports/CircleQuoteRepositoryPort';
+import type { RecommendedCircle } from '@/domain/circles/RecommendedCircle';
 import { InstallmentOption } from '@/domain/circles/value-objects/InstallmentOption';
 import { Slot, type SlotType } from '@/domain/circles/value-objects/Slot';
 import type { HttpClientPort } from '@/domain/shared/ports/HttpClientPort';
@@ -45,7 +46,25 @@ const slotsDto = z.object({
   ),
 });
 
-/** Adaptador HTTP de la cotización de un Game'ya. */
+const PERIOD = /^\d{4}-(0[1-9]|1[0-2])$/;
+
+/** DTO de GET /circles/recommended (docs/api/circles.md). */
+const recommendedDto = z.object({
+  items: z.array(
+    z.object({
+      circleId: z.string().min(1),
+      payout: moneyDto,
+      months: z.number().int().positive(),
+      startsOn: z.string().regex(PERIOD),
+      endsOn: z.string().regex(PERIOD),
+      baseInstallment: moneyDto,
+      adminFee: moneyDto,
+      availableSlots: z.number().int().positive(),
+    }),
+  ),
+});
+
+/** Adaptador HTTP del descubrimiento y la cotización de un Game'ya. */
 export class CircleQuoteApiRepository implements CircleQuoteRepositoryPort {
   constructor(private readonly http: HttpClientPort) {}
 
@@ -62,6 +81,19 @@ export class CircleQuoteApiRepository implements CircleQuoteRepositoryPort {
         withinMonthlyLimit: option.withinMonthlyLimit,
       }),
     );
+  }
+
+  async listRecommended(signal?: AbortSignal): Promise<RecommendedCircle[]> {
+    const dto = await this.http.get('/circles/recommended', {
+      signal,
+      parse: (data) => recommendedDto.parse(data),
+    });
+    return dto.items.map((item) => ({
+      ...item,
+      payout: toMoney(item.payout),
+      baseInstallment: toMoney(item.baseInstallment),
+      adminFee: toMoney(item.adminFee),
+    }));
   }
 
   async listSlots(payout: Money, months: number, signal?: AbortSignal): Promise<Slot[]> {

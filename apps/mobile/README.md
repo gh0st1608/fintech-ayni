@@ -280,6 +280,30 @@ CirclesScreen → useMyCircles(status) (useInfiniteQuery) → ListMyCirclesUseCa
 - Unirse (COPAYNI-31) invalida la query de Activos. En la API falsa, lo que se une aparece en la lista.
 - El diseño (Figma 55:9572 y 55:9688) no se pudo leer por el límite de la integración. Se armó con el inventario y queda pendiente validarlo con UX. El detalle de un círculo no tiene diseño (D8).
 
+## Home y círculos recomendados (COPAYNI-25)
+
+```
+HomeScreen / CirclesScreen (vacío) → RecommendedCircles → useRecommendedCircles
+           → ListRecommendedCirclesUseCase → CircleQuoteRepositoryPort.listRecommended
+```
+
+- "Recomendados para ti" llega de `GET /circles/recommended`, con un criterio provisional del backend ([docs/api/circles.md](../../docs/api/circles.md)).
+- Es un carrusel horizontal de `CircleCard` con monto, cuota base, fechas, duración, Admin Fees y el botón "Únete ahora".
+- "Únete ahora" empieza el flujo de unión con el payout del círculo (`start(payout)`) y abre el paso 1 con ese monto.
+- La sección tiene su propia query `['circles','recommended']`:
+  - Muestra un skeleton mientras carga.
+  - Un error muestra el motivo con "Reintentar" sin bloquear la pantalla.
+  - Si una actualización falla, conserva los datos con un aviso.
+  - Sin recomendados, la sección se oculta.
+- Home se refresca deslizando hacia abajo. Si no hay recomendados, ofrece unirse a un Game'ya nuevo.
+- En Circles > Activos vacío, los recomendados aparecen debajo del estado vacío.
+- Unirse invalida los recomendados: el círculo deja de recomendarse.
+- **Pendiente:**
+  - "Latest Offers" y "Popular Goals" no tienen fuente de datos (CMS o back-office, D13).
+  - El banner de invitación espera las reglas de referidos (R7).
+  - Faltan los iconos de fuego (D11) y campana (D6).
+  - El diseño (Figma 55:8637 y 55:8853) queda pendiente de validar con UX.
+
 ## Pendientes conocidos
 
 - Cierre del `BottomSheet` deslizando hacia abajo: requiere `react-native-gesture-handler` + Reanimated; se evaluará cuando una historia lo necesite.

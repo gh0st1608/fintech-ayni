@@ -33,6 +33,14 @@
     "payment": "Pagos",
     "profile": "Perfil"
   },
+  "home": {
+    "title": "Descubre cómo ahorrar",
+    "empty": {
+      "title": "Todavía no hay círculos abiertos para ti",
+      "description": "Elige tu monto y tu mes de cobro: abriremos un Game'ya nuevo para ti.",
+      "join": "Unirme a un Game'ya"
+    }
+  },
   "join": {
     "title": "Elige un servicio",
     "a11yButton": "Unirse a un círculo o a un programa de ahorro",
@@ -170,7 +178,12 @@
       "finished": "Todavía no tienes círculos finalizados."
     },
     "stale": "No pudimos actualizar tus círculos: {{reason}} Te mostramos lo último que cargamos.",
-    "priceInfo": "La cuota es la de este mes. Varía según los fees, descuentos y Admin Fees de tu turno."
+    "priceInfo": "La cuota es la de este mes. Varía según los fees, descuentos y Admin Fees de tu turno.",
+    "recommended": {
+      "title": "Recomendados para ti",
+      "joinNow": "Únete ahora",
+      "stale": "No pudimos actualizar los recomendados: {{reason}}"
+    }
   },
   "saving": {
     "chooseCircle": {

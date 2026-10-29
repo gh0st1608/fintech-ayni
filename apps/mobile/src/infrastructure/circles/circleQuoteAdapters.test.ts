@@ -198,3 +198,50 @@ describe('InMemoryCircleQuoteRepository.listSlots', () => {
     ]);
   });
 });
+
+const RECOMMENDED = {
+  items: [
+    {
+      circleId: 'r-1',
+      payout: money(3_000_000),
+      months: 10,
+      startsOn: '2026-11',
+      endsOn: '2027-08',
+      baseInstallment: money(300_000),
+      adminFee: money(360_000),
+      availableSlots: 7,
+    },
+  ],
+};
+
+describe('CircleQuoteApiRepository.listRecommended', () => {
+  it('pide los recomendados y mapea los montos', async () => {
+    const { fetchImpl, repository } = setup(RECOMMENDED);
+    const [circle] = await repository.listRecommended();
+
+    expect(fetchImpl.mock.calls[0]?.[0]).toBe('https://api.test/v1/circles/recommended');
+    expect(circle).toMatchObject({
+      circleId: 'r-1',
+      months: 10,
+      endsOn: '2027-08',
+      availableSlots: 7,
+    });
+    expect(circle?.baseInstallment.equals(pen(3_000))).toBe(true);
+    expect(circle?.adminFee.equals(pen(3_600))).toBe(true);
+  });
+
+  it.each([
+    [{ items: [{ ...RECOMMENDED.items[0], availableSlots: 0 }] }],
+    [{ items: [{ ...RECOMMENDED.items[0], endsOn: 'agosto' }] }],
+    [{}],
+  ])('rechaza una respuesta que no cumple el contrato', async (body) => {
+    const { repository } = setup(body);
+    await expect(repository.listRecommended()).rejects.toThrow();
+  });
+
+  it('el adaptador falso no recomienda nada por defecto', async () => {
+    await expect(
+      new InMemoryCircleQuoteRepository({ latencyMs: 0 }).listRecommended(),
+    ).resolves.toEqual([]);
+  });
+});

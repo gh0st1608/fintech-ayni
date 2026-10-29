@@ -2,7 +2,10 @@ import * as SecureStore from 'expo-secure-store';
 import { act, fireEvent, renderRouter, screen, waitFor } from 'expo-router/testing-library';
 
 import { SessionEvents } from '@/application/auth/SessionEvents';
+import { Money } from '@/domain/shared/value-objects/Money';
 import { FAKE_OTP_CODE } from '@/infrastructure/auth/InMemoryAuthApi';
+import { InMemoryCircleQuoteRepository } from '@/infrastructure/circles/InMemoryCircleQuoteRepository';
+import { recommendedCircle } from '@test/fakes/myCircles';
 
 // Rutas reales de la app: se prueba el shell de navegación completo (COPAYNI-15).
 const APP_DIR = './src/app';
@@ -14,6 +17,8 @@ async function storeSession() {
   await SecureStore.setItemAsync('auth.accessToken', 'token');
   await SecureStore.setItemAsync('auth.refreshToken', 'refresh');
 }
+
+afterEach(() => jest.restoreAllMocks());
 
 beforeEach(async () => {
   await SecureStore.deleteItemAsync('auth.accessToken');
@@ -52,6 +57,20 @@ describe('shell de navegación', () => {
     await fireEvent.press(screen.getAllByText(tab)[0]!);
     await waitFor(() => expect(screen).toHavePathname(pathname));
     expect((await screen.findAllByText(content)).length).toBeGreaterThan(0);
+  });
+
+  it('"Únete ahora" de un recomendado abre el paso 1 con el monto del círculo', async () => {
+    jest
+      .spyOn(InMemoryCircleQuoteRepository.prototype, 'listRecommended')
+      .mockResolvedValue([recommendedCircle({ payout: Money.fromMajor(45_000, 'PEN') })]);
+    await storeSession();
+    await renderRouter(APP_DIR, { initialUrl: '/home' });
+
+    await fireEvent.press(
+      await screen.findByRole('button', { name: 'Únete ahora' }, { timeout: 5000 }),
+    );
+    await waitFor(() => expect(screen).toHavePathname('/join/payout-amount'));
+    expect(await screen.findByText(/45\.?000/, {}, { timeout: 5000 })).toBeTruthy();
   });
 
   it('el botón central abre "Elige un servicio"', async () => {

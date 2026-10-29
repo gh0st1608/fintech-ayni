@@ -16,11 +16,14 @@ import { Screen } from '@/presentation/shared/components/Screen';
 import { SegmentedTabs } from '@/presentation/shared/components/SegmentedTabs';
 import { colors, spacing } from '@/presentation/theme/tokens';
 
+import { RecommendedCircles } from '../components/RecommendedCircles';
 import { useMyCircles } from '../useMyCircles';
 
 interface CirclesScreenProps {
   /** Estado vacío de Active: empieza el flujo de unión. */
   onJoin: () => void;
+  /** "Únete ahora" de un recomendado: el flujo de unión con ese payout precargado. */
+  onJoinCircle: (payout: Money) => void;
 }
 
 /** Primer día del mes `YYYY-MM`, para formatearlo con el idioma activo. */
@@ -37,9 +40,9 @@ function currentPeriod(): string {
 /**
  * Circles (Figma 55:9572 y 55:9688): pestañas Active y Finished con mis círculos. El diseño no
  * se pudo leer por el límite de Figma; se armó con el inventario y los componentes existentes.
- * Los recomendados del estado vacío llegan con COPAYNI-25.
+ * El estado vacío de Active muestra los recomendados debajo (COPAYNI-25).
  */
-export function CirclesScreen({ onJoin }: CirclesScreenProps) {
+export function CirclesScreen({ onJoin, onJoinCircle }: CirclesScreenProps) {
   const { t } = useTranslation();
   const [status, setStatus] = useState<MyCircleStatus>('active');
 
@@ -63,12 +66,16 @@ export function CirclesScreen({ onJoin }: CirclesScreenProps) {
         testID="circles-tabs"
       />
       {/* Una lista por pestaña: cada una conserva su caché y su página. */}
-      <MyCirclesList key={status} status={status} onJoin={onJoin} />
+      <MyCirclesList key={status} status={status} onJoin={onJoin} onJoinCircle={onJoinCircle} />
     </Screen>
   );
 }
 
-function MyCirclesList({ status, onJoin }: { status: MyCircleStatus; onJoin: () => void }) {
+function MyCirclesList({
+  status,
+  onJoin,
+  onJoinCircle,
+}: { status: MyCircleStatus } & CirclesScreenProps) {
   const { t } = useTranslation();
   const circles = useMyCircles(status);
 
@@ -106,12 +113,15 @@ function MyCirclesList({ status, onJoin }: { status: MyCircleStatus; onJoin: () 
       }
       ListEmptyComponent={
         status === 'active' ? (
-          <EmptyState
-            title={t('circles.empty.active')}
-            description={t('circles.empty.activeDescription')}
-            action={{ label: t('circles.empty.join'), onPress: onJoin }}
-            testID="circles-empty"
-          />
+          <View style={styles.empty}>
+            <EmptyState
+              title={t('circles.empty.active')}
+              description={t('circles.empty.activeDescription')}
+              action={{ label: t('circles.empty.join'), onPress: onJoin }}
+              testID="circles-empty"
+            />
+            <RecommendedCircles onJoin={onJoinCircle} />
+          </View>
         ) : (
           <EmptyState title={t('circles.empty.finished')} testID="circles-empty" />
         )
@@ -168,4 +178,5 @@ const styles = StyleSheet.create({
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: spacing.lg },
   centerText: { textAlign: 'center' },
   list: { flexGrow: 1, gap: spacing.l, paddingVertical: spacing.l },
+  empty: { gap: spacing.xl },
 });
