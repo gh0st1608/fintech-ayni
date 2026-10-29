@@ -1,9 +1,9 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { IsInt, Max, Min } from 'class-validator';
+import { IsInt, IsOptional, IsUUID, Max, Min } from 'class-validator';
 
 import { type AvailableSlotsResult } from '../../../application/use-cases/get-available-slots.use-case';
-import { SLOT_TYPES, type SlotType } from '../../../domain/services/slot-pricing';
+import { catchUpTotal, SLOT_TYPES, type SlotType } from '../../../domain/services/slot-pricing';
 import { MoneyResponse } from './join-config.response';
 
 export class SlotsQuery {
@@ -20,6 +20,15 @@ export class SlotsQuery {
   @Min(2)
   @Max(120)
   months!: number;
+
+  @ApiProperty({
+    required: false,
+    format: 'uuid',
+    description: 'Un círculo recomendado (COPAYNI-59): sus slots en vez del círculo asignado',
+  })
+  @IsOptional()
+  @IsUUID()
+  circleId?: string;
 }
 
 export class SlotResponse {
@@ -38,7 +47,16 @@ export class SlotResponse {
   @ApiProperty({ type: MoneyResponse, description: 'Cero salvo en highest_return' })
   discount!: MoneyResponse;
 
-  @ApiProperty({ description: 'false si otro miembro ya ocupa el slot' })
+  @ApiProperty({
+    type: MoneyResponse,
+    description: 'Puesta al día de una vacante en un círculo en curso (COPAYNI-59); si no, cero',
+  })
+  catchUp!: MoneyResponse;
+
+  @ApiProperty({
+    description:
+      'false si otro miembro ya ocupa el slot; en un círculo en curso, true solo en sus vacantes abiertas',
+  })
   available!: boolean;
 }
 
@@ -69,13 +87,14 @@ export class SlotsResponse {
       startsOn: terms.startsOn.toString(),
       payout: MoneyResponse.from(terms.payout),
       months: terms.months,
-      slots: slots.map(({ position, payoutPeriod, type, fee, discount, available }) => ({
-        position,
-        payoutPeriod: payoutPeriod.toString(),
-        type,
-        fee: MoneyResponse.from(fee),
-        discount: MoneyResponse.from(discount),
-        available,
+      slots: slots.map((slot) => ({
+        position: slot.position,
+        payoutPeriod: slot.payoutPeriod.toString(),
+        type: slot.type,
+        fee: MoneyResponse.from(slot.fee),
+        discount: MoneyResponse.from(slot.discount),
+        catchUp: MoneyResponse.from(catchUpTotal(slot)),
+        available: slot.available,
       })),
     };
   }

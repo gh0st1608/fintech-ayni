@@ -107,7 +107,8 @@
       "adminFeesInfo": "Las Admin Fees se reparten en partes iguales sobre tus pay-ins hasta tu mes de payout.",
       "continueWith": "Continuar con {{month}}",
       "noLongerAvailable": "Ese turno acaba de ocuparse. Elige otro mes.",
-      "missingSteps": "Primero elige el monto y la cuota mensual."
+      "missingSteps": "Primero elige el monto y la cuota mensual.",
+      "catchUp": "Incluye {{amount}} de puesta al día"
     },
     "payoutMethod": {
       "title": "Método de cobro",
@@ -157,7 +158,8 @@
         "title": "¡Ya eres parte del Game'ya!",
         "payout": "Recibirás {{amount}} en {{month}} (turno {{position}} de {{months}}).",
         "firstInstallment": "Tu primera cuota es de {{amount}} en {{month}}.",
-        "viewCircles": "Ver mis círculos"
+        "viewCircles": "Ver mis círculos",
+        "catchUp": "Tus cuotas incluyen {{amount}} de puesta al día de los meses ya transcurridos, hasta {{month}}."
       }
     }
   },
@@ -185,7 +187,8 @@
     "recommended": {
       "title": "Recomendados para ti",
       "joinNow": "Únete ahora",
-      "stale": "No pudimos actualizar los recomendados: {{reason}}"
+      "stale": "No pudimos actualizar los recomendados: {{reason}}",
+      "vacancyTurn": "Turno vacante · cobras en {{month}}"
     }
   },
   "saving": {

@@ -73,6 +73,7 @@ describe('GET /v1/circles/recommended', () => {
         baseInstallment: { amount: expect.any(Number), currency: 'PEN' },
         adminFee: { amount: expect.any(Number), currency: 'PEN' },
         availableSlots: expect.any(Number),
+        vacancies: expect.any(Array),
       });
       expect(item.availableSlots).toBeGreaterThan(0);
     }

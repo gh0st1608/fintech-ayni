@@ -4,11 +4,7 @@ import { Inject, Injectable, Logger } from '@nestjs/common';
 
 import { CLOCK, type ClockPort } from '../../../../shared/application/ports/clock.port';
 import { LocalDate } from '../../../../shared/domain/value-objects/local-date';
-import {
-  CircleCycle,
-  type DelinquencyPolicy,
-  type PeriodClose,
-} from '../../domain/entities/circle-cycle';
+import { CircleCycle, type PeriodClose } from '../../domain/entities/circle-cycle';
 import { type SlotPricing } from '../../domain/services/slot-pricing';
 import {
   CIRCLE_CYCLE_REPOSITORY,
@@ -21,19 +17,10 @@ import {
   DISBURSEMENTS,
   type DisbursementsPort,
 } from '../ports/cycle-payments.port';
+import { CIRCLE_CYCLE, type CircleCycleSettings } from './cycle-settings';
 import { SLOT_PRICING } from './get-available-slots.use-case';
 
-export const CIRCLE_CYCLE = Symbol('CIRCLE_CYCLE');
-
-export interface CircleCycleSettings {
-  /** Día del mes en que vence cada cuota (pending-scope R19, provisional). */
-  dueDay: number;
-  timeZone: string;
-  /** Gracia, cargo por mora y penalidad de devolución (COPAYNI-57). */
-  delinquency: DelinquencyPolicy;
-  /** Parte de las Admin Fees que va al fondo de garantía (COPAYNI-58, R16). */
-  fundFeeShareBps: number;
-}
+export { CIRCLE_CYCLE, type CircleCycleSettings } from './cycle-settings';
 
 export interface AdvanceCyclesResult {
   advanced: number;
@@ -47,6 +34,7 @@ export interface AdvanceCyclesResult {
  * bloqueado:
  * - Lo empieza cuando llega su mes de inicio, abriendo las cuotas del primer mes. Si faltan
  *   miembros no empieza: se registra que necesita la aprobación de sus miembros (R2).
+ * - Abre la cuota del mes de quien tomó una vacante después de abrirse el mes (COPAYNI-59).
  * - Expulsa a quien no pagó al terminar la gracia (COPAYNI-57), antes de reintentar el cobro: un
  *   pago que llega después de la gracia no evita la expulsión.
  * - Cobra las cuotas vencidas: las que no se pueden cobrar quedan `overdue` y se reintentan
@@ -121,10 +109,14 @@ export class AdvanceCircleCyclesUseCase {
       this.logger.log({ event: 'circles.cycle.started', circleId, members: cycle.members.length });
     }
 
+    for (const { userId, position } of cycle.admitReplacements(randomUUID)) {
+      this.logger.log({ event: 'circles.cycle.replacement_admitted', circleId, userId, position });
+    }
+
     while (cycle.state === 'contributing') {
       for (const { id } of cycle.defaultedInstallments(today)) {
         const expulsion = cycle.expel(id, today);
-        // Su cuota la cubre el fondo (COPAYNI-58); la vacante se ofrece con COPAYNI-59.
+        // Su cuota la cubre el fondo (COPAYNI-58) y, si no cobró, su turno se ofrece (COPAYNI-59).
         this.logger.warn({
           event: 'circles.cycle.member_expelled',
           circleId,

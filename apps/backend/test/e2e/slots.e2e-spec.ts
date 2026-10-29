@@ -43,6 +43,7 @@ describe('GET /v1/circles/slots', () => {
       type: 'fastest_payout',
       fee: { amount: 300_000, currency: 'PEN' },
       discount: { amount: 0, currency: 'PEN' },
+      catchUp: { amount: 0, currency: 'PEN' },
       available: true,
     });
     expect(response.body.data.slots[9]).toMatchObject({
@@ -73,6 +74,47 @@ describe('GET /v1/circles/slots', () => {
         .filter(({ available }) => !available)
         .map(({ position }) => position),
     ).toEqual([3]);
+  });
+
+  it('con circleId de un círculo en curso ofrece su vacante con la puesta al día (COPAYNI-59)', async () => {
+    const dataSource = app.get(DataSource);
+    const circleId = randomUUID();
+    // Empezó hace 2 meses; el turno 8 quedó vacante por una expulsión antes de cobrar.
+    const current = Period.fromDate(new Date(), 'America/Lima');
+    const startsOn = current.addMonths(-2);
+    await dataSource.query(
+      `INSERT INTO circles (id, payout_amount, currency, months, starts_on, cycle_state, current_period)
+       VALUES ($1, 3000000, 'PEN', 10, $2, 'contributing', $3)`,
+      [circleId, `${startsOn.toString()}-01`, `${current.toString()}-01`],
+    );
+    const expelled = await insertTestUser(dataSource);
+    await dataSource.query(
+      `INSERT INTO circle_memberships (id, circle_id, user_id, position, idempotency_key, expelled_at)
+       VALUES ($1, $2, $3, 8, 'k', now())`,
+      [randomUUID(), circleId, expelled],
+    );
+    await dataSource.query(
+      `INSERT INTO circle_expulsions
+         (circle_id, user_id, position, period, expelled_on, overdue_amount, late_fee_amount,
+          paid_amount, refund_amount, currency)
+       VALUES ($1, $2, 8, $3, $4, 300000, 9000, 0, 0, 'PEN')`,
+      [circleId, expelled, `${startsOn.toString()}-01`, `${startsOn.toString()}-20`],
+    );
+
+    const response = await get({ payoutAmount: 3_000_000, months: 10, circleId }).expect(200);
+    const slots = response.body.data.slots as {
+      position: number;
+      available: boolean;
+      catchUp: { amount: number };
+    }[];
+    expect(response.body.data.circleId).toBe(circleId);
+    expect(slots.filter(({ available }) => available).map(({ position }) => position)).toEqual([8]);
+    // Debe las cuotas base (3.000) de los meses transcurridos: 2 o 3, según el día del mes.
+    expect([600_000, 900_000]).toContain(slots[7]!.catchUp.amount);
+
+    const unknown = await get({ payoutAmount: 3_000_000, months: 10, circleId: randomUUID() });
+    expect(unknown.status).toBe(404);
+    expect(unknown.body.error.code).toBe('CIRCLE_NOT_FOUND');
   });
 
   it.each([

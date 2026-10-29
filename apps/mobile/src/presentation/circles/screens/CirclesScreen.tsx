@@ -18,12 +18,13 @@ import { colors, spacing } from '@/presentation/theme/tokens';
 
 import { RecommendedCircles } from '../components/RecommendedCircles';
 import { useMyCircles } from '../useMyCircles';
+import type { JoinTarget } from '@/domain/circles/RecommendedCircle';
 
 interface CirclesScreenProps {
   /** Estado vacío de Active: empieza el flujo de unión. */
   onJoin: () => void;
   /** "Únete ahora" de un recomendado: el flujo de unión con ese payout precargado. */
-  onJoinCircle: (payout: Money) => void;
+  onJoinCircle: (payout: Money, target?: JoinTarget) => void;
 }
 
 /** Primer día del mes `YYYY-MM`, para formatearlo con el idioma activo. */

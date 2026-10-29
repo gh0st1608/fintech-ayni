@@ -10,8 +10,16 @@ import type { Slot } from '../value-objects/Slot';
  */
 export interface CircleQuoteRepositoryPort {
   listInstallmentOptions(payout: Money, signal?: AbortSignal): Promise<InstallmentOption[]>;
-  /** Slots de un círculo con ese payout y esa duración, ocupados incluidos. */
-  listSlots(payout: Money, months: number, signal?: AbortSignal): Promise<Slot[]>;
+  /**
+   * Slots de un círculo con ese payout y esa duración, ocupados incluidos. Con `circleId`, los de
+   * ese círculo recomendado (COPAYNI-59); si no, los del círculo que asigna el backend.
+   */
+  listSlots(
+    payout: Money,
+    months: number,
+    signal?: AbortSignal,
+    circleId?: string | null,
+  ): Promise<Slot[]>;
   /** Círculos abiertos que se le recomiendan al usuario; vacío si no hay. */
   listRecommended(signal?: AbortSignal): Promise<RecommendedCircle[]>;
 }

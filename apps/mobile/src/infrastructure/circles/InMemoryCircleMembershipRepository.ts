@@ -13,6 +13,7 @@ const REJECTIONS = {
   PAYOUT_METHOD_LIMIT_EXCEEDED: 'validation',
   SLOT_TAKEN: 'conflict',
   CIRCLE_ALREADY_STARTED: 'conflict',
+  VACANCY_CLOSED: 'conflict',
   MEMBER_BLOCKED: 'conflict',
 } as const satisfies Record<string, AppErrorKind>;
 
@@ -116,6 +117,7 @@ export class InMemoryCircleMembershipRepository implements CircleMembershipRepos
       type: 'lowestFees',
       installments: Array.from({ length: months }, () => installment),
       netPayout: payout,
+      catchUp: Money.of(0, payout.currency),
       created: true,
     };
     this.joins.set(idempotencyKey, joined);

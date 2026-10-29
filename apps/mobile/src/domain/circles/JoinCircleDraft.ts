@@ -3,6 +3,7 @@ import { DomainError } from '@/domain/shared/errors/DomainError';
 import type { Money } from '@/domain/shared/value-objects/Money';
 
 import type { JoinCircleRequest } from './JoinedCircle';
+import type { JoinTarget } from './RecommendedCircle';
 import type { InstallmentOption } from './value-objects/InstallmentOption';
 import type { Slot } from './value-objects/Slot';
 
@@ -21,16 +22,30 @@ export class JoinCircleDraft {
     readonly slot: Slot | null,
     /** Paso 4: método de cobro. Es una preferencia del usuario, así que no depende de los pasos previos. */
     readonly payoutMethod: PayoutMethodType | null = null,
+    /** El círculo recomendado de "Join now" (COPAYNI-59); `null` si el backend lo asigna. */
+    readonly target: JoinTarget | null = null,
   ) {}
 
   static empty(): JoinCircleDraft {
     return new JoinCircleDraft(null, null, null);
   }
 
+  /** Empieza desde un recomendado: ese monto y, para pedir sus slots, ese círculo. */
+  static forTarget(amount: Money, target: JoinTarget): JoinCircleDraft {
+    return new JoinCircleDraft(amount, null, null, null, target);
+  }
+
   /** Repetir el mismo monto conserva la cuota y el turno; otro monto los descarta. */
   withPayoutAmount(amount: Money): JoinCircleDraft {
     if (this.payoutAmount?.equals(amount)) return this;
     return new JoinCircleDraft(amount, null, null, this.payoutMethod);
+  }
+
+  /** El círculo cuyos slots se piden: el recomendado, si la duración elegida es la suya. */
+  slotsCircleId(): string | null {
+    return this.target && this.installment?.months === this.target.months
+      ? this.target.circleId
+      : null;
   }
 
   withInstallment(option: InstallmentOption): JoinCircleDraft {
@@ -43,6 +58,7 @@ export class JoinCircleDraft {
       option,
       keepsSlot ? this.slot : null,
       this.payoutMethod,
+      this.target,
     );
   }
 
@@ -50,14 +66,20 @@ export class JoinCircleDraft {
     if (!this.payoutAmount || !this.installment) {
       throw new IncompleteJoinDraftError('Choose the payout and the installment before the slot');
     }
-    return new JoinCircleDraft(this.payoutAmount, this.installment, slot, this.payoutMethod);
+    return new JoinCircleDraft(
+      this.payoutAmount,
+      this.installment,
+      slot,
+      this.payoutMethod,
+      this.target,
+    );
   }
 
   withPayoutMethod(type: PayoutMethodType): JoinCircleDraft {
     if (!this.payoutAmount || !this.installment || !this.slot) {
       throw new IncompleteJoinDraftError('Choose the slot before the payout method');
     }
-    return new JoinCircleDraft(this.payoutAmount, this.installment, this.slot, type);
+    return new JoinCircleDraft(this.payoutAmount, this.installment, this.slot, type, this.target);
   }
 
   /** Los cuatro pasos están elegidos: se puede confirmar la unión (COPAYNI-31). */

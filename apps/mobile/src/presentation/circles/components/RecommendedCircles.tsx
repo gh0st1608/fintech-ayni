@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { FlatList, StyleSheet, useWindowDimensions, View } from 'react-native';
 
-import type { RecommendedCircle } from '@/domain/circles/RecommendedCircle';
+import type { JoinTarget, RecommendedCircle } from '@/domain/circles/RecommendedCircle';
 import type { Money } from '@/domain/shared/value-objects/Money';
 import { useFormatDate } from '@/presentation/formatters/formatDate';
 import { useFormatMoney } from '@/presentation/formatters/formatMoney';
@@ -15,7 +15,7 @@ import { useRecommendedCircles } from '../useRecommendedCircles';
 
 interface RecommendedCirclesProps {
   /** "Únete ahora": entra al flujo de unión con el payout del círculo. */
-  onJoin: (payout: Money) => void;
+  onJoin: (payout: Money, target?: JoinTarget) => void;
   /** Qué mostrar si no hay recomendados; por defecto la sección se oculta. */
   emptyFallback?: React.ReactNode;
 }
@@ -100,13 +100,15 @@ function RecommendedCard({
   onJoin,
 }: {
   circle: RecommendedCircle;
-  onJoin: (payout: Money) => void;
+  onJoin: (payout: Money, target?: JoinTarget) => void;
 }) {
   const { t } = useTranslation();
   const formatMoney = useFormatMoney();
   const formatDate = useFormatDate();
   const money = (amount: Money) => formatMoney(amount, { trimZeroDecimals: true });
   const monthYear = (period: string) => formatDate(periodDate(period), 'monthYear');
+  // Una vacante de un círculo en curso (COPAYNI-59): se muestra su turno y se piden sus slots.
+  const [vacancy] = circle.vacancies;
 
   return (
     <CircleCard
@@ -119,7 +121,17 @@ function RecommendedCard({
       durationLabel={t('circles.card.duration', { months: circle.months })}
       feesLabel={t('circles.card.adminFees')}
       feesAmount={money(circle.adminFee)}
-      action={{ label: t('circles.recommended.joinNow'), onPress: () => onJoin(circle.payout) }}
+      {...(vacancy && {
+        turnIndex: vacancy.position - 1,
+        turnLabel: t('circles.recommended.vacancyTurn', { month: monthYear(vacancy.payoutPeriod) }),
+      })}
+      action={{
+        label: t('circles.recommended.joinNow'),
+        onPress: () =>
+          vacancy
+            ? onJoin(circle.payout, { circleId: circle.circleId, months: circle.months })
+            : onJoin(circle.payout),
+      }}
       testID={`recommended-${circle.circleId}`}
     />
   );

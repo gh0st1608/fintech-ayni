@@ -10,10 +10,11 @@ import { AppText } from '@/presentation/shared/components/AppText';
 import { EmptyState } from '@/presentation/shared/components/EmptyState';
 import { Screen } from '@/presentation/shared/components/Screen';
 import { spacing } from '@/presentation/theme/tokens';
+import type { JoinTarget } from '@/domain/circles/RecommendedCircle';
 
 interface HomeScreenProps {
   /** "Únete ahora" de un recomendado: el flujo de unión con ese payout precargado. */
-  onJoinCircle: (payout: Money) => void;
+  onJoinCircle: (payout: Money, target?: JoinTarget) => void;
   /** Sin recomendados: el flujo de unión desde "Elige un servicio". */
   onJoin: () => void;
 }

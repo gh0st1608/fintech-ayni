@@ -79,13 +79,14 @@ Cuotas y duraciones posibles para el payout elegido (Monthly Pay-in, COPAYNI-29)
 | `VALIDATION_ERROR`   | 400  | Falta `payoutAmount`, no es un entero o hay parámetros de más.  |
 | `PAYOUT_NOT_ALLOWED` | 422  | Fuera del rango, fuera del salto o sobre el límite del usuario. |
 
-## `GET /v1/circles/slots?payoutAmount=<entero>&months=<entero>`
+## `GET /v1/circles/slots?payoutAmount=<entero>&months=<entero>[&circleId=<uuid>]`
 
 **Estado:** implementado en el backend (COPAYNI-30), con una **regla provisional** para elegir el círculo (R2). La app la consume con `CircleQuoteApiRepository` y, en dev, con el adaptador falso.
 
 Slots del círculo que se le ofrece al usuario con ese payout y esa duración, ocupados incluidos, con el precio que calcula `SlotPricing` (COPAYNI-24).
 
 - `payoutAmount` y `months` tienen que ser una combinación de `installment-options`.
+- `circleId` (opcional, COPAYNI-59): los slots de ese círculo, el de un recomendado de Home, en vez del que asigna la regla de abajo. Tiene que tener ese payout y esa duración, y el usuario no puede ser miembro. Si el círculo está en curso, solo sus [vacantes abiertas](#reemplazo-del-turno-copayni-59) tienen `available: true`, con el precio de la puesta al día.
 
 ### Qué círculo se ofrece (regla provisional, pending-scope R2)
 
@@ -120,6 +121,7 @@ Queda abierto en R2: si los círculos los arma un administrador y el tamaño má
       "type": "fastest_payout",
       "fee": { "amount": 300000, "currency": "PEN" },
       "discount": { "amount": 0, "currency": "PEN" },
+      "catchUp": { "amount": 0, "currency": "PEN" },
       "available": false
     }
   ]
@@ -135,6 +137,7 @@ Queda abierto en R2: si los círculos los arma un administrador y el tamaño má
 | `type`         | `fastest_payout`, `lowest_fees` o `highest_return` (`SLOT_TYPES` del dominio). |
 | `fee`          | Fee por cobrar antes; cero salvo en `fastest_payout`.                          |
 | `discount`     | Descuento en los pay-ins por cobrar al final; cero salvo en `highest_return`.  |
+| `catchUp`      | Puesta al día incluida en las cuotas al tomar una vacante; cero si no.         |
 | `available`    | `false` si otro miembro ya ocupa el slot. La app lo muestra deshabilitado.     |
 
 Comportamiento de la app:
@@ -143,7 +146,7 @@ Comportamiento de la app:
 - Antes de continuar, vuelve a pedir la lista y comprueba que el slot elegido siga libre. Si se ocupó, avisa, refresca la lista y quita la selección.
 - Esa comprobación no reserva el slot: la reserva atómica es la unión al círculo (COPAYNI-31), con la unicidad por (círculo, slot) del repositorio.
 
-Errores: los mismos que `installment-options`, más `VALIDATION_ERROR` si `months` no es una duración ofrecida para ese payout.
+Errores: los mismos que `installment-options`, más `VALIDATION_ERROR` si `months` no es una duración ofrecida para ese payout. Con `circleId`: `VALIDATION_ERROR` (`circleId: terms_mismatch`), `CIRCLE_NOT_FOUND`, `ALREADY_MEMBER` y `CIRCLE_ALREADY_STARTED` (empezó y no está en curso).
 
 ## `POST /v1/circles/join`
 
@@ -210,7 +213,7 @@ Se comprueba en este orden, que es el orden en que la app resuelve cada caso:
 | Método de cobro elegido (COPAYNI-37)        | El método guardado tiene que seguir disponible en el catálogo.                                                                                                           | `PAYOUT_METHOD_REQUIRED`       |
 | Payout dentro del límite del método         | Por ejemplo, la tarjeta prepago (`PAYOUT_PREPAID_CARD_LIMIT`).                                                                                                           | `PAYOUT_METHOD_LIMIT_EXCEEDED` |
 
-Cada unión queda registrada en el log como `circles.joined`, con el usuario, el círculo, el slot y si abrió un círculo nuevo.
+Cada unión queda registrada en el log como `circles.joined`, con el usuario, el círculo, el slot, si abrió un círculo nuevo y si tomó una vacante (`replacement`). La respuesta incluye `catchUp`: la puesta al día incluida en las cuotas (cero en un turno normal).
 
 ### Errores
 
@@ -220,7 +223,8 @@ Cada unión queda registrada en el log como `circles.joined`, con el usuario, el
 | `CIRCLE_NOT_FOUND`       | 404  | El `circleId` no existe.                                                                                                                                                       |
 | `SLOT_TAKEN`             | 409  | Otro miembro tomó el slot.                                                                                                                                                     |
 | `ALREADY_MEMBER`         | 409  | El usuario ya tiene un slot en ese círculo.                                                                                                                                    |
-| `CIRCLE_ALREADY_STARTED` | 409  | El círculo empezó: el cobro de los primeros slots ya pasó.                                                                                                                     |
+| `CIRCLE_ALREADY_STARTED` | 409  | El círculo empezó y no está en curso (p. ej. espera la aprobación de sus miembros, R2). En uno en curso solo se toman sus vacantes.                                            |
+| `VACANCY_CLOSED`         | 409  | La vacante ya no se puede tomar: venció su mes de cobro (COPAYNI-59).                                                                                                          |
 | `IDEMPOTENCY_KEY_REUSED` | 409  | La clave ya se usó con otros datos.                                                                                                                                            |
 | `MEMBER_BLOCKED`         | 409  | El usuario fue expulsado por impago y no saldó su deuda (COPAYNI-57). `details`: `amountDue` (lo vencido más el cargo por mora, en unidades menores, como texto) y `currency`. |
 | `PAYOUT_NOT_ALLOWED`     | 422  | Payout fuera del rango, del salto o del límite del usuario.                                                                                                                    |
@@ -235,7 +239,7 @@ Fuera de alcance, pendientes del diseño o del PO: la firma del contrato y del p
 
 Criterio (coherente con la asignación `fill_oldest`, R2; pendiente con el PO):
 
-- **Admiten al usuario:** no empezaron, no están llenos y el usuario no es miembro.
+- **Admiten al usuario:** no empezaron, no están llenos y el usuario no es miembro. También los **en curso con una vacante abierta** (COPAYNI-59); `vacancies` trae su turno y su mes de cobro.
 - **El usuario puede elegir sus condiciones hoy:** el payout está permitido en `join-config` y la duración se ofrece en `installment-options`.
 - **Orden:** del más antiguo al más nuevo, porque completarlos hace que empiecen antes.
 - **Cantidad:** hasta `RECOMMENDED_CIRCLES_LIMIT` círculos (5 por defecto).
@@ -253,7 +257,8 @@ Criterio (coherente con la asignación `fill_oldest`, R2; pendiente con el PO):
       "endsOn": "2027-08",
       "baseInstallment": { "amount": 300000, "currency": "PEN" },
       "adminFee": { "amount": 360000, "currency": "PEN" },
-      "availableSlots": 7
+      "availableSlots": 7,
+      "vacancies": []
     }
   ]
 }
@@ -262,6 +267,7 @@ Criterio (coherente con la asignación `fill_oldest`, R2; pendiente con el PO):
 - `baseInstallment` es payout / meses; la cuota real depende del slot que se elija.
 - **Sin círculos abiertos**, `items` viene vacío y la app oculta la sección.
 - **"Join now"** entra al flujo de unión con ese payout. `slots` ofrece el mismo círculo mientras siga siendo el más antiguo con esas condiciones.
+- **Vacante** (`vacancies` no vacío): la tarjeta muestra el turno y su mes de cobro, y "Join now" pide los slots con `circleId` si el usuario elige la duración del círculo.
 
 ## `GET /v1/me/circles?status=active|finished&cursor=<texto>&limit=<entero>`
 
@@ -328,7 +334,7 @@ No es un endpoint: lo ejecuta la tarea diaria `node dist/jobs/circle-cycle.js` (
 - **Cierre del mes:** solo cuando todas sus cuotas están pagadas. El payout es el `netPayout` del miembro que tiene el turno. Si el turno está libre, no hay payout y se registra `circles.cycle.payout_unassigned`; el destino de ese pozo llega con COPAYNI-58 y 59.
 - **Puesta al día:** si la tarea no corrió varios días, procesa todos los meses vencidos.
 - **Pagos:** por los puertos `ContributionsPort` y `DisbursementsPort`, idempotentes por cuota y por (círculo, mes). Hasta tener pasarela (D1, COPAYNI-34) solo existe el adaptador `fake`, prohibido en production.
-- **Auditoría:** eventos `circles.cycle.started`, `installment_paid`, `installment_overdue`, `member_expelled`, `payout_disbursed`, `payout_unassigned`, `finished`, `failed`, `refund_paid`, el resumen `circles.cycle.run`, `circles.debt_settled`, `circles.fund.covered`, `circles.fund.pot_returned`, `circles.cycle.payout_reduced`, `circles.cycle.start_approval_required` y `guarantee_fund.*`.
+- **Auditoría:** eventos `circles.cycle.started`, `installment_paid`, `installment_overdue`, `member_expelled`, `payout_disbursed`, `payout_unassigned`, `finished`, `failed`, `refund_paid`, el resumen `circles.cycle.run`, `circles.debt_settled`, `circles.fund.covered`, `circles.fund.pot_returned`, `circles.cycle.payout_reduced`, `circles.cycle.start_approval_required`, `circles.cycle.replacement_admitted` y `guarantee_fund.*`.
 - **Tablas:** `circles.cycle_state` y `circles.current_period`, `circle_installments` (única por círculo, turno y mes), `circle_payouts` (única por círculo y mes) y `circle_expulsions` (única por círculo y miembro).
 
 ### Impago (COPAYNI-57)
@@ -348,6 +354,17 @@ Reglas del PO (pending-scope R3 y §3.1) con los valores propuestos en R18, todo
 - **Solo se expulsa por una cuota que tuvo un intento de cobro fallido.** Si la tarea no corrió y la cuota nunca se intentó cobrar, se intenta primero y, si falla, se expulsa en la ejecución siguiente: una caída del sistema no expulsa a nadie sin intento de cobro.
 - El turno libre del expulsado se maneja como cualquier turno libre (`payout_unassigned`); el reemplazo llega con COPAYNI-59.
 - El débito automático con reintentos en los días 0, 1 y 3 (R18) llega con D1: hoy se reintenta cada día de la gracia.
+
+### Reemplazo del turno (COPAYNI-59)
+
+Al expulsar a un miembro que todavía no cobró, su turno queda **vacante** y lo puede tomar un miembro nuevo (pending-scope §3.1, R17):
+
+- **Ventana:** se ofrece hasta el **día anterior** al vencimiento de cada mes. Antes, quien la toma paga la cuota de ese mes; desde el vencimiento, empieza el mes siguiente y el fondo cubre el mes en curso. Deja de ofrecerse desde el vencimiento de su mes de cobro: ese pozo vuelve al fondo.
+- **Puesta al día:** las cuotas base de los meses ya transcurridos, repartidas en partes iguales entre sus cuotas hasta su mes de cobro, igual que el fee y las Admin Fees (`SlotPricing.replacementQuote`). Las cuotas de los meses anteriores a su ingreso son cero. Se congela con la membresía (`price.catchUp`) y, al cobrarse, va al fondo (`collection`).
+- **Mismas reglas de unión:** el límite mensual se valida con las cuotas que incluyen la puesta al día. La regla de confianza del tipo de turno llega con COPAYNI-60.
+- **Concurrencia:** el turno es único entre quienes siguen en el círculo (índice parcial `uq_circle_memberships_position`). La unión toma el bloqueo del ciclo, así que no se intercala con la tarea diaria. Si dos usuarios toman la misma vacante, el segundo recibe `SLOT_TAKEN`.
+- **Ciclo:** si alguien toma la vacante después de abrirse el mes, la tarea diaria le abre la cuota de ese mes (`circles.cycle.replacement_admitted`). En su mes de cobro recibe el payout completo.
+- **Caso de §3.1:** si un nuevo toma el turno 7 en el mes 6, el fondo cubre solo el mes 5, recibe 15.000 de puesta al día y termina en +600. Quien tomó el turno cobra 30.000 en el mes 7. Hay un test para ese caso.
 
 ### Fondo de garantía (COPAYNI-58)
 

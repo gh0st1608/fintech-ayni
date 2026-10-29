@@ -103,6 +103,28 @@ describe('JoinConfirmScreen', () => {
     expect(onDone).toHaveBeenCalled();
   });
 
+  it('al tomar una vacante muestra la primera cuota de su mes de ingreso y la puesta al día', async () => {
+    /** El backend responde la unión a una vacante (COPAYNI-59): cuotas en cero antes de entrar. */
+    class VacancyMembership extends InMemoryCircleMembershipRepository {
+      override async join(...args: Parameters<InMemoryCircleMembershipRepository['join']>) {
+        const joined = await super.join(...args);
+        return {
+          ...joined,
+          installments: [0, 0, 0, 0, 0, 12_300, 12_300, 3_000, 3_000, 3_000].map(pen),
+          catchUp: pen(15_000),
+        };
+      }
+    }
+    await renderConfirm({
+      circleMembership: new VacancyMembership({ latencyMs: 0, startsOn: '2026-11' }),
+    });
+    await fireEvent.press(await submit());
+
+    const success = await screen.findByTestId('join-success');
+    expect(success).toHaveTextContent(/primera cuota es de .*12\.?300.* en abr\.? 2027/i);
+    expect(success).toHaveTextContent(/incluyen .*15\.?000.* de puesta al día/i);
+  });
+
   it('tras un fallo de red, reintentar usa la misma clave y crea una sola unión', async () => {
     const circleMembership = new InMemoryCircleMembershipRepository({ latencyMs: 0 });
     const original = circleMembership.join.bind(circleMembership);

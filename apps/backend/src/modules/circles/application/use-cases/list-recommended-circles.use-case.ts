@@ -2,16 +2,20 @@ import { Inject, Injectable } from '@nestjs/common';
 
 import { type Principal } from '../../../../shared/application/ports/access-token-verifier.port';
 import { CLOCK, type ClockPort } from '../../../../shared/application/ports/clock.port';
+import { LocalDate } from '../../../../shared/domain/value-objects/local-date';
 import { type Money } from '../../../../shared/domain/value-objects/money';
 import { Period } from '../../../../shared/domain/value-objects/period';
+import { type Circle } from '../../domain/entities/circle';
 import { installmentOptions } from '../../domain/services/installment-options';
 import { type SlotPricing } from '../../domain/services/slot-pricing';
+import { openVacancies } from '../../domain/services/vacancy';
 import { type CircleTerms } from '../../domain/value-objects/circle-terms';
 import { CIRCLE_REPOSITORY, type CircleRepositoryPort } from '../ports/circle-repository.port';
 import {
   JOIN_CONFIG_REPOSITORY,
   type JoinConfigRepositoryPort,
 } from '../ports/join-config-repository.port';
+import { CIRCLE_CYCLE, type CircleCycleSettings } from './cycle-settings';
 import {
   CIRCLE_ASSIGNMENT,
   type CircleAssignmentSettings,
@@ -34,12 +38,15 @@ export interface RecommendedCircle {
   /** Las Admin Fees no dependen del slot: son un porcentaje del payout (R4). */
   adminFee: Money;
   availableSlots: number;
+  /** Turnos vacantes de un círculo en curso (COPAYNI-59), con su mes de cobro. */
+  vacancies: { position: number; payoutPeriod: Period }[];
 }
 
 /**
  * Círculos recomendados (COPAYNI-25), con un criterio provisional coherente con la asignación
  * `fill_oldest` (pending-scope R2):
- * - Admiten al usuario: no empezaron, no están llenos y el usuario no es miembro.
+ * - Admiten al usuario: no empezaron, no están llenos y el usuario no es miembro. También los
+ *   en curso con una vacante que todavía se puede tomar (COPAYNI-59, R17).
  * - El usuario puede elegir sus condiciones hoy: payout permitido y duración ofrecida.
  * - Del más antiguo al más nuevo: completarlos hace que empiecen antes.
  * "Join now" entra al flujo de unión con ese payout; `slots` ofrece el mismo círculo mientras
@@ -53,32 +60,46 @@ export class ListRecommendedCirclesUseCase {
     @Inject(SLOT_PRICING) private readonly pricing: SlotPricing,
     @Inject(CIRCLE_ASSIGNMENT) private readonly assignment: CircleAssignmentSettings,
     @Inject(RECOMMENDATIONS) private readonly settings: RecommendationSettings,
+    @Inject(CIRCLE_CYCLE) private readonly cycle: Pick<CircleCycleSettings, 'dueDay'>,
     @Inject(CLOCK) private readonly clock: ClockPort,
   ) {}
 
   async execute(principal: Principal): Promise<RecommendedCircle[]> {
+    const today = LocalDate.fromDate(this.clock.now(), this.assignment.timeZone);
     const [joinConfig, candidates] = await Promise.all([
       this.joinConfigs.getForUser(principal.userId),
       this.circles.listJoinable({
-        startsAfter: Period.fromDate(this.clock.now(), this.assignment.timeZone),
+        startsAfter: today.period,
         userId: principal.userId,
         limit: MAX_CANDIDATES,
       }),
     ]);
     return candidates
+      .map((circle) => ({ circle, vacancies: this.vacanciesOf(circle, today) }))
       .filter(
-        ({ terms }) =>
+        ({ circle: { terms }, vacancies }) =>
+          (vacancies === null || vacancies.length > 0) &&
           joinConfig.allowsPayout(terms.payout) &&
           installmentOptions(terms.payout, joinConfig.durationOptions).some(
             (option) => option.months === terms.months,
           ),
       )
       .slice(0, this.settings.limit)
-      .map((circle) => ({
+      .map(({ circle, vacancies }) => ({
         circleId: circle.id,
         terms: circle.terms,
         adminFee: this.pricing.quote(circle.terms, 1).adminFee,
-        availableSlots: circle.availablePositions().length,
+        availableSlots: vacancies?.length ?? circle.availablePositions().length,
+        vacancies: vacancies ?? [],
       }));
+  }
+
+  /** Las vacantes que hoy se pueden tomar; `null` si el círculo no empezó. */
+  private vacanciesOf(circle: Circle, today: LocalDate): RecommendedCircle['vacancies'] | null {
+    if (!circle.isRunning()) return null;
+    return openVacancies(circle, today, this.cycle.dueDay).map(({ position }) => ({
+      position,
+      payoutPeriod: circle.terms.payoutPeriodOf(position),
+    }));
   }
 }

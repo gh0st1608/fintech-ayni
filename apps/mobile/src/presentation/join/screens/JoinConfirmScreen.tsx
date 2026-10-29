@@ -4,6 +4,7 @@ import { ScrollView, StyleSheet, View } from 'react-native';
 
 import type { JoinCircleDraft } from '@/domain/circles/JoinCircleDraft';
 import {
+  firstInstallmentOf,
   type JoinedCircle,
   MemberBlockedError,
   MonthlyLimitExceededError,
@@ -235,7 +236,7 @@ function Joined({ circle, onDone }: { circle: JoinedCircle; onDone: () => void }
   const { t } = useTranslation();
   const formatMoney = useFormatMoney();
   const formatDate = useFormatDate();
-  const [firstInstallment] = circle.installments;
+  const first = firstInstallmentOf(circle);
 
   return (
     <>
@@ -256,11 +257,19 @@ function Joined({ circle, onDone }: { circle: JoinedCircle; onDone: () => void }
             months: circle.months,
           })}
         </AppText>
-        {firstInstallment && (
+        {first && (
           <AppText color={colors.textSecondary} style={styles.centerText}>
             {t('join.confirm.success.firstInstallment', {
-              amount: formatMoney(firstInstallment, { trimZeroDecimals: true }),
-              month: formatDate(periodDate(circle.startsOn), 'monthYear'),
+              amount: formatMoney(first.amount, { trimZeroDecimals: true }),
+              month: formatDate(periodDate(first.period), 'monthYear'),
+            })}
+          </AppText>
+        )}
+        {circle.catchUp.amount > 0 && (
+          <AppText color={colors.textSecondary} style={styles.centerText}>
+            {t('join.confirm.success.catchUp', {
+              amount: formatMoney(circle.catchUp, { trimZeroDecimals: true }),
+              month: formatDate(periodDate(circle.payoutPeriod), 'monthYear'),
             })}
           </AppText>
         )}

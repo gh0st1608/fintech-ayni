@@ -20,6 +20,7 @@ function setup(limit = 5) {
     TEST_PRICING,
     { strategy: 'fill_oldest', startOffsetMonths: 1, timeZone: 'America/Lima' },
     { limit },
+    { dueDay: 5 },
     new TestClock(NOW),
   );
   const addCircle = (

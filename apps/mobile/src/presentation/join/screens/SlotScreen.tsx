@@ -41,7 +41,7 @@ export function SlotScreen({ onEditPayout, onEditInstallment, onNext }: SlotScre
   const formatMoney = useFormatMoney();
   const { draft } = useJoinFlow();
   const { payoutAmount: payout, installment } = draft;
-  const slots = useAvailableSlots(payout, installment);
+  const slots = useAvailableSlots(payout, installment, draft.slotsCircleId());
 
   let body: React.ReactNode;
   if (!payout || !installment) {
@@ -123,7 +123,7 @@ function SlotPicker({
   const formatMoney = useFormatMoney();
   const formatDate = useFormatDate();
   const { draft, setSlot } = useJoinFlow();
-  const confirm = useConfirmSlot(payout, installment);
+  const confirm = useConfirmSlot(payout, installment, draft.slotsCircleId());
 
   // Al volver del paso 4 se parte del slot del borrador si sigue libre.
   const all = groups.flatMap((group) => group.slots);
@@ -146,6 +146,9 @@ function SlotPicker({
     else parts.push(t('join.slot.zeroFees'));
     if (slot.discount.amount > 0) {
       parts.push(t('join.slot.discount', { amount: money(slot.discount) }));
+    }
+    if (slot.catchUp.amount > 0) {
+      parts.push(t('join.slot.catchUp', { amount: money(slot.catchUp) }));
     }
     return parts.join(' · ');
   };

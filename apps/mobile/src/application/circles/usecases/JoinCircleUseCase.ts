@@ -24,6 +24,8 @@ const TYPED_ERRORS: Record<string, new (message: string) => DomainError> = {
   SLOT_TAKEN: SlotNoLongerAvailableError,
   ALREADY_MEMBER: SlotNoLongerAvailableError,
   CIRCLE_ALREADY_STARTED: SlotNoLongerAvailableError,
+  // La vacante de un círculo en curso ya no se puede tomar (COPAYNI-59).
+  VACANCY_CLOSED: SlotNoLongerAvailableError,
   CIRCLE_NOT_FOUND: SlotNoLongerAvailableError,
 };
 

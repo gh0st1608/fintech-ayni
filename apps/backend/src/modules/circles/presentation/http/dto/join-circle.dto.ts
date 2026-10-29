@@ -2,7 +2,7 @@ import { ApiProperty } from '@nestjs/swagger';
 import { IsInt, IsUUID, Max, Min, ValidateIf } from 'class-validator';
 
 import { type JoinCircleResult } from '../../../application/use-cases/join-circle.use-case';
-import { SLOT_TYPES, type SlotType } from '../../../domain/services/slot-pricing';
+import { catchUpTotal, SLOT_TYPES, type SlotType } from '../../../domain/services/slot-pricing';
 import { MoneyResponse } from './join-config.response';
 
 export class JoinCircleRequest {
@@ -64,6 +64,13 @@ export class JoinCircleResponse {
   @ApiProperty({ type: MoneyResponse, description: 'Lo que recibe en su mes de cobro' })
   netPayout!: MoneyResponse;
 
+  @ApiProperty({
+    type: MoneyResponse,
+    description:
+      'Puesta al día incluida en las cuotas al tomar una vacante (COPAYNI-59); cero en un turno normal',
+  })
+  catchUp!: MoneyResponse;
+
   @ApiProperty({ description: 'false si es un reintento de una unión ya hecha (HTTP 200)' })
   created!: boolean;
 
@@ -78,6 +85,7 @@ export class JoinCircleResponse {
       type: quote.type,
       installments: quote.installments.map((installment) => MoneyResponse.from(installment)),
       netPayout: MoneyResponse.from(quote.netPayout),
+      catchUp: MoneyResponse.from(catchUpTotal(quote)),
       created,
     };
   }

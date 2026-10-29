@@ -6,6 +6,8 @@ import type { CircleMembershipRepositoryPort } from '@/domain/circles/ports/Circ
 import type { HttpClientPort } from '@/domain/shared/ports/HttpClientPort';
 
 import { SLOT_TYPE_BY_DTO } from './CircleQuoteApiRepository';
+import { Money } from '@/domain/shared/value-objects/Money';
+
 import { moneyDto, toMoney } from './moneyDto';
 
 const PERIOD = /^\d{4}-(0[1-9]|1[0-2])$/;
@@ -22,6 +24,8 @@ const joinedCircleDto = z.object({
   type: slotTypeDto,
   installments: z.array(moneyDto).min(1),
   netPayout: moneyDto,
+  /** COPAYNI-59; un backend anterior no lo envía. */
+  catchUp: moneyDto.optional(),
   created: z.boolean(),
 });
 
@@ -69,6 +73,7 @@ export class CircleMembershipApiRepository implements CircleMembershipRepository
       type: SLOT_TYPE_BY_DTO[dto.type],
       installments: dto.installments.map(toMoney),
       netPayout: toMoney(dto.netPayout),
+      catchUp: dto.catchUp ? toMoney(dto.catchUp) : Money.of(0, dto.payout.currency),
     };
   }
 

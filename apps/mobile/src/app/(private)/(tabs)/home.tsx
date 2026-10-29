@@ -7,9 +7,9 @@ export default function HomeRoute() {
   const { start } = useJoinFlow();
   return (
     <HomeScreen
-      onJoinCircle={(payout) => {
+      onJoinCircle={(payout, target) => {
         // "Join now" empieza el flujo con el monto del círculo (paso 1 precargado).
-        start(payout);
+        start(payout, target);
         router.push('/join/payout-amount');
       }}
       onJoin={() => router.push('/join')}

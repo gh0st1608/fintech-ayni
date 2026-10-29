@@ -45,6 +45,7 @@ function setup(settings: Partial<CircleAssignmentSettings> = {}) {
     circles,
     PRICING,
     { strategy: 'fill_oldest', startOffsetMonths: 1, timeZone: 'America/Lima', ...settings },
+    { dueDay: 5 },
     new TestClock(NOW),
   );
   const addCircle = (

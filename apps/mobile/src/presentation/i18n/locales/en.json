@@ -107,7 +107,8 @@
       "adminFeesInfo": "Admin Fees are split equally across your pay-ins until your payout month.",
       "continueWith": "Continue with {{month}}",
       "noLongerAvailable": "That slot was just taken. Choose another month.",
-      "missingSteps": "Choose the payout amount and the monthly pay-in first."
+      "missingSteps": "Choose the payout amount and the monthly pay-in first.",
+      "catchUp": "Includes {{amount}} catch-up"
     },
     "payoutMethod": {
       "title": "Payout Method",
@@ -157,7 +158,8 @@
         "title": "You're part of the Game'ya!",
         "payout": "You'll receive {{amount}} in {{month}} (slot {{position}} of {{months}}).",
         "firstInstallment": "Your first installment is {{amount}} in {{month}}.",
-        "viewCircles": "View my circles"
+        "viewCircles": "View my circles",
+        "catchUp": "Your installments include {{amount}} to catch up on past months, until {{month}}."
       }
     }
   },
@@ -185,7 +187,8 @@
     "recommended": {
       "title": "Recommended for you",
       "joinNow": "Join now",
-      "stale": "We couldn't update the recommendations: {{reason}}"
+      "stale": "We couldn't update the recommendations: {{reason}}",
+      "vacancyTurn": "Open slot · payout in {{month}}"
     }
   },
   "saving": {

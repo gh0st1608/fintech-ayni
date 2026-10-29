@@ -36,6 +36,7 @@ export function recommendedCircle(overrides: Partial<RecommendedCircle> = {}): R
     baseInstallment: pen(3_000),
     adminFee: pen(3_600),
     availableSlots: 7,
+    vacancies: [],
     ...overrides,
   };
 }

@@ -363,14 +363,18 @@ describe('TypeOrmCircleRepository', () => {
       await create(Period.of(2091, 2), [ana]); // ya es miembro
       const first = await create(Period.of(2091, 3), [others[0]!]);
       const second = await create(Period.of(2091, 1), [], 12);
-      await create(Period.of(2091, 4));
+      const third = await create(Period.of(2091, 4));
 
-      const joinable = await repository.listJoinable({
-        startsAfter: Period.of(2090, 12),
-        userId: ana,
-        limit: 2,
-      });
-      expect(joinable.map(({ id }) => id)).toEqual([first, second]);
+      // Otros archivos dejan círculos en curso con vacantes (COPAYNI-59), que también admiten a
+      // Ana: se miran solo los de este test.
+      const mine = new Set<string>([first, second, third]);
+      const joinable = (
+        await repository.listJoinable({ startsAfter: Period.of(2090, 12), userId: ana, limit: 500 })
+      ).filter(({ id }) => mine.has(id));
+      expect(joinable.map(({ id }) => id)).toEqual([first, second, third]);
+      await expect(
+        repository.listJoinable({ startsAfter: Period.of(2090, 12), userId: ana, limit: 2 }),
+      ).resolves.toHaveLength(2);
       expect(joinable[0]?.isTaken(1)).toBe(true);
       expect(joinable[1]?.terms.months).toBe(12);
     });

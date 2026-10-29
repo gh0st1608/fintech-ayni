@@ -15,8 +15,9 @@ export class ConfirmSlotSelectionUseCase {
     option: InstallmentOption,
     position: number,
     signal?: AbortSignal,
+    circleId?: string | null,
   ): Promise<Slot> {
-    const slots = await this.repository.listSlots(payout, option.months, signal);
+    const slots = await this.repository.listSlots(payout, option.months, signal, circleId);
     const current = slots.find((slot) => slot.position === position);
     if (!current?.available) {
       throw new SlotNoLongerAvailableError(`Slot ${position} is no longer available`);

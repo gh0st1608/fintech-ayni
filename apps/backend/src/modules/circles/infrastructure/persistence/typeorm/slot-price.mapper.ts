@@ -10,6 +10,8 @@ export interface StoredSlotPrice {
   adminFee: number;
   netPayout: number;
   installments: number[];
+  /** Puesta al día de quien tomó una vacante (COPAYNI-59). */
+  catchUp?: number[];
 }
 
 export const toStoredPrice = (price: SlotPrice): StoredSlotPrice => ({
@@ -20,11 +22,16 @@ export const toStoredPrice = (price: SlotPrice): StoredSlotPrice => ({
   adminFee: price.adminFee.amount,
   netPayout: price.netPayout.amount,
   installments: price.installments.map(({ amount }) => amount),
+  ...(price.catchUp && { catchUp: price.catchUp.map(({ amount }) => amount) }),
 });
 
 /** Money.of rechaza montos que no son enteros; el círculo valida moneda y número de cuotas. */
 export function fromStoredPrice(stored: StoredSlotPrice): SlotPrice {
-  if (!SLOT_TYPES.includes(stored.type) || !Array.isArray(stored.installments)) {
+  if (
+    !SLOT_TYPES.includes(stored.type) ||
+    !Array.isArray(stored.installments) ||
+    (stored.catchUp !== undefined && !Array.isArray(stored.catchUp))
+  ) {
     throw new Error('El precio guardado de la membresía no es válido');
   }
   const money = (amount: number) => Money.of(amount, stored.currency);
@@ -35,5 +42,6 @@ export function fromStoredPrice(stored: StoredSlotPrice): SlotPrice {
     adminFee: money(stored.adminFee),
     netPayout: money(stored.netPayout),
     installments: stored.installments.map(money),
+    ...(stored.catchUp && { catchUp: stored.catchUp.map(money) }),
   };
 }

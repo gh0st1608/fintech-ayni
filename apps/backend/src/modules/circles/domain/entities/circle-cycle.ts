@@ -118,7 +118,8 @@ export class InvalidCycleTransitionError extends DomainError {
  * Un mes se cierra cuando todas sus cuotas están pagadas o incobrables. Una cuota cuyo cobro
  * falló queda `overdue`; si sigue impaga al terminar la gracia, el miembro es expulsado
  * (COPAYNI-57): su cuota pasa a `defaulted`, sale del ciclo y su turno queda libre. El fondo de
- * garantía cubre esa vacante (COPAYNI-58) y el reemplazo del turno llega con COPAYNI-59.
+ * garantía cubre esa vacante (COPAYNI-58) hasta que la toma un miembro nuevo (COPAYNI-59), que
+ * paga la puesta al día con sus cuotas.
  *
  * Un círculo solo empieza con todos sus turnos ocupados: el fondo no cubre turnos que nunca se
  * llenaron. Si llega el mes de inicio y faltan miembros, el PO decidió reducir el pozo y los
@@ -262,6 +263,25 @@ export class CircleCycle {
     this.openPeriod(this.terms.startsOn, newId);
   }
 
+  /**
+   * Abre la cuota del mes en curso de quien tomó una vacante después de que se abrió el mes
+   * (COPAYNI-59). Si la tomó desde el mes siguiente, su cuota de este mes es cero y no se abre.
+   */
+  admitReplacements(newId: () => string): CycleMember[] {
+    if (this.currentState !== 'contributing') return [];
+    const period = this.period!;
+    const month = this.terms.startsOn.monthsUntil(period);
+    const admitted = this.active.filter(
+      ({ userId, quote }) =>
+        quote.installments[month]!.isPositive() &&
+        !this.touched.some(
+          (installment) => installment.userId === userId && installment.period.equals(period),
+        ),
+    );
+    for (const member of admitted) this.openInstallment(member, period, newId);
+    return admitted;
+  }
+
   /** Cuotas del mes en curso que vencieron hasta `today` y todavía se cobran. */
   dueInstallments(today: LocalDate): Installment[] {
     if (this.currentState !== 'contributing') return [];
@@ -371,14 +391,22 @@ export class CircleCycle {
       throw new InvalidCycleTransitionError('El mes tiene cuotas sin pagar ni expulsión');
     }
     const period = this.period!;
+    const month = this.terms.startsOn.monthsUntil(period);
     const receiver = this.receiver();
+    const paid = this.touched.filter(
+      (installment) => installment.period.equals(period) && installment.status === 'paid',
+    );
+    // Quien pagó este mes sigue en el ciclo: se expulsa solo por una cuota impaga.
+    const catchUp = paid.reduce((sum, { userId }) => {
+      const share = this.active.find((member) => member.userId === userId)?.quote.catchUp?.[month];
+      return share ? sum.add(share) : sum;
+    }, Money.zero(this.terms.currency));
     const settlement = settlePeriod({
       circleId: this.circleId,
       terms: this.terms,
       period,
-      paid: this.touched
-        .filter((installment) => installment.period.equals(period) && installment.status === 'paid')
-        .map(({ amount }) => amount),
+      paid: paid.map(({ amount }) => amount),
+      catchUp,
       receiver: receiver && {
         userId: receiver.userId,
         netPayout: receiver.quote.netPayout,
@@ -431,16 +459,24 @@ export class CircleCycle {
   private openPeriod(period: Period, newId: () => string): void {
     this.period = period;
     const month = this.terms.startsOn.monthsUntil(period);
-    for (const { userId, position, quote } of this.active) {
-      this.touched.push({
-        id: newId(),
-        userId,
-        position,
-        period,
-        dueOn: LocalDate.of(period, this.dueDay),
-        amount: quote.installments[month]!,
-        status: 'pending',
-      });
+    for (const member of this.active) {
+      // Quien tomó una vacante no paga los meses anteriores a su ingreso (COPAYNI-59).
+      if (member.quote.installments[month]!.isPositive()) {
+        this.openInstallment(member, period, newId);
+      }
     }
+  }
+
+  private openInstallment(member: CycleMember, period: Period, newId: () => string): void {
+    const month = this.terms.startsOn.monthsUntil(period);
+    this.touched.push({
+      id: newId(),
+      userId: member.userId,
+      position: member.position,
+      period,
+      dueOn: LocalDate.of(period, this.dueDay),
+      amount: member.quote.installments[month]!,
+      status: 'pending',
+    });
   }
 }

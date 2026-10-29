@@ -26,6 +26,7 @@ import {
   AlreadyMemberError,
   Circle,
   type Membership,
+  type RunningCircle,
   SlotTakenError,
 } from '../../../domain/entities/circle';
 import { CircleTerms } from '../../../domain/value-objects/circle-terms';
@@ -101,7 +102,21 @@ export class TypeOrmCircleRepository implements CircleRepositoryPort {
   async findById(id: string): Promise<Circle | null> {
     if (!isUuid(id)) return null;
     const row = await this.circles.findOne({ where: { id }, relations: { memberships: true } });
-    return row ? TypeOrmCircleRepository.toDomain(row) : null;
+    if (!row) return null;
+    if (row.cycleState !== 'contributing') return TypeOrmCircleRepository.toDomain(row, null);
+    // Vacantes (COPAYNI-59): turnos de expulsados antes de cobrar que nadie volvió a tomar.
+    const vacancies = await this.circles.query<{ position: number }[]>(
+      `SELECT DISTINCT e.position FROM circle_expulsions e
+        WHERE e.circle_id = $1 AND e.paid_amount IS NOT NULL
+              AND NOT EXISTS (SELECT 1 FROM circle_memberships m
+                               WHERE m.circle_id = e.circle_id AND m.position = e.position
+                                     AND m.expelled_at IS NULL)
+        ORDER BY e.position`,
+      [id],
+    );
+    return TypeOrmCircleRepository.toDomain(row, {
+      vacancies: vacancies.map(({ position }) => position),
+    });
   }
 
   async listMemberships(query: MembershipsQuery): Promise<MembershipPage> {
@@ -174,33 +189,39 @@ export class TypeOrmCircleRepository implements CircleRepositoryPort {
   }
 
   async listJoinable(criteria: OpenCirclesCriteria): Promise<Circle[]> {
-    const rows = await this.joinable(criteria.startsAfter, criteria.userId)
+    const rows = await this.joinable(criteria.startsAfter, criteria.userId, true)
       .limit(criteria.limit)
       .getRawMany<{ id: string }>();
     const circles = await Promise.all(rows.map(({ id }) => this.findById(id)));
     return circles.filter((circle): circle is Circle => circle !== null);
   }
 
-  /** Círculos que no empezaron, no están llenos y no tienen al usuario, del más antiguo al más nuevo. */
-  private joinable(startsAfter: Period, userId: string) {
-    return (
-      this.circles
-        .createQueryBuilder('circle')
-        .select('circle.id', 'id')
-        // Empieza después del mes actual: el primer día del mes siguiente o más tarde.
-        .where('circle.starts_on >= :firstAllowed', {
-          firstAllowed: toStartsOn(startsAfter.addMonths(1)),
-        })
-        .andWhere(
-          '(SELECT count(*) FROM circle_memberships m WHERE m.circle_id = circle.id) < circle.months',
-        )
-        .andWhere(
-          'NOT EXISTS (SELECT 1 FROM circle_memberships m WHERE m.circle_id = circle.id AND m.user_id::text = :userId)',
-          { userId },
-        )
-        .orderBy('circle.created_at', 'ASC')
-        .addOrderBy('circle.id', 'ASC')
-    );
+  /**
+   * Círculos que no empezaron, no están llenos y no tienen al usuario, del más antiguo al más
+   * nuevo. Con `withVacancies`, también los en curso con un turno vacante (COPAYNI-59).
+   */
+  private joinable(startsAfter: Period, userId: string, withVacancies = false) {
+    // Empieza después del mes actual: el primer día del mes siguiente o más tarde.
+    const notStarted = `(circle.starts_on >= :firstAllowed
+      AND (SELECT count(*) FROM circle_memberships m WHERE m.circle_id = circle.id) < circle.months)`;
+    const withVacancy = `(circle.cycle_state = 'contributing' AND EXISTS (
+      SELECT 1 FROM circle_expulsions e
+       WHERE e.circle_id = circle.id AND e.paid_amount IS NOT NULL
+             AND NOT EXISTS (SELECT 1 FROM circle_memberships m
+                              WHERE m.circle_id = circle.id AND m.position = e.position
+                                    AND m.expelled_at IS NULL)))`;
+    return this.circles
+      .createQueryBuilder('circle')
+      .select('circle.id', 'id')
+      .where(withVacancies ? `(${notStarted} OR ${withVacancy})` : notStarted, {
+        firstAllowed: toStartsOn(startsAfter.addMonths(1)),
+      })
+      .andWhere(
+        'NOT EXISTS (SELECT 1 FROM circle_memberships m WHERE m.circle_id = circle.id AND m.user_id::text = :userId)',
+        { userId },
+      )
+      .orderBy('circle.created_at', 'ASC')
+      .addOrderBy('circle.id', 'ASC');
   }
 
   async create(circle: Circle): Promise<void> {
@@ -238,7 +259,12 @@ export class TypeOrmCircleRepository implements CircleRepositoryPort {
 
   async addMembership(circleId: string, membership: Membership): Promise<void> {
     try {
-      await this.memberships.insert(this.toRow(circleId, membership));
+      await this.memberships.manager.transaction(async (manager) => {
+        // El bloqueo del ciclo (COPAYNI-56): quien toma una vacante no se intercala con la tarea
+        // diaria, que bloquea el círculo mientras lo avanza.
+        await manager.query('SELECT pg_advisory_xact_lock(hashtextextended($1, 0))', [circleId]);
+        await manager.insert(CircleMembershipEntity, this.toRow(circleId, membership));
+      });
     } catch (error) {
       const unique = violatedConstraint(error, PG_UNIQUE_VIOLATION);
       const mapped = unique === undefined ? undefined : UNIQUE_CONSTRAINT_ERRORS[unique];
@@ -272,7 +298,8 @@ export class TypeOrmCircleRepository implements CircleRepositoryPort {
     });
   }
 
-  static toDomain(row: CircleEntity): Circle {
+  /** Las membresías de los expulsados no cuentan: su turno queda vacante (COPAYNI-59). */
+  static toDomain(row: CircleEntity, running: RunningCircle | null = null): Circle {
     return Circle.restore({
       id: row.id,
       terms: CircleTerms.create({
@@ -280,12 +307,15 @@ export class TypeOrmCircleRepository implements CircleRepositoryPort {
         months: row.months,
         startsOn: toPeriod(row.startsOn),
       }),
-      memberships: (row.memberships ?? []).map(({ userId, position, idempotencyKey, price }) => ({
-        userId,
-        position,
-        idempotencyKey,
-        ...(price && { price: fromStoredPrice(price) }),
-      })),
+      memberships: (row.memberships ?? [])
+        .filter(({ expelledAt }) => expelledAt === null)
+        .map(({ userId, position, idempotencyKey, price }) => ({
+          userId,
+          position,
+          idempotencyKey,
+          ...(price && { price: fromStoredPrice(price) }),
+        })),
+      running,
     });
   }
 }

@@ -3,12 +3,19 @@ import { randomUUID } from 'node:crypto';
 import { Inject, Injectable, Logger } from '@nestjs/common';
 
 import { CLOCK, type ClockPort } from '../../../../shared/application/ports/clock.port';
+import { LocalDate } from '../../../../shared/domain/value-objects/local-date';
 import { Money } from '../../../../shared/domain/value-objects/money';
 import { Period } from '../../../../shared/domain/value-objects/period';
 import { ConflictError, NotFoundError, ValidationError } from '../../../../shared/errors/app-error';
-import { Circle, IdempotencyKeyReusedError, type Membership } from '../../domain/entities/circle';
+import {
+  Circle,
+  CircleAlreadyStartedError,
+  IdempotencyKeyReusedError,
+  type Membership,
+} from '../../domain/entities/circle';
 import { assertCanJoin } from '../../domain/services/join-eligibility';
 import { priceOf, type SlotPricing, type SlotQuote } from '../../domain/services/slot-pricing';
+import { joinQuote } from '../../domain/services/vacancy';
 import { CircleTerms } from '../../domain/value-objects/circle-terms';
 import {
   CIRCLE_REPOSITORY,
@@ -17,6 +24,7 @@ import {
 } from '../ports/circle-repository.port';
 import { JOIN_ELIGIBILITY, type JoinEligibilityPort } from '../ports/join-eligibility.port';
 import { MEMBER_DEBTS, type MemberDebtsPort } from '../ports/member-debts.port';
+import { CIRCLE_CYCLE, type CircleCycleSettings } from './cycle-settings';
 import {
   JOIN_CONFIG_REPOSITORY,
   type JoinConfigRepositoryPort,
@@ -27,12 +35,6 @@ import {
   SLOT_PRICING,
 } from './get-available-slots.use-case';
 import { offeredPayout } from './offered-payout';
-
-export class CircleAlreadyStartedError extends ConflictError {
-  constructor() {
-    super('CIRCLE_ALREADY_STARTED', 'El círculo ya empezó: elige otro turno');
-  }
-}
 
 /**
  * El usuario fue expulsado por impago y no pagó lo vencido más el cargo por mora (COPAYNI-57).
@@ -74,6 +76,8 @@ export interface JoinCircleResult {
  * - Valida las condiciones como `slots` (COPAYNI-30) y la elegibilidad del usuario: National ID,
  *   límite mensual y método de cobro (`assertCanJoin`).
  * - Con `circleId: null` abre el círculo nuevo que ofreció `slots`, con el mismo inicio.
+ * - En un círculo en curso solo se toma un turno vacante, con la puesta al día en las cuotas
+ *   (COPAYNI-59); el límite mensual se valida con esas cuotas.
  * - Guarda con la membresía el precio del slot (COPAYNI-55): un reintento responde ese precio
  *   aunque las reglas hayan cambiado.
  * - El repositorio inserta con unicidad: si otra solicitud tomó el slot entre la lectura y la
@@ -90,6 +94,7 @@ export class JoinCircleUseCase {
     @Inject(CIRCLE_ASSIGNMENT) private readonly assignment: CircleAssignmentSettings,
     @Inject(JOIN_ELIGIBILITY) private readonly eligibility: JoinEligibilityPort,
     @Inject(MEMBER_DEBTS) private readonly debts: MemberDebtsPort,
+    @Inject(CIRCLE_CYCLE) private readonly cycle: Pick<CircleCycleSettings, 'dueDay'>,
     @Inject(CLOCK) private readonly clock: ClockPort,
   ) {}
 
@@ -101,7 +106,8 @@ export class JoinCircleUseCase {
     const joinConfig = await this.joinConfigs.getForUser(command.userId);
     const payout = offeredPayout(joinConfig, command.payoutAmount, command.months);
     const { circle, isNew } = await this.target(command, payout);
-    const quote = this.pricing.quote(circle.terms, command.position);
+    const today = LocalDate.fromDate(this.clock.now(), this.assignment.timeZone);
+    const quote = joinQuote(this.pricing, circle, command.position, today, this.cycle.dueDay);
     assertCanJoin(await this.eligibility.applicantFor(command.userId), payout, quote.installments);
 
     const { userId, position, idempotencyKey } = command;
@@ -129,6 +135,7 @@ export class JoinCircleUseCase {
       circleId: circle.id,
       position,
       newCircle: isNew,
+      replacement: circle.isRunning(),
     });
     return { circleId: circle.id, terms: circle.terms, membership, quote, created: true };
   }
@@ -191,8 +198,11 @@ export class JoinCircleUseCase {
         circleId: 'terms_mismatch',
       });
     }
-    // En un círculo ya iniciado, el cobro de los primeros slots ya pasó.
-    if (!circle.terms.startsOn.isAfter(currentPeriod)) throw new CircleAlreadyStartedError();
+    // En un círculo ya iniciado, el cobro de los primeros slots ya pasó: solo se toman sus
+    // vacantes mientras está en curso (COPAYNI-59).
+    if (!circle.isRunning() && !circle.terms.startsOn.isAfter(currentPeriod)) {
+      throw new CircleAlreadyStartedError();
+    }
     return { circle, isNew: false };
   }
 }

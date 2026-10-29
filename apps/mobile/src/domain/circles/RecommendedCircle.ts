@@ -11,5 +11,17 @@ export interface RecommendedCircle {
   /** payout / meses; la cuota real depende del slot que se elija. */
   baseInstallment: Money;
   adminFee: Money;
+  /** Slots libres; en un círculo en curso, sus vacantes abiertas. */
   availableSlots: number;
+  /**
+   * Turnos vacantes de un círculo en curso (COPAYNI-59): los deja un expulsado y los toma un
+   * miembro nuevo pagando la puesta al día. Vacío si el círculo no empezó.
+   */
+  vacancies: { position: number; payoutPeriod: string }[];
+}
+
+/** El círculo recomendado al que apunta "Join now": sus slots se piden con su `circleId`. */
+export interface JoinTarget {
+  circleId: string;
+  months: number;
 }

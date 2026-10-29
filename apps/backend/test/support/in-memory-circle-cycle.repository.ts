@@ -56,6 +56,12 @@ export class InMemoryCircleCycleRepository implements CircleCycleRepositoryPort 
     if (!this.ledger.has(transaction.key)) this.ledger.set(transaction.key, transaction);
   }
 
+  /** Un miembro nuevo toma una vacante (COPAYNI-59), como una membresía nueva en PostgreSQL. */
+  join(circleId: string, member: StoredCycle['members'][number]): void {
+    const stored = this.cycles.get(circleId)!;
+    this.cycles.set(circleId, { ...stored, members: [...stored.members, member] });
+  }
+
   get(circleId: string): StoredCycle | undefined {
     return this.cycles.get(circleId);
   }

@@ -103,7 +103,12 @@ export class CirclesController {
   @Get('slots')
   @ApiOkResponse({ type: SlotsResponse, description: 'Envuelto en { success, data, traceId }' })
   @ApiBadRequestResponse({
-    description: 'payoutAmount o months ausentes, o months no ofrecido (VALIDATION_ERROR)',
+    description:
+      'payoutAmount o months ausentes, months no ofrecido o circleId con otras condiciones (VALIDATION_ERROR)',
+  })
+  @ApiNotFoundResponse({ description: 'circleId inexistente (CIRCLE_NOT_FOUND)' })
+  @ApiConflictResponse({
+    description: 'Con circleId: ALREADY_MEMBER o CIRCLE_ALREADY_STARTED (empezó sin vacantes)',
   })
   @ApiUnprocessableEntityResponse({
     description: 'Payout fuera del rango o del salto permitidos (PAYOUT_NOT_ALLOWED)',
@@ -114,7 +119,12 @@ export class CirclesController {
     @Query() query: SlotsQuery,
   ): Promise<SlotsResponse> {
     return SlotsResponse.from(
-      await this.getAvailableSlots.execute(principal, query.payoutAmount, query.months),
+      await this.getAvailableSlots.execute(
+        principal,
+        query.payoutAmount,
+        query.months,
+        query.circleId,
+      ),
     );
   }
 
@@ -133,7 +143,7 @@ export class CirclesController {
   @ApiNotFoundResponse({ description: 'circleId inexistente (CIRCLE_NOT_FOUND)' })
   @ApiConflictResponse({
     description:
-      'SLOT_TAKEN, ALREADY_MEMBER, CIRCLE_ALREADY_STARTED, IDEMPOTENCY_KEY_REUSED o MEMBER_BLOCKED (details: amountDue, currency)',
+      'SLOT_TAKEN, ALREADY_MEMBER, CIRCLE_ALREADY_STARTED, VACANCY_CLOSED, IDEMPOTENCY_KEY_REUSED o MEMBER_BLOCKED (details: amountDue, currency)',
   })
   @ApiUnprocessableEntityResponse({
     description:

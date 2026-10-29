@@ -8,8 +8,8 @@ export default function CirclesRoute() {
   return (
     <CirclesScreen
       onJoin={() => router.push('/join')}
-      onJoinCircle={(payout) => {
-        start(payout);
+      onJoinCircle={(payout, target) => {
+        start(payout, target);
         router.push('/join/payout-amount');
       }}
     />

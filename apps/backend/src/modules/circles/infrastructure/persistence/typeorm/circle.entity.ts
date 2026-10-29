@@ -1,5 +1,6 @@
 import { Column, CreateDateColumn, Entity, OneToMany, PrimaryColumn } from 'typeorm';
 
+import { type CycleState } from '../../../domain/entities/circle-cycle';
 import { CircleMembershipEntity } from './circle-membership.entity';
 
 /** bigint llega como string desde pg; los montos en céntimos caben en un entero seguro. */
@@ -25,6 +26,10 @@ export class CircleEntity {
   /** Primer día del mes de inicio (`YYYY-MM-01`). */
   @Column('date', { name: 'starts_on' })
   startsOn!: string;
+
+  /** Estado del ciclo mensual (COPAYNI-56); lo escribe el repositorio del ciclo. */
+  @Column({ type: 'varchar', name: 'cycle_state', insert: false, update: false })
+  cycleState!: CycleState;
 
   @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
   createdAt!: Date;

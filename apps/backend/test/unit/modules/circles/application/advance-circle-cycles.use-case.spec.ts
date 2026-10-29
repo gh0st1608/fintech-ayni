@@ -391,10 +391,14 @@ describe('AdvanceCircleCyclesUseCase', () => {
         payments,
         clock,
       );
-      /** Corre el ciclo completo; el turno 7 deja de pagar en el mes 5, después de 4 cuotas. */
-      const runAll = async () => {
+      /**
+       * Corre el ciclo completo; el turno 7 deja de pagar en el mes 5, después de 4 cuotas.
+       * `beforeMonth` corre antes de la tarea de cada mes (índice 0 = noviembre).
+       */
+      const runAll = async (beforeMonth?: (month: number) => void) => {
         for (let month = 0; month < 10; month += 1) {
           const period = EXAMPLE.startsOn.addMonths(month).toString();
+          beforeMonth?.(month);
           if (month === 4) for (const prefix of prefixes) payments.failing.add(`${prefix}u-7`);
           clock.set(at(`${period}-05`));
           await useCase.execute();
@@ -439,6 +443,69 @@ describe('AdvanceCircleCyclesUseCase', () => {
       expect(cycles.balance('circle_pot')).toEqual(pen(0));
       expect(cycles.balance('refunds_payable')).toEqual(pen(0));
       expect(cycles.balance('member_payable')).toEqual(pen(0));
+    });
+
+    it('el caso de §3.1 con reemplazo: un nuevo toma el turno 7 en el mes 6 y el fondo termina en +600', async () => {
+      const log = jest.spyOn(Logger.prototype, 'log').mockImplementation(() => undefined);
+      const { cycles, payments, runAll } = example(pen(10_000));
+      await runAll((month) => {
+        // Antes del vencimiento del mes 6 (índice 5): paga ese mes y la puesta al día de 1 a 5.
+        if (month === 5) {
+          cycles.join('ejemplo', {
+            userId: 'nuevo',
+            position: 7,
+            price: priceOf(FLAT_PRICING.replacementQuote(EXAMPLE, 7, 5)),
+          });
+        }
+      });
+
+      expect(cycles.get('ejemplo')?.state).toBe('finished');
+      expect(cycles.balance('guarantee_fund')).toEqual(pen(10_000 + 600));
+      // El fondo cubrió solo el mes 5; la puesta al día (15.000) entró en los meses 6 y 7.
+      const covered = [...cycles.ledger.values()].filter(({ kind }) => kind === 'coverage');
+      expect(covered.map(({ period }) => period?.toString())).toEqual(['2027-03']);
+      for (const period of ['2027-04', '2027-05']) {
+        expect(cycles.ledger.get(`collection:ejemplo:${period}`)?.netFor('guarantee_fund')).toEqual(
+          pen(7_500),
+        );
+      }
+      // Quien tomó el turno cobra los 30.000 en el mes 7; todos cobran completo.
+      expect(cycles.payouts.find(({ position }) => position === 7)).toMatchObject({
+        userId: 'nuevo',
+        period: Period.of(2027, 5),
+        amount: pen(30_000),
+      });
+      expect(payments.disbursed).toHaveLength(10);
+      expect(cycles.payouts.every(({ amount }) => amount.equals(pen(30_000)))).toBe(true);
+      expect(cycles.ledger.has('pot_returned:ejemplo:2027-05')).toBe(false);
+      expect(payments.refunded).toEqual([`u-7:${pen(11_400).amount}`]);
+      expect(cycles.balance('circle_pot')).toEqual(pen(0));
+      expect(log).toHaveBeenCalledWith({
+        event: 'circles.cycle.replacement_admitted',
+        circleId: 'ejemplo',
+        userId: 'nuevo',
+        position: 7,
+      });
+    });
+
+    it('quien toma la vacante desde el vencimiento empieza a pagar el mes siguiente', async () => {
+      jest.spyOn(Logger.prototype, 'log').mockImplementation(() => undefined);
+      const { cycles, runAll } = example(pen(10_000));
+      await runAll((month) => {
+        // Después del vencimiento del mes 6: su primera cuota es la del mes 7.
+        if (month === 6) {
+          cycles.join('ejemplo', {
+            userId: 'nuevo',
+            position: 7,
+            price: priceOf(FLAT_PRICING.replacementQuote(EXAMPLE, 7, 6)),
+          });
+        }
+      });
+
+      const covered = [...cycles.ledger.values()].filter(({ kind }) => kind === 'coverage');
+      expect(covered.map(({ period }) => period?.toString())).toEqual(['2027-03', '2027-04']);
+      expect(cycles.payouts.find(({ position }) => position === 7)?.userId).toBe('nuevo');
+      expect(cycles.balance('guarantee_fund')).toEqual(pen(10_000 + 600));
     });
 
     it('sin saldo en el fondo, el pozo se reduce, se avisa y el fondo le debe la diferencia', async () => {

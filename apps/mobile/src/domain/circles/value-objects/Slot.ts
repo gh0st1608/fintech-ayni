@@ -1,5 +1,5 @@
 import { DomainError } from '@/domain/shared/errors/DomainError';
-import type { Money } from '@/domain/shared/value-objects/Money';
+import { Money } from '@/domain/shared/value-objects/Money';
 
 /** Tipos de turno del Figma (Slot, 55:9377), en el orden en que se muestran. */
 export const SLOT_TYPES = ['fastestPayout', 'lowestFees', 'highestReturn'] as const;
@@ -34,6 +34,11 @@ export class Slot {
     readonly available: boolean,
     /** Círculo al que pertenece; `null` si es uno nuevo, que el backend abre al unirse. */
     readonly circleId: string | null,
+    /**
+     * Puesta al día de una vacante (COPAYNI-59): las cuotas de los meses ya transcurridos,
+     * repartidas en sus cuotas hasta el mes de cobro. Cero en un turno normal.
+     */
+    readonly catchUp: Money,
   ) {}
 
   static create(props: {
@@ -44,6 +49,7 @@ export class Slot {
     discount: Money;
     available: boolean;
     circleId?: string | null;
+    catchUp?: Money;
   }): Slot {
     const { position, payoutPeriod, type, fee, discount, available } = props;
     if (!Number.isInteger(position) || position < 1) {
@@ -55,7 +61,20 @@ export class Slot {
     if (fee.currency !== discount.currency || fee.amount < 0 || discount.amount < 0) {
       throw new InvalidSlotError('Slot fee and discount must be non-negative in one currency');
     }
-    return new Slot(position, payoutPeriod, type, fee, discount, available, props.circleId ?? null);
+    const catchUp = props.catchUp ?? Money.of(0, fee.currency);
+    if (catchUp.currency !== fee.currency || catchUp.amount < 0) {
+      throw new InvalidSlotError('Slot catch-up must be non-negative in the slot currency');
+    }
+    return new Slot(
+      position,
+      payoutPeriod,
+      type,
+      fee,
+      discount,
+      available,
+      props.circleId ?? null,
+      catchUp,
+    );
   }
 
   /** Primer día del mes de cobro, para formatearlo con el idioma activo. */

@@ -15,6 +15,8 @@ export interface PeriodSettlementInput {
   period: Period;
   /** Montos de las cuotas pagadas del mes. */
   paid: readonly Money[];
+  /** La parte de esas cuotas que es puesta al día de una vacante (COPAYNI-59): va al fondo. */
+  catchUp?: Money;
   /** Quien tiene el turno del mes, o `undefined` si está libre. */
   receiver: PeriodReceiver | undefined;
   /** Saldo del fondo antes de cerrar el mes. */
@@ -40,8 +42,9 @@ const min = (a: Money, b: Money): Money => (a.amount <= b.amount ? a : b);
 
 /**
  * Cierre contable de un mes (COPAYNI-58, pending-scope §3.1). El pozo se mide en cuotas base:
- * de cada cuota cobrada, la cuota base va al pozo y el resto (fee y Admin Fees del slot, menos su
- * descuento) a `operator`. Luego:
+ * de cada cuota cobrada, la cuota base va al pozo, la puesta al día de quien tomó una vacante al
+ * fondo (COPAYNI-59) y el resto (fee y Admin Fees del slot, menos su descuento) a `operator`.
+ * Luego:
  * 1. El fondo cubre lo que falta para el payout completo, o para el payout del círculo si el
  *    turno del expulsado está libre. Solo puede cubrir con el saldo que tiene. No hay turnos que
  *    nunca se llenaron: el círculo solo empieza completo (pending-scope R2).
@@ -68,6 +71,7 @@ export function settlePeriod(input: PeriodSettlementInput): PeriodSettlement {
 
   const collected = paid.reduce((sum, amount) => sum.add(amount), zero);
   const base = terms.baseInstallment.times(paid.length);
+  const catchUp = input.catchUp ?? zero;
   if (paid.length > 0) {
     add(
       LedgerTransaction.create({
@@ -76,16 +80,18 @@ export function settlePeriod(input: PeriodSettlementInput): PeriodSettlement {
         entries: [
           { account: 'external', amount: zero.subtract(collected) },
           { ...pot, amount: base },
-          { ...operator, amount: collected.subtract(base) },
+          { ...fund, amount: catchUp },
+          { ...operator, amount: collected.subtract(base).subtract(catchUp) },
         ],
         ...common,
       }),
     );
   }
+  const fundAfterCollection = input.fundBalance.add(catchUp);
 
   const target = receiver ? receiver.netPayout : terms.payout;
   const need = max(zero, target.subtract(base));
-  const coverage = min(need, max(zero, input.fundBalance));
+  const coverage = min(need, max(zero, fundAfterCollection));
   const shortfall = need.subtract(coverage);
   add(
     LedgerTransaction.transfer({
@@ -97,7 +103,7 @@ export function settlePeriod(input: PeriodSettlementInput): PeriodSettlement {
       ...common,
     }),
   );
-  let fundBalance = input.fundBalance.subtract(coverage);
+  let fundBalance = fundAfterCollection.subtract(coverage);
   const potBalance = base.add(coverage);
 
   let payout: Money | null = null;

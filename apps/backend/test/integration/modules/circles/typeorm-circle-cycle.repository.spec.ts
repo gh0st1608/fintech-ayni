@@ -8,6 +8,7 @@ import { AdvanceCircleCyclesUseCase } from '@src/modules/circles/application/use
 import { Circle } from '@src/modules/circles/domain/entities/circle';
 import { CircleCycle } from '@src/modules/circles/domain/entities/circle-cycle';
 import { priceOf } from '@src/modules/circles/domain/services/slot-pricing';
+import { joinQuote } from '@src/modules/circles/domain/services/vacancy';
 import { CircleTerms } from '@src/modules/circles/domain/value-objects/circle-terms';
 import { LedgerTransaction } from '@src/modules/circles/domain/value-objects/ledger-transaction';
 import { FakeCyclePayments } from '@src/modules/circles/infrastructure/payments/cycle-payments';
@@ -16,6 +17,7 @@ import { CircleEntity } from '@src/modules/circles/infrastructure/persistence/ty
 import { TypeOrmCircleCycleRepository } from '@src/modules/circles/infrastructure/persistence/typeorm/typeorm-circle-cycle.repository';
 import { TypeOrmCircleRepository } from '@src/modules/circles/infrastructure/persistence/typeorm/typeorm-circle.repository';
 import { TypeOrmMemberDebts } from '@src/modules/circles/infrastructure/persistence/typeorm/typeorm-member-debts.repository';
+import { LocalDate } from '@src/shared/domain/value-objects/local-date';
 import { Money } from '@src/shared/domain/value-objects/money';
 import { Period } from '@src/shared/domain/value-objects/period';
 import { TestClock } from '@test/support/create-test-app';
@@ -248,6 +250,80 @@ describe('TypeOrmCircleCycleRepository', () => {
     await expect(debts.openDebtsOf(defaulter.userId)).resolves.toEqual([]);
     await expect(debts.openDebtsOf('no-es-uuid')).resolves.toEqual([]);
     await expect(debts.settle('no-es-uuid', id, recovery)).resolves.toBeNull();
+  });
+
+  it('un miembro nuevo toma la vacante del expulsado y cobra su turno (COPAYNI-59)', async () => {
+    const { id, members } = await fullCircle();
+    const defaulter = members[3]!;
+    const runOn = job([id], {
+      collect: (installment) =>
+        Promise.resolve(installment.userId === defaulter.userId ? 'failed' : 'paid'),
+    });
+    await runOn('2026-11-05');
+    await runOn('2026-11-09');
+
+    const circle = (await circles.findById(id))!;
+    expect(circle.running).toEqual({ vacancies: [4] });
+    expect(circle.availablePositions()).toEqual([4]);
+    const outsider = await insertTestUser(dataSource);
+    const joinable = await circles.listJoinable({
+      startsAfter: Period.of(2026, 12),
+      userId: outsider,
+      limit: 500,
+    });
+    expect(joinable.map(({ id: circleId }) => circleId)).toContain(id);
+    const forMember = await circles.listJoinable({
+      startsAfter: Period.of(2026, 12),
+      userId: members[0]!.userId,
+      limit: 500,
+    });
+    expect(forMember.map(({ id: circleId }) => circleId)).not.toContain(id);
+
+    // Dos usuarios toman la vacante a la vez el 2 de diciembre: gana uno (índice parcial).
+    const quote = joinQuote(TEST_PRICING, circle, 4, LocalDate.parse('2026-12-02'), 5);
+    const rival = await insertTestUser(dataSource);
+    const results = await Promise.allSettled(
+      [outsider, rival].map((userId) =>
+        circles.addMembership(id, {
+          userId,
+          position: 4,
+          idempotencyKey: `k-${id}-${userId}`,
+          price: priceOf(quote),
+        }),
+      ),
+    );
+    expect(results.filter(({ status }) => status === 'fulfilled')).toHaveLength(1);
+    expect(results.find(({ status }) => status === 'rejected')).toMatchObject({
+      reason: expect.objectContaining({ code: 'SLOT_TAKEN' }),
+    });
+    const winner = results[0]!.status === 'fulfilled' ? outsider : rival;
+    expect((await circles.findById(id))!.running).toEqual({ vacancies: [] });
+
+    const all = job([id]);
+    for (const date of ['2026-12-05', '2027-01-05', '2027-02-05', '2027-03-05', '2027-04-05']) {
+      await all(date);
+    }
+    const payouts = await dataSource.query<{ position: number; user_id: string }[]>(
+      'SELECT position, user_id FROM circle_payouts WHERE circle_id = $1 ORDER BY period',
+      [id],
+    );
+    expect(payouts).toHaveLength(MONTHS);
+    expect(payouts.find(({ position }) => position === 4)?.user_id).toBe(winner);
+    // La puesta al día (la cuota base de noviembre) entró al fondo con sus cuotas.
+    const [catchUp] = await dataSource.query<{ total: string }[]>(
+      `SELECT sum(e.amount)::text AS total FROM ledger_entries e
+         JOIN ledger_transactions t ON t.key = e.transaction_key
+        WHERE t.circle_id = $1 AND t.kind = 'collection' AND e.account = 'guarantee_fund'`,
+      [id],
+    );
+    expect(catchUp?.total).toBe(String(100_000));
+    const [pot] = await dataSource.query<{ total: string }[]>(
+      `SELECT COALESCE(sum(e.amount), 0)::text AS total FROM ledger_entries e
+         JOIN ledger_transactions t ON t.key = e.transaction_key
+        WHERE t.circle_id = $1 AND e.account = 'circle_pot'`,
+      [id],
+    );
+    expect(pot?.total).toBe('0');
   });
 
   it('una segunda ejecución simultánea no procesa el círculo bloqueado', async () => {

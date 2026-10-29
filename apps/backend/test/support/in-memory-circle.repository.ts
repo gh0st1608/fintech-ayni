@@ -11,6 +11,7 @@ import {
   AlreadyMemberError,
   Circle,
   type Membership,
+  type RunningCircle,
   SlotTakenError,
 } from '@src/modules/circles/domain/entities/circle';
 import { type CircleTerms } from '@src/modules/circles/domain/value-objects/circle-terms';
@@ -23,7 +24,10 @@ const roundTrip = (): Promise<void> => new Promise((resolve) => setImmediate(res
  * inserción atómica con unicidad por slot, usuario y clave (los índices únicos de PostgreSQL).
  */
 export class InMemoryCircleRepository implements CircleRepositoryPort {
-  private readonly circles = new Map<string, { terms: CircleTerms; memberships: Membership[] }>();
+  private readonly circles = new Map<
+    string,
+    { terms: CircleTerms; memberships: Membership[]; running?: RunningCircle | null }
+  >();
   /** Círculos cuyo ciclo terminó (COPAYNI-56). */
   private readonly finished = new Set<string>();
   /** `círculo:usuario` de las membresías expulsadas por impago. */
@@ -32,7 +36,11 @@ export class InMemoryCircleRepository implements CircleRepositoryPort {
   private readonly joins: { circleId: string; userId: string; joinedAt: Date }[] = [];
 
   add(circle: Circle): void {
-    this.circles.set(circle.id, { terms: circle.terms, memberships: [...circle.memberships] });
+    this.circles.set(circle.id, {
+      terms: circle.terms,
+      memberships: [...circle.memberships],
+      running: circle.running,
+    });
     for (const { userId } of circle.memberships) this.recordJoin(circle.id, userId);
   }
 
@@ -104,6 +112,7 @@ export class InMemoryCircleRepository implements CircleRepositoryPort {
       if (
         terms.payout.equals(criteria.payout) &&
         terms.months === criteria.months &&
+        !circle.isRunning() &&
         terms.startsOn.isAfter(criteria.startsAfter) &&
         circle.status === 'open' &&
         !circle.isMember(criteria.userId)
@@ -120,7 +129,7 @@ export class InMemoryCircleRepository implements CircleRepositoryPort {
       .map(([id, stored]) => Circle.restore({ id, ...stored }))
       .filter(
         (circle) =>
-          circle.terms.startsOn.isAfter(criteria.startsAfter) &&
+          (circle.isRunning() || circle.terms.startsOn.isAfter(criteria.startsAfter)) &&
           circle.status === 'open' &&
           !circle.isMember(criteria.userId),
       )
@@ -146,6 +155,11 @@ export class InMemoryCircleRepository implements CircleRepositoryPort {
       throw new AlreadyMemberError();
     }
     memberships.push({ ...membership });
+    if (stored.running) {
+      stored.running = {
+        vacancies: stored.running.vacancies.filter((position) => position !== membership.position),
+      };
+    }
     this.recordJoin(circleId, membership.userId);
   }
 

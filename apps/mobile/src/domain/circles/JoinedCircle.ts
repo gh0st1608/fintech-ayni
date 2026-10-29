@@ -61,6 +61,23 @@ export interface JoinedCircle {
   installments: Money[];
   /** Lo que recibe en su mes de cobro. */
   netPayout: Money;
+  /** Puesta al día incluida en las cuotas al tomar una vacante (COPAYNI-59); cero si no. */
+  catchUp: Money;
   /** false: era un reintento de una unión ya hecha. */
   created: boolean;
+}
+
+/**
+ * La primera cuota a pagar y su mes (YYYY-MM). Quien toma una vacante no paga los meses
+ * anteriores a su ingreso: sus cuotas empiezan en cero.
+ */
+export function firstInstallmentOf(
+  circle: Pick<JoinedCircle, 'installments' | 'startsOn'>,
+): { amount: Money; period: string } | null {
+  const index = circle.installments.findIndex((installment) => installment.amount > 0);
+  if (index < 0) return null;
+  const [year, month] = circle.startsOn.split('-').map(Number);
+  const total = year! * 12 + (month! - 1) + index;
+  const period = `${Math.floor(total / 12)}-${String((total % 12) + 1).padStart(2, '0')}`;
+  return { amount: circle.installments[index]!, period };
 }

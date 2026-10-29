@@ -41,6 +41,8 @@ const slotsDto = z.object({
       type: z.enum(['fastest_payout', 'lowest_fees', 'highest_return']),
       fee: moneyDto,
       discount: moneyDto,
+      /** COPAYNI-59; un backend anterior no lo envía. */
+      catchUp: moneyDto.optional(),
       available: z.boolean(),
     }),
   ),
@@ -60,6 +62,14 @@ const recommendedDto = z.object({
       baseInstallment: moneyDto,
       adminFee: moneyDto,
       availableSlots: z.number().int().positive(),
+      vacancies: z
+        .array(
+          z.object({
+            position: z.number().int().positive(),
+            payoutPeriod: z.string().regex(PERIOD),
+          }),
+        )
+        .default([]),
     }),
   ),
 });
@@ -96,9 +106,14 @@ export class CircleQuoteApiRepository implements CircleQuoteRepositoryPort {
     }));
   }
 
-  async listSlots(payout: Money, months: number, signal?: AbortSignal): Promise<Slot[]> {
+  async listSlots(
+    payout: Money,
+    months: number,
+    signal?: AbortSignal,
+    circleId?: string | null,
+  ): Promise<Slot[]> {
     const dto = await this.http.get('/circles/slots', {
-      query: { payoutAmount: payout.amount, months },
+      query: { payoutAmount: payout.amount, months, ...(circleId && { circleId }) },
       signal,
       parse: (data) => slotsDto.parse(data),
     });
@@ -111,6 +126,7 @@ export class CircleQuoteApiRepository implements CircleQuoteRepositoryPort {
         discount: toMoney(slot.discount),
         available: slot.available,
         circleId: dto.circleId,
+        ...(slot.catchUp && { catchUp: toMoney(slot.catchUp) }),
       }),
     );
   }

@@ -93,6 +93,7 @@ describe('JoinCircleUseCase', () => {
       circleId: result.circleId,
       position: 3,
       newCircle: true,
+      replacement: false,
     });
   });
 

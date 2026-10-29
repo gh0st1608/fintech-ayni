@@ -1,6 +1,7 @@
 import { createContext, useContext, useMemo, useState } from 'react';
 
 import { JoinCircleDraft } from '@/domain/circles/JoinCircleDraft';
+import type { JoinTarget } from '@/domain/circles/RecommendedCircle';
 import type { InstallmentOption } from '@/domain/circles/value-objects/InstallmentOption';
 import type { Slot } from '@/domain/circles/value-objects/Slot';
 import type { PayoutMethodType } from '@/domain/payouts/value-objects/PayoutMethod';
@@ -8,8 +9,11 @@ import type { Money } from '@/domain/shared/value-objects/Money';
 
 interface JoinFlowValue {
   draft: JoinCircleDraft;
-  /** Empieza un flujo nuevo; "Join now" de Home pasa el monto del círculo (COPAYNI-25). */
-  start: (payoutAmount?: Money) => void;
+  /**
+   * Empieza un flujo nuevo; "Join now" de Home pasa el monto del círculo (COPAYNI-25) y, para
+   * pedir sus slots, el círculo (COPAYNI-59).
+   */
+  start: (payoutAmount?: Money, target?: JoinTarget) => void;
   setPayoutAmount: (amount: Money) => void;
   setInstallment: (option: InstallmentOption) => void;
   setSlot: (slot: Slot) => void;
@@ -25,9 +29,10 @@ export function JoinFlowProvider({ children }: { children: React.ReactNode }) {
   const value = useMemo<JoinFlowValue>(
     () => ({
       draft,
-      start: (payoutAmount) => {
+      start: (payoutAmount, target) => {
         const empty = JoinCircleDraft.empty();
-        setDraft(payoutAmount ? empty.withPayoutAmount(payoutAmount) : empty);
+        if (payoutAmount && target) setDraft(JoinCircleDraft.forTarget(payoutAmount, target));
+        else setDraft(payoutAmount ? empty.withPayoutAmount(payoutAmount) : empty);
       },
       setPayoutAmount: (amount) => setDraft((current) => current.withPayoutAmount(amount)),
       setInstallment: (option) => setDraft((current) => current.withInstallment(option)),
