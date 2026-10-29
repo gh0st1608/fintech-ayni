@@ -236,6 +236,19 @@ describe('validateEnvironment', () => {
         /DELINQUENCY_GRACE_DAYS/,
       );
     });
+
+    it('trae los valores propuestos del fondo de garantía (COPAYNI-58)', () => {
+      expect(validateEnvironment({ ...REQUIRED })).toMatchObject({
+        GUARANTEE_FUND_FEE_SHARE_BPS: 2500,
+        GUARANTEE_FUND_MIN_INSTALLMENTS_PER_CIRCLE: 2,
+      });
+      expect(() =>
+        validateEnvironment({ ...REQUIRED, GUARANTEE_FUND_FEE_SHARE_BPS: '10001' }),
+      ).toThrow(/GUARANTEE_FUND_FEE_SHARE_BPS/);
+      expect(() =>
+        validateEnvironment({ ...REQUIRED, GUARANTEE_FUND_MIN_INSTALLMENTS_PER_CIRCLE: '13' }),
+      ).toThrow(/GUARANTEE_FUND_MIN_INSTALLMENTS_PER_CIRCLE/);
+    });
   });
 
   describe('métodos de cobro', () => {

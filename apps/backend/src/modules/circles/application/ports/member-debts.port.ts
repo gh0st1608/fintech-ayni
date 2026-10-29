@@ -1,4 +1,5 @@
 import { type Money } from '../../../../shared/domain/value-objects/money';
+import { type LedgerTransaction } from '../../domain/value-objects/ledger-transaction';
 
 export const MEMBER_DEBTS = Symbol('MEMBER_DEBTS');
 
@@ -18,6 +19,13 @@ export interface MemberDebt {
 export interface MemberDebtsPort {
   /** Las deudas sin saldar del usuario. */
   openDebtsOf(userId: string): Promise<MemberDebt[]>;
-  /** Marca saldada la deuda del usuario en ese círculo; `false` si no había una abierta. */
-  settle(userId: string, circleId: string): Promise<boolean>;
+  /**
+   * Marca saldada la deuda del usuario en ese círculo y guarda, en la misma transacción, el
+   * movimiento contable que devuelve `recovery` (COPAYNI-58). `null` si no había una abierta.
+   */
+  settle(
+    userId: string,
+    circleId: string,
+    recovery: (debt: MemberDebt) => LedgerTransaction,
+  ): Promise<MemberDebt | null>;
 }

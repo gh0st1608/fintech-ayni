@@ -3,7 +3,11 @@ import { CircleTerms } from '@src/modules/circles/domain/value-objects/circle-te
 import { LocalDate } from '@src/shared/domain/value-objects/local-date';
 import { Money } from '@src/shared/domain/value-objects/money';
 import { Period } from '@src/shared/domain/value-objects/period';
-import { TEST_DELINQUENCY, TEST_PRICING } from '@test/support/join-circle.fixture';
+import {
+  TEST_DELINQUENCY,
+  TEST_FUND_SHARE_BPS,
+  TEST_PRICING,
+} from '@test/support/join-circle.fixture';
 
 /** Payout de 3.000 en 3 meses desde noviembre de 2026; vence el día 5, con 3 días de gracia. */
 const TERMS = CircleTerms.create({
@@ -21,12 +25,16 @@ const member = (userId: string, position: number): CycleMember => ({
 let ids = 0;
 const newId = () => `i-${++ids}`;
 
-function cycle(members: CycleMember[] = [member('ana', 1), member('beto', 2), member('caro', 3)]) {
+function cycle(
+  members: CycleMember[] = [member('ana', 1), member('beto', 2), member('caro', 3)],
+  fund = Money.of(10_000_000, 'PEN'),
+) {
   return CircleCycle.restore({
     circleId: 'c-1',
     terms: TERMS,
     dueDay: 5,
     delinquency: TEST_DELINQUENCY,
+    fund: { balance: fund, feeShareBps: TEST_FUND_SHARE_BPS },
     state: 'collecting',
     currentPeriod: null,
     members,
@@ -175,6 +183,7 @@ describe('CircleCycle', () => {
         }),
         dueDay: 30,
         delinquency: TEST_DELINQUENCY,
+        fund: { balance: Money.zero('PEN'), feeShareBps: TEST_FUND_SHARE_BPS },
         state: 'collecting',
         currentPeriod: null,
         members: [member('ana', 1)],
@@ -205,6 +214,7 @@ describe('CircleCycle', () => {
         expelledOn: day('2026-12-09'),
         overdue: caro.installments[1],
         lateFee: caro.installments[1]!.percentage(300),
+        paid: caro.installments[0],
         refund: caro.installments[0]!.subtract(caro.installments[0]!.percentage(500)),
       });
       expect(subject.expulsions).toEqual([expulsion]);
@@ -235,6 +245,7 @@ describe('CircleCycle', () => {
       expect(expulsion.overdue).toEqual(sum(ana.installments.slice(1)));
       expect(expulsion.lateFee).toEqual(ana.installments[1]!.percentage(300));
       expect(expulsion.refund).toBeNull();
+      expect(expulsion.paid).toBeNull();
     });
 
     it('en su propio mes de cobro todavía no cobró: hay devolución y ese pozo no se paga', () => {
@@ -270,11 +281,25 @@ describe('CircleCycle', () => {
         terms: TERMS,
         dueDay: 5,
         delinquency: TEST_DELINQUENCY,
+        fund: { balance: Money.zero('PEN'), feeShareBps: TEST_FUND_SHARE_BPS },
         state,
         currentPeriod: period,
         members: [],
         installments: [],
       });
+    expect(() =>
+      CircleCycle.restore({
+        circleId: 'c-1',
+        terms: TERMS,
+        dueDay: 5,
+        delinquency: TEST_DELINQUENCY,
+        fund: { balance: Money.zero('USD'), feeShareBps: TEST_FUND_SHARE_BPS },
+        state: 'collecting',
+        currentPeriod: null,
+        members: [],
+        installments: [],
+      }),
+    ).toThrow(expect.objectContaining({ code: 'INVALID_CYCLE_TRANSITION' }));
     expect(() => restore('contributing', null)).toThrow(
       expect.objectContaining({ code: 'INVALID_CYCLE_TRANSITION' }),
     );

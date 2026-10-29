@@ -1,8 +1,10 @@
+import { type Money } from '../../../../shared/domain/value-objects/money';
 import { type Period } from '../../../../shared/domain/value-objects/period';
 import {
   type CircleCycle,
   type CycleState,
   type Installment,
+  type PendingRefund,
 } from '../../domain/entities/circle-cycle';
 import { type SlotPrice } from '../../domain/services/slot-pricing';
 import { type CircleTerms } from '../../domain/value-objects/circle-terms';
@@ -18,6 +20,13 @@ export interface StoredCycle {
   members: { userId: string; position: number; price?: SlotPrice }[];
   /** Las cuotas del mes en curso. */
   installments: Installment[];
+  /**
+   * Saldo del fondo de garantía en la moneda del círculo (COPAYNI-58), leído con el fondo
+   * bloqueado: dos círculos no pueden gastar el mismo saldo.
+   */
+  fundBalance: Money;
+  /** Devoluciones de los expulsados de este círculo que todavía no se pagaron. */
+  pendingRefunds: PendingRefund[];
 }
 
 export interface CircleCycleRepositoryPort {
@@ -26,7 +35,9 @@ export interface CircleCycleRepositoryPort {
   /**
    * Ejecuta `work` con el círculo bloqueado y guarda en la misma transacción el ciclo que
    * devuelve: estado, mes en curso, cuotas y payouts. Devuelve `false` sin ejecutar nada si otra
-   * ejecución tiene el círculo bloqueado. Si `work` falla, no se guarda nada.
+   * ejecución tiene el círculo bloqueado. Si `work` falla, no se guarda nada. También guarda los
+   * movimientos contables (`CircleCycle.ledger`), una sola vez por clave, y marca pagadas las
+   * devoluciones (`CircleCycle.refunds`).
    */
   withLock(circleId: string, work: (stored: StoredCycle) => Promise<CircleCycle>): Promise<boolean>;
 }

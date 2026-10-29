@@ -2,6 +2,7 @@ import {
   type CollectionOutcome,
   type Disbursement,
   type Installment,
+  type Refund,
 } from '../../domain/entities/circle-cycle';
 
 export const CONTRIBUTIONS = Symbol('CONTRIBUTIONS');
@@ -20,4 +21,6 @@ export interface ContributionsPort {
 export interface DisbursementsPort {
   /** Idempotente por (`circleId`, `period`): un mes se paga una sola vez. */
   disburse(disbursement: Disbursement & { circleId: string }): Promise<void>;
+  /** Devolución al expulsado al cerrar el círculo. Idempotente por (`circleId`, `userId`). */
+  refund(refund: Refund & { circleId: string }): Promise<void>;
 }

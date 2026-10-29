@@ -43,7 +43,7 @@ function setup(applicant: Partial<JoinApplicant> = {}, debts: MemberDebt[] = [])
     applicant: current,
     debts: {
       openDebtsOf: () => Promise.resolve([...openDebts]),
-      settle: () => Promise.resolve(openDebts.splice(0).length > 0),
+      settle: () => Promise.resolve(openDebts.splice(0)[0] ?? null),
     },
   });
   const addCircle = (id: string, props: { startsOn?: Period; months?: number } = {}) =>

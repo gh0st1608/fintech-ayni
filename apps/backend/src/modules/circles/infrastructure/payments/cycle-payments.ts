@@ -11,7 +11,7 @@ export type CyclePaymentsAdapter = (typeof CYCLE_PAYMENTS_ADAPTERS)[number];
 
 /**
  * Pagos simulados para desarrollo y pruebas, sin pasarela (D1, COPAYNI-34): toda cuota se cobra
- * y todo payout se paga. La validación de la configuración lo prohíbe en production.
+ * y todo payout y devolución se paga. La validación de la configuración lo prohíbe en production.
  */
 export class FakeCyclePayments implements ContributionsPort, DisbursementsPort {
   private readonly logger = new Logger('FakeCyclePayments');
@@ -24,6 +24,11 @@ export class FakeCyclePayments implements ContributionsPort, DisbursementsPort {
     this.logger.debug('Payout simulado');
     return Promise.resolve();
   }
+
+  refund(): Promise<void> {
+    this.logger.debug('Devolución simulada');
+    return Promise.resolve();
+  }
 }
 
 /** Sin proveedor configurado: el ciclo no puede cobrar ni pagar, y lo dice al intentarlo. */
@@ -33,6 +38,10 @@ export class UnconfiguredCyclePayments implements ContributionsPort, Disbursemen
   }
 
   disburse(): Promise<void> {
+    return Promise.reject(UnconfiguredCyclePayments.error());
+  }
+
+  refund(): Promise<void> {
     return Promise.reject(UnconfiguredCyclePayments.error());
   }
 

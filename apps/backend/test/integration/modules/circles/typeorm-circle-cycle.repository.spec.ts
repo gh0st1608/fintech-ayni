@@ -9,6 +9,7 @@ import { Circle } from '@src/modules/circles/domain/entities/circle';
 import { CircleCycle } from '@src/modules/circles/domain/entities/circle-cycle';
 import { priceOf } from '@src/modules/circles/domain/services/slot-pricing';
 import { CircleTerms } from '@src/modules/circles/domain/value-objects/circle-terms';
+import { LedgerTransaction } from '@src/modules/circles/domain/value-objects/ledger-transaction';
 import { FakeCyclePayments } from '@src/modules/circles/infrastructure/payments/cycle-payments';
 import { CircleMembershipEntity } from '@src/modules/circles/infrastructure/persistence/typeorm/circle-membership.entity';
 import { CircleEntity } from '@src/modules/circles/infrastructure/persistence/typeorm/circle.entity';
@@ -18,7 +19,11 @@ import { TypeOrmMemberDebts } from '@src/modules/circles/infrastructure/persiste
 import { Money } from '@src/shared/domain/value-objects/money';
 import { Period } from '@src/shared/domain/value-objects/period';
 import { TestClock } from '@test/support/create-test-app';
-import { TEST_DELINQUENCY, TEST_PRICING } from '@test/support/join-circle.fixture';
+import {
+  TEST_DELINQUENCY,
+  TEST_FUND_SHARE_BPS,
+  TEST_PRICING,
+} from '@test/support/join-circle.fixture';
 import { insertTestUser, openTestDatabase } from '@test/support/test-database';
 
 const MONTHS = 6;
@@ -80,7 +85,12 @@ describe('TypeOrmCircleCycleRepository', () => {
     const useCase = new AdvanceCircleCyclesUseCase(
       { listToAdvance: () => Promise.resolve(circleIds), withLock: cycles.withLock.bind(cycles) },
       TEST_PRICING,
-      { dueDay: 5, timeZone: 'America/Lima', delinquency: TEST_DELINQUENCY },
+      {
+        dueDay: 5,
+        timeZone: 'America/Lima',
+        delinquency: TEST_DELINQUENCY,
+        fundFeeShareBps: TEST_FUND_SHARE_BPS,
+      },
       contributions,
       new FakeCyclePayments(),
       clock,
@@ -213,11 +223,31 @@ describe('TypeOrmCircleCycleRepository', () => {
       ).items,
     ).toEqual([expect.objectContaining({ circleId: id, expelled: false })]);
 
-    await expect(debts.settle(defaulter.userId, id)).resolves.toBe(true);
-    await expect(debts.settle(defaulter.userId, id)).resolves.toBe(false);
+    const recovery = ({ overdue, lateFee }: { overdue: Money; lateFee: Money }) =>
+      LedgerTransaction.transfer({
+        key: `debt_recovered:${id}:${defaulter.userId}`,
+        kind: 'debt_recovered',
+        from: { account: 'external', userId: defaulter.userId },
+        to: { account: 'guarantee_fund' },
+        amount: overdue.add(lateFee),
+        circleId: id,
+      })!;
+    await expect(debts.settle(defaulter.userId, id, recovery)).resolves.toEqual(debt);
+    await expect(debts.settle(defaulter.userId, id, recovery)).resolves.toBeNull();
+    // Lo recuperado vuelve al fondo, una sola vez (COPAYNI-58).
+    const recovered = await dataSource.query<{ account: string; amount: string }[]>(
+      `SELECT account, amount::text AS amount FROM ledger_entries
+        WHERE transaction_key = $1 ORDER BY account`,
+      [`debt_recovered:${id}:${defaulter.userId}`],
+    );
+    const total = installment.add(installment.percentage(300)).amount;
+    expect(recovered).toEqual([
+      { account: 'external', amount: String(-total) },
+      { account: 'guarantee_fund', amount: String(total) },
+    ]);
     await expect(debts.openDebtsOf(defaulter.userId)).resolves.toEqual([]);
     await expect(debts.openDebtsOf('no-es-uuid')).resolves.toEqual([]);
-    await expect(debts.settle('no-es-uuid', id)).resolves.toBe(false);
+    await expect(debts.settle('no-es-uuid', id, recovery)).resolves.toBeNull();
   });
 
   it('una segunda ejecución simultánea no procesa el círculo bloqueado', async () => {
@@ -234,6 +264,7 @@ describe('TypeOrmCircleCycleRepository', () => {
         ...stored,
         dueDay: 5,
         delinquency: TEST_DELINQUENCY,
+        fund: { balance: stored.fundBalance, feeShareBps: TEST_FUND_SHARE_BPS },
         members: [],
       });
     });
@@ -253,6 +284,7 @@ describe('TypeOrmCircleCycleRepository', () => {
           ...stored,
           dueDay: 5,
           delinquency: TEST_DELINQUENCY,
+          fund: { balance: stored.fundBalance, feeShareBps: TEST_FUND_SHARE_BPS },
           members: [],
         });
         cycle.start(randomUUID);

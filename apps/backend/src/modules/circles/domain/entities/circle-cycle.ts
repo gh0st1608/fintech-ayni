@@ -2,8 +2,10 @@ import { LocalDate } from '../../../../shared/domain/value-objects/local-date';
 import { Money } from '../../../../shared/domain/value-objects/money';
 import { type Period } from '../../../../shared/domain/value-objects/period';
 import { DomainError } from '../../../../shared/errors/app-error';
+import { refundTransactions, settlePeriod } from '../services/period-settlement';
 import { type SlotQuote } from '../services/slot-pricing';
 import { type CircleTerms } from '../value-objects/circle-terms';
+import { type LedgerTransaction } from '../value-objects/ledger-transaction';
 
 /**
  * Estados que se guardan. Los pasos Checking, Setting Receiver, Distributing y Distributed del
@@ -69,8 +71,37 @@ export interface Expulsion {
    */
   readonly overdue: Money;
   readonly lateFee: Money;
+  /** Lo que pagó antes de la expulsión; `null` si ya cobró (no hay devolución). */
+  readonly paid: Money | null;
   /** Lo pagado menos la penalidad, a devolver al cerrar el círculo; `null` si ya cobró. */
   readonly refund: Money | null;
+}
+
+/** Fondo de garantía (COPAYNI-58): su saldo y la parte de las Admin Fees que recibe. */
+export interface CycleFund {
+  balance: Money;
+  feeShareBps: number;
+}
+
+/** Devolución de un expulsado de este círculo que todavía no se pagó. */
+export interface PendingRefund {
+  readonly userId: string;
+  readonly paid: Money;
+  readonly refund: Money;
+}
+
+/** Devolución que se paga al cerrar el círculo. */
+export interface Refund {
+  readonly userId: string;
+  readonly amount: Money;
+}
+
+/** Cómo cerró un mes: lo que cubrió el fondo, lo que no alcanzó y el pozo que volvió. */
+export interface PeriodClose {
+  readonly period: Period;
+  readonly coverage: Money;
+  readonly shortfall: Money;
+  readonly returned: Money;
 }
 
 export class InvalidCycleTransitionError extends DomainError {
@@ -102,21 +133,35 @@ export class CircleCycle {
     private readonly touched: Installment[],
     private readonly payouts: Disbursement[],
     private readonly expelled: Expulsion[],
+    private fundBalance: Money,
+    private readonly feeShareBps: number,
+    private readonly pendingRefunds: readonly PendingRefund[],
+    private readonly entries: LedgerTransaction[],
+    private readonly closes: PeriodClose[],
+    private readonly refundsToPay: Refund[],
   ) {}
 
-  /** `members`: los no expulsados. `installments`: las del mes en curso. */
+  /**
+   * `members`: los no expulsados. `installments`: las del mes en curso. `pendingRefunds`: las
+   * devoluciones de los expulsados de este círculo que todavía no se pagaron.
+   */
   static restore(props: {
     circleId: string;
     terms: CircleTerms;
     dueDay: number;
     delinquency: DelinquencyPolicy;
+    fund: CycleFund;
     state: CycleState;
     currentPeriod: Period | null;
     members: readonly CycleMember[];
     installments: readonly Installment[];
+    pendingRefunds?: readonly PendingRefund[];
   }): CircleCycle {
     const { circleId, terms, dueDay, delinquency, state, currentPeriod, members, installments } =
       props;
+    if (!props.fund.balance.hasSameCurrency(terms.payout)) {
+      throw new InvalidCycleTransitionError('El fondo debe estar en la moneda del círculo');
+    }
     const notRunning = state === 'collecting' || state === 'finished';
     if ((state === 'contributing' && currentPeriod === null) || (notRunning && currentPeriod)) {
       throw new InvalidCycleTransitionError('Solo un círculo en curso tiene un mes en curso');
@@ -132,7 +177,28 @@ export class CircleCycle {
       [...installments],
       [],
       [],
+      props.fund.balance,
+      props.fund.feeShareBps,
+      [...(props.pendingRefunds ?? [])],
+      [],
+      [],
+      [],
     );
+  }
+
+  /** Movimientos contables decididos desde `restore` (COPAYNI-58). */
+  get ledger(): readonly LedgerTransaction[] {
+    return [...this.entries];
+  }
+
+  /** Cierres de mes desde `restore`. */
+  get periodCloses(): readonly PeriodClose[] {
+    return [...this.closes];
+  }
+
+  /** Devoluciones a pagar porque el círculo terminó. */
+  get refunds(): readonly Refund[] {
+    return [...this.refundsToPay];
   }
 
   /** Miembros que siguen en el ciclo. */
@@ -244,6 +310,7 @@ export class CircleCycle {
       expelledOn: today,
       overdue: alreadyPaidOut ? sum(member.quote.installments.slice(month)) : installment.amount,
       lateFee: installment.amount.percentage(this.delinquency.lateFeeBps),
+      paid: alreadyPaidOut ? null : paid,
       refund: alreadyPaidOut
         ? null
         : paid.subtract(paid.percentage(this.delinquency.refundPenaltyBps)),
@@ -279,6 +346,10 @@ export class CircleCycle {
   /**
    * Checking → Setting Receiver → Distributing → Distributed: decide el payout del mes y pasa al
    * mes siguiente, o termina después del último. Devuelve `null` si el turno del mes está libre.
+   *
+   * Con el fondo de garantía (COPAYNI-58, `settlePeriod`): el fondo cubre lo que falta para el
+   * payout completo; si no alcanza, el payout se reduce. Al terminar, se deciden las
+   * devoluciones de los expulsados antes de su turno.
    */
   closePeriod(today: LocalDate, newId: () => string): Disbursement | null {
     if (!this.isPeriodSettled(today)) {
@@ -286,23 +357,60 @@ export class CircleCycle {
     }
     const period = this.period!;
     const receiver = this.receiver();
-    const disbursement = receiver
-      ? {
-          period,
-          userId: receiver.userId,
-          position: receiver.position,
-          amount: receiver.quote.netPayout,
-        }
-      : null;
+    const settlement = settlePeriod({
+      circleId: this.circleId,
+      terms: this.terms,
+      period,
+      paid: this.touched
+        .filter((installment) => installment.period.equals(period) && installment.status === 'paid')
+        .map(({ amount }) => amount),
+      receiver: receiver && {
+        userId: receiver.userId,
+        netPayout: receiver.quote.netPayout,
+        adminFee: receiver.quote.adminFee,
+      },
+      fundBalance: this.fundBalance,
+      feeShareBps: this.feeShareBps,
+    });
+    this.entries.push(...settlement.transactions);
+    this.fundBalance = settlement.fundBalance;
+    const { coverage, shortfall, returned } = settlement;
+    this.closes.push({ period, coverage, shortfall, returned });
+    const disbursement =
+      receiver && settlement.payout
+        ? {
+            period,
+            userId: receiver.userId,
+            position: receiver.position,
+            amount: settlement.payout,
+          }
+        : null;
     if (disbursement) this.payouts.push(disbursement);
 
     if (period.equals(this.terms.endsOn)) {
       this.currentState = 'finished';
       this.period = null;
+      this.decideRefunds();
     } else {
       this.openPeriod(period.addMonths(1), newId);
     }
     return disbursement;
+  }
+
+  /** Al cerrar el círculo se devuelve lo pagado menos la penalidad (pending-scope §3.1). */
+  private decideRefunds(): void {
+    const owed: PendingRefund[] = [...this.pendingRefunds];
+    for (const { userId, paid, refund } of this.expelled) {
+      if (paid && refund) owed.push({ userId, paid, refund });
+    }
+    for (const { userId, paid, refund } of owed) {
+      const transactions = refundTransactions({ circleId: this.circleId, userId, paid, refund });
+      this.entries.push(...transactions);
+      for (const transaction of transactions) {
+        this.fundBalance = this.fundBalance.add(transaction.netFor('guarantee_fund'));
+      }
+      if (refund.isPositive()) this.refundsToPay.push({ userId, amount: refund });
+    }
   }
 
   private openPeriod(period: Period, newId: () => string): void {

@@ -4,7 +4,11 @@ import { Inject, Injectable, Logger } from '@nestjs/common';
 
 import { CLOCK, type ClockPort } from '../../../../shared/application/ports/clock.port';
 import { LocalDate } from '../../../../shared/domain/value-objects/local-date';
-import { CircleCycle, type DelinquencyPolicy } from '../../domain/entities/circle-cycle';
+import {
+  CircleCycle,
+  type DelinquencyPolicy,
+  type PeriodClose,
+} from '../../domain/entities/circle-cycle';
 import { type SlotPricing } from '../../domain/services/slot-pricing';
 import {
   CIRCLE_CYCLE_REPOSITORY,
@@ -27,6 +31,8 @@ export interface CircleCycleSettings {
   timeZone: string;
   /** Gracia, cargo por mora y penalidad de devolución (COPAYNI-57). */
   delinquency: DelinquencyPolicy;
+  /** Parte de las Admin Fees que va al fondo de garantía (COPAYNI-58, R16). */
+  fundFeeShareBps: number;
 }
 
 export interface AdvanceCyclesResult {
@@ -91,6 +97,7 @@ export class AdvanceCircleCyclesUseCase {
       ...stored,
       dueDay: this.settings.dueDay,
       delinquency: this.settings.delinquency,
+      fund: { balance: stored.fundBalance, feeShareBps: this.settings.fundFeeShareBps },
       members: stored.members.map(({ userId, position, price }) => ({
         userId,
         position,
@@ -143,13 +150,53 @@ export class AdvanceCircleCyclesUseCase {
           period,
         });
       } else {
-        // Turno libre (pending-scope R2 y R17): el destino del pozo llega con COPAYNI-58 y 59.
+        // Turno libre (pending-scope R2 y R17): el pozo vuelve al fondo (COPAYNI-58).
         this.logger.warn({ event: 'circles.cycle.payout_unassigned', circleId, period });
       }
+      this.logClose(circleId, cycle.periodCloses.at(-1)!);
       if (cycle.isFinished()) {
+        for (const refund of cycle.refunds) {
+          await this.disbursements.refund({ ...refund, circleId });
+          this.logger.log({
+            event: 'circles.cycle.refund_paid',
+            circleId,
+            userId: refund.userId,
+            amount: refund.amount.amount,
+          });
+        }
         this.logger.log({ event: 'circles.cycle.finished', circleId });
       }
     }
     return cycle;
+  }
+
+  /** Auditoría de lo que hizo el fondo al cerrar el mes. */
+  private logClose(circleId: string, close: PeriodClose): void {
+    const period = close.period.toString();
+    if (close.coverage.isPositive()) {
+      this.logger.log({
+        event: 'circles.fund.covered',
+        circleId,
+        period,
+        amount: close.coverage.amount,
+      });
+    }
+    if (close.shortfall.isPositive()) {
+      // Pending-scope §3.1, regla 7: se avisa a quien cobra y el fondo le debe la diferencia.
+      this.logger.warn({
+        event: 'circles.cycle.payout_reduced',
+        circleId,
+        period,
+        shortfall: close.shortfall.amount,
+      });
+    }
+    if (close.returned.isPositive()) {
+      this.logger.log({
+        event: 'circles.fund.pot_returned',
+        circleId,
+        period,
+        amount: close.returned.amount,
+      });
+    }
   }
 }

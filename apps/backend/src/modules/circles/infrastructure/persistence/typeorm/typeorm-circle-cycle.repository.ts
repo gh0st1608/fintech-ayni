@@ -16,6 +16,7 @@ import {
 } from '../../../domain/entities/circle-cycle';
 import { CircleTerms } from '../../../domain/value-objects/circle-terms';
 import { CircleEntity } from './circle.entity';
+import { fundBalance, insertLedgerTransaction, lockFund } from './ledger.sql';
 import { fromStoredPrice, type StoredSlotPrice } from './slot-price.mapper';
 
 const toDate = (period: Period): string => `${period.toString()}-01`;
@@ -42,7 +43,8 @@ interface InstallmentRow {
 
 /**
  * CircleCycleRepositoryPort sobre PostgreSQL. El bloqueo es un advisory lock de transacción por
- * círculo: una segunda ejecución no espera, sigue con otro círculo.
+ * círculo: una segunda ejecución no espera, sigue con otro círculo. Con el círculo bloqueado
+ * espera el bloqueo del fondo de garantía (COPAYNI-58), que es uno solo para todos.
  */
 @Injectable()
 export class TypeOrmCircleCycleRepository implements CircleCycleRepositoryPort {
@@ -68,6 +70,7 @@ export class TypeOrmCircleCycleRepository implements CircleCycleRepositoryPort {
         [circleId],
       );
       if (!lock?.locked) return false;
+      await lockFund(manager);
       await this.save(manager, await work(await this.load(manager, circleId)));
       return true;
     });
@@ -97,8 +100,25 @@ export class TypeOrmCircleCycleRepository implements CircleCycleRepositoryPort {
         )
       : [];
 
+    const pendingRefunds = await manager.query<
+      { user_id: string; paid_amount: string; refund_amount: string; currency: string }[]
+    >(
+      `SELECT user_id, paid_amount::text AS paid_amount, refund_amount::text AS refund_amount,
+              currency
+         FROM circle_expulsions
+        WHERE circle_id = $1 AND refunded_at IS NULL
+              AND paid_amount IS NOT NULL AND refund_amount IS NOT NULL`,
+      [circleId],
+    );
+
     return {
       circleId,
+      fundBalance: await fundBalance(manager, circle.currency),
+      pendingRefunds: pendingRefunds.map((row) => ({
+        userId: row.user_id,
+        paid: Money.of(Number(row.paid_amount), row.currency),
+        refund: Money.of(Number(row.refund_amount), row.currency),
+      })),
       terms: CircleTerms.create({
         payout: Money.of(Number(circle.payout_amount), circle.currency),
         months: circle.months,
@@ -169,8 +189,8 @@ export class TypeOrmCircleCycleRepository implements CircleCycleRepositoryPort {
       await manager.query(
         `INSERT INTO circle_expulsions
            (circle_id, user_id, position, period, expelled_on, overdue_amount, late_fee_amount,
-            refund_amount, currency)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+            paid_amount, refund_amount, currency)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
          ON CONFLICT ON CONSTRAINT uq_circle_expulsions_member DO NOTHING`,
         [
           cycle.circleId,
@@ -180,6 +200,7 @@ export class TypeOrmCircleCycleRepository implements CircleCycleRepositoryPort {
           expulsion.expelledOn.toString(),
           expulsion.overdue.amount,
           expulsion.lateFee.amount,
+          expulsion.paid?.amount ?? null,
           expulsion.refund?.amount ?? null,
           expulsion.overdue.currency,
         ],
@@ -188,6 +209,17 @@ export class TypeOrmCircleCycleRepository implements CircleCycleRepositoryPort {
         `UPDATE circle_memberships SET expelled_at = now()
           WHERE circle_id = $1 AND user_id = $2 AND expelled_at IS NULL`,
         [cycle.circleId, expulsion.userId],
+      );
+    }
+    for (const transaction of cycle.ledger) {
+      await insertLedgerTransaction(manager, transaction);
+    }
+    if (cycle.isFinished()) {
+      // Las devoluciones se decidieron y pagaron al terminar (CircleCycle.refunds).
+      await manager.query(
+        `UPDATE circle_expulsions SET refunded_at = now()
+          WHERE circle_id = $1 AND refund_amount IS NOT NULL AND refunded_at IS NULL`,
+        [cycle.circleId],
       );
     }
   }

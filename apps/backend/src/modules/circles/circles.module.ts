@@ -10,6 +10,15 @@ import { PayoutsModule } from '../payouts/payouts.module';
 import { JOIN_CONFIG_REPOSITORY } from './application/ports/join-config-repository.port';
 import { JOIN_ELIGIBILITY } from './application/ports/join-eligibility.port';
 import { MEMBER_DEBTS } from './application/ports/member-debts.port';
+import { FUND_METRICS, GUARANTEE_FUND } from './application/ports/guarantee-fund.port';
+import {
+  CheckGuaranteeFundUseCase,
+  GUARANTEE_FUND_SETTINGS,
+  type GuaranteeFundSettings,
+} from './application/use-cases/check-guarantee-fund.use-case';
+import { RecordFundMovementUseCase } from './application/use-cases/record-fund-movement.use-case';
+import { OtelFundMetrics } from './infrastructure/observability/otel-fund-metrics';
+import { TypeOrmGuaranteeFund } from './infrastructure/persistence/typeorm/typeorm-guarantee-fund.repository';
 import {
   CIRCLE_ASSIGNMENT,
   type CircleAssignmentSettings,
@@ -73,6 +82,22 @@ import { MyCirclesController } from './presentation/http/controllers/my-circles.
           lateFeeBps: config.get('LATE_FEE_BPS', { infer: true }),
           refundPenaltyBps: config.get('EXPULSION_REFUND_PENALTY_BPS', { infer: true }),
         },
+        fundFeeShareBps: config.get('GUARANTEE_FUND_FEE_SHARE_BPS', { infer: true }),
+      }),
+    },
+    // Fondo de garantía (COPAYNI-58, R16): alerta de saldo y movimientos manuales del back-office.
+    CheckGuaranteeFundUseCase,
+    RecordFundMovementUseCase,
+    TypeOrmGuaranteeFund,
+    { provide: GUARANTEE_FUND, useExisting: TypeOrmGuaranteeFund },
+    { provide: FUND_METRICS, useClass: OtelFundMetrics },
+    {
+      provide: GUARANTEE_FUND_SETTINGS,
+      inject: [ConfigService],
+      useFactory: (config: AppConfigService): GuaranteeFundSettings => ({
+        minInstallmentsPerCircle: config.get('GUARANTEE_FUND_MIN_INSTALLMENTS_PER_CIRCLE', {
+          infer: true,
+        }),
       }),
     },
     // Deudas por impago (COPAYNI-57): bloquean la unión hasta saldarse.

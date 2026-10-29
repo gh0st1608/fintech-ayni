@@ -240,6 +240,21 @@ export class EnvironmentVariables {
   EXPULSION_REFUND_PENALTY_BPS: number = 500;
 
   /**
+   * Parte de las Admin Fees de quien cobra que va al fondo de garantía (COPAYNI-58, R16), en
+   * puntos básicos (R18, propuesto: 25 %).
+   */
+  @IsInt()
+  @Min(0)
+  @Max(10000)
+  GUARANTEE_FUND_FEE_SHARE_BPS: number = 2500;
+
+  /** Saldo mínimo del fondo en cuotas base por círculo en curso; debajo, alerta (R18, propuesto). */
+  @IsInt()
+  @Min(0)
+  @Max(12)
+  GUARANTEE_FUND_MIN_INSTALLMENTS_PER_CIRCLE: number = 2;
+
+  /**
    * Cobro de cuotas y pago de payouts del ciclo mensual. `fake` simula ambos (desarrollo y
    * pruebas) y está prohibido en production; sin valor, el ciclo falla al intentar cobrar
    * (pasarela pendiente: D1, COPAYNI-34).

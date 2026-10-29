@@ -33,10 +33,13 @@ export const TEST_DELINQUENCY: DelinquencyPolicy = {
   refundPenaltyBps: 500,
 };
 
+/** 25 % de las Admin Fees al fondo de garantía, el valor por defecto (R18). */
+export const TEST_FUND_SHARE_BPS = 2_500;
+
 /** Sin deudas por impago: nadie está bloqueado. */
 export const NO_DEBTS: MemberDebtsPort = {
   openDebtsOf: () => Promise.resolve([]),
-  settle: () => Promise.resolve(false),
+  settle: () => Promise.resolve(null),
 };
 
 export const TEST_JOIN_CONFIG = JoinConfig.create({

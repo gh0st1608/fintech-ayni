@@ -10,8 +10,10 @@ import {
   type CollectionOutcome,
   type Installment,
 } from '@src/modules/circles/domain/entities/circle-cycle';
-import { priceOf } from '@src/modules/circles/domain/services/slot-pricing';
+import { priceOf, SlotPricing } from '@src/modules/circles/domain/services/slot-pricing';
 import { CircleTerms } from '@src/modules/circles/domain/value-objects/circle-terms';
+import { LedgerTransaction } from '@src/modules/circles/domain/value-objects/ledger-transaction';
+import { SlotPricingRules } from '@src/modules/circles/domain/value-objects/slot-pricing-rules';
 import {
   FakeCyclePayments,
   UnconfiguredCyclePayments,
@@ -20,7 +22,11 @@ import { Money } from '@src/shared/domain/value-objects/money';
 import { Period } from '@src/shared/domain/value-objects/period';
 import { TestClock } from '@test/support/create-test-app';
 import { InMemoryCircleCycleRepository } from '@test/support/in-memory-circle-cycle.repository';
-import { TEST_DELINQUENCY, TEST_PRICING } from '@test/support/join-circle.fixture';
+import {
+  TEST_DELINQUENCY,
+  TEST_FUND_SHARE_BPS,
+  TEST_PRICING,
+} from '@test/support/join-circle.fixture';
 
 /** Payout de 6.000 en 6 meses desde noviembre de 2026, con los 6 turnos tomados. */
 const TERMS = CircleTerms.create({
@@ -38,6 +44,7 @@ class ScriptedPayments implements ContributionsPort, DisbursementsPort {
   readonly failing = new Set<string>();
   readonly collected: string[] = [];
   readonly disbursed: string[] = [];
+  readonly refunded: string[] = [];
 
   collect(installment: Installment): Promise<CollectionOutcome> {
     this.collected.push(installment.id);
@@ -48,12 +55,20 @@ class ScriptedPayments implements ContributionsPort, DisbursementsPort {
     this.disbursed.push(`${disbursement.userId}@${disbursement.period.toString()}`);
     return Promise.resolve();
   }
+
+  refund(refund: { userId: string; amount: Money }): Promise<void> {
+    this.refunded.push(`${refund.userId}:${refund.amount.amount}`);
+    return Promise.resolve();
+  }
 }
 
 /** Lima es UTC-5: las 17:00 UTC son mediodía del día indicado. */
 const at = (date: string) => new Date(`${date}T17:00:00Z`);
 
-function setup(members: StoredCycle['members'] = MEMBERS, extra: Partial<StoredCycle> = {}) {
+function setup(
+  members: StoredCycle['members'] = MEMBERS,
+  extra: Partial<Omit<StoredCycle, 'fundBalance'>> = {},
+) {
   const cycles = new InMemoryCircleCycleRepository();
   cycles.add({
     circleId: 'c-1',
@@ -69,7 +84,12 @@ function setup(members: StoredCycle['members'] = MEMBERS, extra: Partial<StoredC
   const useCase = new AdvanceCircleCyclesUseCase(
     cycles,
     TEST_PRICING,
-    { dueDay: 5, timeZone: 'America/Lima', delinquency: TEST_DELINQUENCY },
+    {
+      dueDay: 5,
+      timeZone: 'America/Lima',
+      delinquency: TEST_DELINQUENCY,
+      fundFeeShareBps: TEST_FUND_SHARE_BPS,
+    },
     payments,
     payments,
     clock,
@@ -129,6 +149,10 @@ describe('AdvanceCircleCyclesUseCase', () => {
     expect(payments.collected).toHaveLength(6);
     expect(payments.disbursed).toEqual(['u-1@2026-11']);
     expect(cycles.payouts).toHaveLength(1);
+    // Repetir el día no agrega movimientos contables (COPAYNI-58).
+    const keys = [...cycles.ledger.keys()];
+    await runOn('2026-11-05');
+    expect([...cycles.ledger.keys()]).toEqual(keys);
   });
 
   it('si no corrió varios meses, se pone al día', async () => {
@@ -264,7 +288,12 @@ describe('AdvanceCircleCyclesUseCase', () => {
     const useCase = new AdvanceCircleCyclesUseCase(
       cycles,
       TEST_PRICING,
-      { dueDay: 5, timeZone: 'America/Lima', delinquency: TEST_DELINQUENCY },
+      {
+        dueDay: 5,
+        timeZone: 'America/Lima',
+        delinquency: TEST_DELINQUENCY,
+        fundFeeShareBps: TEST_FUND_SHARE_BPS,
+      },
       {
         collect: (installment) => (installment.circleId === 'roto' ? broken : fake).collect(),
       },
@@ -281,5 +310,140 @@ describe('AdvanceCircleCyclesUseCase', () => {
       reason: expect.stringContaining('CIRCLE_PAYMENTS_ADAPTER'),
     });
     await expect(broken.disburse()).rejects.toThrow('CIRCLE_PAYMENTS_ADAPTER');
+    await expect(broken.refund()).rejects.toThrow('CIRCLE_PAYMENTS_ADAPTER');
+    await expect(fake.refund()).resolves.toBeUndefined();
+  });
+
+  describe('fondo de garantía (COPAYNI-58)', () => {
+    /** Sin fees, descuentos ni Admin Fees, como el ejemplo de pending-scope §3.1. */
+    const FLAT_PRICING = new SlotPricing(
+      SlotPricingRules.create({
+        fastestShareBps: 0,
+        highestShareBps: 0,
+        maxFeeBps: 0,
+        maxDiscountBps: 0,
+        adminFeeBps: 0,
+        adminFeeMode: 'added_to_installments',
+      }),
+    );
+    /** Payout de 30.000 en 10 meses desde noviembre de 2026: cuota base de 3.000. */
+    const EXAMPLE = CircleTerms.create({
+      payout: Money.of(3_000_000, 'PEN'),
+      months: 10,
+      startsOn: Period.of(2026, 11),
+    });
+    const pen = (major: number) => Money.of(major * 100, 'PEN');
+
+    function example(seed: Money | null) {
+      const cycles = new InMemoryCircleCycleRepository();
+      cycles.add({
+        circleId: 'ejemplo',
+        terms: EXAMPLE,
+        state: 'collecting',
+        currentPeriod: null,
+        members: Array.from({ length: 10 }, (_, index) => ({
+          userId: `u-${index + 1}`,
+          position: index + 1,
+        })),
+        installments: [],
+      });
+      if (seed) {
+        cycles.record(
+          LedgerTransaction.transfer({
+            key: 'seed_capital:op-1',
+            kind: 'seed_capital',
+            from: { account: 'external' },
+            to: { account: 'guarantee_fund' },
+            amount: seed,
+            reason: 'Capital semilla de prueba',
+          })!,
+        );
+      }
+      const payments = new ScriptedPayments();
+      const clock = new TestClock(at('2026-10-15'));
+      const useCase = new AdvanceCircleCyclesUseCase(
+        cycles,
+        FLAT_PRICING,
+        {
+          dueDay: 5,
+          timeZone: 'America/Lima',
+          delinquency: TEST_DELINQUENCY,
+          fundFeeShareBps: TEST_FUND_SHARE_BPS,
+        },
+        payments,
+        payments,
+        clock,
+      );
+      /** Corre el ciclo completo; el turno 7 deja de pagar en el mes 5, después de 4 cuotas. */
+      const runAll = async () => {
+        for (let month = 0; month < 10; month += 1) {
+          const period = EXAMPLE.startsOn.addMonths(month).toString();
+          if (month === 4) payments.failing.add('u-7');
+          clock.set(at(`${period}-05`));
+          await useCase.execute();
+          if (month === 4) {
+            clock.set(at(`${period}-09`));
+            await useCase.execute();
+          }
+        }
+      };
+      return { cycles, payments, runAll };
+    }
+
+    it('el caso de pending-scope §3.1 sin reemplazo: el fondo termina en +600', async () => {
+      const { cycles, payments, runAll } = example(pen(10_000));
+      await runAll();
+
+      expect(cycles.get('ejemplo')?.state).toBe('finished');
+      // 6 cuotas cubiertas (meses 5 a 10), el pozo del mes 7 vuelve y la devolución de 11.400.
+      expect(cycles.balance('guarantee_fund')).toEqual(pen(10_000 + 600));
+      const covered = [...cycles.ledger.values()].filter(({ kind }) => kind === 'coverage');
+      expect(covered.map(({ period }) => period?.toString())).toEqual([
+        '2027-03',
+        '2027-04',
+        '2027-05',
+        '2027-06',
+        '2027-07',
+        '2027-08',
+      ]);
+      expect(
+        covered.every((transaction) => transaction.netFor('circle_pot').equals(pen(3_000))),
+      ).toBe(true);
+      expect(cycles.ledger.get('pot_returned:ejemplo:2027-05')?.netFor('guarantee_fund')).toEqual(
+        pen(30_000),
+      );
+      expect(payments.refunded).toEqual([`u-7:${pen(11_400).amount}`]);
+      expect(cycles.ledger.get('penalty:ejemplo:u-7')?.netFor('guarantee_fund')).toEqual(pen(600));
+
+      // Quien cobra recibe el payout completo cada mes, también con la cuota faltante.
+      expect(payments.disbursed).toHaveLength(9);
+      expect(cycles.payouts.every(({ amount }) => amount.equals(pen(30_000)))).toBe(true);
+      // Invariante por mes: el pozo pagado es lo cobrado más la cobertura; el pozo cierra en cero.
+      expect(cycles.balance('circle_pot')).toEqual(pen(0));
+      expect(cycles.balance('refunds_payable')).toEqual(pen(0));
+      expect(cycles.balance('member_payable')).toEqual(pen(0));
+    });
+
+    it('sin saldo en el fondo, el pozo se reduce, se avisa y el fondo le debe la diferencia', async () => {
+      const warn = jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
+      const { cycles, payments, runAll } = example(null);
+      await runAll();
+
+      // Mes 5: falta la cuota del expulsado y el fondo está vacío.
+      expect(cycles.payouts[4]).toMatchObject({ userId: 'u-5', amount: pen(27_000) });
+      expect(warn).toHaveBeenCalledWith({
+        event: 'circles.cycle.payout_reduced',
+        circleId: 'ejemplo',
+        period: '2027-03',
+        shortfall: pen(3_000).amount,
+      });
+      expect(cycles.ledger.get('fund_debt:ejemplo:2027-03')?.entries).toEqual(
+        expect.arrayContaining([{ account: 'member_payable', userId: 'u-5', amount: pen(3_000) }]),
+      );
+      // El pozo del mes 7 recupera el fondo: los meses siguientes se cubren completos.
+      expect(cycles.payouts.slice(6).every(({ amount }) => amount.equals(pen(30_000)))).toBe(true);
+      expect(payments.disbursed).toHaveLength(9);
+      expect(cycles.balance('circle_pot')).toEqual(pen(0));
+    });
   });
 });

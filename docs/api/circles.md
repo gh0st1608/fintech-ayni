@@ -328,7 +328,7 @@ No es un endpoint: lo ejecuta la tarea diaria `node dist/jobs/circle-cycle.js` (
 - **Cierre del mes:** solo cuando todas sus cuotas están pagadas. El payout es el `netPayout` del miembro que tiene el turno. Si el turno está libre, no hay payout y se registra `circles.cycle.payout_unassigned`; el destino de ese pozo llega con COPAYNI-58 y 59.
 - **Puesta al día:** si la tarea no corrió varios días, procesa todos los meses vencidos.
 - **Pagos:** por los puertos `ContributionsPort` y `DisbursementsPort`, idempotentes por cuota y por (círculo, mes). Hasta tener pasarela (D1, COPAYNI-34) solo existe el adaptador `fake`, prohibido en production.
-- **Auditoría:** eventos `circles.cycle.started`, `installment_paid`, `installment_overdue`, `member_expelled`, `payout_disbursed`, `payout_unassigned`, `finished`, `failed`, el resumen `circles.cycle.run` y `circles.debt_settled`.
+- **Auditoría:** eventos `circles.cycle.started`, `installment_paid`, `installment_overdue`, `member_expelled`, `payout_disbursed`, `payout_unassigned`, `finished`, `failed`, `refund_paid`, el resumen `circles.cycle.run`, `circles.debt_settled`, `circles.fund.covered`, `circles.fund.pot_returned`, `circles.cycle.payout_reduced` y `guarantee_fund.*`.
 - **Tablas:** `circles.cycle_state` y `circles.current_period`, `circle_installments` (única por círculo, turno y mes), `circle_payouts` (única por círculo y mes) y `circle_expulsions` (única por círculo y miembro).
 
 ### Impago (COPAYNI-57)
@@ -348,6 +348,33 @@ Reglas del PO (pending-scope R3 y §3.1) con los valores propuestos en R18, todo
 - **Solo se expulsa por una cuota que tuvo un intento de cobro fallido.** Si la tarea no corrió y la cuota nunca se intentó cobrar, se intenta primero y, si falla, se expulsa en la ejecución siguiente: una caída del sistema no expulsa a nadie sin intento de cobro.
 - El turno libre del expulsado se maneja como cualquier turno libre (`payout_unassigned`); el reemplazo llega con COPAYNI-59.
 - El débito automático con reintentos en los días 0, 1 y 3 (R18) llega con D1: hoy se reintenta cada día de la gracia.
+
+### Fondo de garantía (COPAYNI-58)
+
+Fondo propio decidido por el PO (R16), con un **registro contable de doble entrada** (`ledger_transactions` y `ledger_entries`):
+
+- **Solo inserción.** La base de datos rechaza editar, borrar o vaciar movimientos; una corrección es otro movimiento.
+- **Cuadre.** Cada movimiento cuadra al confirmar la transacción: al menos dos asientos, una moneda, suma cero.
+- **Idempotencia.** Hay un movimiento por clave, así que repetir un mes no duplica nada.
+
+**Cuentas:** `circle_pot`, `guarantee_fund`, `operator`, `member_payable`, `refunds_payable` y `external`.
+
+**Al cerrar cada mes** (`settlePeriod`), con el fondo bloqueado para que dos círculos no gasten el mismo saldo:
+
+| Paso                                      | Movimiento                                                                                                                     | Regla (pending-scope §3.1) |
+| ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ | -------------------------- |
+| Cuotas pagadas                            | `collection`: la cuota base al pozo; el resto (fee y Admin Fees del slot, menos su descuento) a `operator`                     | —                          |
+| Falta una cuota (expulsado o turno libre) | `coverage`: el fondo cubre lo que falta para el payout completo, con el saldo que tiene                                        | 5                          |
+| Quien cobra                               | `payout` y `fund_contribution`: `GUARANTEE_FUND_FEE_SHARE_BPS` de sus Admin Fees va al fondo (25 % por defecto)                | R16                        |
+| El fondo no alcanzó                       | El payout se reduce, se registra `circles.cycle.payout_reduced` y `fund_debt_to_member` deja al fondo debiéndole la diferencia | 7                          |
+| Turno sin quien cobre                     | `pot_returned`: el pozo entero vuelve al fondo                                                                                 | 6                          |
+| Lo que sobra en el pozo                   | `operator_residual`: el pozo siempre cierra en cero                                                                            | —                          |
+
+- **Invariante:** el pozo pagado es igual a las cuotas cobradas más la cobertura. En el caso de §3.1 (30.000 en 10 meses, expulsado en el turno 7 después de 4 cuotas, sin reemplazo), el fondo termina en +600; hay un test para ese caso.
+- **Al terminar el círculo:** la devolución al expulsado antes de su turno se registra en tres movimientos (`refund_due`, `penalty` y `refund_paid`) y se paga por `DisbursementsPort.refund`.
+- **Deuda saldada:** lo recuperado (lo vencido más el cargo por mora) vuelve al fondo (`debt_recovered`), en la misma transacción que el desbloqueo.
+- **Movimientos manuales:** capital semilla (`seed_capital`) y correcciones (`adjustment`), siempre con motivo (`RecordFundMovementUseCase`). Los usará el back-office; el monto del capital semilla lo decide el PO.
+- **Alerta de saldo mínimo:** al final de la tarea diaria, si el saldo de una moneda no cubre `GUARANTEE_FUND_MIN_INSTALLMENTS_PER_CIRCLE` cuotas base por círculo en curso (2 por defecto), se emite el log `guarantee_fund.below_minimum` y la métrica `ayni.guarantee_fund.below_minimum`. Los gauges `ayni.guarantee_fund.balance` y `ayni.guarantee_fund.minimum` se emiten siempre.
 
 ## Valores pendientes (pending-scope M6, R5 y R15)
 
