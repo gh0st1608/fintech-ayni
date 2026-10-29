@@ -20,6 +20,7 @@ import { TypeOrmCircleCycleRepository } from '@src/modules/circles/infrastructur
 import { TypeOrmCircleRepository } from '@src/modules/circles/infrastructure/persistence/typeorm/typeorm-circle.repository';
 import { TypeOrmMemberDebts } from '@src/modules/circles/infrastructure/persistence/typeorm/typeorm-member-debts.repository';
 import { TypeOrmMemberHistory } from '@src/modules/circles/infrastructure/persistence/typeorm/typeorm-member-history.repository';
+import { TypeOrmPaymentSettings } from '@src/modules/circles/infrastructure/persistence/typeorm/typeorm-payment-settings.repository';
 import { TypeOrmPaymentsQuery } from '@src/modules/circles/infrastructure/persistence/typeorm/typeorm-payments-query';
 import { LocalDate } from '@src/shared/domain/value-objects/local-date';
 import { Money } from '@src/shared/domain/value-objects/money';
@@ -460,6 +461,40 @@ describe('TypeOrmCircleCycleRepository', () => {
       [id],
     );
     expect(payout).toEqual({ period: '2026-12' });
+  });
+
+  it('descuenta del payout la cuota del mes de cobro si el miembro lo pidió (COPAYNI-38)', async () => {
+    const { id, members } = await fullCircle(Period.of(2026, 11));
+    const settings = new TypeOrmPaymentSettings(dataSource.getRepository(CircleEntity));
+    const [, second] = members;
+    await expect(settings.get(second!.userId)).resolves.toEqual({ deductPayInFromPayout: false });
+    await settings.save(second!.userId, { deductPayInFromPayout: true });
+    await settings.save(second!.userId, { deductPayInFromPayout: true });
+    await expect(settings.get(second!.userId)).resolves.toEqual({ deductPayInFromPayout: true });
+    await expect(settings.get('no-es-uuid')).resolves.toEqual({ deductPayInFromPayout: false });
+
+    const runOn = job([id]);
+    await runOn('2026-11-05');
+    await runOn('2026-12-05');
+    const [installment] = await dataSource.query<{ status: string }[]>(
+      `SELECT status FROM circle_installments
+        WHERE circle_id = $1 AND user_id = $2 AND period = '2026-12-01'`,
+      [id, second!.userId],
+    );
+    expect(installment?.status).toBe('deducted');
+    const [payout] = await dataSource.query<{ amount: string }[]>(
+      "SELECT amount::text AS amount FROM circle_payouts WHERE circle_id = $1 AND period = '2026-12-01'",
+      [id],
+    );
+    expect(payout?.amount).toBe(
+      String(second!.price.netPayout.subtract(second!.price.installments[1]!).amount),
+    );
+    const [deduction] = await dataSource.query<{ total: number }[]>(
+      `SELECT count(*)::int AS total FROM ledger_transactions
+        WHERE circle_id = $1 AND kind = 'payin_deducted'`,
+      [id],
+    );
+    expect(deduction?.total).toBe(1);
   });
 
   it('el historial lista pagos y cobros paginados, del más reciente al más antiguo (COPAYNI-41)', async () => {

@@ -87,10 +87,11 @@ export class AdvanceCircleCyclesUseCase {
       dueDay: this.settings.dueDay,
       delinquency: this.settings.delinquency,
       fund: { balance: stored.fundBalance, feeShareBps: this.settings.fundFeeShareBps },
-      members: stored.members.map(({ userId, position, price }) => ({
+      members: stored.members.map(({ userId, position, price, deductPayIn }) => ({
         userId,
         position,
         quote: this.pricing.quoteOf(terms, position, price),
+        deductPayInFromPayout: deductPayIn ?? false,
       })),
     });
     if (cycle.isStartDue(today)) {

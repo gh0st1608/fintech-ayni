@@ -9,6 +9,7 @@ import { CreateGuaranteeFund1762257600000 } from './1762257600000-create-guarant
 import { AllowTurnReplacement1762344000000 } from './1762344000000-allow-turn-replacement';
 import { AddPayoutRetention1762430400000 } from './1762430400000-add-payout-retention';
 import { AddCirclePause1762516800000 } from './1762516800000-add-circle-pause';
+import { AddPayinDeduction1762603200000 } from './1762603200000-add-payin-deduction';
 
 /** Migraciones en orden. Se listan explícitamente: el build no depende de globs. */
 export const MIGRATIONS = [
@@ -23,4 +24,5 @@ export const MIGRATIONS = [
   AllowTurnReplacement1762344000000,
   AddPayoutRetention1762430400000,
   AddCirclePause1762516800000,
+  AddPayinDeduction1762603200000,
 ];

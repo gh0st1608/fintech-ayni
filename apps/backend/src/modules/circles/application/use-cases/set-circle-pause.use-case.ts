@@ -58,10 +58,11 @@ export class SetCirclePauseUseCase {
           dueDay: this.settings.dueDay,
           delinquency: this.settings.delinquency,
           fund: { balance: stored.fundBalance, feeShareBps: this.settings.fundFeeShareBps },
-          members: stored.members.map(({ userId, position, price }) => ({
+          members: stored.members.map(({ userId, position, price, deductPayIn }) => ({
             userId,
             position,
             quote: this.pricing.quoteOf(stored.terms, position, price),
+            deductPayInFromPayout: deductPayIn ?? false,
           })),
         });
         const by = { actorId: command.actorId, reason };

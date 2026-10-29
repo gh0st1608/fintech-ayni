@@ -52,6 +52,8 @@ export const LEDGER_KINDS = [
   'retention_applied',
   /** Expulsado después de cobrar: su retención va al fondo y reduce su deuda. */
   'retention_to_fund',
+  /** La cuota de quien cobra se descontó de su payout: fees y Admin Fees a `operator`. */
+  'payin_deducted',
   /** Movimientos manuales del back-office, con motivo. */
   'seed_capital',
   'adjustment',

@@ -18,7 +18,8 @@ export interface StoredCycle {
   terms: CircleTerms;
   state: CycleState;
   currentPeriod: Period | null;
-  members: { userId: string; position: number; price?: SlotPrice }[];
+  /** `deductPayIn`: descontar la cuota de su mes de cobro del payout (COPAYNI-38). */
+  members: { userId: string; position: number; price?: SlotPrice; deductPayIn?: boolean }[];
   /** Las cuotas del mes en curso. */
   installments: Installment[];
   /**

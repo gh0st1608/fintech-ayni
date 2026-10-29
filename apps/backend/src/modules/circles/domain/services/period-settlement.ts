@@ -28,6 +28,11 @@ export interface PeriodSettlementInput {
   catchUp?: Money;
   /** Cuotas del mes que paga la retención del miembro en vez de cobrarse (COPAYNI-60). */
   retained?: readonly RetainedInstallment[];
+  /**
+   * La cuota del mes de quien cobra, si pidió descontarla del payout (COPAYNI-38): no se cobra y
+   * el payout se paga sin ella.
+   */
+  deducted?: Money;
   /** Quien tiene el turno del mes, o `undefined` si está libre. */
   receiver: PeriodReceiver | undefined;
   /** Saldo del fondo antes de cerrar el mes. */
@@ -62,7 +67,9 @@ const min = (a: Money, b: Money): Money => (a.amount <= b.amount ? a : b);
  * 2. Con quien cobra: se le retiene la retención de su turno (COPAYNI-60), se le paga el resto
  *    del payout y el fondo recibe su aporte de las Admin Fees. Si el fondo no alcanzó, se reduce
  *    lo que se le paga y el fondo le debe la diferencia.
- * Las cuotas que paga una retención entran al pozo desde `retention_held`.
+ * Las cuotas que paga una retención entran al pozo desde `retention_held`. La cuota que quien
+ * cobra descuenta del payout (COPAYNI-38) cuenta en el pozo y se descuenta de lo que se le paga;
+ * su parte de fees y Admin Fees va a `operator` (`payin_deducted`).
  * 3. Sin quien cobra: el pozo entero vuelve al fondo.
  * 4. Lo que queda en el pozo va a `operator`: el pozo siempre cierra en cero.
  *
@@ -119,8 +126,10 @@ export function settlePeriod(input: PeriodSettlementInput): PeriodSettlement {
   const fundAfterCollection = input.fundBalance.add(catchUp);
 
   const retention = receiver?.retention ?? zero;
+  const deducted = receiver ? (input.deducted ?? zero) : zero;
+  const deductedBase = deducted.isZero() ? zero : terms.baseInstallment;
   const target = receiver ? receiver.netPayout.add(retention) : terms.payout;
-  const need = max(zero, target.subtract(base));
+  const need = max(zero, target.subtract(base).subtract(deductedBase));
   const coverage = min(need, max(zero, fundAfterCollection));
   const shortfall = need.subtract(coverage);
   add(
@@ -151,7 +160,20 @@ export function settlePeriod(input: PeriodSettlementInput): PeriodSettlement {
         ...common,
       }),
     );
-    payout = min(receiver.netPayout, potBalance.subtract(held));
+    payout = max(
+      zero,
+      min(receiver.netPayout, potBalance.add(deductedBase).subtract(held)).subtract(deducted),
+    );
+    add(
+      LedgerTransaction.transfer({
+        key: `payin_deducted:${at}`,
+        kind: 'payin_deducted',
+        from: pot,
+        to: operator,
+        amount: deducted.subtract(deductedBase),
+        ...common,
+      }),
+    );
     add(
       LedgerTransaction.transfer({
         key: `payout:${at}`,
@@ -208,7 +230,8 @@ export function settlePeriod(input: PeriodSettlementInput): PeriodSettlement {
       amount: potBalance
         .subtract(payout ?? zero)
         .subtract(returned)
-        .subtract(receiver ? min(retention, potBalance) : zero),
+        .subtract(receiver ? min(retention, potBalance) : zero)
+        .subtract(deducted.subtract(deductedBase)),
       ...common,
     }),
   );

@@ -14,6 +14,12 @@ import { PAYMENTS_QUERY } from './application/ports/payments-query.port';
 import { GetPaymentSummaryUseCase } from './application/use-cases/get-payment-summary.use-case';
 import { ListTransactionsUseCase } from './application/use-cases/list-transactions.use-case';
 import { GetPayoutEligibilityUseCase } from './application/use-cases/get-payout-eligibility.use-case';
+import { PAYMENT_SETTINGS } from './application/ports/payment-settings.port';
+import {
+  GetPaymentSettingsUseCase,
+  UpdatePaymentSettingsUseCase,
+} from './application/use-cases/payment-settings.use-cases';
+import { TypeOrmPaymentSettings } from './infrastructure/persistence/typeorm/typeorm-payment-settings.repository';
 import { TypeOrmPaymentsQuery } from './infrastructure/persistence/typeorm/typeorm-payments-query';
 import { MyPaymentsController } from './presentation/http/controllers/my-payments.controller';
 import { SetCirclePauseUseCase } from './application/use-cases/set-circle-pause.use-case';
@@ -149,6 +155,10 @@ import { MyCirclesController } from './presentation/http/controllers/my-circles.
     GetPaymentSummaryUseCase,
     ListTransactionsUseCase,
     GetPayoutEligibilityUseCase,
+    GetPaymentSettingsUseCase,
+    UpdatePaymentSettingsUseCase,
+    TypeOrmPaymentSettings,
+    { provide: PAYMENT_SETTINGS, useExisting: TypeOrmPaymentSettings },
     TypeOrmPaymentsQuery,
     { provide: PAYMENTS_QUERY, useExisting: TypeOrmPaymentsQuery },
     // Pausa del admin general (COPAYNI-61). La identidad del personal llega con la fase 1 del

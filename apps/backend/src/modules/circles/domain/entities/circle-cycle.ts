@@ -17,7 +17,8 @@ export type CycleState = (typeof CYCLE_STATES)[number];
 /**
  * `overdue`: el cobro falló y la cuota sigue en gracia. `defaulted`: no se pagó en la gracia y el
  * miembro fue expulsado; la cubre el fondo de garantía (COPAYNI-58). `retained`: la paga la
- * retención de su payout, sin cobrarse (COPAYNI-60).
+ * retención de su payout, sin cobrarse (COPAYNI-60). `deducted`: la de su mes de cobro, que se
+ * descuenta del payout porque lo pidió (COPAYNI-38).
  */
 export const INSTALLMENT_STATUSES = [
   'pending',
@@ -25,6 +26,7 @@ export const INSTALLMENT_STATUSES = [
   'overdue',
   'defaulted',
   'retained',
+  'deducted',
 ] as const;
 export type InstallmentStatus = (typeof INSTALLMENT_STATUSES)[number];
 
@@ -55,6 +57,8 @@ export interface CycleMember {
   readonly position: number;
   /** Precio del slot: el congelado al unirse o el de las reglas vigentes (`SlotPricing.quoteOf`). */
   readonly quote: SlotQuote;
+  /** Descontar la cuota de su mes de cobro del payout (COPAYNI-38). */
+  readonly deductPayInFromPayout?: boolean;
 }
 
 /** Payout de un mes al miembro que tiene ese turno. */
@@ -513,7 +517,7 @@ export class CircleCycle {
       !LocalDate.of(this.period!, this.dueDay).isAfter(today) &&
       this.touched
         .filter(({ period }) => period.equals(this.period!))
-        .every(({ status }) => status === 'paid' || status === 'defaulted' || status === 'retained')
+        .every(({ status }) => ['paid', 'defaulted', 'retained', 'deducted'].includes(status))
     );
   }
 
@@ -565,6 +569,12 @@ export class CircleCycle {
         adminFee: receiver.quote.adminFee,
         retention: receiver.quote.retention,
       },
+      deducted: this.touched.find(
+        (installment) =>
+          installment.period.equals(period) &&
+          installment.status === 'deducted' &&
+          installment.userId === receiver?.userId,
+      )?.amount,
       fundBalance: this.fundBalance,
       feeShareBps: this.feeShareBps,
     });
@@ -632,7 +642,12 @@ export class CircleCycle {
       period,
       dueOn: LocalDate.of(period, this.dueDay),
       amount: member.quote.installments[month]!,
-      status: month >= retainedFrom ? 'retained' : 'pending',
+      status:
+        month >= retainedFrom
+          ? 'retained'
+          : member.deductPayInFromPayout && month === member.position - 1
+            ? 'deducted'
+            : 'pending',
     });
   }
 }

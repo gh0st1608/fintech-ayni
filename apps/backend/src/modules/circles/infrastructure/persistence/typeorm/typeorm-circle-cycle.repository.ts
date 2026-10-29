@@ -94,9 +94,13 @@ export class TypeOrmCircleCycleRepository implements CircleCycleRepositoryPort {
     );
     if (!circle) throw new NotFoundError(`No existe el círculo ${circleId}`, 'CIRCLE_NOT_FOUND');
     const members = await manager.query<
-      { user_id: string; position: number; price: StoredSlotPrice | null }[]
+      { user_id: string; position: number; price: StoredSlotPrice | null; deduct: boolean }[]
     >(
-      'SELECT user_id, position, price FROM circle_memberships WHERE circle_id = $1 AND expelled_at IS NULL',
+      `SELECT m.user_id, m.position, m.price,
+              COALESCE(s.deduct_pay_in_from_payout, false) AS deduct
+         FROM circle_memberships m
+         LEFT JOIN member_payment_settings s ON s.user_id = m.user_id
+        WHERE m.circle_id = $1 AND m.expelled_at IS NULL`,
       [circleId],
     );
     const installments = circle.current_period
@@ -135,10 +139,11 @@ export class TypeOrmCircleCycleRepository implements CircleCycleRepositoryPort {
       state: circle.cycle_state,
       currentPeriod: circle.current_period ? Period.parse(circle.current_period) : null,
       pausedOn: circle.paused_on ? LocalDate.parse(circle.paused_on) : null,
-      members: members.map(({ user_id, position, price }) => ({
+      members: members.map(({ user_id, position, price, deduct }) => ({
         userId: user_id,
         position,
         ...(price && { price: fromStoredPrice(price) }),
+        deductPayIn: deduct,
       })),
       installments: installments.map((row) => ({
         id: row.id,

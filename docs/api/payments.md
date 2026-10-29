@@ -109,3 +109,19 @@ Checklist de Payout Eligibility (COPAYNI-36, Figma 55:9892). El backend calcula 
 - **Hoy es informativo:** el ciclo mensual paga el payout aunque falte un requisito. Qué pasa si llega su turno sin cumplirlos está pendiente con el PO.
 
 Errores: `UNAUTHORIZED` (401).
+
+## `GET` y `PATCH /v1/me/payment-settings`
+
+Preferencias de Payment Settings (COPAYNI-38, Figma 55:10052).
+
+```json
+{ "deductPayInFromPayout": true }
+```
+
+- `deductPayInFromPayout` (`false` por defecto): si en su mes de cobro también debe la cuota, la cuota no se cobra con el débito automático y se descuenta del payout. El `PATCH` recibe el mismo cuerpo y responde las preferencias guardadas.
+- **Cómo lo aplica el ciclo:** al abrir el mes de cobro del miembro, su cuota queda `deducted`. Al pagar el payout se descuenta la cuota completa; la cuota base cuenta en el pozo y las fees y Admin Fees van a la cooperativa (`payin_deducted`). Con la retención de la primera mitad (COPAYNI-60), se descuentan las dos. Ejemplo sin fees: 30.000 en 10 meses, turno 3: recibe 27.000.
+- Un cambio cuenta desde el próximo mes de cobro que todavía no se abrió.
+- La cuota descontada no aparece en el historial de pagos: el payout aparece por lo que recibió.
+- Los accesos "Change Payout Method" y "Saved Cards" de la pantalla son de la app; las tarjetas dependen de la pasarela (COPAYNI-34, 39 y 40).
+
+Errores: `VALIDATION_ERROR` (400: falta `deductPayInFromPayout`, no es booleano o hay campos de más) y `UNAUTHORIZED` (401).
