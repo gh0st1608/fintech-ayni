@@ -149,6 +149,14 @@ export class MercadoPagoGateway implements PaymentGatewayPort {
     );
   }
 
+  async paymentsFor(externalReference: string): Promise<GatewayPayment[]> {
+    const found = await this.request<{ results: PaymentBody[] }>(
+      'GET',
+      `/v1/payments/search?external_reference=${encodeURIComponent(externalReference)}`,
+    );
+    return found.results.map((body) => MercadoPagoGateway.toPayment(body));
+  }
+
   private static toPayment(body: PaymentBody): GatewayPayment {
     const status: GatewayPaymentStatus =
       body.status === 'approved'

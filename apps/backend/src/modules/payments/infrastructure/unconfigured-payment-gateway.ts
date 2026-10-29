@@ -26,6 +26,10 @@ export class UnconfiguredPaymentGateway implements PaymentGatewayPort {
     return Promise.reject(UnconfiguredPaymentGateway.error());
   }
 
+  paymentsFor(): Promise<GatewayPayment[]> {
+    return Promise.reject(UnconfiguredPaymentGateway.error());
+  }
+
   private static error(): Error {
     return new Error('Sin pasarela de pago configurada (PAYMENT_GATEWAY; COPAYNI-34)');
   }

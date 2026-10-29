@@ -69,8 +69,11 @@ import { SlotPricingRules } from './domain/value-objects/slot-pricing-rules';
 import { ProvisionalJoinEligibility } from './infrastructure/eligibility/provisional-join-eligibility';
 import {
   FakeCyclePayments,
+  GatewayCyclePayments,
   UnconfiguredCyclePayments,
 } from './infrastructure/payments/cycle-payments';
+import { PaymentsModule } from '../payments/payments.module';
+import { CollectInstallmentUseCase } from '../payments/application/use-cases/collect-installment.use-case';
 import { ConfigJoinConfigRepository } from './infrastructure/persistence/config-join-config.repository';
 import { CircleMembershipEntity } from './infrastructure/persistence/typeorm/circle-membership.entity';
 import { CircleEntity } from './infrastructure/persistence/typeorm/circle.entity';
@@ -81,7 +84,11 @@ import { CirclesController } from './presentation/http/controllers/circles.contr
 import { MyCirclesController } from './presentation/http/controllers/my-circles.controller';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([CircleEntity, CircleMembershipEntity]), PayoutsModule],
+  imports: [
+    TypeOrmModule.forFeature([CircleEntity, CircleMembershipEntity]),
+    PayoutsModule,
+    PaymentsModule,
+  ],
   controllers: [
     CirclesController,
     MyCirclesController,
@@ -136,11 +143,13 @@ import { MyCirclesController } from './presentation/http/controllers/my-circles.
     {
       // Pasarela pendiente (D1, COPAYNI-34): solo pagos simulados o ninguno.
       provide: CONTRIBUTIONS,
-      inject: [ConfigService],
-      useFactory: (config: AppConfigService) =>
-        config.get('CIRCLE_PAYMENTS_ADAPTER', { infer: true }) === 'fake'
-          ? new FakeCyclePayments()
-          : new UnconfiguredCyclePayments(),
+      inject: [ConfigService, CollectInstallmentUseCase],
+      useFactory: (config: AppConfigService, collect: CollectInstallmentUseCase) => {
+        const adapter = config.get('CIRCLE_PAYMENTS_ADAPTER', { infer: true });
+        if (adapter === 'fake') return new FakeCyclePayments();
+        if (adapter === 'gateway') return new GatewayCyclePayments(collect);
+        return new UnconfiguredCyclePayments();
+      },
     },
     { provide: DISBURSEMENTS, useExisting: CONTRIBUTIONS },
     {

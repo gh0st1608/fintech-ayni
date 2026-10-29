@@ -4,9 +4,10 @@ import {
   type ContributionsPort,
   type DisbursementsPort,
 } from '../../application/ports/cycle-payments.port';
-import { type CollectionOutcome } from '../../domain/entities/circle-cycle';
+import { type CollectionOutcome, type Installment } from '../../domain/entities/circle-cycle';
+import { type CollectInstallmentUseCase } from '../../../payments/application/use-cases/collect-installment.use-case';
 
-export const CYCLE_PAYMENTS_ADAPTERS = ['fake'] as const;
+export const CYCLE_PAYMENTS_ADAPTERS = ['fake', 'gateway'] as const;
 export type CyclePaymentsAdapter = (typeof CYCLE_PAYMENTS_ADAPTERS)[number];
 
 /**
@@ -49,5 +50,37 @@ export class UnconfiguredCyclePayments implements ContributionsPort, Disbursemen
     return new Error(
       'Sin proveedor de pagos del ciclo (CIRCLE_PAYMENTS_ADAPTER; pending-scope D1)',
     );
+  }
+}
+
+/**
+ * Cobro de las cuotas con la pasarela (COPAYNI-34 y 40): débito automático con la tarjeta
+ * predeterminada. Si el usuario no tiene tarjeta o el cobro no se aprueba, la cuota queda vencida
+ * y se reintenta durante la gracia (COPAYNI-57). Los payouts y las devoluciones todavía no tienen
+ * riel: Mercado Pago no documenta transferencias bancarias en Perú (pending-scope T5).
+ */
+export class GatewayCyclePayments implements ContributionsPort, DisbursementsPort {
+  constructor(private readonly collectInstallment: CollectInstallmentUseCase) {}
+
+  async collect(installment: Installment & { circleId: string }): Promise<CollectionOutcome> {
+    const paid = await this.collectInstallment.execute({
+      installmentId: installment.id,
+      userId: installment.userId,
+      amount: installment.amount,
+      description: `Ayni: cuota de ${installment.period.toString()}`,
+    });
+    return paid ? 'paid' : 'failed';
+  }
+
+  disburse(): Promise<void> {
+    return Promise.reject(GatewayCyclePayments.noPayoutRail());
+  }
+
+  refund(): Promise<void> {
+    return Promise.reject(GatewayCyclePayments.noPayoutRail());
+  }
+
+  private static noPayoutRail(): Error {
+    return new Error('Sin riel de payouts: Mercado Pago no cubre transferencias en Perú (T5)');
   }
 }

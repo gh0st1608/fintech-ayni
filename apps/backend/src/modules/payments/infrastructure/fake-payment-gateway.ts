@@ -59,6 +59,14 @@ export class FakePaymentGateway implements PaymentGatewayPort {
     return Promise.resolve(payment);
   }
 
+  paymentsFor(externalReference: string): Promise<GatewayPayment[]> {
+    return Promise.resolve(
+      [...this.payments.values()].filter(
+        (payment) => payment.externalReference === externalReference,
+      ),
+    );
+  }
+
   getPayment(paymentId: string): Promise<GatewayPayment> {
     const payment = this.payments.get(paymentId);
     return payment

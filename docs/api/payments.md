@@ -125,3 +125,49 @@ Preferencias de Payment Settings (COPAYNI-38, Figma 55:10052).
 - Los accesos "Change Payout Method" y "Saved Cards" de la pantalla son de la app; las tarjetas dependen de la pasarela (COPAYNI-34, 39 y 40).
 
 Errores: `VALIDATION_ERROR` (400: falta `deductPayInFromPayout`, no es booleano o hay campos de más) y `UNAUTHORIZED` (401).
+
+## Tarjetas guardadas: `GET` y `POST /v1/me/cards`
+
+Pasarela: **Mercado Pago** ([architecture.md](../architecture.md#10-pasarela-de-pago-mercado-pago)). La app tokeniza la tarjeta con el SDK de Mercado Pago y envía **solo el token de un solo uso**: el backend nunca recibe el número ni el CVC, y no los registra.
+
+`POST /v1/me/cards` (COPAYNI-40), con `Idempotency-Key` (16 a 255 caracteres `[A-Za-z0-9_-]`, una por formulario):
+
+```json
+{ "token": "ff8080814c11e237014c1ff593b57b4d" }
+```
+
+**201** (o **200** si es un reintento con la misma clave: no vuelve a la pasarela, porque el token ya se usó):
+
+```json
+{
+  "id": "0b9e…",
+  "brand": "visa",
+  "lastFour": "0215",
+  "expirationMonth": 11,
+  "expirationYear": 2029,
+  "isDefault": true
+}
+```
+
+- La primera tarjeta queda predeterminada: con ella se cobran las cuotas.
+- El backend crea el cliente de Mercado Pago del usuario la primera vez, identificado por su **email**. Un usuario que entró solo con teléfono recibe `EMAIL_REQUIRED` hasta agregar un email (COPAYNI-45). **Supuesto [?]**.
+- Si el usuario ya tenía esa tarjeta, responde la existente.
+
+`GET /v1/me/cards`: `{ "items": [SavedCard] }`, la predeterminada primero.
+
+| Error              | HTTP | Cuándo                                                                 |
+| ------------------ | ---- | ---------------------------------------------------------------------- |
+| `VALIDATION_ERROR` | 400  | Falta el token o la `Idempotency-Key`, o el cuerpo trae campos de más. |
+| `CARD_REJECTED`    | 422  | Mercado Pago rechazó el token o la tarjeta.                            |
+| `EMAIL_REQUIRED`   | 422  | El usuario no tiene email.                                             |
+| `UNAUTHORIZED`     | 401  | Sin token o token inválido.                                            |
+
+### Débito automático de las cuotas
+
+Con `CIRCLE_PAYMENTS_ADAPTER=gateway`, el ciclo mensual cobra cada cuota con la tarjeta predeterminada del usuario:
+
+- Antes de cobrar busca los pagos de la cuota en Mercado Pago (`external_reference` = id de la cuota). Uno aprobado la da por pagada; uno pendiente no se vuelve a cobrar.
+- Un intento por día: la clave de idempotencia es la cuota y la fecha. Si se rechaza, la cuota queda vencida y se reintenta durante la gracia (COPAYNI-57).
+- **Sin tarjeta guardada no hay débito automático.** Quien paga con Yape lo hace desde la app cada mes, porque Yape pide un OTP en cada pago; ese flujo de pago (D1) todavía no tiene ticket.
+- **Pendiente con Mercado Pago:** cobrar una tarjeta guardada sin CVV requiere habilitar "Automatic Payments".
+- **Payouts y devoluciones:** sin riel todavía (T5). Con `gateway`, el ciclo falla al pagar un payout hasta tenerlo.

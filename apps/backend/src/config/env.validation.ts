@@ -283,8 +283,9 @@ export class EnvironmentVariables {
 
   /**
    * Cobro de cuotas y pago de payouts del ciclo mensual. `fake` simula ambos (desarrollo y
-   * pruebas) y está prohibido en production; sin valor, el ciclo falla al intentar cobrar
-   * (pasarela pendiente: D1, COPAYNI-34).
+   * pruebas) y está prohibido en production. `gateway` cobra con débito automático en la pasarela
+   * (`PAYMENT_GATEWAY`); los payouts todavía no tienen riel (T5). Sin valor, el ciclo falla al
+   * intentar cobrar.
    */
   @IsOptional()
   @IsIn(CYCLE_PAYMENTS_ADAPTERS)

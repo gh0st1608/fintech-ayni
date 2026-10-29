@@ -69,4 +69,6 @@ export interface PaymentGatewayPort {
   deleteCard(customerId: string, cardId: string): Promise<void>;
   charge(request: ChargeRequest): Promise<GatewayPayment>;
   getPayment(paymentId: string): Promise<GatewayPayment>;
+  /** Los pagos con esa referencia externa (p. ej. todos los intentos de una cuota). */
+  paymentsFor(externalReference: string): Promise<GatewayPayment[]>;
 }

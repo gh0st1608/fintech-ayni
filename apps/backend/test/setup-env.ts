@@ -14,6 +14,8 @@ export const TEST_ENV = {
   RATE_LIMIT_MAX: '5',
   ENABLE_SWAGGER: 'true',
   DEFAULT_CURRENCY: 'PEN',
+  // Pasarela simulada (COPAYNI-34): las pruebas nunca llaman a Mercado Pago.
+  PAYMENT_GATEWAY: 'fake',
   JOIN_PAYOUT_MIN: '300000',
   JOIN_PAYOUT_MAX: '12000000',
   JOIN_PAYOUT_STEP: '50000',

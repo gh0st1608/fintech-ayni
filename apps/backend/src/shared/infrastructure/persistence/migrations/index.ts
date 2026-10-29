@@ -10,6 +10,7 @@ import { AllowTurnReplacement1762344000000 } from './1762344000000-allow-turn-re
 import { AddPayoutRetention1762430400000 } from './1762430400000-add-payout-retention';
 import { AddCirclePause1762516800000 } from './1762516800000-add-circle-pause';
 import { AddPayinDeduction1762603200000 } from './1762603200000-add-payin-deduction';
+import { CreateSavedCards1762689600000 } from './1762689600000-create-saved-cards';
 
 /** Migraciones en orden. Se listan explícitamente: el build no depende de globs. */
 export const MIGRATIONS = [
@@ -25,4 +26,5 @@ export const MIGRATIONS = [
   AddPayoutRetention1762430400000,
   AddCirclePause1762516800000,
   AddPayinDeduction1762603200000,
+  CreateSavedCards1762689600000,
 ];
