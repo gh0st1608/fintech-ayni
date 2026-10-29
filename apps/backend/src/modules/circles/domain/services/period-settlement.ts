@@ -43,7 +43,8 @@ const min = (a: Money, b: Money): Money => (a.amount <= b.amount ? a : b);
  * de cada cuota cobrada, la cuota base va al pozo y el resto (fee y Admin Fees del slot, menos su
  * descuento) a `operator`. Luego:
  * 1. El fondo cubre lo que falta para el payout completo, o para el payout del círculo si el
- *    turno está libre. Solo puede cubrir con el saldo que tiene.
+ *    turno del expulsado está libre. Solo puede cubrir con el saldo que tiene. No hay turnos que
+ *    nunca se llenaron: el círculo solo empieza completo (pending-scope R2).
  * 2. Con quien cobra: se le paga el payout y el fondo recibe su aporte de las Admin Fees. Si el
  *    fondo no alcanzó, el pozo se reduce y el fondo le debe la diferencia.
  * 3. Sin quien cobra: el pozo entero vuelve al fondo.

@@ -10,6 +10,7 @@ import { RecordFundMovementUseCase } from '@src/modules/circles/application/use-
 import { type LedgerTransaction } from '@src/modules/circles/domain/value-objects/ledger-transaction';
 import { OtelFundMetrics } from '@src/modules/circles/infrastructure/observability/otel-fund-metrics';
 import { Money } from '@src/shared/domain/value-objects/money';
+import { SEED_CAPITAL_SCENARIOS } from '@test/support/join-circle.fixture';
 
 const pen = (amount: number) => Money.of(amount, 'PEN');
 
@@ -64,6 +65,29 @@ describe('CheckGuaranteeFundUseCase', () => {
       expect.objectContaining({ event: 'guarantee_fund.status', currency: 'USD' }),
     );
   });
+
+  it.each(SEED_CAPITAL_SCENARIOS)(
+    'el capital semilla $name es el saldo mínimo de sus $circles círculos de referencia',
+    async ({ circles, seed }) => {
+      jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
+      jest.spyOn(Logger.prototype, 'log').mockImplementation(() => undefined);
+      // Círculos de 30.000 en 10 meses: cuota base de 3.000 cada uno.
+      const statusWith = (active: number): FundStatus => ({
+        balance: seed,
+        activeCircles: active,
+        activeBaseInstallments: pen(300_000 * active),
+      });
+      const check = (active: number) =>
+        new CheckGuaranteeFundUseCase(
+          new FakeFund([statusWith(active)]),
+          { report: () => undefined },
+          { minInstallmentsPerCircle: 2 },
+        ).execute();
+
+      expect((await check(circles))[0]?.belowMinimum).toBe(false);
+      expect((await check(circles + 1))[0]?.belowMinimum).toBe(true);
+    },
+  );
 });
 
 describe('RecordFundMovementUseCase', () => {

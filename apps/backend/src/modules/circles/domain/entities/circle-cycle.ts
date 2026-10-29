@@ -117,8 +117,13 @@ export class InvalidCycleTransitionError extends DomainError {
  *
  * Un mes se cierra cuando todas sus cuotas están pagadas o incobrables. Una cuota cuyo cobro
  * falló queda `overdue`; si sigue impaga al terminar la gracia, el miembro es expulsado
- * (COPAYNI-57): su cuota pasa a `defaulted`, sale del ciclo y su turno queda libre. La cobertura
- * del fondo llega con COPAYNI-58 y el reemplazo del turno con COPAYNI-59.
+ * (COPAYNI-57): su cuota pasa a `defaulted`, sale del ciclo y su turno queda libre. El fondo de
+ * garantía cubre esa vacante (COPAYNI-58) y el reemplazo del turno llega con COPAYNI-59.
+ *
+ * Un círculo solo empieza con todos sus turnos ocupados: el fondo no cubre turnos que nunca se
+ * llenaron. Si llega el mes de inicio y faltan miembros, el PO decidió reducir el pozo y los
+ * integrantes con la aprobación de los miembros (pending-scope R2); mientras ese flujo no exista,
+ * el círculo espera en `collecting`.
  */
 export class CircleCycle {
   private constructor(
@@ -238,10 +243,20 @@ export class CircleCycle {
     return this.currentState === 'collecting' && !this.terms.startsOn.isAfter(today.period);
   }
 
-  /** Collecting → Contributing: abre las cuotas del primer mes. */
+  /** Turnos sin miembro. Antes de empezar, los que nunca se llenaron. */
+  missingMembers(): number {
+    return this.terms.months - this.active.length;
+  }
+
+  /** Collecting → Contributing: abre las cuotas del primer mes. Requiere el círculo completo. */
   start(newId: () => string): void {
     if (this.currentState !== 'collecting') {
       throw new InvalidCycleTransitionError('Solo empieza un círculo que está reuniendo miembros');
+    }
+    if (this.missingMembers() > 0) {
+      throw new InvalidCycleTransitionError(
+        'Un círculo incompleto necesita la aprobación de sus miembros para empezar',
+      );
     }
     this.currentState = 'contributing';
     this.openPeriod(this.terms.startsOn, newId);

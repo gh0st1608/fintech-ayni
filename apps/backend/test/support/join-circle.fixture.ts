@@ -36,6 +36,19 @@ export const TEST_DELINQUENCY: DelinquencyPolicy = {
 /** 25 % de las Admin Fees al fondo de garantía, el valor por defecto (R18). */
 export const TEST_FUND_SHARE_BPS = 2_500;
 
+/**
+ * Escenarios de capital semilla para las pruebas (el monto real lo decide el PO, R18). Siguen la
+ * regla propuesta: el saldo mínimo de los círculos previstos para los 3 primeros meses, con el
+ * círculo de referencia de §3.1 (30.000 PEN en 10 meses, cuota base de 3.000) y 2 cuotas base por
+ * círculo: 6.000 PEN por círculo. Es lo que adelanta el fondo, como máximo, por una expulsión
+ * sin reemplazo antes de recuperar el pozo del turno vacante.
+ */
+export const SEED_CAPITAL_SCENARIOS = [
+  { name: 'conservador', circles: 5, seed: pen(30_000) },
+  { name: 'base', circles: 10, seed: pen(60_000) },
+  { name: 'expansión', circles: 20, seed: pen(120_000) },
+] as const;
+
 /** Sin deudas por impago: nadie está bloqueado. */
 export const NO_DEBTS: MemberDebtsPort = {
   openDebtsOf: () => Promise.resolve([]),

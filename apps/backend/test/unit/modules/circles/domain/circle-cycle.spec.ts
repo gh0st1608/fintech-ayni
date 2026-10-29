@@ -126,17 +126,39 @@ describe('CircleCycle', () => {
     expect(subject.dueInstallments(day('2027-02-05'))).toEqual([]);
   });
 
+  /** Un círculo en noviembre, ya empezado, con estos miembros y sin cuotas abiertas. */
+  const running = (members: CycleMember[]) =>
+    CircleCycle.restore({
+      circleId: 'c-1',
+      terms: TERMS,
+      dueDay: 5,
+      delinquency: TEST_DELINQUENCY,
+      fund: { balance: Money.zero('PEN'), feeShareBps: TEST_FUND_SHARE_BPS },
+      state: 'contributing',
+      currentPeriod: Period.of(2026, 11),
+      members,
+      installments: [],
+    });
+
+  it('un círculo incompleto no empieza: necesita la aprobación de sus miembros', () => {
+    const subject = cycle([member('ana', 1), member('caro', 3)]);
+    expect(subject.isStartDue(day('2026-11-01'))).toBe(true);
+    expect(subject.missingMembers()).toBe(1);
+    expect(() => subject.start(newId)).toThrow(
+      expect.objectContaining({ code: 'INVALID_CYCLE_TRANSITION' }),
+    );
+    expect(subject.state).toBe('collecting');
+    expect(cycle().missingMembers()).toBe(0);
+  });
+
   it('no cierra un mes antes de su vencimiento, aunque no tenga cuotas', () => {
-    const subject = cycle([]);
-    subject.start(newId);
+    const subject = running([]);
     expect(subject.isPeriodSettled(day('2026-11-04'))).toBe(false);
     expect(subject.isPeriodSettled(day('2026-11-05'))).toBe(true);
   });
 
   it('un turno libre no tiene payout', () => {
-    const subject = cycle([member('beto', 2)]);
-    subject.start(newId);
-    payAll(subject, day('2026-11-05'));
+    const subject = running([member('beto', 2)]);
     expect(subject.receiver()).toBeUndefined();
     expect(subject.closePeriod(day('2026-11-05'), newId)).toBeNull();
     expect(subject.receiver()?.userId).toBe('beto');
@@ -186,7 +208,7 @@ describe('CircleCycle', () => {
         fund: { balance: Money.zero('PEN'), feeShareBps: TEST_FUND_SHARE_BPS },
         state: 'collecting',
         currentPeriod: null,
-        members: [member('ana', 1)],
+        members: [member('ana', 1), member('beto', 2), member('caro', 3)],
         installments: [],
       });
       subject.start(newId);

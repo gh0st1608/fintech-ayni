@@ -45,7 +45,8 @@ export interface AdvanceCyclesResult {
 /**
  * Tarea diaria del ciclo mensual (COPAYNI-56). Para cada círculo pendiente, con el círculo
  * bloqueado:
- * - Lo empieza cuando llega su mes de inicio, abriendo las cuotas del primer mes.
+ * - Lo empieza cuando llega su mes de inicio, abriendo las cuotas del primer mes. Si faltan
+ *   miembros no empieza: se registra que necesita la aprobación de sus miembros (R2).
  * - Expulsa a quien no pagó al terminar la gracia (COPAYNI-57), antes de reintentar el cobro: un
  *   pago que llega después de la gracia no evita la expulsión.
  * - Cobra las cuotas vencidas: las que no se pueden cobrar quedan `overdue` y se reintentan
@@ -105,6 +106,17 @@ export class AdvanceCircleCyclesUseCase {
       })),
     });
     if (cycle.isStartDue(today)) {
+      const missing = cycle.missingMembers();
+      if (missing > 0) {
+        // Pending-scope R2: el fondo no cubre turnos sin llenar; se reduce con aprobación.
+        this.logger.warn({
+          event: 'circles.cycle.start_approval_required',
+          circleId,
+          members: cycle.members.length,
+          missing,
+        });
+        return cycle;
+      }
       cycle.start(randomUUID);
       this.logger.log({ event: 'circles.cycle.started', circleId, members: cycle.members.length });
     }
@@ -150,7 +162,7 @@ export class AdvanceCircleCyclesUseCase {
           period,
         });
       } else {
-        // Turno libre (pending-scope R2 y R17): el pozo vuelve al fondo (COPAYNI-58).
+        // Turno del expulsado sin reemplazo (R17): el pozo vuelve al fondo (COPAYNI-58).
         this.logger.warn({ event: 'circles.cycle.payout_unassigned', circleId, period });
       }
       this.logClose(circleId, cycle.periodCloses.at(-1)!);

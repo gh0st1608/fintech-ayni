@@ -285,7 +285,11 @@ describe('TypeOrmCircleCycleRepository', () => {
           dueDay: 5,
           delinquency: TEST_DELINQUENCY,
           fund: { balance: stored.fundBalance, feeShareBps: TEST_FUND_SHARE_BPS },
-          members: [],
+          members: stored.members.map(({ userId, position }) => ({
+            userId,
+            position,
+            quote: TEST_PRICING.quote(stored.terms, position),
+          })),
         });
         cycle.start(randomUUID);
         return Promise.reject(new Error('falla del proveedor'));

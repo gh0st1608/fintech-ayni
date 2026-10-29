@@ -23,6 +23,7 @@ import { Period } from '@src/shared/domain/value-objects/period';
 import { TestClock } from '@test/support/create-test-app';
 import { InMemoryCircleCycleRepository } from '@test/support/in-memory-circle-cycle.repository';
 import {
+  SEED_CAPITAL_SCENARIOS,
   TEST_DELINQUENCY,
   TEST_FUND_SHARE_BPS,
   TEST_PRICING,
@@ -235,22 +236,29 @@ describe('AdvanceCircleCyclesUseCase', () => {
   it('usa el precio congelado de cada miembro', async () => {
     const price = priceOf(TEST_PRICING.quote(TERMS, 1));
     const frozen = { ...price, installments: price.installments.map(() => Money.of(1, 'PEN')) };
-    const { cycles, runOn } = setup([{ userId: 'u-1', position: 1, price: frozen }]);
+    const { cycles, runOn } = setup([{ ...MEMBERS[0]!, price: frozen }, ...MEMBERS.slice(1)]);
     await runOn('2026-11-05');
 
-    expect([...cycles.installments.values()][0]?.amount).toEqual(Money.of(1, 'PEN'));
+    const installments = [...cycles.installments.values()];
+    expect(installments.find(({ userId }) => userId === 'u-1')?.amount).toEqual(Money.of(1, 'PEN'));
+    expect(installments.find(({ userId }) => userId === 'u-2')?.amount).not.toEqual(
+      Money.of(1, 'PEN'),
+    );
   });
 
-  it('un turno libre no recibe payout y queda registrado', async () => {
+  it('un círculo incompleto no empieza ni cobra: pide la aprobación de sus miembros (R2)', async () => {
     const warn = jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
-    const { payments, runOn } = setup(MEMBERS.slice(1));
-    await runOn('2026-11-05');
+    const { cycles, payments, runOn } = setup(MEMBERS.slice(1));
+    await expect(runOn('2026-11-05')).resolves.toEqual({ advanced: 1, locked: 0, failed: 0 });
 
-    expect(payments.disbursed).toEqual([]);
+    expect(cycles.get('c-1')?.state).toBe('collecting');
+    expect(payments.collected).toEqual([]);
+    expect(cycles.ledger.size).toBe(0);
     expect(warn).toHaveBeenCalledWith({
-      event: 'circles.cycle.payout_unassigned',
+      event: 'circles.cycle.start_approval_required',
       circleId: 'c-1',
-      period: '2026-11',
+      members: 5,
+      missing: 1,
     });
   });
 
@@ -334,19 +342,28 @@ describe('AdvanceCircleCyclesUseCase', () => {
     });
     const pen = (major: number) => Money.of(major * 100, 'PEN');
 
-    function example(seed: Money | null) {
+    /**
+     * `circles` círculos iguales al del ejemplo que comparten el fondo: el primero es `ejemplo`
+     * con los usuarios `u-1` a `u-10`; los demás, `ejemplo-n` con `n-u-1` a `n-u-10`.
+     */
+    function example(seed: Money | null, circles = 1) {
       const cycles = new InMemoryCircleCycleRepository();
-      cycles.add({
-        circleId: 'ejemplo',
-        terms: EXAMPLE,
-        state: 'collecting',
-        currentPeriod: null,
-        members: Array.from({ length: 10 }, (_, index) => ({
-          userId: `u-${index + 1}`,
-          position: index + 1,
-        })),
-        installments: [],
-      });
+      const prefixes = Array.from({ length: circles }, (_, index) =>
+        index ? `${index + 1}-` : '',
+      );
+      for (const prefix of prefixes) {
+        cycles.add({
+          circleId: prefix ? `ejemplo-${prefix.slice(0, -1)}` : 'ejemplo',
+          terms: EXAMPLE,
+          state: 'collecting',
+          currentPeriod: null,
+          members: Array.from({ length: 10 }, (_, index) => ({
+            userId: `${prefix}u-${index + 1}`,
+            position: index + 1,
+          })),
+          installments: [],
+        });
+      }
       if (seed) {
         cycles.record(
           LedgerTransaction.transfer({
@@ -378,7 +395,7 @@ describe('AdvanceCircleCyclesUseCase', () => {
       const runAll = async () => {
         for (let month = 0; month < 10; month += 1) {
           const period = EXAMPLE.startsOn.addMonths(month).toString();
-          if (month === 4) payments.failing.add('u-7');
+          if (month === 4) for (const prefix of prefixes) payments.failing.add(`${prefix}u-7`);
           clock.set(at(`${period}-05`));
           await useCase.execute();
           if (month === 4) {
@@ -444,6 +461,29 @@ describe('AdvanceCircleCyclesUseCase', () => {
       expect(cycles.payouts.slice(6).every(({ amount }) => amount.equals(pen(30_000)))).toBe(true);
       expect(payments.disbursed).toHaveLength(9);
       expect(cycles.balance('circle_pot')).toEqual(pen(0));
+    });
+
+    describe.each(SEED_CAPITAL_SCENARIOS)('capital semilla $name', ({ circles, seed }) => {
+      const reduced = (cycles: InMemoryCircleCycleRepository) =>
+        [...cycles.ledger.values()].filter(({ kind }) => kind === 'fund_debt_to_member').length;
+
+      it(`cubre una expulsión sin reemplazo a la vez en ${circles} círculos`, async () => {
+        const { cycles, payments, runAll } = example(seed, circles);
+        await runAll();
+
+        expect(reduced(cycles)).toBe(0);
+        expect(payments.disbursed).toHaveLength(9 * circles);
+        // Cada círculo deja la penalidad de su expulsado en el fondo.
+        expect(cycles.balance('guarantee_fund')).toEqual(seed.add(pen(600 * circles)));
+      });
+
+      it(`con un círculo más, el fondo no alcanza y algún pozo se reduce`, async () => {
+        const { cycles, runAll } = example(seed, circles + 1);
+        await runAll();
+
+        expect(reduced(cycles)).toBeGreaterThan(0);
+        expect(cycles.balance('circle_pot')).toEqual(pen(0));
+      });
     });
   });
 });
