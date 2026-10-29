@@ -298,6 +298,27 @@ describe('TypeOrmCircleRepository', () => {
         }),
       ).resolves.toBeNull();
     });
+
+    it('listJoinable: los que admiten al usuario, del más antiguo al más nuevo y hasta el límite', async () => {
+      // Lejos en el futuro: solo estos círculos empiezan después de 2090-12.
+      const ana = await user();
+      const others = await Promise.all(Array.from({ length: 6 }, () => user()));
+      await create(Period.of(2090, 12)); // empieza en el mes "actual"
+      await create(Period.of(2091, 2), others); // lleno
+      await create(Period.of(2091, 2), [ana]); // ya es miembro
+      const first = await create(Period.of(2091, 3), [others[0]!]);
+      const second = await create(Period.of(2091, 1), [], 12);
+      await create(Period.of(2091, 4));
+
+      const joinable = await repository.listJoinable({
+        startsAfter: Period.of(2090, 12),
+        userId: ana,
+        limit: 2,
+      });
+      expect(joinable.map(({ id }) => id)).toEqual([first, second]);
+      expect(joinable[0]?.isTaken(1)).toBe(true);
+      expect(joinable[1]?.terms.months).toBe(12);
+    });
   });
 
   describe('listMemberships (COPAYNI-26)', () => {

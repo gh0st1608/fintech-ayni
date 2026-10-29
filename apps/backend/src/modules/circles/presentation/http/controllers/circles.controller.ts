@@ -29,12 +29,14 @@ import { GetAvailableSlotsUseCase } from '../../../application/use-cases/get-ava
 import { GetInstallmentOptionsUseCase } from '../../../application/use-cases/get-installment-options.use-case';
 import { GetJoinConfigUseCase } from '../../../application/use-cases/get-join-config.use-case';
 import { JoinCircleUseCase } from '../../../application/use-cases/join-circle.use-case';
+import { ListRecommendedCirclesUseCase } from '../../../application/use-cases/list-recommended-circles.use-case';
 import {
   InstallmentOptionsQuery,
   InstallmentOptionsResponse,
 } from '../dto/installment-options.dto';
 import { JoinCircleRequest, JoinCircleResponse } from '../dto/join-circle.dto';
 import { JoinConfigResponse } from '../dto/join-config.response';
+import { RecommendedCirclesResponse } from '../dto/recommended-circles.dto';
 import { SlotsQuery, SlotsResponse } from '../dto/slots.dto';
 
 /** La genera el cliente una vez por borrador (en la app, un UUID) y la repite en los reintentos. */
@@ -55,6 +57,8 @@ export class CirclesController {
     private readonly getInstallmentOptions: GetInstallmentOptionsUseCase,
     @Inject(GetAvailableSlotsUseCase) private readonly getAvailableSlots: GetAvailableSlotsUseCase,
     @Inject(JoinCircleUseCase) private readonly joinCircle: JoinCircleUseCase,
+    @Inject(ListRecommendedCirclesUseCase)
+    private readonly listRecommended: ListRecommendedCirclesUseCase,
   ) {}
 
   @Get('join-config')
@@ -65,6 +69,16 @@ export class CirclesController {
   @ApiUnauthorizedResponse({ description: 'Sin token o token inválido (UNAUTHORIZED)' })
   async joinConfig(@CurrentPrincipal() principal: Principal): Promise<JoinConfigResponse> {
     return JoinConfigResponse.from(await this.getJoinConfig.execute(principal));
+  }
+
+  @Get('recommended')
+  @ApiOkResponse({
+    type: RecommendedCirclesResponse,
+    description: 'Envuelto en { success, data, traceId }',
+  })
+  @ApiUnauthorizedResponse({ description: 'Sin token o token inválido (UNAUTHORIZED)' })
+  async recommended(@CurrentPrincipal() principal: Principal): Promise<RecommendedCirclesResponse> {
+    return RecommendedCirclesResponse.from(await this.listRecommended.execute(principal));
   }
 
   @Get('installment-options')

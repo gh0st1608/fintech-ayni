@@ -20,6 +20,7 @@ import {
   type JoinableCircleCriteria,
   type MembershipPage,
   type MembershipsQuery,
+  type OpenCirclesCriteria,
 } from '../../../application/ports/circle-repository.port';
 import {
   AlreadyMemberError,
@@ -156,30 +157,45 @@ export class TypeOrmCircleRepository implements CircleRepositoryPort {
 
   async findOldestJoinable(criteria: JoinableCircleCriteria): Promise<Circle | null> {
     const { payout, months, startsAfter, userId } = criteria;
-    const row = await this.circles
-      .createQueryBuilder('circle')
-      .select('circle.id', 'id')
-      .where('circle.payout_amount = :amount AND circle.currency = :currency', {
+    const row = await this.joinable(startsAfter, userId)
+      .andWhere('circle.payout_amount = :amount AND circle.currency = :currency', {
         amount: payout.amount,
         currency: payout.currency,
       })
       .andWhere('circle.months = :months', { months })
-      // Empieza después del mes actual: el primer día del mes siguiente o más tarde.
-      .andWhere('circle.starts_on >= :firstAllowed', {
-        firstAllowed: toStartsOn(startsAfter.addMonths(1)),
-      })
-      .andWhere(
-        '(SELECT count(*) FROM circle_memberships m WHERE m.circle_id = circle.id) < circle.months',
-      )
-      .andWhere(
-        'NOT EXISTS (SELECT 1 FROM circle_memberships m WHERE m.circle_id = circle.id AND m.user_id::text = :userId)',
-        { userId },
-      )
-      .orderBy('circle.created_at', 'ASC')
-      .addOrderBy('circle.id', 'ASC')
       .limit(1)
       .getRawOne<{ id: string }>();
     return row ? this.findById(row.id) : null;
+  }
+
+  async listJoinable(criteria: OpenCirclesCriteria): Promise<Circle[]> {
+    const rows = await this.joinable(criteria.startsAfter, criteria.userId)
+      .limit(criteria.limit)
+      .getRawMany<{ id: string }>();
+    const circles = await Promise.all(rows.map(({ id }) => this.findById(id)));
+    return circles.filter((circle): circle is Circle => circle !== null);
+  }
+
+  /** Círculos que no empezaron, no están llenos y no tienen al usuario, del más antiguo al más nuevo. */
+  private joinable(startsAfter: Period, userId: string) {
+    return (
+      this.circles
+        .createQueryBuilder('circle')
+        .select('circle.id', 'id')
+        // Empieza después del mes actual: el primer día del mes siguiente o más tarde.
+        .where('circle.starts_on >= :firstAllowed', {
+          firstAllowed: toStartsOn(startsAfter.addMonths(1)),
+        })
+        .andWhere(
+          '(SELECT count(*) FROM circle_memberships m WHERE m.circle_id = circle.id) < circle.months',
+        )
+        .andWhere(
+          'NOT EXISTS (SELECT 1 FROM circle_memberships m WHERE m.circle_id = circle.id AND m.user_id::text = :userId)',
+          { userId },
+        )
+        .orderBy('circle.created_at', 'ASC')
+        .addOrderBy('circle.id', 'ASC')
+    );
   }
 
   async create(circle: Circle): Promise<void> {

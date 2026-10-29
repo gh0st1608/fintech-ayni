@@ -224,6 +224,40 @@ Cada unión queda registrada en el log como `circles.joined`, con el usuario, el
 
 Fuera de alcance, pendientes del diseño o del PO: la firma del contrato y del pagaré (D3, T9) y el primer pago (D1).
 
+## `GET /v1/circles/recommended`
+
+**Estado:** implementado en el backend (COPAYNI-25), con un **criterio provisional**. La app lo usa en Home ("Recomendados para ti") y en el estado vacío de Circles > Activos.
+
+Criterio (coherente con la asignación `fill_oldest`, R2; pendiente con el PO):
+
+- **Admiten al usuario:** no empezaron, no están llenos y el usuario no es miembro.
+- **El usuario puede elegir sus condiciones hoy:** el payout está permitido en `join-config` y la duración se ofrece en `installment-options`.
+- **Orden:** del más antiguo al más nuevo, porque completarlos hace que empiecen antes.
+- **Cantidad:** hasta `RECOMMENDED_CIRCLES_LIMIT` círculos (5 por defecto).
+
+**200**:
+
+```json
+{
+  "items": [
+    {
+      "circleId": "6f1c…",
+      "payout": { "amount": 3000000, "currency": "PEN" },
+      "months": 10,
+      "startsOn": "2026-11",
+      "endsOn": "2027-08",
+      "baseInstallment": { "amount": 300000, "currency": "PEN" },
+      "adminFee": { "amount": 360000, "currency": "PEN" },
+      "availableSlots": 7
+    }
+  ]
+}
+```
+
+- `baseInstallment` es payout / meses; la cuota real depende del slot que se elija.
+- **Sin círculos abiertos**, `items` viene vacío y la app oculta la sección.
+- **"Join now"** entra al flujo de unión con ese payout. `slots` ofrece el mismo círculo mientras siga siendo el más antiguo con esas condiciones.
+
 ## `GET /v1/me/circles?status=active|finished&cursor=<texto>&limit=<entero>`
 
 **Estado:** implementado en el backend (COPAYNI-26).

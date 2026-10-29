@@ -197,6 +197,12 @@ export class EnvironmentVariables {
   @Max(12)
   CIRCLE_START_OFFSET_MONTHS: number = 1;
 
+  /** Círculos recomendados en Home y en Circles vacío (COPAYNI-25, criterio provisional). */
+  @IsInt()
+  @Min(1)
+  @Max(20)
+  RECOMMENDED_CIRCLES_LIMIT: number = 5;
+
   /** Zona horaria del negocio: define en qué mes estamos para los cronogramas. */
   @IsTimeZone()
   BUSINESS_TIME_ZONE: string = 'America/Lima';

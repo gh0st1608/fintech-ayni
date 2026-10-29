@@ -5,6 +5,7 @@ import {
   type JoinableCircleCriteria,
   type MembershipPage,
   type MembershipsQuery,
+  type OpenCirclesCriteria,
 } from '@src/modules/circles/application/ports/circle-repository.port';
 import {
   AlreadyMemberError,
@@ -97,6 +98,19 @@ export class InMemoryCircleRepository implements CircleRepositoryPort {
       }
     }
     return null;
+  }
+
+  async listJoinable(criteria: OpenCirclesCriteria): Promise<Circle[]> {
+    await roundTrip();
+    return [...this.circles]
+      .map(([id, stored]) => Circle.restore({ id, ...stored }))
+      .filter(
+        (circle) =>
+          circle.terms.startsOn.isAfter(criteria.startsAfter) &&
+          circle.status === 'open' &&
+          !circle.isMember(criteria.userId),
+      )
+      .slice(0, criteria.limit);
   }
 
   async addMembership(circleId: string, membership: Membership): Promise<void> {

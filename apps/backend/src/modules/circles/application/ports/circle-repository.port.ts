@@ -26,6 +26,13 @@ export interface JoinableCircleCriteria {
   userId: string;
 }
 
+/** Círculos recomendados (COPAYNI-25): los que admiten al usuario, sin filtrar condiciones. */
+export interface OpenCirclesCriteria {
+  startsAfter: Period;
+  userId: string;
+  limit: number;
+}
+
 export type MembershipStatus = 'active' | 'finished';
 
 /** Mis círculos (COPAYNI-26): las membresías del usuario, de la más reciente a la más antigua. */
@@ -67,6 +74,8 @@ export interface CircleRepositoryPort {
   findByMembershipKey(userId: string, idempotencyKey: string): Promise<Circle | null>;
   /** El más antiguo (por alta) que cumple los criterios y no está lleno, o `null`. */
   findOldestJoinable(criteria: JoinableCircleCriteria): Promise<Circle | null>;
+  /** Hasta `limit` círculos que admiten al usuario, del más antiguo al más nuevo. */
+  listJoinable(criteria: OpenCirclesCriteria): Promise<Circle[]>;
   /**
    * Inserta la membresía de forma atómica. El círculo se validó con una lectura que pudo
    * quedar vieja, así que el almacenamiento es la barrera final, con unicidad por

@@ -197,6 +197,7 @@ Se validan al arrancar ([src/config/env.validation.ts](src/config/env.validation
 | `DB_SSL` / `DB_SSL_CA`                                    | `false` / vacío                             | TLS verificando el servidor (RDS lo exige). `DB_SSL_CA`: bundle de CA de RDS en PEM.            |
 | `DB_POOL_MAX`                                             | `10`                                        | Conexiones máximas por instancia de la API.                                                     |
 | `CIRCLE_ASSIGNMENT_STRATEGY`                              | `fill_oldest`                               | Qué círculo se ofrece (R2, provisional): `fill_oldest` o `always_new`. Ver docs/api/circles.md. |
+| `RECOMMENDED_CIRCLES_LIMIT`                               | `5`                                         | Círculos recomendados en Home (COPAYNI-25, criterio provisional).                               |
 | `CIRCLE_START_OFFSET_MONTHS`                              | `1`                                         | Meses hasta el inicio de un círculo nuevo.                                                      |
 | `BUSINESS_TIME_ZONE`                                      | `America/Lima`                              | Zona IANA que define el mes actual.                                                             |
 | `SLOT_FASTEST_SHARE_BPS` / `SLOT_HIGHEST_SHARE_BPS`       | `2500` / `2500`                             | Parte de los slots con fee y con descuento (R1, provisional).                                   |
