@@ -44,6 +44,18 @@ describe('SqlSavedCardRepository', () => {
     const list = await cards.list(userId);
     expect(list).toHaveLength(2);
     expect(list[0]!.isDefault).toBe(true);
+    // Cambiar la predeterminada deja una sola (COPAYNI-39).
+    const other = list.find(({ isDefault }) => !isDefault)!;
+    await expect(cards.setDefault(userId, other.id)).resolves.toBe(true);
+    const after = await cards.list(userId);
+    expect(after.filter(({ isDefault }) => isDefault).map(({ id }) => id)).toEqual([other.id]);
+    await expect(cards.setDefault(userId, '00000000-0000-4000-8000-000000000000')).resolves.toBe(
+      false,
+    );
+    await expect(cards.setDefault(userId, 'no-es-uuid')).resolves.toBe(false);
+    await cards.remove(userId, list.find(({ id }) => id !== other.id)!.id);
+    await expect(cards.list(userId)).resolves.toHaveLength(1);
+    await cards.remove('no-es-uuid', other.id);
     await expect(cards.list('no-es-uuid')).resolves.toEqual([]);
     await expect(cards.customerOf('no-es-uuid')).resolves.toBeNull();
     await expect(cards.findByIdempotencyKey('no-es-uuid', 'k')).resolves.toBeNull();

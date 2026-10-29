@@ -1,8 +1,25 @@
-import { Body, Controller, Get, Headers, HttpStatus, Inject, Post, Res } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Headers,
+  HttpCode,
+  HttpStatus,
+  Inject,
+  Param,
+  ParseUUIDPipe,
+  Post,
+  Put,
+  Res,
+} from '@nestjs/common';
 import {
   ApiBadRequestResponse,
   ApiBearerAuth,
+  ApiConflictResponse,
   ApiCreatedResponse,
+  ApiNoContentResponse,
+  ApiNotFoundResponse,
   ApiHeader,
   ApiOkResponse,
   ApiTags,
@@ -14,7 +31,16 @@ import { type Principal } from '../../../../../shared/application/ports/access-t
 import { ValidationError } from '../../../../../shared/errors/app-error';
 import { CurrentPrincipal } from '../../../../../shared/presentation/decorators/current-principal.decorator';
 import { AddCardUseCase, ListCardsUseCase } from '../../../application/use-cases/add-card.use-case';
+import {
+  RemoveCardUseCase,
+  SetDefaultCardUseCase,
+} from '../../../application/use-cases/manage-cards.use-cases';
 import { AddCardRequest, SavedCardResponse, SavedCardsResponse } from '../dto/cards.dto';
+
+const CARD_ID = new ParseUUIDPipe({
+  exceptionFactory: () =>
+    new ValidationError('El id de la tarjeta debe ser un UUID', { id: 'invalid' }),
+});
 
 /** La genera la app una vez por formulario y la repite en los reintentos. */
 const IDEMPOTENCY_KEY = /^[A-Za-z0-9_-]{16,255}$/;
@@ -31,7 +57,38 @@ export class CardsController {
   constructor(
     @Inject(AddCardUseCase) private readonly addCard: AddCardUseCase,
     @Inject(ListCardsUseCase) private readonly listCards: ListCardsUseCase,
+    @Inject(SetDefaultCardUseCase) private readonly setDefault: SetDefaultCardUseCase,
+    @Inject(RemoveCardUseCase) private readonly removeCard: RemoveCardUseCase,
   ) {}
+
+  @Put(':id/default')
+  @ApiOkResponse({
+    type: SavedCardsResponse,
+    description: 'Las tarjetas, con la nueva predeterminada',
+  })
+  @ApiNotFoundResponse({ description: 'CARD_NOT_FOUND' })
+  @ApiUnauthorizedResponse({ description: 'Sin token o token inválido (UNAUTHORIZED)' })
+  async makeDefault(
+    @CurrentPrincipal() principal: Principal,
+    @Param('id', CARD_ID) id: string,
+  ): Promise<SavedCardsResponse> {
+    return SavedCardsResponse.from(await this.setDefault.execute(principal, id));
+  }
+
+  @Delete(':id')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiNoContentResponse({ description: 'Eliminada, también en Mercado Pago' })
+  @ApiNotFoundResponse({ description: 'CARD_NOT_FOUND' })
+  @ApiConflictResponse({
+    description: 'Es la predeterminada y hay otras (DEFAULT_CARD_REPLACEMENT_REQUIRED)',
+  })
+  @ApiUnauthorizedResponse({ description: 'Sin token o token inválido (UNAUTHORIZED)' })
+  async remove(
+    @CurrentPrincipal() principal: Principal,
+    @Param('id', CARD_ID) id: string,
+  ): Promise<void> {
+    await this.removeCard.execute(principal, id);
+  }
 
   @Get()
   @ApiOkResponse({

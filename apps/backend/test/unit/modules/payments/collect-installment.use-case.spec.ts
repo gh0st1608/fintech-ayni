@@ -41,6 +41,8 @@ const cardsWith = (...saved: ReturnType<typeof card>[]): SavedCardRepositoryPort
   findByIdempotencyKey: jest.fn(),
   add: jest.fn(),
   list: () => Promise.resolve(saved),
+  setDefault: jest.fn(),
+  remove: jest.fn(),
 });
 
 function setup(gateway = new FakePaymentGateway(), cards = cardsWith(card('card-1'))) {

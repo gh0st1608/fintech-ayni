@@ -99,6 +99,41 @@ export class SqlSavedCardRepository implements SavedCardRepositoryPort {
     });
   }
 
+  async setDefault(userId: string, cardId: string): Promise<boolean> {
+    if (!isUuid(userId) || !isUuid(cardId)) return false;
+    return this.dataSource.transaction(async (manager) => {
+      await manager.query("SELECT pg_advisory_xact_lock(hashtextextended('cards:' || $1, 0))", [
+        userId,
+      ]);
+      const [exists] = await manager.query<unknown[]>(
+        'SELECT 1 FROM saved_cards WHERE user_id = $1 AND id = $2 AND deleted_at IS NULL',
+        [userId, cardId],
+      );
+      if (!exists) return false;
+      await manager.query(
+        `UPDATE saved_cards SET is_default = false
+          WHERE user_id = $1 AND is_default AND id <> $2 AND deleted_at IS NULL`,
+        [userId, cardId],
+      );
+      await manager.query('UPDATE saved_cards SET is_default = true WHERE id = $1', [cardId]);
+      return true;
+    });
+  }
+
+  async remove(userId: string, cardId: string): Promise<void> {
+    if (!isUuid(userId) || !isUuid(cardId)) return;
+    await this.dataSource.transaction(async (manager) => {
+      await manager.query("SELECT pg_advisory_xact_lock(hashtextextended('cards:' || $1, 0))", [
+        userId,
+      ]);
+      await manager.query(
+        `UPDATE saved_cards SET deleted_at = now(), is_default = false
+          WHERE user_id = $1 AND id = $2 AND deleted_at IS NULL`,
+        [userId, cardId],
+      );
+    });
+  }
+
   async list(userId: string): Promise<SavedCard[]> {
     if (!isUuid(userId)) return [];
     const rows = await this.dataSource.query<CardRow[]>(

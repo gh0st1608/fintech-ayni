@@ -7,6 +7,10 @@ import { PAYMENT_GATEWAY } from './application/ports/payment-gateway.port';
 import { SAVED_CARDS } from './application/ports/saved-card-repository.port';
 import { AddCardUseCase, ListCardsUseCase } from './application/use-cases/add-card.use-case';
 import {
+  RemoveCardUseCase,
+  SetDefaultCardUseCase,
+} from './application/use-cases/manage-cards.use-cases';
+import {
   AUTO_DEBIT_SETTINGS,
   type AutoDebitSettings,
   CollectInstallmentUseCase,
@@ -27,6 +31,8 @@ import { CardsController } from './presentation/http/controllers/cards.controlle
   providers: [
     AddCardUseCase,
     ListCardsUseCase,
+    SetDefaultCardUseCase,
+    RemoveCardUseCase,
     CollectInstallmentUseCase,
     {
       provide: AUTO_DEBIT_SETTINGS,

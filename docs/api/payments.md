@@ -162,6 +162,13 @@ Pasarela: **Mercado Pago** ([architecture.md](../architecture.md#10-pasarela-de-
 | `EMAIL_REQUIRED`   | 422  | El usuario no tiene email.                                             |
 | `UNAUTHORIZED`     | 401  | Sin token o token inválido.                                            |
 
+### Gestionar tarjetas (COPAYNI-39)
+
+- `PUT /v1/me/cards/:id/default`: la deja como la única predeterminada y responde `{ "items": [SavedCard] }`.
+- `DELETE /v1/me/cards/:id` (**204**): la retira de Mercado Pago y la marca como borrada (los pagos ya hechos la siguen referenciando en la pasarela). La predeterminada solo se borra si es la única: con otras responde `DEFAULT_CARD_REPLACEMENT_REQUIRED` (409) y la app pide elegir otra.
+- Errores: `CARD_NOT_FOUND` (404, no existe o no es del usuario) y `VALIDATION_ERROR` (400, el id no es UUID).
+- **Pendiente [?]:** qué se puede editar de una tarjeta (pregunta abierta del ticket). Mercado Pago no permite cambiar el número; la expiración se actualiza agregando la tarjeta de nuevo.
+
 ### Débito automático de las cuotas
 
 Con `CIRCLE_PAYMENTS_ADAPTER=gateway`, el ciclo mensual cobra cada cuota con la tarjeta predeterminada del usuario:

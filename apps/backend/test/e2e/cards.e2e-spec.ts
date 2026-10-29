@@ -69,6 +69,33 @@ describe('/v1/me/cards', () => {
     expect(response.body.error.code).toBe('VALIDATION_ERROR');
   });
 
+  it('cambia la predeterminada y elimina una tarjeta (COPAYNI-39)', async () => {
+    const auth = { Authorization: `Bearer ${token}` };
+    const second = await add({ token: 'tok-e2e-2' }).expect(201);
+    const id = second.body.data.id as string;
+    const updated = await request(app.getHttpServer())
+      .put(`/v1/me/cards/${id}/default`)
+      .set(auth)
+      .expect(200);
+    expect(updated.body.data.items[0]).toMatchObject({ id, isDefault: true });
+
+    const others = (updated.body.data.items as { id: string }[]).filter((item) => item.id !== id);
+    for (const other of others) {
+      await request(app.getHttpServer()).delete(`/v1/me/cards/${other.id}`).set(auth).expect(204);
+    }
+    await request(app.getHttpServer()).delete(`/v1/me/cards/${id}`).set(auth).expect(204);
+    const missing = await request(app.getHttpServer())
+      .delete(`/v1/me/cards/${id}`)
+      .set(auth)
+      .expect(404);
+    expect(missing.body.error.code).toBe('CARD_NOT_FOUND');
+    const invalid = await request(app.getHttpServer())
+      .put('/v1/me/cards/no-es-uuid/default')
+      .set(auth)
+      .expect(400);
+    expect(invalid.body.error.code).toBe('VALIDATION_ERROR');
+  });
+
   it('exige autenticación', async () => {
     await request(app.getHttpServer()).get('/v1/me/cards').expect(401);
   });

@@ -25,4 +25,8 @@ export interface SavedCardRepositoryPort {
   add(userId: string, card: GatewayCard, idempotencyKey: string): Promise<SavedCard>;
   /** De la predeterminada a las demás, de la más nueva a la más vieja. */
   list(userId: string): Promise<SavedCard[]>;
+  /** La deja como la única predeterminada del usuario. `false` si no es suya o no existe. */
+  setDefault(userId: string, cardId: string): Promise<boolean>;
+  /** La marca como borrada. */
+  remove(userId: string, cardId: string): Promise<void>;
 }
