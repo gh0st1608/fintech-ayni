@@ -7,8 +7,8 @@ import request from 'supertest';
 
 import { createTestApp } from '@test/support/create-test-app';
 
-/** `PATCH /v1/me` (COPAYNI-50) con un usuario real autenticado por OTP. */
-describe('PATCH /v1/me', () => {
+/** `GET` y `PATCH /v1/me` (COPAYNI-44 y 50) con un usuario real autenticado por OTP. */
+describe('/v1/me', () => {
   let app: NestExpressApplication;
   let accessToken: string;
   const email = `${randomUUID()}@mail.com`;
@@ -39,6 +39,8 @@ describe('PATCH /v1/me', () => {
       phone: null,
       status: 'active',
       preferredLanguage: 'en',
+      fullName: null,
+      monthlyPayInLimit: null,
     });
     await expect(patch({ preferredLanguage: 'pt-BR' }).expect(200)).resolves.toMatchObject({
       body: { data: { preferredLanguage: 'pt-BR' } },
@@ -53,7 +55,20 @@ describe('PATCH /v1/me', () => {
     },
   );
 
+  it('GET devuelve el perfil con el límite mensual de pay-in (COPAYNI-44)', async () => {
+    const response = await request(app.getHttpServer())
+      .get('/v1/me')
+      .set('Authorization', `Bearer ${accessToken}`)
+      .expect(200);
+    // Sin JOIN_MONTHLY_PAYIN_LIMIT en el ambiente de pruebas: no se le restringe.
+    expect(response.body.data).toMatchObject({ email, status: 'active', monthlyPayInLimit: null });
+  });
+
   it('exige un access token válido', async () => {
     await patch({ preferredLanguage: 'es' }, 'otro').expect(401);
+    await request(app.getHttpServer())
+      .get('/v1/me')
+      .set('Authorization', 'Bearer otro')
+      .expect(401);
   });
 });
