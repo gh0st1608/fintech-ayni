@@ -20,6 +20,7 @@ import { TypeOrmCircleCycleRepository } from '@src/modules/circles/infrastructur
 import { TypeOrmCircleRepository } from '@src/modules/circles/infrastructure/persistence/typeorm/typeorm-circle.repository';
 import { TypeOrmMemberDebts } from '@src/modules/circles/infrastructure/persistence/typeorm/typeorm-member-debts.repository';
 import { TypeOrmMemberHistory } from '@src/modules/circles/infrastructure/persistence/typeorm/typeorm-member-history.repository';
+import { TypeOrmPaymentsQuery } from '@src/modules/circles/infrastructure/persistence/typeorm/typeorm-payments-query';
 import { LocalDate } from '@src/shared/domain/value-objects/local-date';
 import { Money } from '@src/shared/domain/value-objects/money';
 import { Period } from '@src/shared/domain/value-objects/period';
@@ -448,6 +449,30 @@ describe('TypeOrmCircleCycleRepository', () => {
       [id],
     );
     expect(payout).toEqual({ period: '2026-12' });
+  });
+
+  it('el resumen de pagos lista las cuotas por pagar hasta que se cobran (COPAYNI-35)', async () => {
+    const { id, members } = await fullCircle(Period.of(2026, 11));
+    const payments = new TypeOrmPaymentsQuery(dataSource.getRepository(CircleEntity));
+    const [first] = members;
+    await expect(payments.dueInstallmentsOf(first!.userId)).resolves.toEqual([]);
+
+    // El 2 de noviembre empieza: la cuota de noviembre queda pendiente hasta el día 5.
+    await job([id])('2026-11-02');
+    await expect(payments.dueInstallmentsOf(first!.userId)).resolves.toEqual([
+      {
+        circleId: id,
+        period: Period.of(2026, 11),
+        dueOn: LocalDate.parse('2026-11-05'),
+        amount: first!.price.installments[0],
+        status: 'pending',
+      },
+    ]);
+    await job([id])('2026-11-05');
+    // Noviembre se cobró y diciembre todavía no tiene cuota: no debe nada.
+    const [due] = await payments.dueInstallmentsOf(first!.userId);
+    expect(due?.period).toEqual(Period.of(2026, 12));
+    await expect(payments.dueInstallmentsOf('no-es-uuid')).resolves.toEqual([]);
   });
 
   it('una segunda ejecución simultánea no procesa el círculo bloqueado', async () => {

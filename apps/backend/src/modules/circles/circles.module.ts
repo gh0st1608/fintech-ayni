@@ -10,6 +10,10 @@ import { PayoutsModule } from '../payouts/payouts.module';
 import { JOIN_CONFIG_REPOSITORY } from './application/ports/join-config-repository.port';
 import { JOIN_ELIGIBILITY } from './application/ports/join-eligibility.port';
 import { MEMBER_HISTORY } from './application/ports/member-history.port';
+import { PAYMENTS_QUERY } from './application/ports/payments-query.port';
+import { GetPaymentSummaryUseCase } from './application/use-cases/get-payment-summary.use-case';
+import { TypeOrmPaymentsQuery } from './infrastructure/persistence/typeorm/typeorm-payments-query';
+import { MyPaymentsController } from './presentation/http/controllers/my-payments.controller';
 import { SetCirclePauseUseCase } from './application/use-cases/set-circle-pause.use-case';
 import { AdminCirclesController } from './presentation/http/controllers/admin-circles.controller';
 import { STAFF_AUTHENTICATOR } from '../../shared/application/ports/staff-authenticator.port';
@@ -70,7 +74,12 @@ import { MyCirclesController } from './presentation/http/controllers/my-circles.
 
 @Module({
   imports: [TypeOrmModule.forFeature([CircleEntity, CircleMembershipEntity]), PayoutsModule],
-  controllers: [CirclesController, MyCirclesController, AdminCirclesController],
+  controllers: [
+    CirclesController,
+    MyCirclesController,
+    MyPaymentsController,
+    AdminCirclesController,
+  ],
   providers: [
     GetJoinConfigUseCase,
     GetInstallmentOptionsUseCase,
@@ -134,6 +143,10 @@ import { MyCirclesController } from './presentation/http/controllers/my-circles.
         limit: config.get('RECOMMENDED_CIRCLES_LIMIT', { infer: true }),
       }),
     },
+    // Sección Payment de la app (COPAYNI-35).
+    GetPaymentSummaryUseCase,
+    TypeOrmPaymentsQuery,
+    { provide: PAYMENTS_QUERY, useExisting: TypeOrmPaymentsQuery },
     // Pausa del admin general (COPAYNI-61). La identidad del personal llega con la fase 1 del
     // back-office: hasta entonces, la API de administración rechaza todo con 401.
     SetCirclePauseUseCase,
