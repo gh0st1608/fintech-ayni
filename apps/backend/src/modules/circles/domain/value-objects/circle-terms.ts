@@ -62,9 +62,4 @@ export class CircleTerms {
   get endsOn(): Period {
     return this.startsOn.addMonths(this.months - 1);
   }
-
-  /** Terminó cuando su último mes ya pasó. Uno que todavía no empezó sigue activo. */
-  isFinishedAt(current: Period): boolean {
-    return current.isAfter(this.endsOn);
-  }
 }

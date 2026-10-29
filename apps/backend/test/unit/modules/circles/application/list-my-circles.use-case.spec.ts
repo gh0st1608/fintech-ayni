@@ -5,7 +5,6 @@ import { CircleTerms } from '@src/modules/circles/domain/value-objects/circle-te
 import { SlotPricingRules } from '@src/modules/circles/domain/value-objects/slot-pricing-rules';
 import { Money } from '@src/shared/domain/value-objects/money';
 import { Period } from '@src/shared/domain/value-objects/period';
-import { TestClock } from '@test/support/create-test-app';
 import { InMemoryCircleRepository } from '@test/support/in-memory-circle.repository';
 import { TEST_PRICING, TEST_PRICING_RULES } from '@test/support/join-circle.fixture';
 
@@ -15,17 +14,10 @@ const ANA = { userId: 'ana' };
 const OTHER_PRICING = new SlotPricing(
   SlotPricingRules.create({ ...TEST_PRICING_RULES.props, adminFeeBps: 2_000 }),
 );
-/** 15 de octubre de 2026 en Lima. */
-const NOW = new Date('2026-10-15T15:00:00Z');
 
 function setup() {
   const circles = new InMemoryCircleRepository();
-  const useCase = new ListMyCirclesUseCase(
-    circles,
-    TEST_PRICING,
-    { strategy: 'fill_oldest', startOffsetMonths: 1, timeZone: 'America/Lima' },
-    new TestClock(NOW),
-  );
+  const useCase = new ListMyCirclesUseCase(circles, TEST_PRICING);
   const addCircle = (id: string, startsOn: Period, position = 1, months = 6) =>
     circles.add(
       Circle.restore({
@@ -38,24 +30,21 @@ function setup() {
 }
 
 describe('CircleTerms: fin del círculo', () => {
-  const terms = CircleTerms.create({
-    payout: pen(30_000),
-    months: 6,
-    startsOn: Period.of(2026, 5),
-  });
-
   it('termina en el mes del último cobro', () => {
+    const terms = CircleTerms.create({
+      payout: pen(30_000),
+      months: 6,
+      startsOn: Period.of(2026, 5),
+    });
     expect(terms.endsOn).toEqual(Period.of(2026, 10));
-    expect(terms.isFinishedAt(Period.of(2026, 10))).toBe(false);
-    expect(terms.isFinishedAt(Period.of(2026, 11))).toBe(true);
-    expect(terms.isFinishedAt(Period.of(2026, 1))).toBe(false);
   });
 });
 
 describe('ListMyCirclesUseCase', () => {
-  it('separa activos (también los que no empezaron) de finalizados, el más reciente primero', async () => {
-    const { useCase, addCircle } = setup();
+  it('separa activos (también los que no empezaron) de los que terminaron su ciclo, el más reciente primero', async () => {
+    const { useCase, addCircle, circles } = setup();
     addCircle('terminado', Period.of(2026, 1));
+    circles.finish('terminado');
     addCircle('en-curso', Period.of(2026, 5), 3);
     addCircle('por-empezar', Period.of(2026, 11));
 

@@ -24,20 +24,20 @@ Lo que ya existe en el código condiciona la infraestructura:
 
 ## Resumen de decisiones
 
-| #   | Tema                     | Propuesta                                                                                    |
-| --- | ------------------------ | -------------------------------------------------------------------------------------------- |
-| 1   | Cómputo                  | **ECS Fargate** detrás de un Application Load Balancer                                       |
-| 2   | Base de datos            | **Amazon RDS for PostgreSQL** (17); Single-AZ en dev, Multi-AZ en prod                       |
-| 3   | Documentos KYC           | **S3** privado con cifrado SSE-KMS (clave propia), versionado y URLs prefirmadas             |
-| 4   | Infraestructura como código | **Terraform** con módulos propios, estado en S3 con bloqueo nativo, un stack por ambiente en `live/` |
-| 5   | Secretos y despliegue    | **Secrets Manager** (secretos) y SSM Parameter Store (configuración); **GitHub Actions con OIDC** |
-| 6   | Tareas programadas       | **EventBridge Scheduler → tarea ECS** con la misma imagen                                    |
-| 7   | Ambiente dev             | **Emulador floci** en Docker local; prd en AWS (ver [Ambientes](#ambientes-dev-con-emulador-y-prd-en-aws)) |
-| D1  | Región                   | **Decidido:** `us-east-1`                                                                    |
-| D2  | Cuenta AWS               | **[pendiente]** cuenta dedicada a prd: en el código es un valor `CAMBIAR` (no `mayo-prod`)    |
-| D3  | Dominio y TLS            | **Decidido:** `backend-ayni.solutionserj.com`, solo HTTPS. El subdominio se delega desde GoDaddy a Route 53 |
-| 8   | Observabilidad           | **New Relic como lugar principal** (APM por OTLP, métricas y logs de AWS, alertas, SLO, monitor sintético); CloudWatch de respaldo |
-| 9   | Auditoría                | **CloudTrail** multi-región con data events de los documentos KYC y alarmas de seguridad (CIS) |
+| #   | Tema                        | Propuesta                                                                                                                          |
+| --- | --------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | Cómputo                     | **ECS Fargate** detrás de un Application Load Balancer                                                                             |
+| 2   | Base de datos               | **Amazon RDS for PostgreSQL** (17); Single-AZ en dev, Multi-AZ en prod                                                             |
+| 3   | Documentos KYC              | **S3** privado con cifrado SSE-KMS (clave propia), versionado y URLs prefirmadas                                                   |
+| 4   | Infraestructura como código | **Terraform** con módulos propios, estado en S3 con bloqueo nativo, un stack por ambiente en `live/`                               |
+| 5   | Secretos y despliegue       | **Secrets Manager** (secretos) y SSM Parameter Store (configuración); **GitHub Actions con OIDC**                                  |
+| 6   | Tareas programadas          | **EventBridge Scheduler → tarea ECS** con la misma imagen                                                                          |
+| 7   | Ambiente dev                | **Emulador floci** en Docker local; prd en AWS (ver [Ambientes](#ambientes-dev-con-emulador-y-prd-en-aws))                         |
+| D1  | Región                      | **Decidido:** `us-east-1`                                                                                                          |
+| D2  | Cuenta AWS                  | **[pendiente]** cuenta dedicada a prd: en el código es un valor `CAMBIAR` (no `mayo-prod`)                                         |
+| D3  | Dominio y TLS               | **Decidido:** `backend-ayni.solutionserj.com`, solo HTTPS. El subdominio se delega desde GoDaddy a Route 53                        |
+| 8   | Observabilidad              | **New Relic como lugar principal** (APM por OTLP, métricas y logs de AWS, alertas, SLO, monitor sintético); CloudWatch de respaldo |
+| 9   | Auditoría                   | **CloudTrail** multi-región con data events de los documentos KYC y alarmas de seguridad (CIS)                                     |
 
 ## Diagrama
 
@@ -62,15 +62,15 @@ flowchart LR
 
 **Opciones**
 
-| Criterio                         | Lambda + API Gateway (adaptador NestJS)                                                         | ECS Fargate + ALB                                                    |
-| -------------------------------- | ----------------------------------------------------------------------------------------------- | -------------------------------------------------------------------- |
-| Arranque en frío                 | Sí: NestJS, la validación de entorno y OpenTelemetry suman al arranque de cada instancia nueva. | No: las tareas quedan en ejecución.                                  |
-| Conexiones a la base de datos    | Cada invocación concurrente abre las suyas; en la práctica exige RDS Proxy.                     | Pool por tarea, acotado.                                             |
-| Telemetría                       | Los envíos por lotes se cortan al congelarse la instancia: hay que vaciar en cada invocación o usar la capa ADOT. | Funciona como está: envío por lotes y vaciado en SIGTERM.            |
-| Salida a internet                | Dentro de la VPC (para llegar a RDS) necesita NAT gateway.                                       | Igual en prod; en dev puede usar IP pública sin NAT (ver Red).      |
-| Tareas programadas               | Buen encaje (EventBridge → Lambda), con un máximo de 15 min por ejecución.                       | EventBridge Scheduler → tarea ECS, sin límite de duración.           |
-| Costo con poco tráfico           | Bajo en cómputo, pero NAT y RDS Proxy son fijos (ver Costos).                                    | Fijo: ALB y al menos una tarea.                                      |
-| Cambios en el código             | Adaptador serverless, `main` distinto y vaciado de telemetría por invocación.                    | Ninguno: imagen de contenedor con `node dist/main.js`.               |
+| Criterio                      | Lambda + API Gateway (adaptador NestJS)                                                                           | ECS Fargate + ALB                                              |
+| ----------------------------- | ----------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------- |
+| Arranque en frío              | Sí: NestJS, la validación de entorno y OpenTelemetry suman al arranque de cada instancia nueva.                   | No: las tareas quedan en ejecución.                            |
+| Conexiones a la base de datos | Cada invocación concurrente abre las suyas; en la práctica exige RDS Proxy.                                       | Pool por tarea, acotado.                                       |
+| Telemetría                    | Los envíos por lotes se cortan al congelarse la instancia: hay que vaciar en cada invocación o usar la capa ADOT. | Funciona como está: envío por lotes y vaciado en SIGTERM.      |
+| Salida a internet             | Dentro de la VPC (para llegar a RDS) necesita NAT gateway.                                                        | Igual en prod; en dev puede usar IP pública sin NAT (ver Red). |
+| Tareas programadas            | Buen encaje (EventBridge → Lambda), con un máximo de 15 min por ejecución.                                        | EventBridge Scheduler → tarea ECS, sin límite de duración.     |
+| Costo con poco tráfico        | Bajo en cómputo, pero NAT y RDS Proxy son fijos (ver Costos).                                                     | Fijo: ALB y al menos una tarea.                                |
+| Cambios en el código          | Adaptador serverless, `main` distinto y vaciado de telemetría por invocación.                                     | Ninguno: imagen de contenedor con `node dist/main.js`.         |
 
 **Propuesta:** ECS Fargate. Con la API dentro de una VPC, Lambda no sale más barata (NAT gateway más RDS Proxy) y obliga a adaptar el arranque, la telemetría y las conexiones. Fargate ejecuta la misma imagen en todos los ambientes y en las tareas programadas.
 
@@ -167,6 +167,10 @@ El módulo `scheduled-task` (EventBridge Scheduler) se agrega con el primer job.
 - **Idempotencia:** cada ejecución registra su clave (job y periodo) en la base de datos. Así, un reintento o una ejecución duplicada no cobra dos veces.
 - **Sin cron dentro de la API:** con varias tareas se ejecutaría en cada una.
 
+| Job                                        | Comando                          | Frecuencia                      | Qué hace                                                                                                                                                                                                                                                                                                          |
+| ------------------------------------------ | -------------------------------- | ------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Ciclo mensual de los círculos (COPAYNI-56) | `node dist/jobs/circle-cycle.js` | Diaria, en `BUSINESS_TIME_ZONE` | Empieza los círculos, cobra las cuotas vencidas, paga el payout del mes y termina los círculos ([circles.md](api/circles.md#ciclo-mensual-copayni-56)). Bloquea cada círculo con un advisory lock de PostgreSQL y los índices únicos impiden duplicar cuotas o payouts. Sale con código 1 si algún círculo falló. |
+
 ## Ambientes: dev con emulador y prd en AWS
 
 **Decisión (2026-10-27):** dev corre en la máquina de cada desarrollador contra un emulador de AWS, y prd en la cuenta dedicada. No hay cuenta AWS de dev por ahora.
@@ -179,13 +183,13 @@ El módulo `scheduled-task` (EventBridge Scheduler) se agrega con el primer job.
 
 **Opciones evaluadas**
 
-| Opción | Resultado |
-| --- | --- |
-| LocalStack Hobby | Descartado: no comercial y sin ECS, RDS ni ALB. |
-| LocalStack Base | Viable y maduro, pero pago por persona. Queda como respaldo. |
-| **floci** (MIT) | **Elegido.** ECS, RDS y ECR con contenedores reales; ELBv2, ACM, WAF, Route 53, S3, KMS, Secrets Manager, IAM y CloudWatch emulados; compatible con el provider AWS 6 de Terraform. |
-| MiniStack (MIT) | Alternativa si floci falla: también ejecuta ECS y RDS reales. |
-| Cuenta AWS dev | Unos 56 USD al mes (ver Costos). No es local. |
+| Opción           | Resultado                                                                                                                                                                           |
+| ---------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| LocalStack Hobby | Descartado: no comercial y sin ECS, RDS ni ALB.                                                                                                                                     |
+| LocalStack Base  | Viable y maduro, pero pago por persona. Queda como respaldo.                                                                                                                        |
+| **floci** (MIT)  | **Elegido.** ECS, RDS y ECR con contenedores reales; ELBv2, ACM, WAF, Route 53, S3, KMS, Secrets Manager, IAM y CloudWatch emulados; compatible con el provider AWS 6 de Terraform. |
+| MiniStack (MIT)  | Alternativa si floci falla: también ejecuta ECS y RDS reales.                                                                                                                       |
+| Cuenta AWS dev   | Unos 56 USD al mes (ver Costos). No es local.                                                                                                                                       |
 
 **Verificado con floci 2.2.0** (`terraform apply` del stack dev):
 
@@ -206,14 +210,14 @@ Se reconsidera si aparece una necesidad concreta, como planes de uso por cliente
 
 **Decisión (2026-10-28):** New Relic es el lugar principal de observabilidad y alertas; CloudWatch queda de respaldo. CloudTrail cubre la auditoría.
 
-| Pieza | Cómo |
-| --- | --- |
-| Aplicación | OpenTelemetry por OTLP directo a New Relic (COPAYNI-10): trazas, métricas y logs. |
-| Métricas de AWS | CloudWatch Metric Streams → Firehose → New Relic (casi en tiempo real). La cuenta AWS se vincula con un rol de solo lectura y external ID. |
-| Logs de infraestructura | WAF, PostgreSQL, flow logs y CloudTrail → Firehose → New Relic. Los de la API no, porque ya llegan por OTLP. |
-| Alertas | New Relic: errores 5xx y latencia p95 desde los spans, infraestructura, monitor sintético externo del health check, SLO de disponibilidad (99,9 %) y de latencia (99 % bajo 800 ms) en 28 días, y alerta de consumo rápido del presupuesto de error. |
-| Respaldo | CloudWatch: targets no sanos y almacenamiento de la base. Avisan aunque New Relic no esté disponible. |
-| Auditoría | CloudTrail multi-región con validación de integridad, en un bucket cifrado con un año de retención, y data events de los documentos KYC. Siete alarmas de seguridad CIS: root, consola sin MFA, llamadas no autorizadas, cambios de IAM, de security groups, de claves KMS y del propio trail. |
+| Pieza                   | Cómo                                                                                                                                                                                                                                                                                           |
+| ----------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Aplicación              | OpenTelemetry por OTLP directo a New Relic (COPAYNI-10): trazas, métricas y logs.                                                                                                                                                                                                              |
+| Métricas de AWS         | CloudWatch Metric Streams → Firehose → New Relic (casi en tiempo real). La cuenta AWS se vincula con un rol de solo lectura y external ID.                                                                                                                                                     |
+| Logs de infraestructura | WAF, PostgreSQL, flow logs y CloudTrail → Firehose → New Relic. Los de la API no, porque ya llegan por OTLP.                                                                                                                                                                                   |
+| Alertas                 | New Relic: errores 5xx y latencia p95 desde los spans, infraestructura, monitor sintético externo del health check, SLO de disponibilidad (99,9 %) y de latencia (99 % bajo 800 ms) en 28 días, y alerta de consumo rápido del presupuesto de error.                                           |
+| Respaldo                | CloudWatch: targets no sanos y almacenamiento de la base. Avisan aunque New Relic no esté disponible.                                                                                                                                                                                          |
+| Auditoría               | CloudTrail multi-región con validación de integridad, en un bucket cifrado con un año de retención, y data events de los documentos KYC. Siete alarmas de seguridad CIS: root, consola sin MFA, llamadas no autorizadas, cambios de IAM, de security groups, de claves KMS y del propio trail. |
 
 **Secretos:**
 
@@ -245,28 +249,28 @@ Valores mensuales aproximados, en USD, para `us-east-1` y 730 horas. Las tarifas
 
 **dev en AWS (referencia)**
 
-| Recurso                                                          | Cálculo                                     | USD/mes  |
-| ---------------------------------------------------------------- | ------------------------------------------- | -------- |
-| Fargate: 1 tarea de 0,25 vCPU y 0,5 GB                           | 0,25 × 0,04048 + 0,5 × 0,004445 por hora    | ~9       |
-| ALB                                                              | 0,0225 por hora + LCU mínimos               | ~17      |
-| IPv4 públicas: 2 del ALB y 1 de la tarea                         | 3 × 0,005 por hora                          | ~11      |
-| RDS `db.t4g.micro` Single-AZ + 20 GB gp3                         | aproximado                                  | ~14      |
-| Secrets Manager, KMS, CloudWatch Logs, ECR y S3                  | uso bajo                                    | ~5       |
-| **Total dev**                                                    |                                             | **~56**  |
+| Recurso                                         | Cálculo                                  | USD/mes |
+| ----------------------------------------------- | ---------------------------------------- | ------- |
+| Fargate: 1 tarea de 0,25 vCPU y 0,5 GB          | 0,25 × 0,04048 + 0,5 × 0,004445 por hora | ~9      |
+| ALB                                             | 0,0225 por hora + LCU mínimos            | ~17     |
+| IPv4 públicas: 2 del ALB y 1 de la tarea        | 3 × 0,005 por hora                       | ~11     |
+| RDS `db.t4g.micro` Single-AZ + 20 GB gp3        | aproximado                               | ~14     |
+| Secrets Manager, KMS, CloudWatch Logs, ECR y S3 | uso bajo                                 | ~5      |
+| **Total dev**                                   |                                          | **~56** |
 
 **Lo mismo con Lambda, como comparación:** Lambda y API Gateway cuestan casi nada con poco tráfico, pero se suman el NAT gateway (~33 más datos) y RDS Proxy (~22), y RDS es igual (~14). El total da ~70, sin ahorro frente a Fargate.
 
 **prod inicial (alta disponibilidad)**
 
-| Recurso                                                    | USD/mes   |
-| ---------------------------------------------------------- | --------- |
-| Fargate: 2 tareas de 0,5 vCPU y 1 GB                       | ~36       |
-| ALB y 2 IPv4 públicas                                      | ~25       |
-| 1 NAT gateway compartido + datos (uno por zona: ~70)       | ~37       |
-| RDS `db.t4g.small` Multi-AZ + 50 GB gp3                    | ~60       |
-| AWS WAF (web ACL, unas 3 reglas, tráfico bajo)             | ~10       |
-| Secrets Manager, KMS, CloudWatch, ECR, S3 y backups        | ~15       |
-| **Total prod**                                             | **~182**  |
+| Recurso                                              | USD/mes  |
+| ---------------------------------------------------- | -------- |
+| Fargate: 2 tareas de 0,5 vCPU y 1 GB                 | ~36      |
+| ALB y 2 IPv4 públicas                                | ~25      |
+| 1 NAT gateway compartido + datos (uno por zona: ~70) | ~37      |
+| RDS `db.t4g.small` Multi-AZ + 50 GB gp3              | ~60      |
+| AWS WAF (web ACL, unas 3 reglas, tráfico bajo)       | ~10      |
+| Secrets Manager, KMS, CloudWatch, ECR, S3 y backups  | ~15      |
+| **Total prod**                                       | **~182** |
 
 **No incluido:**
 
@@ -284,17 +288,17 @@ Valores mensuales aproximados, en USD, para `us-east-1` y 730 horas. Las tarifas
 
 ## Riesgos
 
-| Riesgo                                                                                       | Mitigación                                                                                   |
-| -------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
+| Riesgo                                                                                                                                                            | Mitigación                                                                                                                                                                                                                                |
+| ----------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **El perfil AWS por defecto de la máquina de desarrollo es `mayo-prod`** (otra cuenta productiva). Un `terraform apply` sin perfil explícito actuaría sobre ella. | **Implementado:**<br>- dev usa credenciales fijas de prueba y solo admite el endpoint local.<br>- El provider de prd tiene `allowed_account_ids` con la cuenta dedicada y rechaza la de ejemplo.<br>- Despliegues solo desde CI con OIDC. |
-| La región elegida no cumple lo que defina Legal sobre transferencia de datos (L3).           | Decidir D1 con Legal antes de cargar datos reales. Cambiar de región con datos es una migración. |
-| El costo fijo de prod (NAT y Multi-AZ) es alto para el volumen inicial.                      | Arrancar con un NAT y revisar a los 3 meses con datos reales de uso.                          |
-| Rate limit no compartido entre tareas.                                                       | WAF por IP en el ALB y límites críticos en la base de datos.                                  |
-| Tareas programadas duplicadas o reintentadas.                                                | Claves de idempotencia por job y periodo.                                                    |
-| Secretos en el estado de Terraform.                                                          | Contraseña gestionada por RDS; secretos creados vacíos y cargados fuera de Terraform; bucket del estado cifrado y con acceso restringido. |
-| El DNS de `solutionserj.com` está en GoDaddy.                                                 | Se delega solo el subdominio `backend-ayni` a Route 53, con 4 registros NS que se crean una vez en GoDaddy. Después, Terraform administra el certificado y el alias sin pasos manuales. |
-| New Relic deja de recibir datos o de alertar.                                                 | Alarmas de respaldo en CloudWatch para los dos síntomas más graves.                           |
-| El emulador de dev se aleja de AWS en algunos comportamientos.                                | Diferencias documentadas. Lo que el emulador no aplica (TLS en RDS, enrutamiento del ALB, políticas) se verifica con smoke tests en prd. |
+| La región elegida no cumple lo que defina Legal sobre transferencia de datos (L3).                                                                                | Decidir D1 con Legal antes de cargar datos reales. Cambiar de región con datos es una migración.                                                                                                                                          |
+| El costo fijo de prod (NAT y Multi-AZ) es alto para el volumen inicial.                                                                                           | Arrancar con un NAT y revisar a los 3 meses con datos reales de uso.                                                                                                                                                                      |
+| Rate limit no compartido entre tareas.                                                                                                                            | WAF por IP en el ALB y límites críticos en la base de datos.                                                                                                                                                                              |
+| Tareas programadas duplicadas o reintentadas.                                                                                                                     | Claves de idempotencia por job y periodo.                                                                                                                                                                                                 |
+| Secretos en el estado de Terraform.                                                                                                                               | Contraseña gestionada por RDS; secretos creados vacíos y cargados fuera de Terraform; bucket del estado cifrado y con acceso restringido.                                                                                                 |
+| El DNS de `solutionserj.com` está en GoDaddy.                                                                                                                     | Se delega solo el subdominio `backend-ayni` a Route 53, con 4 registros NS que se crean una vez en GoDaddy. Después, Terraform administra el certificado y el alias sin pasos manuales.                                                   |
+| New Relic deja de recibir datos o de alertar.                                                                                                                     | Alarmas de respaldo en CloudWatch para los dos síntomas más graves.                                                                                                                                                                       |
+| El emulador de dev se aleja de AWS en algunos comportamientos.                                                                                                    | Diferencias documentadas. Lo que el emulador no aplica (TLS en RDS, enrutamiento del ALB, políticas) se verifica con smoke tests en prd.                                                                                                  |
 
 ## Decisiones
 

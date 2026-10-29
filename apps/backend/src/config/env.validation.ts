@@ -19,6 +19,9 @@ import {
 } from 'class-validator';
 
 export const NODE_ENVS = ['development', 'test', 'production'] as const;
+/** Igual que `CYCLE_PAYMENTS_ADAPTERS` del módulo de círculos (COPAYNI-56). */
+export const CYCLE_PAYMENTS_ADAPTERS = ['fake'] as const;
+export type CyclePaymentsAdapter = (typeof CYCLE_PAYMENTS_ADAPTERS)[number];
 export const LOG_LEVELS = ['debug', 'info', 'warn', 'error', 'fatal'] as const;
 export const CIRCLE_ASSIGNMENT_STRATEGIES = ['fill_oldest', 'always_new'] as const;
 /** Igual que `ADMIN_FEE_MODES` del dominio de círculos (pending-scope R4). */
@@ -202,6 +205,24 @@ export class EnvironmentVariables {
   @Min(1)
   @Max(20)
   RECOMMENDED_CIRCLES_LIMIT: number = 5;
+
+  /**
+   * Día del mes en que vence cada cuota (COPAYNI-56; pending-scope R19, provisional). Hasta 28
+   * para que exista en todos los meses.
+   */
+  @IsInt()
+  @Min(1)
+  @Max(28)
+  CIRCLE_INSTALLMENT_DUE_DAY: number = 1;
+
+  /**
+   * Cobro de cuotas y pago de payouts del ciclo mensual. `fake` simula ambos (desarrollo y
+   * pruebas) y está prohibido en production; sin valor, el ciclo falla al intentar cobrar
+   * (pasarela pendiente: D1, COPAYNI-34).
+   */
+  @IsOptional()
+  @IsIn(CYCLE_PAYMENTS_ADAPTERS)
+  CIRCLE_PAYMENTS_ADAPTER?: CyclePaymentsAdapter;
 
   /** Zona horaria del negocio: define en qué mes estamos para los cronogramas. */
   @IsTimeZone()
@@ -431,6 +452,11 @@ export function validateEnvironment(config: Record<string, unknown>): Environmen
   const errors = validateSync(env, { skipMissingProperties: false, forbidUnknownValues: true });
   if (env.NODE_ENV === 'production' && env.OTP_DEV_CODE !== undefined) {
     throw new Error('Configuración inválida:\n- OTP_DEV_CODE: no se admite en production');
+  }
+  if (env.NODE_ENV === 'production' && env.CIRCLE_PAYMENTS_ADAPTER === 'fake') {
+    throw new Error(
+      'Configuración inválida:\n- CIRCLE_PAYMENTS_ADAPTER: fake no se admite en production',
+    );
   }
   if (errors.length > 0) {
     const problems = errors.map(

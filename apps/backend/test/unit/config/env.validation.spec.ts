@@ -202,6 +202,23 @@ describe('validateEnvironment', () => {
         /OTP_DEV_CODE: no se admite en production/,
       );
     });
+
+    it('los pagos simulados del ciclo mensual nunca se admiten en production (COPAYNI-56)', () => {
+      expect(validateEnvironment({ ...REQUIRED, CIRCLE_PAYMENTS_ADAPTER: 'fake' })).toMatchObject({
+        CIRCLE_PAYMENTS_ADAPTER: 'fake',
+        CIRCLE_INSTALLMENT_DUE_DAY: 1,
+      });
+      expect(validateEnvironment(PRODUCTION).CIRCLE_PAYMENTS_ADAPTER).toBeUndefined();
+      expect(() => validateEnvironment({ ...PRODUCTION, CIRCLE_PAYMENTS_ADAPTER: 'fake' })).toThrow(
+        /CIRCLE_PAYMENTS_ADAPTER: fake no se admite en production/,
+      );
+      expect(() => validateEnvironment({ ...REQUIRED, CIRCLE_PAYMENTS_ADAPTER: 'stripe' })).toThrow(
+        /CIRCLE_PAYMENTS_ADAPTER/,
+      );
+      expect(() => validateEnvironment({ ...REQUIRED, CIRCLE_INSTALLMENT_DUE_DAY: '29' })).toThrow(
+        /CIRCLE_INSTALLMENT_DUE_DAY/,
+      );
+    });
   });
 
   describe('métodos de cobro', () => {

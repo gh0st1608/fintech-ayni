@@ -59,7 +59,8 @@
       "src/**/*.ts",
       "!src/main.ts",
       "!src/instrumentation.ts",
-      "!src/migrate.ts"
+      "!src/migrate.ts",
+      "!src/jobs/*.ts"
     ],
     "coverageThreshold": {
       "global": {

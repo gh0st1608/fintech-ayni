@@ -39,9 +39,8 @@ export type MembershipStatus = 'active' | 'finished';
 /** Mis círculos (COPAYNI-26): las membresías del usuario, de la más reciente a la más antigua. */
 export interface MembershipsQuery {
   userId: string;
-  /** `finished`: el último mes del círculo es anterior a `currentPeriod`. */
+  /** `finished`: el ciclo del círculo terminó (COPAYNI-56); los demás están activos. */
   status: MembershipStatus;
-  currentPeriod: Period;
   limit: number;
   /** Cursor opaco de la página anterior (`nextCursor`), o `null` para la primera. */
   cursor: string | null;

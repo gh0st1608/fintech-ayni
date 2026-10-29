@@ -104,17 +104,15 @@ export class TypeOrmCircleRepository implements CircleRepositoryPort {
   }
 
   async listMemberships(query: MembershipsQuery): Promise<MembershipPage> {
-    const { userId, status, currentPeriod, limit } = query;
+    const { userId, status, limit } = query;
     const after = query.cursor === null ? null : decodeCursor(query.cursor);
     if (!isUuid(userId)) return { items: [], nextCursor: null };
 
-    const params: unknown[] = [userId, toStartsOn(currentPeriod), limit + 1];
-    // El círculo terminó si el mes siguiente a su último mes ya llegó.
-    const ended = 'c.starts_on + make_interval(months => c.months::int) <= $2::date';
+    const params: unknown[] = [userId, limit + 1];
     let keyset = '';
     if (after) {
       params.push(after.joinedAt, after.membershipId);
-      keyset = 'AND (m.created_at, m.id) < ($4::timestamptz, $5::uuid)';
+      keyset = 'AND (m.created_at, m.id) < ($3::timestamptz, $4::uuid)';
     }
     const rows = await this.memberships.query<MemberCircleRow[]>(
       `SELECT m.id AS membership_id, m.created_at::text AS joined_at, m.position, m.price,
@@ -122,9 +120,10 @@ export class TypeOrmCircleRepository implements CircleRepositoryPort {
               to_char(c.starts_on, 'YYYY-MM') AS starts_on
          FROM circle_memberships m
          JOIN circles c ON c.id = m.circle_id
-        WHERE m.user_id = $1 AND ${status === 'finished' ? ended : `NOT (${ended})`} ${keyset}
+        WHERE m.user_id = $1 AND c.cycle_state ${status === 'finished' ? '=' : '<>'} 'finished'
+              ${keyset}
         ORDER BY m.created_at DESC, m.id DESC
-        LIMIT $3`,
+        LIMIT $2`,
       params,
     );
 

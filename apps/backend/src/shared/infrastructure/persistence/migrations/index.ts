@@ -3,6 +3,7 @@ import { CreateAuth1761739200000 } from './1761739200000-create-auth';
 import { CreatePayoutMethods1761825600000 } from './1761825600000-create-payout-methods';
 import { AddJoinIdempotency1761912000000 } from './1761912000000-add-join-idempotency';
 import { AddMembershipPrice1761998400000 } from './1761998400000-add-membership-price';
+import { CreateCircleCycle1762084800000 } from './1762084800000-create-circle-cycle';
 
 /** Migraciones en orden. Se listan explícitamente: el build no depende de globs. */
 export const MIGRATIONS = [
@@ -11,4 +12,5 @@ export const MIGRATIONS = [
   CreatePayoutMethods1761825600000,
   AddJoinIdempotency1761912000000,
   AddMembershipPrice1761998400000,
+  CreateCircleCycle1762084800000,
 ];

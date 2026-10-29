@@ -34,6 +34,10 @@ export class TestClock implements ClockPort {
   advanceSeconds(seconds: number): void {
     this.current = new Date(this.current.getTime() + seconds * 1000);
   }
+
+  set(date: Date): void {
+    this.current = new Date(date);
+  }
 }
 
 /**

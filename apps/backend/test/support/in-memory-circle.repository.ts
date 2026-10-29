@@ -24,6 +24,8 @@ const roundTrip = (): Promise<void> => new Promise((resolve) => setImmediate(res
  */
 export class InMemoryCircleRepository implements CircleRepositoryPort {
   private readonly circles = new Map<string, { terms: CircleTerms; memberships: Membership[] }>();
+  /** Círculos cuyo ciclo terminó (COPAYNI-56). */
+  private readonly finished = new Set<string>();
   /** Orden de alta de las membresías, que hace de fecha de unión. */
   private readonly joins: { circleId: string; userId: string; joinedAt: Date }[] = [];
 
@@ -54,9 +56,7 @@ export class InMemoryCircleRepository implements CircleRepositoryPort {
         const { position, price } = member;
         return { circleId, terms: stored.terms, position, ...(price && { price }), joinedAt };
       })
-      .filter(
-        ({ terms }) => terms.isFinishedAt(query.currentPeriod) === (query.status === 'finished'),
-      );
+      .filter(({ circleId }) => this.finished.has(circleId) === (query.status === 'finished'));
     const items = matching.slice(offset, offset + query.limit);
     const next = offset + query.limit;
     return { items, nextCursor: next < matching.length ? String(next) : null };
@@ -151,6 +151,11 @@ export class InMemoryCircleRepository implements CircleRepositoryPort {
         (member) => member.userId === userId && member.idempotencyKey === idempotencyKey,
       ),
     );
+  }
+
+  /** Marca el ciclo del círculo como terminado. */
+  finish(circleId: string): void {
+    this.finished.add(circleId);
   }
 
   get size(): number {

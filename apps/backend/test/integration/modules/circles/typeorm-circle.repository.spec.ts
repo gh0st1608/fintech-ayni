@@ -109,7 +109,6 @@ describe('TypeOrmCircleRepository', () => {
     const page = await repository.listMemberships({
       userId: ana,
       status: 'active',
-      currentPeriod: Period.of(2026, 10),
       limit: 5,
       cursor: null,
     });
@@ -128,7 +127,6 @@ describe('TypeOrmCircleRepository', () => {
     const page = await repository.listMemberships({
       userId: ana,
       status: 'active',
-      currentPeriod: Period.of(2026, 10),
       limit: 5,
       cursor: null,
     });
@@ -394,15 +392,18 @@ describe('TypeOrmCircleRepository', () => {
       repository.listMemberships({
         userId,
         status,
-        currentPeriod: Period.of(2026, 10),
         limit: 2,
         cursor,
       });
 
     it('filtra por estado y pagina de la unión más reciente a la más antigua', async () => {
       const ana = await user();
-      const finished = await joinCircle(ana, Period.of(2026, 4)); // terminó en septiembre
-      const lastMonth = await joinCircle(ana, Period.of(2026, 5)); // termina este mes: activo
+      const finished = await joinCircle(ana, Period.of(2026, 4));
+      // El ciclo decide cuándo termina un círculo (COPAYNI-56), no las fechas.
+      await dataSource.query(`UPDATE circles SET cycle_state = 'finished' WHERE id = $1`, [
+        finished,
+      ]);
+      const lastMonth = await joinCircle(ana, Period.of(2026, 5)); // ya pasó su fecha: activo
       const started = await joinCircle(ana, Period.of(2026, 8));
       const upcoming = await joinCircle(ana, Period.of(2026, 12));
       await joinCircle(await user(), Period.of(2026, 12)); // de otro usuario

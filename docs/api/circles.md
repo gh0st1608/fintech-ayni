@@ -268,11 +268,11 @@ Criterio (coherente con la asignación `fill_oldest`, R2; pendiente con el PO):
 
 Mis círculos, de la unión más reciente a la más antigua, paginados por cursor.
 
-| Parámetro | Notas                                                                                                                                                             |
-| --------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `status`  | Obligatorio. `active`: el círculo todavía no terminó, **incluidos los que no empezaron**. `finished`: su último mes ya pasó (mes actual en `BUSINESS_TIME_ZONE`). |
-| `cursor`  | El `nextCursor` de la página anterior. Es opaco: la app no lo interpreta.                                                                                         |
-| `limit`   | De 1 a 50; 20 por defecto.                                                                                                                                        |
+| Parámetro | Notas                                                                                                                                              |
+| --------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `status`  | Obligatorio. `active`: el círculo todavía no terminó, **incluidos los que no empezaron**. `finished`: su ciclo pagó el último payout (COPAYNI-56). |
+| `cursor`  | El `nextCursor` de la página anterior. Es opaco: la app no lo interpreta.                                                                          |
+| `limit`   | De 1 a 50; 20 por defecto.                                                                                                                         |
 
 **200**:
 
@@ -306,6 +306,26 @@ Mis círculos, de la unión más reciente a la más antigua, paginados por curso
 | Error              | HTTP | Cuándo                                                                                                |
 | ------------------ | ---- | ----------------------------------------------------------------------------------------------------- |
 | `VALIDATION_ERROR` | 400  | `status` ausente o inválido, `limit` fuera de rango, o `cursor` inválido (`details.cursor: invalid`). |
+
+## Ciclo mensual (COPAYNI-56)
+
+No es un endpoint: lo ejecuta la tarea diaria `node dist/jobs/circle-cycle.js` (docs/architecture.md, sección 6). Sigue el workflow ROSCA del PO (pending-scope §3.1):
+
+| Estado guardado | Significado                                                                                                                                                  | Paso del workflow                                     |
+| --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------- |
+| `collecting`    | Reúne miembros; todavía no llegó su mes de inicio                                                                                                            | Collecting Applications                               |
+| `contributing`  | Mes en curso: se cobran las cuotas                                                                                                                           | Contributing                                          |
+| —               | Al cerrar el mes, en la misma ejecución: se verifica que todas las cuotas estén pagadas, se elige a quien tiene el turno del mes y se le paga el payout neto | Checking, Setting Receiver, Distributing, Distributed |
+| `finished`      | Pagó el último payout                                                                                                                                        | Finished                                              |
+| `paused`        | Detenido por el admin general (COPAYNI-61)                                                                                                                   | Paused                                                |
+
+- **Inicio:** el primer día del mes de inicio, aunque haya turnos libres (R2 sigue abierta). Se abre una cuota por miembro con el precio congelado al unirse (COPAYNI-55).
+- **Vencimiento:** cada cuota vence el día `CIRCLE_INSTALLMENT_DUE_DAY` de su mes (por defecto 1; R19, provisional). Desde ese día se cobra; si el cobro falla, queda `overdue` y se reintenta cada día. La gracia de 3 días, la expulsión y el cargo por mora llegan con COPAYNI-57.
+- **Cierre del mes:** solo cuando todas sus cuotas están pagadas. El payout es el `netPayout` del miembro que tiene el turno. Si el turno está libre, no hay payout y se registra `circles.cycle.payout_unassigned`; el destino de ese pozo llega con COPAYNI-58 y 59.
+- **Puesta al día:** si la tarea no corrió varios días, procesa todos los meses vencidos.
+- **Pagos:** por los puertos `ContributionsPort` y `DisbursementsPort`, idempotentes por cuota y por (círculo, mes). Hasta tener pasarela (D1, COPAYNI-34) solo existe el adaptador `fake`, prohibido en production.
+- **Auditoría:** eventos `circles.cycle.started`, `installment_paid`, `installment_overdue`, `payout_disbursed`, `payout_unassigned`, `finished`, `failed` y el resumen `circles.cycle.run`.
+- **Tablas:** `circles.cycle_state` y `circles.current_period`, `circle_installments` (única por círculo, turno y mes) y `circle_payouts` (única por círculo y mes).
 
 ## Valores pendientes (pending-scope M6, R5 y R15)
 

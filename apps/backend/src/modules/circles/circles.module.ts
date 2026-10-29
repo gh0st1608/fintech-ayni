@@ -3,7 +3,9 @@ import { ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 
 import { type AppConfigService } from '../../config/configuration';
+import { CIRCLE_CYCLE_REPOSITORY } from './application/ports/circle-cycle-repository.port';
 import { CIRCLE_REPOSITORY } from './application/ports/circle-repository.port';
+import { CONTRIBUTIONS, DISBURSEMENTS } from './application/ports/cycle-payments.port';
 import { PayoutsModule } from '../payouts/payouts.module';
 import { JOIN_CONFIG_REPOSITORY } from './application/ports/join-config-repository.port';
 import { JOIN_ELIGIBILITY } from './application/ports/join-eligibility.port';
@@ -13,6 +15,11 @@ import {
   GetAvailableSlotsUseCase,
   SLOT_PRICING,
 } from './application/use-cases/get-available-slots.use-case';
+import {
+  AdvanceCircleCyclesUseCase,
+  CIRCLE_CYCLE,
+  type CircleCycleSettings,
+} from './application/use-cases/advance-circle-cycles.use-case';
 import { GetInstallmentOptionsUseCase } from './application/use-cases/get-installment-options.use-case';
 import { GetJoinConfigUseCase } from './application/use-cases/get-join-config.use-case';
 import { JoinCircleUseCase } from './application/use-cases/join-circle.use-case';
@@ -25,9 +32,14 @@ import {
 import { SlotPricing } from './domain/services/slot-pricing';
 import { SlotPricingRules } from './domain/value-objects/slot-pricing-rules';
 import { ProvisionalJoinEligibility } from './infrastructure/eligibility/provisional-join-eligibility';
+import {
+  FakeCyclePayments,
+  UnconfiguredCyclePayments,
+} from './infrastructure/payments/cycle-payments';
 import { ConfigJoinConfigRepository } from './infrastructure/persistence/config-join-config.repository';
 import { CircleMembershipEntity } from './infrastructure/persistence/typeorm/circle-membership.entity';
 import { CircleEntity } from './infrastructure/persistence/typeorm/circle.entity';
+import { TypeOrmCircleCycleRepository } from './infrastructure/persistence/typeorm/typeorm-circle-cycle.repository';
 import { TypeOrmCircleRepository } from './infrastructure/persistence/typeorm/typeorm-circle.repository';
 import { CirclesController } from './presentation/http/controllers/circles.controller';
 import { MyCirclesController } from './presentation/http/controllers/my-circles.controller';
@@ -42,6 +54,28 @@ import { MyCirclesController } from './presentation/http/controllers/my-circles.
     JoinCircleUseCase,
     ListMyCirclesUseCase,
     ListRecommendedCirclesUseCase,
+    // Ciclo mensual (COPAYNI-56): lo ejecuta la tarea programada dist/jobs/circle-cycle.js.
+    AdvanceCircleCyclesUseCase,
+    TypeOrmCircleCycleRepository,
+    { provide: CIRCLE_CYCLE_REPOSITORY, useExisting: TypeOrmCircleCycleRepository },
+    {
+      provide: CIRCLE_CYCLE,
+      inject: [ConfigService],
+      useFactory: (config: AppConfigService): CircleCycleSettings => ({
+        dueDay: config.get('CIRCLE_INSTALLMENT_DUE_DAY', { infer: true }),
+        timeZone: config.get('BUSINESS_TIME_ZONE', { infer: true }),
+      }),
+    },
+    {
+      // Pasarela pendiente (D1, COPAYNI-34): solo pagos simulados o ninguno.
+      provide: CONTRIBUTIONS,
+      inject: [ConfigService],
+      useFactory: (config: AppConfigService) =>
+        config.get('CIRCLE_PAYMENTS_ADAPTER', { infer: true }) === 'fake'
+          ? new FakeCyclePayments()
+          : new UnconfiguredCyclePayments(),
+    },
+    { provide: DISBURSEMENTS, useExisting: CONTRIBUTIONS },
     {
       // Criterio provisional de recomendación (COPAYNI-25).
       provide: RECOMMENDATIONS,
