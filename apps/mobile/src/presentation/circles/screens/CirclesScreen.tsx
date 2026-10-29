@@ -167,7 +167,7 @@ function JoinedCircleCard({ circle }: { circle: MyCircle }) {
       durationLabel={t('circles.card.duration', { months: circle.months })}
       feesLabel={t('circles.card.adminFees')}
       feesAmount={money(circle.adminFee)}
-      badge={t('circles.card.joined')}
+      badge={t(circle.expelled ? 'circles.card.expelled' : 'circles.card.joined')}
       testID={`my-circle-${circle.circleId}`}
     />
   );

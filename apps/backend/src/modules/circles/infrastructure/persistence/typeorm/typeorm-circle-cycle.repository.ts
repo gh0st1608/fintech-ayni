@@ -84,7 +84,10 @@ export class TypeOrmCircleCycleRepository implements CircleCycleRepositoryPort {
     if (!circle) throw new Error(`No existe el círculo ${circleId}`);
     const members = await manager.query<
       { user_id: string; position: number; price: StoredSlotPrice | null }[]
-    >('SELECT user_id, position, price FROM circle_memberships WHERE circle_id = $1', [circleId]);
+    >(
+      'SELECT user_id, position, price FROM circle_memberships WHERE circle_id = $1 AND expelled_at IS NULL',
+      [circleId],
+    );
     const installments = circle.current_period
       ? await manager.query<InstallmentRow[]>(
           `SELECT id, user_id, position, to_char(period, 'YYYY-MM') AS period,
@@ -160,6 +163,31 @@ export class TypeOrmCircleCycleRepository implements CircleCycleRepositoryPort {
           payout.amount.amount,
           payout.amount.currency,
         ],
+      );
+    }
+    for (const expulsion of cycle.expulsions) {
+      await manager.query(
+        `INSERT INTO circle_expulsions
+           (circle_id, user_id, position, period, expelled_on, overdue_amount, late_fee_amount,
+            refund_amount, currency)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+         ON CONFLICT ON CONSTRAINT uq_circle_expulsions_member DO NOTHING`,
+        [
+          cycle.circleId,
+          expulsion.userId,
+          expulsion.position,
+          toDate(expulsion.period),
+          expulsion.expelledOn.toString(),
+          expulsion.overdue.amount,
+          expulsion.lateFee.amount,
+          expulsion.refund?.amount ?? null,
+          expulsion.overdue.currency,
+        ],
+      );
+      await manager.query(
+        `UPDATE circle_memberships SET expelled_at = now()
+          WHERE circle_id = $1 AND user_id = $2 AND expelled_at IS NULL`,
+        [cycle.circleId, expulsion.userId],
       );
     }
   }

@@ -13,6 +13,7 @@ const REJECTIONS = {
   PAYOUT_METHOD_LIMIT_EXCEEDED: 'validation',
   SLOT_TAKEN: 'conflict',
   CIRCLE_ALREADY_STARTED: 'conflict',
+  MEMBER_BLOCKED: 'conflict',
 } as const satisfies Record<string, AppErrorKind>;
 
 export type JoinRejection = keyof typeof REJECTIONS;
@@ -72,7 +73,7 @@ export class InMemoryCircleMembershipRepository implements CircleMembershipRepos
     const current = this.options.currentPeriod ?? thisMonth();
     // Los períodos YYYY-MM se comparan como texto.
     const matching = this.mine.filter(
-      ({ endsOn }) => (endsOn < current ? 'finished' : 'active') === status,
+      ({ endsOn, expelled }) => (endsOn < current || expelled ? 'finished' : 'active') === status,
     );
     const offset = cursor === null ? 0 : Number(cursor);
     const size = this.options.pageSize ?? 20;
@@ -90,7 +91,16 @@ export class InMemoryCircleMembershipRepository implements CircleMembershipRepos
     if (this.rejection) {
       const code = this.rejection;
       this.rejection = undefined;
-      throw new AppError(REJECTIONS[code], `Join rejected: ${code}`, { code });
+      // Como el backend: lo vencido (una cuota base) más 3 % de cargo por mora, en unidades menores.
+      const installment = Math.round(request.payout.amount / request.months);
+      const fieldErrors =
+        code === 'MEMBER_BLOCKED'
+          ? {
+              amountDue: String(installment + Math.round(installment * 0.03)),
+              currency: request.payout.currency,
+            }
+          : undefined;
+      throw new AppError(REJECTIONS[code], `Join rejected: ${code}`, { code, fieldErrors });
     }
 
     const { payout, months, position } = request;
@@ -115,6 +125,7 @@ export class InMemoryCircleMembershipRepository implements CircleMembershipRepos
       endsOn: addMonths(startsOn, months - 1),
       adminFee: Money.of(0, payout.currency),
       joinedAt: new Date(),
+      expelled: false,
     });
     return joined;
   }

@@ -49,6 +49,7 @@ interface MemberCircleRow {
   joined_at: string;
   position: number;
   price: StoredSlotPrice | null;
+  expelled: boolean;
   circle_id: string;
   payout_amount: string;
   currency: string;
@@ -116,11 +117,12 @@ export class TypeOrmCircleRepository implements CircleRepositoryPort {
     }
     const rows = await this.memberships.query<MemberCircleRow[]>(
       `SELECT m.id AS membership_id, m.created_at::text AS joined_at, m.position, m.price,
-              c.id AS circle_id, c.payout_amount::text AS payout_amount, c.currency, c.months,
+              m.expelled_at IS NOT NULL AS expelled, c.id AS circle_id, c.payout_amount::text AS payout_amount, c.currency, c.months,
               to_char(c.starts_on, 'YYYY-MM') AS starts_on
          FROM circle_memberships m
          JOIN circles c ON c.id = m.circle_id
-        WHERE m.user_id = $1 AND c.cycle_state ${status === 'finished' ? '=' : '<>'} 'finished'
+        WHERE m.user_id = $1
+              AND ${status === 'finished' ? '' : 'NOT'} (c.cycle_state = 'finished' OR m.expelled_at IS NOT NULL)
               ${keyset}
         ORDER BY m.created_at DESC, m.id DESC
         LIMIT $2`,
@@ -140,6 +142,7 @@ export class TypeOrmCircleRepository implements CircleRepositoryPort {
         position: row.position,
         ...(row.price && { price: fromStoredPrice(row.price) }),
         joinedAt: new Date(row.joined_at),
+        expelled: row.expelled,
       })),
       nextCursor:
         rows.length > limit && last

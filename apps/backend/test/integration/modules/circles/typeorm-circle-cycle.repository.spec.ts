@@ -3,6 +3,7 @@ import { randomUUID } from 'node:crypto';
 import { Logger } from '@nestjs/common';
 import { type DataSource } from 'typeorm';
 
+import { type ContributionsPort } from '@src/modules/circles/application/ports/cycle-payments.port';
 import { AdvanceCircleCyclesUseCase } from '@src/modules/circles/application/use-cases/advance-circle-cycles.use-case';
 import { Circle } from '@src/modules/circles/domain/entities/circle';
 import { CircleCycle } from '@src/modules/circles/domain/entities/circle-cycle';
@@ -13,10 +14,11 @@ import { CircleMembershipEntity } from '@src/modules/circles/infrastructure/pers
 import { CircleEntity } from '@src/modules/circles/infrastructure/persistence/typeorm/circle.entity';
 import { TypeOrmCircleCycleRepository } from '@src/modules/circles/infrastructure/persistence/typeorm/typeorm-circle-cycle.repository';
 import { TypeOrmCircleRepository } from '@src/modules/circles/infrastructure/persistence/typeorm/typeorm-circle.repository';
+import { TypeOrmMemberDebts } from '@src/modules/circles/infrastructure/persistence/typeorm/typeorm-member-debts.repository';
 import { Money } from '@src/shared/domain/value-objects/money';
 import { Period } from '@src/shared/domain/value-objects/period';
 import { TestClock } from '@test/support/create-test-app';
-import { TEST_PRICING } from '@test/support/join-circle.fixture';
+import { TEST_DELINQUENCY, TEST_PRICING } from '@test/support/join-circle.fixture';
 import { insertTestUser, openTestDatabase } from '@test/support/test-database';
 
 const MONTHS = 6;
@@ -24,22 +26,26 @@ const MONTHS = 6;
 const at = (date: string) => new Date(`${date}T17:00:00Z`);
 
 /**
- * El ciclo mensual contra PostgreSQL (COPAYNI-56): guardado, bloqueo e idempotencia. Otros
+ * El ciclo mensual contra PostgreSQL (COPAYNI-56 y 57): guardado, bloqueo, idempotencia y
+ * expulsión por impago. Otros
  * archivos crean círculos en la misma base, así que la tarea se limita a los de este archivo.
  */
 describe('TypeOrmCircleCycleRepository', () => {
   let dataSource: DataSource;
   let circles: TypeOrmCircleRepository;
   let cycles: TypeOrmCircleCycleRepository;
+  let debts: TypeOrmMemberDebts;
 
   beforeAll(async () => {
     jest.spyOn(Logger.prototype, 'log').mockImplementation(() => undefined);
+    jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
     dataSource = await openTestDatabase([CircleEntity, CircleMembershipEntity]);
     circles = new TypeOrmCircleRepository(
       dataSource.getRepository(CircleEntity),
       dataSource.getRepository(CircleMembershipEntity),
     );
     cycles = new TypeOrmCircleCycleRepository(dataSource.getRepository(CircleEntity));
+    debts = new TypeOrmMemberDebts(dataSource.getRepository(CircleEntity));
   });
 
   afterAll(async () => {
@@ -69,13 +75,13 @@ describe('TypeOrmCircleCycleRepository', () => {
   }
 
   /** La tarea diaria, limitada a `circleIds`. */
-  function job(circleIds: string[]) {
+  function job(circleIds: string[], contributions: ContributionsPort = new FakeCyclePayments()) {
     const clock = new TestClock();
     const useCase = new AdvanceCircleCyclesUseCase(
       { listToAdvance: () => Promise.resolve(circleIds), withLock: cycles.withLock.bind(cycles) },
       TEST_PRICING,
-      { dueDay: 5, timeZone: 'America/Lima' },
-      new FakeCyclePayments(),
+      { dueDay: 5, timeZone: 'America/Lima', delinquency: TEST_DELINQUENCY },
+      contributions,
       new FakeCyclePayments(),
       clock,
     );
@@ -146,6 +152,74 @@ describe('TypeOrmCircleCycleRepository', () => {
     expect(await count('circle_installments', id)).toBe(MONTHS * 2);
   });
 
+  it('expulsa al que no pagó en la gracia, registra su deuda y lo desbloquea al saldarla', async () => {
+    const { id, members } = await fullCircle();
+    const defaulter = members[3]!;
+    const runOn = job([id], {
+      collect: (installment) =>
+        Promise.resolve(installment.userId === defaulter.userId ? 'failed' : 'paid'),
+    });
+    await runOn('2026-11-05');
+    await runOn('2026-11-08');
+    await expect(debts.openDebtsOf(defaulter.userId)).resolves.toEqual([]);
+    await runOn('2026-11-09');
+    await runOn('2026-11-09');
+
+    const installment = defaulter.price.installments[0]!;
+    const expulsions = await dataSource.query<Record<string, unknown>[]>(
+      `SELECT position, to_char(period, 'YYYY-MM') AS period,
+              to_char(expelled_on, 'YYYY-MM-DD') AS expelled_on, overdue_amount::int AS overdue,
+              late_fee_amount::int AS late_fee, refund_amount::int AS refund, currency
+         FROM circle_expulsions WHERE circle_id = $1`,
+      [id],
+    );
+    expect(expulsions).toEqual([
+      {
+        position: 4,
+        period: '2026-11',
+        expelled_on: '2026-11-09',
+        overdue: installment.amount,
+        late_fee: installment.percentage(300).amount,
+        refund: 0,
+        currency: 'PEN',
+      },
+    ]);
+    const statuses = await dataSource.query<{ status: string }[]>(
+      `SELECT status FROM circle_installments
+        WHERE circle_id = $1 AND user_id = $2 ORDER BY period`,
+      [id, defaulter.userId],
+    );
+    expect(statuses).toEqual([{ status: 'defaulted' }]);
+    // Noviembre cerró con su cuota incobrable y diciembre se abrió sin él.
+    expect(await count('circle_payouts', id)).toBe(1);
+    expect(await count('circle_installments', id)).toBe(MONTHS + MONTHS - 1);
+
+    const debt = { circleId: id, overdue: installment, lateFee: installment.percentage(300) };
+    await expect(debts.openDebtsOf(defaulter.userId)).resolves.toEqual([debt]);
+    const list = (status: 'active' | 'finished') =>
+      circles.listMemberships({ userId: defaulter.userId, status, limit: 5, cursor: null });
+    expect((await list('active')).items).toEqual([]);
+    expect((await list('finished')).items).toEqual([
+      expect.objectContaining({ circleId: id, expelled: true }),
+    ]);
+    expect(
+      (
+        await circles.listMemberships({
+          userId: members[0]!.userId,
+          status: 'active',
+          limit: 5,
+          cursor: null,
+        })
+      ).items,
+    ).toEqual([expect.objectContaining({ circleId: id, expelled: false })]);
+
+    await expect(debts.settle(defaulter.userId, id)).resolves.toBe(true);
+    await expect(debts.settle(defaulter.userId, id)).resolves.toBe(false);
+    await expect(debts.openDebtsOf(defaulter.userId)).resolves.toEqual([]);
+    await expect(debts.openDebtsOf('no-es-uuid')).resolves.toEqual([]);
+    await expect(debts.settle('no-es-uuid', id)).resolves.toBe(false);
+  });
+
   it('una segunda ejecución simultánea no procesa el círculo bloqueado', async () => {
     const { id } = await fullCircle();
     let release!: () => void;
@@ -156,7 +230,12 @@ describe('TypeOrmCircleCycleRepository', () => {
     const first = cycles.withLock(id, async (stored) => {
       entered();
       await gate;
-      return CircleCycle.restore({ ...stored, dueDay: 5, members: [] });
+      return CircleCycle.restore({
+        ...stored,
+        dueDay: 5,
+        delinquency: TEST_DELINQUENCY,
+        members: [],
+      });
     });
     await inside;
     await expect(
@@ -170,7 +249,12 @@ describe('TypeOrmCircleCycleRepository', () => {
     const { id } = await fullCircle();
     await expect(
       cycles.withLock(id, (stored) => {
-        const cycle = CircleCycle.restore({ ...stored, dueDay: 5, members: [] });
+        const cycle = CircleCycle.restore({
+          ...stored,
+          dueDay: 5,
+          delinquency: TEST_DELINQUENCY,
+          members: [],
+        });
         cycle.start(randomUUID);
         return Promise.reject(new Error('falla del proveedor'));
       }),

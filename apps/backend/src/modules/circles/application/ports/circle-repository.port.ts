@@ -39,7 +39,10 @@ export type MembershipStatus = 'active' | 'finished';
 /** Mis círculos (COPAYNI-26): las membresías del usuario, de la más reciente a la más antigua. */
 export interface MembershipsQuery {
   userId: string;
-  /** `finished`: el ciclo del círculo terminó (COPAYNI-56); los demás están activos. */
+  /**
+   * `finished`: el ciclo del círculo terminó (COPAYNI-56) o el usuario fue expulsado (COPAYNI-57);
+   * los demás están activos.
+   */
   status: MembershipStatus;
   limit: number;
   /** Cursor opaco de la página anterior (`nextCursor`), o `null` para la primera. */
@@ -53,6 +56,8 @@ export interface MemberCircle {
   /** Precio congelado al unirse; falta en las membresías anteriores a COPAYNI-55. */
   price?: SlotPrice;
   joinedAt: Date;
+  /** El usuario fue expulsado por impago (COPAYNI-57). */
+  expelled: boolean;
 }
 
 export interface MembershipPage {

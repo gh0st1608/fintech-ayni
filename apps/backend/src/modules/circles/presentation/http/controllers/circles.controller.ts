@@ -132,7 +132,8 @@ export class CirclesController {
   })
   @ApiNotFoundResponse({ description: 'circleId inexistente (CIRCLE_NOT_FOUND)' })
   @ApiConflictResponse({
-    description: 'SLOT_TAKEN, ALREADY_MEMBER, CIRCLE_ALREADY_STARTED o IDEMPOTENCY_KEY_REUSED',
+    description:
+      'SLOT_TAKEN, ALREADY_MEMBER, CIRCLE_ALREADY_STARTED, IDEMPOTENCY_KEY_REUSED o MEMBER_BLOCKED (details: amountDue, currency)',
   })
   @ApiUnprocessableEntityResponse({
     description:

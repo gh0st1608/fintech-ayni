@@ -143,7 +143,9 @@
         "monthlyLimitExceeded": "Las cuotas de este turno superan tu límite mensual de pay-in.",
         "payoutMethodRequired": "Elige cómo quieres recibir tu payout antes de unirte.",
         "payoutMethodLimitExceeded": "El payout supera el límite de tu método de cobro. Elige otro método.",
-        "slotNoLongerAvailable": "Ese turno ya no está disponible. Elige otro."
+        "slotNoLongerAvailable": "Ese turno ya no está disponible. Elige otro.",
+        "memberBlocked": "Fuiste expulsado de un círculo por no pagar una cuota. Paga lo vencido más el cargo por mora ({{amount}}) para unirte a otro.",
+        "memberBlockedNoAmount": "Fuiste expulsado de un círculo por no pagar una cuota. Paga lo vencido más el cargo por mora para unirte a otro."
       },
       "actions": {
         "verifyIdentity": "Verificar mi National ID",
@@ -169,7 +171,8 @@
       "yourTurn": "Tu turno · {{month}}",
       "duration": "{{months}} meses",
       "adminFees": "Admin Fees:",
-      "joined": "Unido"
+      "joined": "Unido",
+      "expelled": "Expulsado"
     },
     "empty": {
       "active": "¡Tus círculos activos aparecerán aquí!",

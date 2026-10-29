@@ -3,7 +3,7 @@ import { randomUUID } from 'node:crypto';
 import { Inject, Injectable, Logger } from '@nestjs/common';
 
 import { CLOCK, type ClockPort } from '../../../../shared/application/ports/clock.port';
-import { type Money } from '../../../../shared/domain/value-objects/money';
+import { Money } from '../../../../shared/domain/value-objects/money';
 import { Period } from '../../../../shared/domain/value-objects/period';
 import { ConflictError, NotFoundError, ValidationError } from '../../../../shared/errors/app-error';
 import { Circle, IdempotencyKeyReusedError, type Membership } from '../../domain/entities/circle';
@@ -16,6 +16,7 @@ import {
   IdempotencyKeyExistsError,
 } from '../ports/circle-repository.port';
 import { JOIN_ELIGIBILITY, type JoinEligibilityPort } from '../ports/join-eligibility.port';
+import { MEMBER_DEBTS, type MemberDebtsPort } from '../ports/member-debts.port';
 import {
   JOIN_CONFIG_REPOSITORY,
   type JoinConfigRepositoryPort,
@@ -30,6 +31,19 @@ import { offeredPayout } from './offered-payout';
 export class CircleAlreadyStartedError extends ConflictError {
   constructor() {
     super('CIRCLE_ALREADY_STARTED', 'El círculo ya empezó: elige otro turno');
+  }
+}
+
+/**
+ * El usuario fue expulsado por impago y no pagó lo vencido más el cargo por mora (COPAYNI-57).
+ * `amountDue` va en unidades menores, como el resto de los montos del contrato.
+ */
+export class MemberBlockedError extends ConflictError {
+  constructor(amountDue: Money) {
+    super('MEMBER_BLOCKED', 'Tienes una deuda por impago: págala para unirte a otro círculo', {
+      amountDue: String(amountDue.amount),
+      currency: amountDue.currency,
+    });
   }
 }
 
@@ -56,6 +70,7 @@ export interface JoinCircleResult {
  * Confirma la unión a un Game'ya (COPAYNI-31): reserva el slot de forma atómica e idempotente.
  * - Un reintento con la misma clave responde la unión ya hecha, antes de volver a validar: la
  *   elegibilidad pudo cambiar desde entonces, pero la unión ya existe.
+ * - Rechaza al expulsado por impago con deuda abierta (MEMBER_BLOCKED, COPAYNI-57).
  * - Valida las condiciones como `slots` (COPAYNI-30) y la elegibilidad del usuario: National ID,
  *   límite mensual y método de cobro (`assertCanJoin`).
  * - Con `circleId: null` abre el círculo nuevo que ofreció `slots`, con el mismo inicio.
@@ -74,12 +89,14 @@ export class JoinCircleUseCase {
     @Inject(SLOT_PRICING) private readonly pricing: SlotPricing,
     @Inject(CIRCLE_ASSIGNMENT) private readonly assignment: CircleAssignmentSettings,
     @Inject(JOIN_ELIGIBILITY) private readonly eligibility: JoinEligibilityPort,
+    @Inject(MEMBER_DEBTS) private readonly debts: MemberDebtsPort,
     @Inject(CLOCK) private readonly clock: ClockPort,
   ) {}
 
   async execute(command: JoinCircleCommand): Promise<JoinCircleResult> {
     const previous = await this.previousJoin(command);
     if (previous) return previous;
+    await this.assertNotBlocked(command.userId);
 
     const joinConfig = await this.joinConfigs.getForUser(command.userId);
     const payout = offeredPayout(joinConfig, command.payoutAmount, command.months);
@@ -114,6 +131,17 @@ export class JoinCircleUseCase {
       newCircle: isNew,
     });
     return { circleId: circle.id, terms: circle.terms, membership, quote, created: true };
+  }
+
+  private async assertNotBlocked(userId: string): Promise<void> {
+    const [first, ...rest] = await this.debts.openDebtsOf(userId);
+    if (!first) return;
+    // Un solo país y una sola moneda en el MVP: sumar monedas distintas falla (InvalidMoneyError).
+    const amountDue = rest.reduce(
+      (total, { overdue, lateFee }) => total.add(overdue).add(lateFee),
+      first.overdue.add(first.lateFee),
+    );
+    throw new MemberBlockedError(Money.of(amountDue.amount, amountDue.currency));
   }
 
   private async previousJoin(command: JoinCircleCommand): Promise<JoinCircleResult | null> {

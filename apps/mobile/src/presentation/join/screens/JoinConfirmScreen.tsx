@@ -5,6 +5,7 @@ import { ScrollView, StyleSheet, View } from 'react-native';
 import type { JoinCircleDraft } from '@/domain/circles/JoinCircleDraft';
 import {
   type JoinedCircle,
+  MemberBlockedError,
   MonthlyLimitExceededError,
   NationalIdRequiredError,
   PayoutMethodLimitExceededError,
@@ -130,7 +131,7 @@ function Review({
     },
   ];
 
-  const recovery = recoveryFor(t, join.error, {
+  const recovery = recoveryFor(t, money, join.error, {
     onEditSlot,
     onEditPayoutMethod,
     onVerifyIdentity,
@@ -180,6 +181,7 @@ interface Recovery {
 /** Cada rechazo de negocio tiene su mensaje y, si la ruta existe, la acción que lo resuelve. */
 function recoveryFor(
   t: TFunction,
+  money: (amount: Money) => string,
   error: Error | null,
   actions: Pick<
     JoinConfirmScreenProps,
@@ -210,6 +212,14 @@ function recoveryFor(
     return {
       message: t('join.confirm.errors.payoutMethodLimitExceeded'),
       action: withAction(t('join.confirm.actions.choosePayoutMethod'), actions.onEditPayoutMethod),
+    };
+  }
+  // El pago de la deuda llega con la pasarela (D1): por ahora solo se explica el motivo.
+  if (error instanceof MemberBlockedError) {
+    return {
+      message: error.amountDue
+        ? t('join.confirm.errors.memberBlocked', { amount: money(error.amountDue) })
+        : t('join.confirm.errors.memberBlockedNoAmount'),
     };
   }
   if (error instanceof SlotNoLongerAvailableError) {

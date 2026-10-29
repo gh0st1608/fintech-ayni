@@ -219,6 +219,23 @@ describe('validateEnvironment', () => {
         /CIRCLE_INSTALLMENT_DUE_DAY/,
       );
     });
+
+    it('trae las reglas de impago del PO y no admite una penalidad de devolución menor a 5 % (COPAYNI-57)', () => {
+      expect(validateEnvironment({ ...REQUIRED })).toMatchObject({
+        DELINQUENCY_GRACE_DAYS: 3,
+        LATE_FEE_BPS: 300,
+        EXPULSION_REFUND_PENALTY_BPS: 500,
+      });
+      expect(() =>
+        validateEnvironment({ ...REQUIRED, EXPULSION_REFUND_PENALTY_BPS: '499' }),
+      ).toThrow(/EXPULSION_REFUND_PENALTY_BPS/);
+      expect(() => validateEnvironment({ ...REQUIRED, LATE_FEE_BPS: '10001' })).toThrow(
+        /LATE_FEE_BPS/,
+      );
+      expect(() => validateEnvironment({ ...REQUIRED, DELINQUENCY_GRACE_DAYS: '-1' })).toThrow(
+        /DELINQUENCY_GRACE_DAYS/,
+      );
+    });
   });
 
   describe('métodos de cobro', () => {

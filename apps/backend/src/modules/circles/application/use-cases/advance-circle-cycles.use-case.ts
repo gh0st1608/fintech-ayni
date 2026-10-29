@@ -4,7 +4,7 @@ import { Inject, Injectable, Logger } from '@nestjs/common';
 
 import { CLOCK, type ClockPort } from '../../../../shared/application/ports/clock.port';
 import { LocalDate } from '../../../../shared/domain/value-objects/local-date';
-import { CircleCycle } from '../../domain/entities/circle-cycle';
+import { CircleCycle, type DelinquencyPolicy } from '../../domain/entities/circle-cycle';
 import { type SlotPricing } from '../../domain/services/slot-pricing';
 import {
   CIRCLE_CYCLE_REPOSITORY,
@@ -25,6 +25,8 @@ export interface CircleCycleSettings {
   /** Día del mes en que vence cada cuota (pending-scope R19, provisional). */
   dueDay: number;
   timeZone: string;
+  /** Gracia, cargo por mora y penalidad de devolución (COPAYNI-57). */
+  delinquency: DelinquencyPolicy;
 }
 
 export interface AdvanceCyclesResult {
@@ -38,10 +40,12 @@ export interface AdvanceCyclesResult {
  * Tarea diaria del ciclo mensual (COPAYNI-56). Para cada círculo pendiente, con el círculo
  * bloqueado:
  * - Lo empieza cuando llega su mes de inicio, abriendo las cuotas del primer mes.
+ * - Expulsa a quien no pagó al terminar la gracia (COPAYNI-57), antes de reintentar el cobro: un
+ *   pago que llega después de la gracia no evita la expulsión.
  * - Cobra las cuotas vencidas: las que no se pueden cobrar quedan `overdue` y se reintentan
- *   al día siguiente (la gracia y la expulsión llegan con COPAYNI-57).
- * - Con todas las cuotas del mes pagadas, paga el payout a quien tiene el turno y abre el mes
- *   siguiente, o termina el círculo. Si la tarea no corrió varios días, se pone al día.
+ *   al día siguiente, durante la gracia.
+ * - Con todas las cuotas del mes pagadas o incobrables, paga el payout a quien tiene el turno y
+ *   abre el mes siguiente, o termina el círculo. Si la tarea no corrió varios días, se pone al día.
  *
  * Es idempotente: el estado se guarda con cada círculo y los puertos de pago son idempotentes,
  * así que volver a ejecutarla el mismo día no duplica cobros ni payouts. Un círculo que falla
@@ -86,6 +90,7 @@ export class AdvanceCircleCyclesUseCase {
     const cycle = CircleCycle.restore({
       ...stored,
       dueDay: this.settings.dueDay,
+      delinquency: this.settings.delinquency,
       members: stored.members.map(({ userId, position, price }) => ({
         userId,
         position,
@@ -98,6 +103,20 @@ export class AdvanceCircleCyclesUseCase {
     }
 
     while (cycle.state === 'contributing') {
+      for (const { id } of cycle.defaultedInstallments(today)) {
+        const expulsion = cycle.expel(id, today);
+        // Su cuota la cubre el fondo (COPAYNI-58); la vacante se ofrece con COPAYNI-59.
+        this.logger.warn({
+          event: 'circles.cycle.member_expelled',
+          circleId,
+          userId: expulsion.userId,
+          period: expulsion.period.toString(),
+          overdue: expulsion.overdue.amount,
+          lateFee: expulsion.lateFee.amount,
+          refund: expulsion.refund?.amount ?? null,
+          currency: expulsion.overdue.currency,
+        });
+      }
       for (const installment of cycle.dueInstallments(today)) {
         const outcome = await this.contributions.collect({ ...installment, circleId });
         cycle.recordCollection(installment.id, outcome);

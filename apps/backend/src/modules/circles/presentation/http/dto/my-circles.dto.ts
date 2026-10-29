@@ -67,6 +67,9 @@ export class MyCircleResponse {
 
   @ApiProperty({ format: 'date-time' })
   joinedAt!: string;
+
+  @ApiProperty({ description: 'Expulsado por impago (COPAYNI-57); se lista con `finished`' })
+  expelled!: boolean;
 }
 
 /** Contrato `GET /v1/me/circles` (docs/api/circles.md). */
@@ -79,7 +82,7 @@ export class MyCirclesResponse {
 
   static from({ items, nextCursor }: MyCirclesPage): MyCirclesResponse {
     return {
-      items: items.map(({ circleId, status, terms, quote, joinedAt }) => ({
+      items: items.map(({ circleId, status, terms, quote, joinedAt, expelled }) => ({
         circleId,
         status,
         payout: MoneyResponse.from(terms.payout),
@@ -93,6 +96,7 @@ export class MyCirclesResponse {
         adminFee: MoneyResponse.from(quote.adminFee),
         netPayout: MoneyResponse.from(quote.netPayout),
         joinedAt: joinedAt.toISOString(),
+        expelled,
       })),
       nextCursor,
     };

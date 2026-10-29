@@ -1,6 +1,8 @@
 import { type CircleRepositoryPort } from '@src/modules/circles/application/ports/circle-repository.port';
+import { type MemberDebtsPort } from '@src/modules/circles/application/ports/member-debts.port';
 import { type CircleAssignmentSettings } from '@src/modules/circles/application/use-cases/get-available-slots.use-case';
 import { JoinCircleUseCase } from '@src/modules/circles/application/use-cases/join-circle.use-case';
+import { type DelinquencyPolicy } from '@src/modules/circles/domain/entities/circle-cycle';
 import { JoinConfig } from '@src/modules/circles/domain/entities/join-config';
 import { type JoinApplicant } from '@src/modules/circles/domain/services/join-eligibility';
 import { SlotPricing } from '@src/modules/circles/domain/services/slot-pricing';
@@ -23,6 +25,19 @@ export const TEST_PRICING_RULES = SlotPricingRules.create({
 });
 
 export const TEST_PRICING = new SlotPricing(TEST_PRICING_RULES);
+
+/** Los valores por defecto de la configuración: 3 días de gracia, mora de 3 % y penalidad de 5 %. */
+export const TEST_DELINQUENCY: DelinquencyPolicy = {
+  graceDays: 3,
+  lateFeeBps: 300,
+  refundPenaltyBps: 500,
+};
+
+/** Sin deudas por impago: nadie está bloqueado. */
+export const NO_DEBTS: MemberDebtsPort = {
+  openDebtsOf: () => Promise.resolve([]),
+  settle: () => Promise.resolve(false),
+};
 
 export const TEST_JOIN_CONFIG = JoinConfig.create({
   payoutRange: PayoutRange.create({ min: pen(3_000), max: pen(120_000), step: pen(500) }),
@@ -48,6 +63,7 @@ export function createJoinCircleUseCase(
     now?: Date;
     assignment?: Partial<CircleAssignmentSettings>;
     pricing?: SlotPricing;
+    debts?: MemberDebtsPort;
   } = {},
 ): JoinCircleUseCase {
   const applicant = options.applicant ?? ELIGIBLE;
@@ -62,6 +78,7 @@ export function createJoinCircleUseCase(
       ...options.assignment,
     },
     { applicantFor: () => Promise.resolve(applicant) },
+    options.debts ?? NO_DEBTS,
     new TestClock(options.now ?? JOIN_NOW),
   );
 }

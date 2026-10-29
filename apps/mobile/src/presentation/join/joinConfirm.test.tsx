@@ -197,6 +197,37 @@ describe('JoinConfirmScreen', () => {
     },
   );
 
+  it('con MEMBER_BLOCKED explica que debe pagar lo vencido más la mora y cuánto (COPAYNI-57)', async () => {
+    await renderConfirm({
+      circleMembership: new InMemoryCircleMembershipRepository({
+        latencyMs: 0,
+        rejectWith: 'MEMBER_BLOCKED',
+      }),
+    });
+    await fireEvent.press(await submit());
+
+    // Una cuota base de 3.000 más 3 % de mora; el pago llega con la pasarela, sin acción todavía.
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      /expulsado de un círculo.*cargo por mora \(.*3\.?090.*\)/,
+    );
+    expect(
+      screen.getAllByRole('button').map((button) => button.props.accessibilityLabel),
+    ).not.toContain('Elegir otro turno');
+  });
+
+  it('con MEMBER_BLOCKED sin el monto explica el motivo igual', async () => {
+    const circleMembership = new InMemoryCircleMembershipRepository({ latencyMs: 0 });
+    jest
+      .spyOn(circleMembership, 'join')
+      .mockRejectedValueOnce(new AppError('conflict', 'no', { code: 'MEMBER_BLOCKED' }));
+    await renderConfirm({ circleMembership });
+    await fireEvent.press(await submit());
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Fuiste expulsado de un círculo por no pagar una cuota. Paga lo vencido más el cargo por mora para unirte a otro.',
+    );
+  });
+
   it('sin los pasos anteriores pide volver al paso 1', async () => {
     const { onStartOver } = await renderConfirm({ complete: false });
     expect(screen.getByRole('alert')).toHaveTextContent(/completa los cuatro pasos/);

@@ -20,7 +20,7 @@ import { Money } from '@src/shared/domain/value-objects/money';
 import { Period } from '@src/shared/domain/value-objects/period';
 import { TestClock } from '@test/support/create-test-app';
 import { InMemoryCircleCycleRepository } from '@test/support/in-memory-circle-cycle.repository';
-import { TEST_PRICING } from '@test/support/join-circle.fixture';
+import { TEST_DELINQUENCY, TEST_PRICING } from '@test/support/join-circle.fixture';
 
 /** Payout de 6.000 en 6 meses desde noviembre de 2026, con los 6 turnos tomados. */
 const TERMS = CircleTerms.create({
@@ -69,7 +69,7 @@ function setup(members: StoredCycle['members'] = MEMBERS, extra: Partial<StoredC
   const useCase = new AdvanceCircleCyclesUseCase(
     cycles,
     TEST_PRICING,
-    { dueDay: 5, timeZone: 'America/Lima' },
+    { dueDay: 5, timeZone: 'America/Lima', delinquency: TEST_DELINQUENCY },
     payments,
     payments,
     clock,
@@ -158,6 +158,56 @@ describe('AdvanceCircleCyclesUseCase', () => {
     expect(payments.disbursed).toEqual(['u-1@2026-11']);
   });
 
+  it('expulsa al terminar la gracia aunque pague tarde, y cierra el mes sin su cuota', async () => {
+    const warn = jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
+    const { cycles, payments, runOn } = setup();
+    payments.failing.add('u-4');
+    for (const date of ['2026-11-05', '2026-11-06', '2026-11-07', '2026-11-08']) {
+      await runOn(date);
+    }
+    expect(cycles.expulsions).toEqual([]);
+    expect(payments.disbursed).toEqual([]);
+
+    // Paga el día 5 de gracia: ya es tarde y no se le vuelve a cobrar.
+    payments.failing.clear();
+    const attempts = payments.collected.length;
+    await runOn('2026-11-09');
+    expect(payments.collected).toHaveLength(attempts);
+
+    const installment = TEST_PRICING.quote(TERMS, 4).installments[0]!;
+    expect(cycles.expulsions).toEqual([
+      expect.objectContaining({
+        circleId: 'c-1',
+        userId: 'u-4',
+        overdue: installment,
+        lateFee: installment.percentage(300),
+        refund: Money.zero('PEN'),
+      }),
+    ]);
+    expect(warn).toHaveBeenCalledWith(
+      expect.objectContaining({ event: 'circles.cycle.member_expelled', userId: 'u-4' }),
+    );
+    expect(payments.disbursed).toEqual(['u-1@2026-11']);
+    expect(cycles.get('c-1')?.members.map(({ userId }) => userId)).not.toContain('u-4');
+    expect(
+      [...cycles.installments.values()].find(
+        ({ userId, period }) => userId === 'u-4' && period.equals(Period.of(2026, 11)),
+      )?.status,
+    ).toBe('defaulted');
+
+    // Ya no se le abren cuotas y su mes de cobro (febrero) no tiene payout.
+    for (const date of ['2026-12-05', '2027-01-05', '2027-02-05']) await runOn(date);
+    expect([...cycles.installments.values()].filter(({ userId }) => userId === 'u-4')).toHaveLength(
+      1,
+    );
+    expect(payments.disbursed).toEqual(['u-1@2026-11', 'u-2@2026-12', 'u-3@2027-01']);
+    expect(warn).toHaveBeenCalledWith({
+      event: 'circles.cycle.payout_unassigned',
+      circleId: 'c-1',
+      period: '2027-02',
+    });
+  });
+
   it('usa el precio congelado de cada miembro', async () => {
     const price = priceOf(TEST_PRICING.quote(TERMS, 1));
     const frozen = { ...price, installments: price.installments.map(() => Money.of(1, 'PEN')) };
@@ -214,7 +264,7 @@ describe('AdvanceCircleCyclesUseCase', () => {
     const useCase = new AdvanceCircleCyclesUseCase(
       cycles,
       TEST_PRICING,
-      { dueDay: 5, timeZone: 'America/Lima' },
+      { dueDay: 5, timeZone: 'America/Lima', delinquency: TEST_DELINQUENCY },
       {
         collect: (installment) => (installment.circleId === 'roto' ? broken : fake).collect(),
       },

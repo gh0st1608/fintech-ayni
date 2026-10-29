@@ -65,6 +65,20 @@ describe('CirclesScreen', () => {
     expect(screen.queryByTestId('my-circle-c-1')).toBeNull();
   });
 
+  it('una membresía expulsada por impago aparece en Finished como "Expulsado" (COPAYNI-57)', async () => {
+    const expelled = { ...future('expulsado'), expelled: true };
+    await renderCircles(
+      new InMemoryCircleMembershipRepository({ latencyMs: 0, circles: [future('c-1'), expelled] }),
+    );
+    expect(await screen.findByTestId('my-circle-c-1')).toHaveTextContent(/Unido/);
+    expect(screen.queryByTestId('my-circle-expulsado')).toBeNull();
+
+    await fireEvent.press(screen.getByRole('tab', { name: 'Finalizados' }));
+    const card = await screen.findByTestId('my-circle-expulsado');
+    expect(card).toHaveTextContent(/Expulsado/);
+    expect(card).not.toHaveTextContent(/Unido/);
+  });
+
   it('sin círculos muestra los estados vacíos; el de Active lleva a unirse', async () => {
     const { onJoin } = await renderCircles();
     expect(await screen.findByText('¡Tus círculos activos aparecerán aquí!')).toBeTruthy();

@@ -214,17 +214,18 @@ Cada unión queda registrada en el log como `circles.joined`, con el usuario, el
 
 ### Errores
 
-| Error                    | HTTP | Cuándo                                                                                                                                         |
-| ------------------------ | ---- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
-| `VALIDATION_ERROR`       | 400  | Cuerpo inválido; `Idempotency-Key` ausente o inválida; `months: not_offered`; `circleId: terms_mismatch` (el círculo tiene otras condiciones). |
-| `CIRCLE_NOT_FOUND`       | 404  | El `circleId` no existe.                                                                                                                       |
-| `SLOT_TAKEN`             | 409  | Otro miembro tomó el slot.                                                                                                                     |
-| `ALREADY_MEMBER`         | 409  | El usuario ya tiene un slot en ese círculo.                                                                                                    |
-| `CIRCLE_ALREADY_STARTED` | 409  | El círculo empezó: el cobro de los primeros slots ya pasó.                                                                                     |
-| `IDEMPOTENCY_KEY_REUSED` | 409  | La clave ya se usó con otros datos.                                                                                                            |
-| `PAYOUT_NOT_ALLOWED`     | 422  | Payout fuera del rango, del salto o del límite del usuario.                                                                                    |
-| `SLOT_OUT_OF_RANGE`      | 422  | `position` mayor que la duración.                                                                                                              |
-| Elegibilidad             | 422  | `NATIONAL_ID_REQUIRED`, `MONTHLY_LIMIT_EXCEEDED`, `PAYOUT_METHOD_REQUIRED`, `PAYOUT_METHOD_LIMIT_EXCEEDED`.                                    |
+| Error                    | HTTP | Cuándo                                                                                                                                                                         |
+| ------------------------ | ---- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `VALIDATION_ERROR`       | 400  | Cuerpo inválido; `Idempotency-Key` ausente o inválida; `months: not_offered`; `circleId: terms_mismatch` (el círculo tiene otras condiciones).                                 |
+| `CIRCLE_NOT_FOUND`       | 404  | El `circleId` no existe.                                                                                                                                                       |
+| `SLOT_TAKEN`             | 409  | Otro miembro tomó el slot.                                                                                                                                                     |
+| `ALREADY_MEMBER`         | 409  | El usuario ya tiene un slot en ese círculo.                                                                                                                                    |
+| `CIRCLE_ALREADY_STARTED` | 409  | El círculo empezó: el cobro de los primeros slots ya pasó.                                                                                                                     |
+| `IDEMPOTENCY_KEY_REUSED` | 409  | La clave ya se usó con otros datos.                                                                                                                                            |
+| `MEMBER_BLOCKED`         | 409  | El usuario fue expulsado por impago y no saldó su deuda (COPAYNI-57). `details`: `amountDue` (lo vencido más el cargo por mora, en unidades menores, como texto) y `currency`. |
+| `PAYOUT_NOT_ALLOWED`     | 422  | Payout fuera del rango, del salto o del límite del usuario.                                                                                                                    |
+| `SLOT_OUT_OF_RANGE`      | 422  | `position` mayor que la duración.                                                                                                                                              |
+| Elegibilidad             | 422  | `NATIONAL_ID_REQUIRED`, `MONTHLY_LIMIT_EXCEEDED`, `PAYOUT_METHOD_REQUIRED`, `PAYOUT_METHOD_LIMIT_EXCEEDED`.                                                                    |
 
 Fuera de alcance, pendientes del diseño o del PO: la firma del contrato y del pagaré (D3, T9) y el primer pago (D1).
 
@@ -268,11 +269,11 @@ Criterio (coherente con la asignación `fill_oldest`, R2; pendiente con el PO):
 
 Mis círculos, de la unión más reciente a la más antigua, paginados por cursor.
 
-| Parámetro | Notas                                                                                                                                              |
-| --------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `status`  | Obligatorio. `active`: el círculo todavía no terminó, **incluidos los que no empezaron**. `finished`: su ciclo pagó el último payout (COPAYNI-56). |
-| `cursor`  | El `nextCursor` de la página anterior. Es opaco: la app no lo interpreta.                                                                          |
-| `limit`   | De 1 a 50; 20 por defecto.                                                                                                                         |
+| Parámetro | Notas                                                                                                                                                                                          |
+| --------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `status`  | Obligatorio. `active`: el círculo todavía no terminó, **incluidos los que no empezaron**. `finished`: su ciclo pagó el último payout (COPAYNI-56) **o el usuario fue expulsado** (COPAYNI-57). |
+| `cursor`  | El `nextCursor` de la página anterior. Es opaco: la app no lo interpreta.                                                                                                                      |
+| `limit`   | De 1 a 50; 20 por defecto.                                                                                                                                                                     |
 
 **200**:
 
@@ -292,7 +293,8 @@ Mis círculos, de la unión más reciente a la más antigua, paginados por curso
       "installments": [{ "amount": 336000, "currency": "PEN" }, "…"],
       "adminFee": { "amount": 360000, "currency": "PEN" },
       "netPayout": { "amount": 3000000, "currency": "PEN" },
-      "joinedAt": "2026-10-28T23:10:00.000Z"
+      "joinedAt": "2026-10-28T23:10:00.000Z",
+      "expelled": false
     }
   ],
   "nextCursor": "WyIyMDI2LTEw…"
@@ -301,6 +303,7 @@ Mis círculos, de la unión más reciente a la más antigua, paginados por curso
 
 - `endsOn` es el mes del último cobro. `installments` y `adminFee` son los del slot del usuario.
 - **Precio congelado (COPAYNI-55):** el precio es el que el miembro aceptó al unirse, guardado con la membresía. Un cambio posterior de `SLOT_*` o `ADMIN_FEE_*` no lo altera. Las membresías anteriores a COPAYNI-55 no lo tienen guardado y se siguen cotizando con la configuración vigente.
+- **`expelled`:** `true` si el usuario fue expulsado por impago de ese círculo (COPAYNI-57). La app lo muestra en Finalizados con la etiqueta "Expulsado".
 - `nextCursor: null` indica que no hay más páginas. El orden es estable aunque dos uniones tengan la misma fecha (se desempata por id).
 
 | Error              | HTTP | Cuándo                                                                                                |
@@ -320,12 +323,31 @@ No es un endpoint: lo ejecuta la tarea diaria `node dist/jobs/circle-cycle.js` (
 | `paused`        | Detenido por el admin general (COPAYNI-61)                                                                                                                   | Paused                                                |
 
 - **Inicio:** el primer día del mes de inicio, aunque haya turnos libres (R2 sigue abierta). Se abre una cuota por miembro con el precio congelado al unirse (COPAYNI-55).
-- **Vencimiento:** cada cuota vence el día `CIRCLE_INSTALLMENT_DUE_DAY` de su mes (por defecto 1; R19, provisional). Desde ese día se cobra; si el cobro falla, queda `overdue` y se reintenta cada día. La gracia de 3 días, la expulsión y el cargo por mora llegan con COPAYNI-57.
+- **Vencimiento:** cada cuota vence el día `CIRCLE_INSTALLMENT_DUE_DAY` de su mes (por defecto 1; R19, provisional). Desde ese día se cobra; si el cobro falla, queda `overdue` y se reintenta cada día durante la gracia.
+- **Impago (COPAYNI-57, pending-scope §3.1):** ver la sección siguiente.
 - **Cierre del mes:** solo cuando todas sus cuotas están pagadas. El payout es el `netPayout` del miembro que tiene el turno. Si el turno está libre, no hay payout y se registra `circles.cycle.payout_unassigned`; el destino de ese pozo llega con COPAYNI-58 y 59.
 - **Puesta al día:** si la tarea no corrió varios días, procesa todos los meses vencidos.
 - **Pagos:** por los puertos `ContributionsPort` y `DisbursementsPort`, idempotentes por cuota y por (círculo, mes). Hasta tener pasarela (D1, COPAYNI-34) solo existe el adaptador `fake`, prohibido en production.
-- **Auditoría:** eventos `circles.cycle.started`, `installment_paid`, `installment_overdue`, `payout_disbursed`, `payout_unassigned`, `finished`, `failed` y el resumen `circles.cycle.run`.
-- **Tablas:** `circles.cycle_state` y `circles.current_period`, `circle_installments` (única por círculo, turno y mes) y `circle_payouts` (única por círculo y mes).
+- **Auditoría:** eventos `circles.cycle.started`, `installment_paid`, `installment_overdue`, `member_expelled`, `payout_disbursed`, `payout_unassigned`, `finished`, `failed`, el resumen `circles.cycle.run` y `circles.debt_settled`.
+- **Tablas:** `circles.cycle_state` y `circles.current_period`, `circle_installments` (única por círculo, turno y mes), `circle_payouts` (única por círculo y mes) y `circle_expulsions` (única por círculo y miembro).
+
+### Impago (COPAYNI-57)
+
+Reglas del PO (pending-scope R3 y §3.1) con los valores propuestos en R18, todos parametrizables:
+
+| Regla          | Comportamiento                                                                                                                                                                                                                                                                                                     | Variable (por defecto)                                 |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------ |
+| Gracia         | Días corridos desde el vencimiento, en `BUSINESS_TIME_ZONE`. Con vencimiento el día 1 y 3 días, el último día para pagar es el 4                                                                                                                                                                                   | `DELINQUENCY_GRACE_DAYS` (3)                           |
+| Expulsión      | El día siguiente a la gracia, **antes** de reintentar el cobro: un pago que llega tarde no la evita. La cuota pasa a `defaulted`, el miembro sale del ciclo (no se le abren más cuotas) y su turno queda libre. El mes cierra igual y quien cobra recibe el payout completo; el fondo cubre esa cuota (COPAYNI-58) | —                                                      |
+| Cargo por mora | Porcentaje de la cuota impaga, cobrado una vez. Legal debe validar el tope                                                                                                                                                                                                                                         | `LATE_FEE_BPS` (300 = 3 %)                             |
+| Deuda          | Si todavía no cobró: la cuota impaga. Si ya cobró: todas sus cuotas desde ese mes hasta el final, como el ejemplo de §3.1. Más el cargo por mora                                                                                                                                                                   | —                                                      |
+| Bloqueo        | Con una deuda abierta, `POST /v1/circles/join` responde `MEMBER_BLOCKED`. Un reintento de una unión anterior sigue respondiendo la unión                                                                                                                                                                           | —                                                      |
+| Desbloqueo     | Automático al saldar la deuda (`SettleMemberDebtUseCase`). Lo invocará la confirmación del pago de la pasarela (D1, COPAYNI-34); hoy no hay forma de pagar desde la app                                                                                                                                            | —                                                      |
+| Devolución     | Solo si no cobró: lo pagado menos la penalidad. Se registra y se paga al cerrar el círculo (COPAYNI-58)                                                                                                                                                                                                            | `EXPULSION_REFUND_PENALTY_BPS` (500 = 5 %, mínimo 5 %) |
+
+- **Solo se expulsa por una cuota que tuvo un intento de cobro fallido.** Si la tarea no corrió y la cuota nunca se intentó cobrar, se intenta primero y, si falla, se expulsa en la ejecución siguiente: una caída del sistema no expulsa a nadie sin intento de cobro.
+- El turno libre del expulsado se maneja como cualquier turno libre (`payout_unassigned`); el reemplazo llega con COPAYNI-59.
+- El débito automático con reintentos en los días 0, 1 y 3 (R18) llega con D1: hoy se reintenta cada día de la gracia.
 
 ## Valores pendientes (pending-scope M6, R5 y R15)
 

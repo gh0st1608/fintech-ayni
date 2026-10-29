@@ -23,6 +23,21 @@ export class PayoutMethodLimitExceededError extends DomainError {
   readonly code = 'PAYOUT_METHOD_LIMIT_EXCEEDED';
 }
 
+/**
+ * Fue expulsado de un círculo por impago y todavía no pagó lo vencido más el cargo por mora
+ * (COPAYNI-57). `amountDue` es `null` si el backend no lo informó.
+ */
+export class MemberBlockedError extends DomainError {
+  readonly code = 'MEMBER_BLOCKED';
+
+  constructor(
+    message: string,
+    readonly amountDue: Money | null,
+  ) {
+    super(message);
+  }
+}
+
 /** Lo que se envía para unirse: el círculo ofrecido (o `null`, uno nuevo) y el slot. */
 export interface JoinCircleRequest {
   circleId: string | null;

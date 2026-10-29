@@ -215,6 +215,30 @@ export class EnvironmentVariables {
   @Max(28)
   CIRCLE_INSTALLMENT_DUE_DAY: number = 1;
 
+  /** Días corridos de gracia después del vencimiento de una cuota (COPAYNI-57, decidido por el PO). */
+  @IsInt()
+  @Min(0)
+  @Max(28)
+  DELINQUENCY_GRACE_DAYS: number = 3;
+
+  /**
+   * Cargo por mora sobre la cuota vencida, cobrado una vez, en puntos básicos (R18, propuesto:
+   * 3 %). Legal debe validar el tope del interés moratorio antes de producción.
+   */
+  @IsInt()
+  @Min(0)
+  @Max(10000)
+  LATE_FEE_BPS: number = 300;
+
+  /**
+   * Penalidad sobre lo pagado que se descuenta de la devolución al expulsado antes de su turno,
+   * en puntos básicos. El PO la fijó como mínimo en 5 %.
+   */
+  @IsInt()
+  @Min(500)
+  @Max(10000)
+  EXPULSION_REFUND_PENALTY_BPS: number = 500;
+
   /**
    * Cobro de cuotas y pago de payouts del ciclo mensual. `fake` simula ambos (desarrollo y
    * pruebas) y está prohibido en production; sin valor, el ciclo falla al intentar cobrar

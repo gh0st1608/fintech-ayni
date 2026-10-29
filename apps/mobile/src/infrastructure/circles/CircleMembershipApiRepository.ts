@@ -42,6 +42,7 @@ const myCirclesDto = z.object({
       adminFee: moneyDto,
       netPayout: moneyDto,
       joinedAt: z.iso.datetime({ offset: true }),
+      expelled: z.boolean(),
     }),
   ),
   nextCursor: z.string().min(1).nullable(),

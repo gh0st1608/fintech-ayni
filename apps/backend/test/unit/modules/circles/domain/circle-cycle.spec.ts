@@ -3,9 +3,9 @@ import { CircleTerms } from '@src/modules/circles/domain/value-objects/circle-te
 import { LocalDate } from '@src/shared/domain/value-objects/local-date';
 import { Money } from '@src/shared/domain/value-objects/money';
 import { Period } from '@src/shared/domain/value-objects/period';
-import { TEST_PRICING } from '@test/support/join-circle.fixture';
+import { TEST_DELINQUENCY, TEST_PRICING } from '@test/support/join-circle.fixture';
 
-/** Payout de 3.000 en 3 meses desde noviembre de 2026; vence el día 5. */
+/** Payout de 3.000 en 3 meses desde noviembre de 2026; vence el día 5, con 3 días de gracia. */
 const TERMS = CircleTerms.create({
   payout: Money.of(300_000, 'PEN'),
   months: 3,
@@ -26,6 +26,7 @@ function cycle(members: CycleMember[] = [member('ana', 1), member('beto', 2), me
     circleId: 'c-1',
     terms: TERMS,
     dueDay: 5,
+    delinquency: TEST_DELINQUENCY,
     state: 'collecting',
     currentPeriod: null,
     members,
@@ -133,6 +134,118 @@ describe('CircleCycle', () => {
     expect(subject.receiver()?.userId).toBe('beto');
   });
 
+  describe('impago (COPAYNI-57)', () => {
+    const quoteOf = (userId: string, position: number) => member(userId, position).quote;
+    const sum = (amounts: readonly Money[]) =>
+      amounts.reduce((total, amount) => total.add(amount), Money.zero('PEN'));
+
+    /** Paga noviembre completo y en diciembre falla el cobro de `userId`. */
+    function failInDecember(userId: string) {
+      const subject = cycle();
+      subject.start(newId);
+      payAll(subject, day('2026-11-05'));
+      subject.closePeriod(day('2026-11-05'), newId);
+      for (const installment of subject.dueInstallments(day('2026-12-05'))) {
+        subject.recordCollection(installment.id, installment.userId === userId ? 'failed' : 'paid');
+      }
+      const unpaid = subject.installments.find(
+        ({ userId: owner, status }) => owner === userId && status === 'overdue',
+      )!;
+      return { subject, unpaid };
+    }
+
+    it('expulsa al día siguiente de terminar los 3 días de gracia, y no antes', () => {
+      const { subject, unpaid } = failInDecember('caro');
+      expect(subject.defaultedInstallments(day('2026-12-08'))).toEqual([]);
+      expect(subject.defaultedInstallments(day('2026-12-09')).map(({ id }) => id)).toEqual([
+        unpaid.id,
+      ]);
+      expect(() => subject.expel(unpaid.id, day('2026-12-08'))).toThrow(
+        expect.objectContaining({ code: 'INVALID_CYCLE_TRANSITION' }),
+      );
+    });
+
+    it('la gracia cruza el cambio de mes y de año', () => {
+      const subject = CircleCycle.restore({
+        circleId: 'c-2',
+        terms: CircleTerms.create({
+          payout: Money.of(300_000, 'PEN'),
+          months: 3,
+          startsOn: Period.of(2026, 12),
+        }),
+        dueDay: 30,
+        delinquency: TEST_DELINQUENCY,
+        state: 'collecting',
+        currentPeriod: null,
+        members: [member('ana', 1)],
+        installments: [],
+      });
+      subject.start(newId);
+      const [installment] = subject.dueInstallments(day('2026-12-30'));
+      subject.recordCollection(installment!.id, 'failed');
+      expect(subject.defaultedInstallments(day('2027-01-02'))).toEqual([]);
+      expect(subject.defaultedInstallments(day('2027-01-03'))).toHaveLength(1);
+    });
+
+    it('una cuota que nunca se intentó cobrar no expulsa', () => {
+      const subject = cycle();
+      subject.start(newId);
+      expect(subject.defaultedInstallments(day('2026-11-30'))).toEqual([]);
+    });
+
+    it('antes de su turno: debe la cuota más la mora, recibe lo pagado menos 5 % y su turno queda libre', () => {
+      const { subject, unpaid } = failInDecember('caro');
+      const caro = quoteOf('caro', 3);
+      const expulsion = subject.expel(unpaid.id, day('2026-12-09'));
+
+      expect(expulsion).toEqual({
+        userId: 'caro',
+        position: 3,
+        period: Period.of(2026, 12),
+        expelledOn: day('2026-12-09'),
+        overdue: caro.installments[1],
+        lateFee: caro.installments[1]!.percentage(300),
+        refund: caro.installments[0]!.subtract(caro.installments[0]!.percentage(500)),
+      });
+      expect(subject.expulsions).toEqual([expulsion]);
+      expect(subject.installments.find(({ id }) => id === unpaid.id)?.status).toBe('defaulted');
+      expect(subject.dueInstallments(day('2026-12-09'))).toEqual([]);
+      expect(() => subject.recordCollection(unpaid.id, 'paid')).toThrow(
+        expect.objectContaining({ code: 'INVALID_CYCLE_TRANSITION' }),
+      );
+      expect(subject.members.map(({ userId }) => userId)).toEqual(['ana', 'beto']);
+
+      // El mes cierra con la cuota incobrable; el fondo la cubre (COPAYNI-58).
+      expect(subject.closePeriod(day('2026-12-09'), newId)?.userId).toBe('beto');
+      expect(
+        subject.installments
+          .filter(({ period }) => period.equals(Period.of(2027, 1)))
+          .map(({ userId }) => userId),
+      ).toEqual(['ana', 'beto']);
+      payAll(subject, day('2027-01-05'));
+      expect(subject.closePeriod(day('2027-01-05'), newId)).toBeNull();
+      expect(subject.isFinished()).toBe(true);
+    });
+
+    it('después de cobrar: debe sus cuotas restantes más la mora y no hay devolución', () => {
+      const { subject, unpaid } = failInDecember('ana');
+      const ana = quoteOf('ana', 1);
+      const expulsion = subject.expel(unpaid.id, day('2026-12-09'));
+
+      expect(expulsion.overdue).toEqual(sum(ana.installments.slice(1)));
+      expect(expulsion.lateFee).toEqual(ana.installments[1]!.percentage(300));
+      expect(expulsion.refund).toBeNull();
+    });
+
+    it('en su propio mes de cobro todavía no cobró: hay devolución y ese pozo no se paga', () => {
+      const { subject, unpaid } = failInDecember('beto');
+      const expulsion = subject.expel(unpaid.id, day('2026-12-09'));
+      expect(expulsion.refund).not.toBeNull();
+      expect(subject.receiver()).toBeUndefined();
+      expect(subject.closePeriod(day('2026-12-09'), newId)).toBeNull();
+    });
+  });
+
   it('rechaza transiciones y estados inconsistentes', () => {
     const subject = cycle();
     subject.start(newId);
@@ -156,6 +269,7 @@ describe('CircleCycle', () => {
         circleId: 'c-1',
         terms: TERMS,
         dueDay: 5,
+        delinquency: TEST_DELINQUENCY,
         state,
         currentPeriod: period,
         members: [],

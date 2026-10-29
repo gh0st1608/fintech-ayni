@@ -42,6 +42,13 @@ export class LocalDate {
     return LocalDate.of(Period.fromDate(date, timeZone), Number(day));
   }
 
+  /** El día `days` días corridos después (o antes, si es negativo), cruzando meses y años. */
+  addDays(days: number): LocalDate {
+    if (!Number.isInteger(days)) throw new InvalidLocalDateError('Los días deben ser un entero');
+    const date = new Date(Date.UTC(this.period.year, this.period.month - 1, this.day + days));
+    return LocalDate.parse(date.toISOString().slice(0, 10));
+  }
+
   isAfter(other: LocalDate): boolean {
     return this.toString() > other.toString();
   }

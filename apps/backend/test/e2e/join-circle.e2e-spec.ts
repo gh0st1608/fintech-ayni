@@ -4,7 +4,9 @@ import { randomUUID } from 'node:crypto';
 
 import { type NestExpressApplication } from '@nestjs/platform-express';
 import request from 'supertest';
+import { DataSource } from 'typeorm';
 
+import { SettleMemberDebtUseCase } from '@src/modules/circles/application/use-cases/settle-member-debt.use-case';
 import { Period } from '@src/shared/domain/value-objects/period';
 import { createTestApp } from '@test/support/create-test-app';
 
@@ -96,6 +98,41 @@ describe('POST /v1/circles/join', () => {
     await join(beto, { ...NEW_CIRCLE, circleId, position: 4 })
       .expect(201)
       .expect(({ body }) => expect(body.data).toMatchObject({ circleId, position: 4 }));
+  });
+
+  it('el expulsado por impago responde MEMBER_BLOCKED hasta saldar su deuda (COPAYNI-57)', async () => {
+    const ana = await signIn();
+    // 88.000 en 10 meses: un círculo propio de esta prueba.
+    const first = await join(ana, { ...NEW_CIRCLE, payoutAmount: 8_800_000 }).expect(201);
+    const { circleId } = first.body.data as { circleId: string };
+    // La expulsión la registra la tarea diaria; aquí se simula con la misma fila que guarda.
+    const dataSource = app.get(DataSource);
+    const [member] = await dataSource.query<{ user_id: string }[]>(
+      'SELECT user_id FROM circle_memberships WHERE circle_id = $1',
+      [circleId],
+    );
+    const userId = member!.user_id;
+    await dataSource.query(
+      `INSERT INTO circle_expulsions (circle_id, user_id, position, period, expelled_on,
+                                      overdue_amount, late_fee_amount, refund_amount, currency)
+       VALUES ($1, $2, 3, date_trunc('month', now())::date, now()::date, 880000, 26400, 0, 'PEN')`,
+      [circleId, userId],
+    );
+
+    const other = { ...NEW_CIRCLE, payoutAmount: 8_850_000 };
+    await join(ana, other)
+      .expect(409)
+      .expect(({ body }) =>
+        expect(body.error).toMatchObject({
+          code: 'MEMBER_BLOCKED',
+          details: { amountDue: '906400', currency: 'PEN' },
+        }),
+      );
+
+    await expect(app.get(SettleMemberDebtUseCase).execute({ userId, circleId })).resolves.toBe(
+      true,
+    );
+    await join(ana, other).expect(201);
   });
 
   it('sin método de cobro responde PAYOUT_METHOD_REQUIRED y no reserva nada', async () => {

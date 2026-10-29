@@ -56,6 +56,21 @@ describe('ListMyCirclesUseCase', () => {
     const finished = await useCase.execute(ANA, { status: 'finished', cursor: null });
     expect(finished.items.map(({ circleId }) => circleId)).toEqual(['terminado']);
     expect(finished.nextCursor).toBeNull();
+    expect(active.items.every(({ expelled }) => !expelled)).toBe(true);
+  });
+
+  it('una membresía expulsada por impago se lista con los finalizados (COPAYNI-57)', async () => {
+    const { useCase, addCircle, circles } = setup();
+    addCircle('expulsado', Period.of(2026, 5));
+    circles.expel('expulsado', 'ana');
+    addCircle('en-curso', Period.of(2026, 6));
+
+    const active = await useCase.execute(ANA, { status: 'active', cursor: null });
+    expect(active.items.map(({ circleId }) => circleId)).toEqual(['en-curso']);
+    const finished = await useCase.execute(ANA, { status: 'finished', cursor: null });
+    expect(finished.items).toEqual([
+      expect.objectContaining({ circleId: 'expulsado', status: 'finished', expelled: true }),
+    ]);
   });
 
   it('responde el precio congelado al unirse; sin él, cotiza con las reglas vigentes', async () => {

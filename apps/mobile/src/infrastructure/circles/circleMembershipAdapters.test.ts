@@ -141,6 +141,7 @@ const MY_CIRCLES = {
       adminFee: money(360_000),
       netPayout: money(3_000_000),
       joinedAt: '2026-10-28T23:10:00.000Z',
+      expelled: false,
     },
   ],
   nextCursor: 'cursor-2',
@@ -159,6 +160,7 @@ describe('CircleMembershipApiRepository.listMine', () => {
     expect(page.items[0]).toMatchObject({ circleId: 'c-1', type: 'lowestFees', endsOn: '2027-04' });
     expect(page.items[0]?.adminFee.toMajor()).toBe(3_600);
     expect(page.items[0]?.joinedAt.toISOString()).toBe('2026-10-28T23:10:00.000Z');
+    expect(page.items[0]?.expelled).toBe(false);
   });
 
   it('envía el cursor de la página siguiente', async () => {
@@ -179,6 +181,7 @@ describe('CircleMembershipApiRepository.listMine', () => {
     [{ ...MY_CIRCLES, nextCursor: undefined }],
     [{ ...MY_CIRCLES, items: [{ ...MY_CIRCLES.items[0], status: 'paused' }] }],
     [{ ...MY_CIRCLES, items: [{ ...MY_CIRCLES.items[0], joinedAt: 'ayer' }] }],
+    [{ ...MY_CIRCLES, items: [{ ...MY_CIRCLES.items[0], expelled: undefined }] }],
   ])('rechaza una respuesta que no cumple el contrato', async (data) => {
     const { repository } = setup({ status: 200, body: { success: true, data } });
     await expect(repository.listMine('active', null)).rejects.toMatchObject({

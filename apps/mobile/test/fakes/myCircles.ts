@@ -20,6 +20,7 @@ export function myCircle(overrides: Partial<MyCircle> = {}): MyCircle {
     adminFee: pen(1_800),
     netPayout: pen(30_000),
     joinedAt: new Date('2026-10-20T15:00:00Z'),
+    expelled: false,
     ...overrides,
   };
 }

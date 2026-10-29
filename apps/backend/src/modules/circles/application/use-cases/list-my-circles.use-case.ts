@@ -19,6 +19,8 @@ export interface MyCircle {
   /** Precio del slot del usuario: cuotas, Admin Fees y mes de cobro. */
   quote: SlotQuote;
   joinedAt: Date;
+  /** Expulsado por impago (COPAYNI-57): se lista con los finalizados. */
+  expelled: boolean;
 }
 
 export interface MyCirclesPage {
@@ -29,7 +31,8 @@ export interface MyCirclesPage {
 /**
  * Mis círculos activos o finalizados (COPAYNI-26), de la unión más reciente a la más antigua.
  * Un círculo terminó cuando su ciclo pagó el último payout (COPAYNI-56); uno que todavía no
- * empezó está activo.
+ * empezó está activo. Una membresía expulsada por impago (COPAYNI-57) se lista con los
+ * finalizados.
  *
  * El precio es el congelado al unirse (COPAYNI-55); las membresías anteriores se cotizan con las
  * reglas vigentes.
@@ -52,12 +55,13 @@ export class ListMyCirclesUseCase {
       cursor: query.cursor,
     });
     return {
-      items: page.items.map(({ circleId, terms, position, price, joinedAt }) => ({
+      items: page.items.map(({ circleId, terms, position, price, joinedAt, expelled }) => ({
         circleId,
         status: query.status,
         terms,
         quote: this.pricing.quoteOf(terms, position, price),
         joinedAt,
+        expelled,
       })),
       nextCursor: page.nextCursor,
     };

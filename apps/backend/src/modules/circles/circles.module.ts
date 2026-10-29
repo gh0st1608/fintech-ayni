@@ -9,6 +9,7 @@ import { CONTRIBUTIONS, DISBURSEMENTS } from './application/ports/cycle-payments
 import { PayoutsModule } from '../payouts/payouts.module';
 import { JOIN_CONFIG_REPOSITORY } from './application/ports/join-config-repository.port';
 import { JOIN_ELIGIBILITY } from './application/ports/join-eligibility.port';
+import { MEMBER_DEBTS } from './application/ports/member-debts.port';
 import {
   CIRCLE_ASSIGNMENT,
   type CircleAssignmentSettings,
@@ -24,6 +25,7 @@ import { GetInstallmentOptionsUseCase } from './application/use-cases/get-instal
 import { GetJoinConfigUseCase } from './application/use-cases/get-join-config.use-case';
 import { JoinCircleUseCase } from './application/use-cases/join-circle.use-case';
 import { ListMyCirclesUseCase } from './application/use-cases/list-my-circles.use-case';
+import { SettleMemberDebtUseCase } from './application/use-cases/settle-member-debt.use-case';
 import {
   ListRecommendedCirclesUseCase,
   RECOMMENDATIONS,
@@ -41,6 +43,7 @@ import { CircleMembershipEntity } from './infrastructure/persistence/typeorm/cir
 import { CircleEntity } from './infrastructure/persistence/typeorm/circle.entity';
 import { TypeOrmCircleCycleRepository } from './infrastructure/persistence/typeorm/typeorm-circle-cycle.repository';
 import { TypeOrmCircleRepository } from './infrastructure/persistence/typeorm/typeorm-circle.repository';
+import { TypeOrmMemberDebts } from './infrastructure/persistence/typeorm/typeorm-member-debts.repository';
 import { CirclesController } from './presentation/http/controllers/circles.controller';
 import { MyCirclesController } from './presentation/http/controllers/my-circles.controller';
 
@@ -64,8 +67,18 @@ import { MyCirclesController } from './presentation/http/controllers/my-circles.
       useFactory: (config: AppConfigService): CircleCycleSettings => ({
         dueDay: config.get('CIRCLE_INSTALLMENT_DUE_DAY', { infer: true }),
         timeZone: config.get('BUSINESS_TIME_ZONE', { infer: true }),
+        // Reglas de impago del PO con valores de R18 (pending-scope §3.1), parametrizables.
+        delinquency: {
+          graceDays: config.get('DELINQUENCY_GRACE_DAYS', { infer: true }),
+          lateFeeBps: config.get('LATE_FEE_BPS', { infer: true }),
+          refundPenaltyBps: config.get('EXPULSION_REFUND_PENALTY_BPS', { infer: true }),
+        },
       }),
     },
+    // Deudas por impago (COPAYNI-57): bloquean la unión hasta saldarse.
+    SettleMemberDebtUseCase,
+    TypeOrmMemberDebts,
+    { provide: MEMBER_DEBTS, useExisting: TypeOrmMemberDebts },
     {
       // Pasarela pendiente (D1, COPAYNI-34): solo pagos simulados o ninguno.
       provide: CONTRIBUTIONS,

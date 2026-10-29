@@ -1,6 +1,7 @@
 import { type JoinCircleDraft, joinRequestFingerprint } from '@/domain/circles/JoinCircleDraft';
 import {
   type JoinedCircle,
+  MemberBlockedError,
   MonthlyLimitExceededError,
   NationalIdRequiredError,
   PayoutMethodLimitExceededError,
@@ -11,6 +12,7 @@ import { SlotNoLongerAvailableError } from '@/domain/circles/value-objects/Slot'
 import { AppError } from '@/domain/shared/errors/AppError';
 import type { DomainError } from '@/domain/shared/errors/DomainError';
 import type { IdGeneratorPort } from '@/domain/shared/ports/IdGeneratorPort';
+import { Money } from '@/domain/shared/value-objects/Money';
 
 /** Rechazos del backend que la pantalla resuelve con una acción concreta. */
 const TYPED_ERRORS: Record<string, new (message: string) => DomainError> = {
@@ -24,6 +26,17 @@ const TYPED_ERRORS: Record<string, new (message: string) => DomainError> = {
   CIRCLE_ALREADY_STARTED: SlotNoLongerAvailableError,
   CIRCLE_NOT_FOUND: SlotNoLongerAvailableError,
 };
+
+/** Lo que debe el expulsado: el backend lo manda en los detalles del error, en unidades menores. */
+function amountDue(error: AppError): Money | null {
+  const { amountDue: amount, currency } = error.fieldErrors ?? {};
+  if (!amount || !/^\d+$/.test(amount) || !currency) return null;
+  try {
+    return Money.of(Number(amount), currency);
+  } catch {
+    return null;
+  }
+}
 
 /**
  * Confirma la unión del borrador (COPAYNI-31). La Idempotency-Key se genera una vez por pedido
@@ -44,6 +57,9 @@ export class JoinCircleUseCase {
     try {
       return await this.repository.join(request, this.keyFor(joinRequestFingerprint(request)));
     } catch (error) {
+      if (error instanceof AppError && error.code === 'MEMBER_BLOCKED') {
+        throw new MemberBlockedError('Join rejected: MEMBER_BLOCKED', amountDue(error));
+      }
       const TypedError = error instanceof AppError ? TYPED_ERRORS[error.code ?? ''] : undefined;
       if (TypedError) throw new TypedError(`Join rejected: ${(error as AppError).code}`);
       throw error;

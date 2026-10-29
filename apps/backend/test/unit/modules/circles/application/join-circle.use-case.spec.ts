@@ -1,6 +1,7 @@
 import { Logger } from '@nestjs/common';
 
 import { IdempotencyKeyExistsError } from '@src/modules/circles/application/ports/circle-repository.port';
+import { type MemberDebt } from '@src/modules/circles/application/ports/member-debts.port';
 import { type JoinCircleCommand } from '@src/modules/circles/application/use-cases/join-circle.use-case';
 import { Circle } from '@src/modules/circles/domain/entities/circle';
 import { type JoinApplicant } from '@src/modules/circles/domain/services/join-eligibility';
@@ -29,14 +30,22 @@ const NEW_CIRCLE: JoinCircleCommand = {
   idempotencyKey: 'key-ana-0000000001',
 };
 
-function setup(applicant: Partial<JoinApplicant> = {}) {
+function setup(applicant: Partial<JoinApplicant> = {}, debts: MemberDebt[] = []) {
   const circles = new InMemoryCircleRepository();
   // Mutable: el caso de uso lo lee en cada ejecución, así se simula un cambio de elegibilidad.
   const current: { -readonly [K in keyof JoinApplicant]: JoinApplicant[K] } = {
     ...ELIGIBLE,
     ...applicant,
   };
-  const useCase = createJoinCircleUseCase(circles, { applicant: current });
+  // Mutable, igual que la elegibilidad: simula pagar la deuda entre dos intentos.
+  const openDebts = [...debts];
+  const useCase = createJoinCircleUseCase(circles, {
+    applicant: current,
+    debts: {
+      openDebtsOf: () => Promise.resolve([...openDebts]),
+      settle: () => Promise.resolve(openDebts.splice(0).length > 0),
+    },
+  });
   const addCircle = (id: string, props: { startsOn?: Period; months?: number } = {}) =>
     circles.add(
       Circle.open({
@@ -48,7 +57,7 @@ function setup(applicant: Partial<JoinApplicant> = {}) {
         }),
       }),
     );
-  return { circles, useCase, current, addCircle };
+  return { circles, useCase, current, addCircle, openDebts };
 }
 
 describe('JoinCircleUseCase', () => {
@@ -95,6 +104,40 @@ describe('JoinCircleUseCase', () => {
     expect(result).toMatchObject({ circleId: 'c-1', created: true });
     expect(result.quote.payoutPeriod).toEqual(Period.of(2027, 2));
     expect(circles.size).toBe(1);
+  });
+
+  it('el expulsado con deuda abierta no puede unirse: MEMBER_BLOCKED con lo vencido más la mora', async () => {
+    const debt = (overdue: number, lateFee: number): MemberDebt => ({
+      circleId: `c-${overdue}`,
+      overdue: Money.of(overdue, 'PEN'),
+      lateFee: Money.of(lateFee, 'PEN'),
+    });
+    const { circles, useCase, openDebts } = setup({}, [debt(33_000, 990), debt(10_000, 300)]);
+
+    await expect(useCase.execute(NEW_CIRCLE)).rejects.toMatchObject({
+      kind: 'conflict',
+      code: 'MEMBER_BLOCKED',
+      details: { amountDue: '44290', currency: 'PEN' },
+    });
+    expect(circles.size).toBe(0);
+
+    // Al saldar la deuda se desbloquea solo.
+    openDebts.splice(0);
+    await expect(useCase.execute(NEW_CIRCLE)).resolves.toMatchObject({ created: true });
+  });
+
+  it('un reintento de una unión anterior responde aunque después quedara bloqueado', async () => {
+    const { useCase, openDebts } = setup();
+    const first = await useCase.execute(NEW_CIRCLE);
+    openDebts.push({
+      circleId: 'otro',
+      overdue: Money.of(100, 'PEN'),
+      lateFee: Money.of(3, 'PEN'),
+    });
+    await expect(useCase.execute(NEW_CIRCLE)).resolves.toMatchObject({
+      circleId: first.circleId,
+      created: false,
+    });
   });
 
   it('un reintento responde la misma unión sin abrir otro círculo, aunque cambie la elegibilidad', async () => {

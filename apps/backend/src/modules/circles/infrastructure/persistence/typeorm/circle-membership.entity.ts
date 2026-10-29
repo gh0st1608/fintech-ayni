@@ -28,6 +28,10 @@ export class CircleMembershipEntity {
   @Column('jsonb', { nullable: true })
   price!: StoredSlotPrice | null;
 
+  /** Expulsión por impago (COPAYNI-57); `NULL` mientras sigue en el círculo. */
+  @Column('timestamptz', { name: 'expelled_at', nullable: true })
+  expelledAt!: Date | null;
+
   @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
   createdAt!: Date;
 }

@@ -26,6 +26,8 @@ export class InMemoryCircleRepository implements CircleRepositoryPort {
   private readonly circles = new Map<string, { terms: CircleTerms; memberships: Membership[] }>();
   /** Círculos cuyo ciclo terminó (COPAYNI-56). */
   private readonly finished = new Set<string>();
+  /** `círculo:usuario` de las membresías expulsadas por impago. */
+  private readonly expelled = new Set<string>();
   /** Orden de alta de las membresías, que hace de fecha de unión. */
   private readonly joins: { circleId: string; userId: string; joinedAt: Date }[] = [];
 
@@ -54,9 +56,20 @@ export class InMemoryCircleRepository implements CircleRepositoryPort {
         const stored = this.circles.get(circleId)!;
         const member = stored.memberships.find(({ userId }) => userId === query.userId)!;
         const { position, price } = member;
-        return { circleId, terms: stored.terms, position, ...(price && { price }), joinedAt };
+        const expelled = this.expelled.has(`${circleId}:${query.userId}`);
+        return {
+          circleId,
+          terms: stored.terms,
+          position,
+          ...(price && { price }),
+          joinedAt,
+          expelled,
+        };
       })
-      .filter(({ circleId }) => this.finished.has(circleId) === (query.status === 'finished'));
+      .filter(
+        ({ circleId, expelled }) =>
+          (this.finished.has(circleId) || expelled) === (query.status === 'finished'),
+      );
     const items = matching.slice(offset, offset + query.limit);
     const next = offset + query.limit;
     return { items, nextCursor: next < matching.length ? String(next) : null };
@@ -156,6 +169,10 @@ export class InMemoryCircleRepository implements CircleRepositoryPort {
   /** Marca el ciclo del círculo como terminado. */
   finish(circleId: string): void {
     this.finished.add(circleId);
+  }
+
+  expel(circleId: string, userId: string): void {
+    this.expelled.add(`${circleId}:${userId}`);
   }
 
   get size(): number {

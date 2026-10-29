@@ -2,6 +2,7 @@ import { IncompleteJoinDraftError, JoinCircleDraft } from '@/domain/circles/Join
 import {
   MonthlyLimitExceededError,
   NationalIdRequiredError,
+  MemberBlockedError,
   PayoutMethodLimitExceededError,
   PayoutMethodRequiredError,
 } from '@/domain/circles/JoinedCircle';
@@ -96,6 +97,31 @@ describe('JoinCircleUseCase', () => {
     const { useCase, repository } = setup();
     jest.spyOn(repository, 'join').mockRejectedValueOnce(new AppError('conflict', 'no', { code }));
     await expect(useCase.execute(draft())).rejects.toThrow(TypedError);
+  });
+
+  it('MEMBER_BLOCKED trae lo que debe el expulsado, si el backend lo informa (COPAYNI-57)', async () => {
+    const { useCase, repository } = setup();
+    const blocked = (fieldErrors?: Record<string, string>) =>
+      new AppError('conflict', 'no', { code: 'MEMBER_BLOCKED', fieldErrors });
+
+    jest
+      .spyOn(repository, 'join')
+      .mockRejectedValueOnce(blocked({ amountDue: '309000', currency: 'PEN' }));
+    const error = await useCase.execute(draft()).catch((caught: unknown) => caught);
+    expect(error).toBeInstanceOf(MemberBlockedError);
+    expect((error as MemberBlockedError).amountDue?.equals(Money.of(309_000, 'PEN'))).toBe(true);
+
+    for (const details of [
+      undefined,
+      { amountDue: '3,5', currency: 'PEN' },
+      { amountDue: '1', currency: 'pen' },
+    ]) {
+      jest.spyOn(repository, 'join').mockRejectedValueOnce(blocked(details));
+      await expect(useCase.execute(draft())).rejects.toMatchObject({
+        code: 'MEMBER_BLOCKED',
+        amountDue: null,
+      });
+    }
   });
 
   it('propaga los demás errores', async () => {

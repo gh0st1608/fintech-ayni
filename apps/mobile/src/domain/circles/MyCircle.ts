@@ -2,7 +2,7 @@ import type { Money } from '@/domain/shared/value-objects/Money';
 
 import type { SlotType } from './value-objects/Slot';
 
-/** `active` incluye los círculos que todavía no empezaron. */
+/** `active` incluye los círculos que todavía no empezaron; `finished`, las membresías expulsadas. */
 export const MY_CIRCLE_STATUSES = ['active', 'finished'] as const;
 export type MyCircleStatus = (typeof MY_CIRCLE_STATUSES)[number];
 
@@ -25,6 +25,8 @@ export interface MyCircle {
   adminFee: Money;
   netPayout: Money;
   joinedAt: Date;
+  /** Expulsado por impago (COPAYNI-57): se lista con los finalizados. */
+  expelled: boolean;
 }
 
 export interface MyCirclesPage {

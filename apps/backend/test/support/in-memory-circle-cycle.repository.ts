@@ -5,6 +5,7 @@ import {
 import {
   type CircleCycle,
   type Disbursement,
+  type Expulsion,
   type Installment,
 } from '@src/modules/circles/domain/entities/circle-cycle';
 import { type Period } from '@src/shared/domain/value-objects/period';
@@ -16,6 +17,8 @@ export class InMemoryCircleCycleRepository implements CircleCycleRepositoryPort 
   /** Todas las cuotas guardadas, por (círculo, turno, mes), como el índice único de PostgreSQL. */
   readonly installments = new Map<string, Installment>();
   readonly payouts: (Disbursement & { circleId: string })[] = [];
+  /** Una por (círculo, miembro), como el índice único de PostgreSQL. */
+  readonly expulsions: (Expulsion & { circleId: string })[] = [];
 
   add(stored: StoredCycle): void {
     this.cycles.set(stored.circleId, stored);
@@ -64,6 +67,10 @@ export class InMemoryCircleCycleRepository implements CircleCycleRepositoryPort 
       ...stored,
       state: cycle.state,
       currentPeriod: current,
+      // Los expulsados ya no se cargan, como `expelled_at` en PostgreSQL.
+      members: stored.members.filter(({ userId }) =>
+        cycle.members.some((member) => member.userId === userId),
+      ),
       installments: current
         ? cycle.installments.filter(({ period }) => period.equals(current))
         : [],
@@ -78,6 +85,12 @@ export class InMemoryCircleCycleRepository implements CircleCycleRepositoryPort 
         ({ circleId, period }) => circleId === cycle.circleId && period.equals(payout.period),
       );
       if (!exists) this.payouts.push({ ...payout, circleId: cycle.circleId });
+    }
+    for (const expulsion of cycle.expulsions) {
+      const exists = this.expulsions.some(
+        ({ circleId, userId }) => circleId === cycle.circleId && userId === expulsion.userId,
+      );
+      if (!exists) this.expulsions.push({ ...expulsion, circleId: cycle.circleId });
     }
   }
 }

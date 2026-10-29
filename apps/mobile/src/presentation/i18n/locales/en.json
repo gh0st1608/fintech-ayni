@@ -143,7 +143,9 @@
         "monthlyLimitExceeded": "This slot's installments exceed your monthly pay-in limit.",
         "payoutMethodRequired": "Choose how you want to receive your payout before joining.",
         "payoutMethodLimitExceeded": "The payout exceeds your payout method limit. Choose another method.",
-        "slotNoLongerAvailable": "That slot is no longer available. Choose another one."
+        "slotNoLongerAvailable": "That slot is no longer available. Choose another one.",
+        "memberBlocked": "You were removed from a circle for missing an installment. Pay the overdue amount plus the late fee ({{amount}}) to join another one.",
+        "memberBlockedNoAmount": "You were removed from a circle for missing an installment. Pay the overdue amount plus the late fee to join another one."
       },
       "actions": {
         "verifyIdentity": "Verify my National ID",
@@ -169,7 +171,8 @@
       "yourTurn": "Your Turn · {{month}}",
       "duration": "{{months}} Months",
       "adminFees": "Admin Fees:",
-      "joined": "Joined"
+      "joined": "Joined",
+      "expelled": "Removed"
     },
     "empty": {
       "active": "Your active circles will appear here!",
