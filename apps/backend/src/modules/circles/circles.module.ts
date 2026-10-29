@@ -16,6 +16,7 @@ import {
 import { GetInstallmentOptionsUseCase } from './application/use-cases/get-installment-options.use-case';
 import { GetJoinConfigUseCase } from './application/use-cases/get-join-config.use-case';
 import { JoinCircleUseCase } from './application/use-cases/join-circle.use-case';
+import { ListMyCirclesUseCase } from './application/use-cases/list-my-circles.use-case';
 import { SlotPricing } from './domain/services/slot-pricing';
 import { SlotPricingRules } from './domain/value-objects/slot-pricing-rules';
 import { ProvisionalJoinEligibility } from './infrastructure/eligibility/provisional-join-eligibility';
@@ -24,15 +25,17 @@ import { CircleMembershipEntity } from './infrastructure/persistence/typeorm/cir
 import { CircleEntity } from './infrastructure/persistence/typeorm/circle.entity';
 import { TypeOrmCircleRepository } from './infrastructure/persistence/typeorm/typeorm-circle.repository';
 import { CirclesController } from './presentation/http/controllers/circles.controller';
+import { MyCirclesController } from './presentation/http/controllers/my-circles.controller';
 
 @Module({
   imports: [TypeOrmModule.forFeature([CircleEntity, CircleMembershipEntity]), PayoutsModule],
-  controllers: [CirclesController],
+  controllers: [CirclesController, MyCirclesController],
   providers: [
     GetJoinConfigUseCase,
     GetInstallmentOptionsUseCase,
     GetAvailableSlotsUseCase,
     JoinCircleUseCase,
+    ListMyCirclesUseCase,
     // Reglas provisionales de elegibilidad (KYC COPAYNI-47 y pending-scope R5).
     { provide: JOIN_ELIGIBILITY, useClass: ProvisionalJoinEligibility },
     ConfigJoinConfigRepository,

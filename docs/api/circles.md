@@ -224,6 +224,51 @@ Cada unión queda registrada en el log como `circles.joined`, con el usuario, el
 
 Fuera de alcance, pendientes del diseño o del PO: la firma del contrato y del pagaré (D3, T9) y el primer pago (D1).
 
+## `GET /v1/me/circles?status=active|finished&cursor=<texto>&limit=<entero>`
+
+**Estado:** implementado en el backend (COPAYNI-26).
+
+Mis círculos, de la unión más reciente a la más antigua, paginados por cursor.
+
+| Parámetro | Notas                                                                                                                                                             |
+| --------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `status`  | Obligatorio. `active`: el círculo todavía no terminó, **incluidos los que no empezaron**. `finished`: su último mes ya pasó (mes actual en `BUSINESS_TIME_ZONE`). |
+| `cursor`  | El `nextCursor` de la página anterior. Es opaco: la app no lo interpreta.                                                                                         |
+| `limit`   | De 1 a 50; 20 por defecto.                                                                                                                                        |
+
+**200**:
+
+```json
+{
+  "items": [
+    {
+      "circleId": "6f1c…",
+      "status": "active",
+      "payout": { "amount": 3000000, "currency": "PEN" },
+      "months": 10,
+      "startsOn": "2026-11",
+      "endsOn": "2027-08",
+      "position": 3,
+      "payoutPeriod": "2027-01",
+      "type": "lowest_fees",
+      "installments": [{ "amount": 336000, "currency": "PEN" }, "…"],
+      "adminFee": { "amount": 360000, "currency": "PEN" },
+      "netPayout": { "amount": 3000000, "currency": "PEN" },
+      "joinedAt": "2026-10-28T23:10:00.000Z"
+    }
+  ],
+  "nextCursor": "WyIyMDI2LTEw…"
+}
+```
+
+- `endsOn` es el mes del último cobro. `installments` y `adminFee` son los del slot del usuario.
+- **Supuesto provisional (R1 y R4):** el precio se recalcula con la configuración actual, porque todavía no se guarda con la membresía al unirse. Si cambian las variables `SLOT_*` o `ADMIN_FEE_*`, cambia también el precio de las uniones anteriores.
+- `nextCursor: null` indica que no hay más páginas. El orden es estable aunque dos uniones tengan la misma fecha (se desempata por id).
+
+| Error              | HTTP | Cuándo                                                                                                |
+| ------------------ | ---- | ----------------------------------------------------------------------------------------------------- |
+| `VALIDATION_ERROR` | 400  | `status` ausente o inválido, `limit` fuera de rango, o `cursor` inválido (`details.cursor: invalid`). |
+
 ## Valores pendientes (pending-scope M6, R5 y R15)
 
 El adaptador falso usa los valores del Figma como provisionales:

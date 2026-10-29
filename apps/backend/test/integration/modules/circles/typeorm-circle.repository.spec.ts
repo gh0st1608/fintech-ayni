@@ -299,4 +299,84 @@ describe('TypeOrmCircleRepository', () => {
       ).resolves.toBeNull();
     });
   });
+
+  describe('listMemberships (COPAYNI-26)', () => {
+    const joinCircle = async (userId: string, startsOn: Period, months = 6) => {
+      const id = randomUUID();
+      await repository.create(
+        Circle.restore({
+          id,
+          terms: CircleTerms.create({ payout: Money.of(1_200_000, 'PEN'), months, startsOn }),
+          memberships: [{ userId, position: 2, idempotencyKey: `k-${id}` }],
+        }),
+      );
+      return id;
+    };
+    const list = (userId: string, status: 'active' | 'finished', cursor: string | null = null) =>
+      repository.listMemberships({
+        userId,
+        status,
+        currentPeriod: Period.of(2026, 10),
+        limit: 2,
+        cursor,
+      });
+
+    it('filtra por estado y pagina de la unión más reciente a la más antigua', async () => {
+      const ana = await user();
+      const finished = await joinCircle(ana, Period.of(2026, 4)); // terminó en septiembre
+      const lastMonth = await joinCircle(ana, Period.of(2026, 5)); // termina este mes: activo
+      const started = await joinCircle(ana, Period.of(2026, 8));
+      const upcoming = await joinCircle(ana, Period.of(2026, 12));
+      await joinCircle(await user(), Period.of(2026, 12)); // de otro usuario
+
+      const first = await list(ana, 'active');
+      expect(first.items.map(({ circleId }) => circleId)).toEqual([upcoming, started]);
+      expect(first.items[0]).toMatchObject({ position: 2 });
+      expect(first.items[0]?.terms.startsOn).toEqual(Period.of(2026, 12));
+      expect(first.items[0]?.terms.payout).toEqual(Money.of(1_200_000, 'PEN'));
+      expect(first.items[0]?.joinedAt).toBeInstanceOf(Date);
+      expect(first.nextCursor).toEqual(expect.any(String));
+
+      const second = await list(ana, 'active', first.nextCursor);
+      expect(second.items.map(({ circleId }) => circleId)).toEqual([lastMonth]);
+      expect(second.nextCursor).toBeNull();
+
+      const done = await list(ana, 'finished');
+      expect(done).toEqual({
+        items: [expect.objectContaining({ circleId: finished })],
+        nextCursor: null,
+      });
+    });
+
+    it('el cursor resiste uniones en el mismo instante (desempata por id)', async () => {
+      const ana = await user();
+      const ids = await Promise.all(
+        Array.from({ length: 5 }, () => joinCircle(ana, Period.of(2027, 1))),
+      );
+      await dataSource.query(
+        "UPDATE circle_memberships SET created_at = '2026-10-01T00:00:00.123456Z' WHERE user_id = $1",
+        [ana],
+      );
+
+      const seen: string[] = [];
+      let cursor: string | null = null;
+      do {
+        const page = await list(ana, 'active', cursor);
+        seen.push(...page.items.map(({ circleId }) => circleId));
+        cursor = page.nextCursor;
+      } while (cursor);
+      expect([...seen].sort()).toEqual([...ids].sort());
+    });
+
+    it('rechaza un cursor ajeno y devuelve vacío para un usuario que no es uuid', async () => {
+      const forged = Buffer.from(JSON.stringify(['ayer', 'x'])).toString('base64url');
+      for (const cursor of [forged, 'no-es-base64', Buffer.from('{}').toString('base64url')]) {
+        await expect(list(randomUUID(), 'active', cursor)).rejects.toMatchObject({
+          code: 'VALIDATION_ERROR',
+          details: { cursor: 'invalid' },
+        });
+      }
+      await expect(list('user-1', 'active')).resolves.toEqual({ items: [], nextCursor: null });
+    });
+  });
 });

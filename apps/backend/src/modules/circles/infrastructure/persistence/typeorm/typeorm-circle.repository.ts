@@ -16,7 +16,10 @@ import {
 import {
   type CircleRepositoryPort,
   IdempotencyKeyExistsError,
+  InvalidCursorError,
   type JoinableCircleCriteria,
+  type MembershipPage,
+  type MembershipsQuery,
 } from '../../../application/ports/circle-repository.port';
 import {
   AlreadyMemberError,
@@ -37,6 +40,49 @@ const UNIQUE_CONSTRAINT_ERRORS: Record<string, () => Error> = {
 };
 
 const toStartsOn = (period: Period): string => `${period.toString()}-01`;
+
+interface MemberCircleRow {
+  membership_id: string;
+  /** `created_at::text`: conserva los microsegundos, que un Date de JS perdería en el cursor. */
+  joined_at: string;
+  position: number;
+  circle_id: string;
+  payout_amount: string;
+  currency: string;
+  months: number;
+  starts_on: string;
+}
+
+interface Keyset {
+  joinedAt: string;
+  membershipId: string;
+}
+
+const TIMESTAMPTZ = /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}(\.\d{1,6})?[+-]\d{2}(:\d{2})?$/;
+
+/** Cursor opaco para el cliente: la posición (fecha de unión, id) de la última membresía. */
+const encodeCursor = (keyset: Keyset): string =>
+  Buffer.from(JSON.stringify([keyset.joinedAt, keyset.membershipId])).toString('base64url');
+
+function decodeCursor(cursor: string): Keyset {
+  try {
+    const parsed: unknown = JSON.parse(Buffer.from(cursor, 'base64url').toString('utf8'));
+    if (Array.isArray(parsed) && parsed.length === 2) {
+      const [joinedAt, membershipId] = parsed as unknown[];
+      if (
+        typeof joinedAt === 'string' &&
+        TIMESTAMPTZ.test(joinedAt) &&
+        typeof membershipId === 'string' &&
+        isUuid(membershipId)
+      ) {
+        return { joinedAt, membershipId };
+      }
+    }
+  } catch {
+    // Cae al error de abajo: un cursor que no es JSON no lo generó este repositorio.
+  }
+  throw new InvalidCursorError();
+}
 const toPeriod = (startsOn: string): Period => Period.parse(startsOn.slice(0, 7));
 
 /** CircleRepositoryPort sobre PostgreSQL. Las entidades no salen de este adaptador. */
@@ -52,6 +98,51 @@ export class TypeOrmCircleRepository implements CircleRepositoryPort {
     if (!isUuid(id)) return null;
     const row = await this.circles.findOne({ where: { id }, relations: { memberships: true } });
     return row ? TypeOrmCircleRepository.toDomain(row) : null;
+  }
+
+  async listMemberships(query: MembershipsQuery): Promise<MembershipPage> {
+    const { userId, status, currentPeriod, limit } = query;
+    const after = query.cursor === null ? null : decodeCursor(query.cursor);
+    if (!isUuid(userId)) return { items: [], nextCursor: null };
+
+    const params: unknown[] = [userId, toStartsOn(currentPeriod), limit + 1];
+    // El círculo terminó si el mes siguiente a su último mes ya llegó.
+    const ended = 'c.starts_on + make_interval(months => c.months::int) <= $2::date';
+    let keyset = '';
+    if (after) {
+      params.push(after.joinedAt, after.membershipId);
+      keyset = 'AND (m.created_at, m.id) < ($4::timestamptz, $5::uuid)';
+    }
+    const rows = await this.memberships.query<MemberCircleRow[]>(
+      `SELECT m.id AS membership_id, m.created_at::text AS joined_at, m.position,
+              c.id AS circle_id, c.payout_amount::text AS payout_amount, c.currency, c.months,
+              to_char(c.starts_on, 'YYYY-MM') AS starts_on
+         FROM circle_memberships m
+         JOIN circles c ON c.id = m.circle_id
+        WHERE m.user_id = $1 AND ${status === 'finished' ? ended : `NOT (${ended})`} ${keyset}
+        ORDER BY m.created_at DESC, m.id DESC
+        LIMIT $3`,
+      params,
+    );
+
+    const page = rows.slice(0, limit);
+    const last = page[page.length - 1];
+    return {
+      items: page.map((row) => ({
+        circleId: row.circle_id,
+        terms: CircleTerms.create({
+          payout: Money.of(Number(row.payout_amount), row.currency),
+          months: row.months,
+          startsOn: Period.parse(row.starts_on),
+        }),
+        position: row.position,
+        joinedAt: new Date(row.joined_at),
+      })),
+      nextCursor:
+        rows.length > limit && last
+          ? encodeCursor({ joinedAt: last.joined_at, membershipId: last.membership_id })
+          : null,
+    };
   }
 
   async findByMembershipKey(userId: string, idempotencyKey: string): Promise<Circle | null> {

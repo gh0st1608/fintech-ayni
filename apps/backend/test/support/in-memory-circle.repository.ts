@@ -1,8 +1,11 @@
 import {
   type CircleRepositoryPort,
+  IdempotencyKeyExistsError,
+  InvalidCursorError,
   type JoinableCircleCriteria,
+  type MembershipPage,
+  type MembershipsQuery,
 } from '@src/modules/circles/application/ports/circle-repository.port';
-import { IdempotencyKeyExistsError } from '@src/modules/circles/application/ports/circle-repository.port';
 import {
   AlreadyMemberError,
   Circle,
@@ -20,9 +23,41 @@ const roundTrip = (): Promise<void> => new Promise((resolve) => setImmediate(res
  */
 export class InMemoryCircleRepository implements CircleRepositoryPort {
   private readonly circles = new Map<string, { terms: CircleTerms; memberships: Membership[] }>();
+  /** Orden de alta de las membresías, que hace de fecha de unión. */
+  private readonly joins: { circleId: string; userId: string; joinedAt: Date }[] = [];
 
   add(circle: Circle): void {
     this.circles.set(circle.id, { terms: circle.terms, memberships: [...circle.memberships] });
+    for (const { userId } of circle.memberships) this.recordJoin(circle.id, userId);
+  }
+
+  private recordJoin(circleId: string, userId: string): void {
+    this.joins.push({
+      circleId,
+      userId,
+      joinedAt: new Date(Date.UTC(2026, 0, 1, 0, this.joins.length)),
+    });
+  }
+
+  /** Mismo orden que PostgreSQL (la más reciente primero); el cursor es la posición en la lista. */
+  async listMemberships(query: MembershipsQuery): Promise<MembershipPage> {
+    await roundTrip();
+    const offset = query.cursor === null ? 0 : Number(query.cursor);
+    if (!Number.isInteger(offset) || offset < 0) throw new InvalidCursorError();
+    const matching = [...this.joins]
+      .reverse()
+      .filter(({ userId }) => userId === query.userId)
+      .map(({ circleId, joinedAt }) => {
+        const stored = this.circles.get(circleId)!;
+        const member = stored.memberships.find(({ userId }) => userId === query.userId)!;
+        return { circleId, terms: stored.terms, position: member.position, joinedAt };
+      })
+      .filter(
+        ({ terms }) => terms.isFinishedAt(query.currentPeriod) === (query.status === 'finished'),
+      );
+    const items = matching.slice(offset, offset + query.limit);
+    const next = offset + query.limit;
+    return { items, nextCursor: next < matching.length ? String(next) : null };
   }
 
   async findById(id: string): Promise<Circle | null> {
@@ -83,6 +118,7 @@ export class InMemoryCircleRepository implements CircleRepositoryPort {
       throw new AlreadyMemberError();
     }
     memberships.push({ ...membership });
+    this.recordJoin(circleId, membership.userId);
   }
 
   async create(circle: Circle): Promise<void> {
