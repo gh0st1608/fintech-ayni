@@ -13,6 +13,7 @@ import { MEMBER_HISTORY } from './application/ports/member-history.port';
 import { PAYMENTS_QUERY } from './application/ports/payments-query.port';
 import { GetPaymentSummaryUseCase } from './application/use-cases/get-payment-summary.use-case';
 import { ListTransactionsUseCase } from './application/use-cases/list-transactions.use-case';
+import { GetPayoutEligibilityUseCase } from './application/use-cases/get-payout-eligibility.use-case';
 import { TypeOrmPaymentsQuery } from './infrastructure/persistence/typeorm/typeorm-payments-query';
 import { MyPaymentsController } from './presentation/http/controllers/my-payments.controller';
 import { SetCirclePauseUseCase } from './application/use-cases/set-circle-pause.use-case';
@@ -147,6 +148,7 @@ import { MyCirclesController } from './presentation/http/controllers/my-circles.
     // Sección Payment de la app (COPAYNI-35).
     GetPaymentSummaryUseCase,
     ListTransactionsUseCase,
+    GetPayoutEligibilityUseCase,
     TypeOrmPaymentsQuery,
     { provide: PAYMENTS_QUERY, useExisting: TypeOrmPaymentsQuery },
     // Pausa del admin general (COPAYNI-61). La identidad del personal llega con la fase 1 del

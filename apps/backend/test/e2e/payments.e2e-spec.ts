@@ -5,7 +5,7 @@ import request from 'supertest';
 
 import { createTestApp, VALID_TOKEN } from '@test/support/create-test-app';
 
-/** Sección Payment (COPAYNI-35 y 41): el contrato; los montos se prueban en el caso de uso. */
+/** Sección Payment (COPAYNI-35, 36 y 41): el contrato; los montos se prueban en el caso de uso. */
 describe('Sección Payment', () => {
   let app: NestExpressApplication;
 
@@ -52,8 +52,20 @@ describe('Sección Payment', () => {
     },
   );
 
+  it('la elegibilidad del payout lista el checklist (COPAYNI-36)', async () => {
+    const response = await request(app.getHttpServer())
+      .get('/v1/me/payout-eligibility')
+      .set('Authorization', `Bearer ${VALID_TOKEN}`)
+      .expect(200);
+    expect(response.body.data.isEligible).toBe(false);
+    expect(
+      (response.body.data.requirements as { requirement: string }[]).map((r) => r.requirement),
+    ).toEqual(['national_id', 'insurance_note', 'payout_method', 'contract', 'due_payments']);
+  });
+
   it('exige autenticación', async () => {
     await request(app.getHttpServer()).get('/v1/me/payments/summary').expect(401);
     await request(app.getHttpServer()).get('/v1/me/transactions?type=payment').expect(401);
+    await request(app.getHttpServer()).get('/v1/me/payout-eligibility').expect(401);
   });
 });

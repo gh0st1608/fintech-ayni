@@ -10,11 +10,13 @@ import {
 import { type Principal } from '../../../../../shared/application/ports/access-token-verifier.port';
 import { CurrentPrincipal } from '../../../../../shared/presentation/decorators/current-principal.decorator';
 import { GetPaymentSummaryUseCase } from '../../../application/use-cases/get-payment-summary.use-case';
+import { GetPayoutEligibilityUseCase } from '../../../application/use-cases/get-payout-eligibility.use-case';
 import { ListTransactionsUseCase } from '../../../application/use-cases/list-transactions.use-case';
 import { PaymentSummaryResponse } from '../dto/payment-summary.dto';
+import { PayoutEligibilityResponse } from '../dto/payout-eligibility.dto';
 import { TransactionsQuery, TransactionsResponse } from '../dto/transactions.dto';
 
-/** Sección Payment de la app (COPAYNI-35 y 41, docs/api/payments.md). */
+/** Sección Payment de la app (COPAYNI-35, 36 y 41, docs/api/payments.md). */
 @ApiTags('payments')
 @ApiBearerAuth()
 @Controller({ path: 'me', version: '1' })
@@ -22,7 +24,21 @@ export class MyPaymentsController {
   constructor(
     @Inject(GetPaymentSummaryUseCase) private readonly getSummary: GetPaymentSummaryUseCase,
     @Inject(ListTransactionsUseCase) private readonly listTransactions: ListTransactionsUseCase,
+    @Inject(GetPayoutEligibilityUseCase)
+    private readonly getEligibility: GetPayoutEligibilityUseCase,
   ) {}
+
+  @Get('payout-eligibility')
+  @ApiOkResponse({
+    type: PayoutEligibilityResponse,
+    description: 'Envuelto en { success, data, traceId }',
+  })
+  @ApiUnauthorizedResponse({ description: 'Sin token o token inválido (UNAUTHORIZED)' })
+  async payoutEligibility(
+    @CurrentPrincipal() principal: Principal,
+  ): Promise<PayoutEligibilityResponse> {
+    return PayoutEligibilityResponse.from(await this.getEligibility.execute(principal));
+  }
 
   @Get('transactions')
   @ApiOkResponse({
