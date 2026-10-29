@@ -18,6 +18,9 @@ import {
   validateSync,
 } from 'class-validator';
 
+/** Pasarelas de pago admitidas (COPAYNI-34). */
+export const PAYMENT_GATEWAYS = ['fake', 'mercadopago'] as const;
+
 export const NODE_ENVS = ['development', 'test', 'production'] as const;
 /** Igual que `CYCLE_PAYMENTS_ADAPTERS` del módulo de círculos (COPAYNI-56). */
 export const CYCLE_PAYMENTS_ADAPTERS = ['fake'] as const;
@@ -287,6 +290,35 @@ export class EnvironmentVariables {
   @IsIn(CYCLE_PAYMENTS_ADAPTERS)
   CIRCLE_PAYMENTS_ADAPTER?: CyclePaymentsAdapter;
 
+  /**
+   * Pasarela de pago (COPAYNI-34, decidido: Mercado Pago con tarjetas y Yape). `fake` simula la
+   * pasarela (desarrollo y pruebas) y está prohibida en production; sin valor, las operaciones
+   * con tarjetas fallan.
+   */
+  @IsOptional()
+  @IsIn(PAYMENT_GATEWAYS)
+  PAYMENT_GATEWAY?: (typeof PAYMENT_GATEWAYS)[number];
+
+  /** Access token de Mercado Pago. Es un secreto: nunca se registra. */
+  @ValidateIf((env: EnvironmentVariables) => env.PAYMENT_GATEWAY === 'mercadopago')
+  @IsString()
+  @IsNotEmpty()
+  MERCADOPAGO_ACCESS_TOKEN?: string;
+
+  /** Clave secreta de los webhooks de Mercado Pago (firma `x-signature`). Es un secreto. */
+  @ValidateIf((env: EnvironmentVariables) => env.PAYMENT_GATEWAY === 'mercadopago')
+  @IsString()
+  @IsNotEmpty()
+  MERCADOPAGO_WEBHOOK_SECRET?: string;
+
+  @IsUrl({ require_tld: false, require_protocol: true, protocols: ['https', 'http'] })
+  MERCADOPAGO_API_URL: string = 'https://api.mercadopago.com';
+
+  @IsInt()
+  @Min(1000)
+  @Max(30000)
+  MERCADOPAGO_TIMEOUT_MS: number = 10000;
+
   /** Zona horaria del negocio: define en qué mes estamos para los cronogramas. */
   @IsTimeZone()
   BUSINESS_TIME_ZONE: string = 'America/Lima';
@@ -515,6 +547,9 @@ export function validateEnvironment(config: Record<string, unknown>): Environmen
   const errors = validateSync(env, { skipMissingProperties: false, forbidUnknownValues: true });
   if (env.NODE_ENV === 'production' && env.OTP_DEV_CODE !== undefined) {
     throw new Error('Configuración inválida:\n- OTP_DEV_CODE: no se admite en production');
+  }
+  if (env.NODE_ENV === 'production' && env.PAYMENT_GATEWAY === 'fake') {
+    throw new Error('Configuración inválida:\n- PAYMENT_GATEWAY: fake no se admite en production');
   }
   if (env.NODE_ENV === 'production' && env.CIRCLE_PAYMENTS_ADAPTER === 'fake') {
     throw new Error(

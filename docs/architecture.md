@@ -24,20 +24,21 @@ Lo que ya existe en el código condiciona la infraestructura:
 
 ## Resumen de decisiones
 
-| #   | Tema                        | Propuesta                                                                                                                          |
-| --- | --------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
-| 1   | Cómputo                     | **ECS Fargate** detrás de un Application Load Balancer                                                                             |
-| 2   | Base de datos               | **Amazon RDS for PostgreSQL** (17); Single-AZ en dev, Multi-AZ en prod                                                             |
-| 3   | Documentos KYC              | **S3** privado con cifrado SSE-KMS (clave propia), versionado y URLs prefirmadas                                                   |
-| 4   | Infraestructura como código | **Terraform** con módulos propios, estado en S3 con bloqueo nativo, un stack por ambiente en `live/`                               |
-| 5   | Secretos y despliegue       | **Secrets Manager** (secretos) y SSM Parameter Store (configuración); **GitHub Actions con OIDC**                                  |
-| 6   | Tareas programadas          | **EventBridge Scheduler → tarea ECS** con la misma imagen                                                                          |
-| 7   | Ambiente dev                | **Emulador floci** en Docker local; prd en AWS (ver [Ambientes](#ambientes-dev-con-emulador-y-prd-en-aws))                         |
-| D1  | Región                      | **Decidido:** `us-east-1`                                                                                                          |
-| D2  | Cuenta AWS                  | **[pendiente]** cuenta dedicada a prd: en el código es un valor `CAMBIAR` (no `mayo-prod`)                                         |
-| D3  | Dominio y TLS               | **Decidido:** `backend-ayni.solutionserj.com`, solo HTTPS. El subdominio se delega desde GoDaddy a Route 53                        |
-| 8   | Observabilidad              | **New Relic como lugar principal** (APM por OTLP, métricas y logs de AWS, alertas, SLO, monitor sintético); CloudWatch de respaldo |
-| 9   | Auditoría                   | **CloudTrail** multi-región con data events de los documentos KYC y alarmas de seguridad (CIS)                                     |
+| #   | Tema                        | Propuesta                                                                                                                                      |
+| --- | --------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | Cómputo                     | **ECS Fargate** detrás de un Application Load Balancer                                                                                         |
+| 2   | Base de datos               | **Amazon RDS for PostgreSQL** (17); Single-AZ en dev, Multi-AZ en prod                                                                         |
+| 3   | Documentos KYC              | **S3** privado con cifrado SSE-KMS (clave propia), versionado y URLs prefirmadas                                                               |
+| 4   | Infraestructura como código | **Terraform** con módulos propios, estado en S3 con bloqueo nativo, un stack por ambiente en `live/`                                           |
+| 5   | Secretos y despliegue       | **Secrets Manager** (secretos) y SSM Parameter Store (configuración); **GitHub Actions con OIDC**                                              |
+| 6   | Tareas programadas          | **EventBridge Scheduler → tarea ECS** con la misma imagen                                                                                      |
+| 7   | Ambiente dev                | **Emulador floci** en Docker local; prd en AWS (ver [Ambientes](#ambientes-dev-con-emulador-y-prd-en-aws))                                     |
+| D1  | Región                      | **Decidido:** `us-east-1`                                                                                                                      |
+| D2  | Cuenta AWS                  | **[pendiente]** cuenta dedicada a prd: en el código es un valor `CAMBIAR` (no `mayo-prod`)                                                     |
+| D3  | Dominio y TLS               | **Decidido:** `backend-ayni.solutionserj.com`, solo HTTPS. El subdominio se delega desde GoDaddy a Route 53                                    |
+| 8   | Observabilidad              | **New Relic como lugar principal** (APM por OTLP, métricas y logs de AWS, alertas, SLO, monitor sintético); CloudWatch de respaldo             |
+| 9   | Auditoría                   | **CloudTrail** multi-región con data events de los documentos KYC y alarmas de seguridad (CIS)                                                 |
+| 10  | Pasarela de pago            | **Decidido: Mercado Pago** (Checkout API, Perú), con tarjetas guardadas y **Yape** (ver [Pasarela de pago](#10-pasarela-de-pago-mercado-pago)) |
 
 ## Diagrama
 
@@ -300,6 +301,51 @@ Valores mensuales aproximados, en USD, para `us-east-1` y 730 horas. Las tarifas
 | New Relic deja de recibir datos o de alertar.                                                                                                                     | Alarmas de respaldo en CloudWatch para los dos síntomas más graves.                                                                                                                                                                       |
 | El emulador de dev se aleja de AWS en algunos comportamientos.                                                                                                    | Diferencias documentadas. Lo que el emulador no aplica (TLS en RDS, enrutamiento del ALB, políticas) se verifica con smoke tests en prd.                                                                                                  |
 
+## 10. Pasarela de pago: Mercado Pago
+
+**Decidido por el negocio (2026-10-29):** Mercado Pago, con pago por tarjeta y por **Yape** (COPAYNI-34). El backend la usa detrás de `PaymentGatewayPort` (`apps/backend/src/modules/payments`); cambiar de proveedor solo cambia el adaptador.
+
+| Pregunta del spike                    | Respuesta con Mercado Pago                                                                                                                                                                                                                                                                              | Estado                                       |
+| ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------- |
+| Tokenización y alcance PCI            | La app tokeniza la tarjeta con el SDK de Mercado Pago (Secure Fields / Card Form); el backend recibe un token de un solo uso y guarda el cliente y la tarjeta en Mercado Pago (`/v1/customers`, `/v1/customers/{id}/cards`). El backend nunca ve el PAN ni el CVC: alcance **SAQ A**                    | Implementado (adaptador)                     |
+| Cobro recurrente con tarjeta guardada | Token de la tarjeta guardada (`/v1/card_tokens` con `card_id`) y pago (`/v1/payments`) con `X-Idempotency-Key`. Cobrar **sin CVV** (débito automático mensual) es "Automatic Payments" de Mercado Pago, que **requiere aprobación de su equipo comercial**                                              | **[?]** Pedir la habilitación a Mercado Pago |
+| Yape                                  | La app genera un token con el SDK, el número de celular y el **OTP de la app de Yape**; el backend paga con `payment_method_id: yape`. Cada pago pide un OTP nuevo: **Yape no permite débito automático**. Tope por pago de S/500, S/900 o S/2.000 según lo configure el usuario en Yape                | Implementado (adaptador)                     |
+| 3-D Secure                            | Lo resuelve el SDK de la app al tokenizar; el backend trata un pago `pending` como no cobrado hasta que el webhook lo confirme                                                                                                                                                                          | Supuesto                                     |
+| Webhooks e idempotencia               | Firma `x-signature` (HMAC-SHA256 del manifiesto `id:…;request-id:…;ts:…;` con la clave secreta de la aplicación), verificada en `isValidWebhookSignature`. Responder 200 en menos de 22 s; Mercado Pago reintenta cada 15 minutos. La cuota viaja en `external_reference` y es la clave de idempotencia | Verificación implementada; endpoint en D1    |
+| Payouts                               | **No encontramos** transferencias a cuentas bancarias de Mercado Pago para Perú ("Money Out" está documentado para Brasil, Argentina y México). Los payouts necesitan otro riel (transferencia bancaria o CCI)                                                                                          | **[?]** T5 abierto                           |
+| Comisiones                            | Según el contrato con Mercado Pago                                                                                                                                                                                                                                                                      | **[?]** Negocio                              |
+
+**Consecuencias para el producto:**
+
+- **Débito automático solo con tarjeta** y solo si Mercado Pago habilita Automatic Payments. Quien paga con Yape lo hace cada mes desde la app (el flujo de pago D1): si no paga, la cuota queda vencida y aplica la mora (COPAYNI-57).
+- El tope de Yape por pago puede ser menor que una cuota grande: la app debe avisarlo antes de elegir Yape.
+
+**Configuración:** `PAYMENT_GATEWAY` (`mercadopago` o `fake`, prohibido en production), `MERCADOPAGO_ACCESS_TOKEN` y `MERCADOPAGO_WEBHOOK_SECRET` (secretos en Secrets Manager), `MERCADOPAGO_API_URL` y `MERCADOPAGO_TIMEOUT_MS`. Sin `PAYMENT_GATEWAY`, toda operación con la pasarela falla.
+
+```mermaid
+sequenceDiagram
+  participant App
+  participant MPSDK as SDK de Mercado Pago (app)
+  participant API as Backend Ayni
+  participant MP as API de Mercado Pago
+  Note over App,MP: Alta de tarjeta (COPAYNI-40)
+  App->>MPSDK: Datos de la tarjeta
+  MPSDK->>MP: Tokeniza (PAN y CVC no pasan por Ayni)
+  MP-->>MPSDK: token de un solo uso
+  App->>API: POST /v1/me/cards { token }
+  API->>MP: Cliente (search o POST /v1/customers)
+  API->>MP: POST /v1/customers/{id}/cards { token }
+  MP-->>API: card_id, marca, últimos 4, expiración
+  Note over App,MP: Cobro mensual de la cuota
+  API->>MP: POST /v1/card_tokens { card_id } (o token de Yape de la app)
+  API->>MP: POST /v1/payments (X-Idempotency-Key = id de la cuota)
+  MP-->>API: approved, rejected o pending
+  MP-->>API: Webhook payment (firma x-signature)
+  API->>MP: GET /v1/payments/{id}: concilia por external_reference
+```
+
+Fuentes: [Yape en Checkout API](https://www.mercadopago.com.pe/developers/en/docs/checkout-api-payments/integration-configuration/yape), [webhooks](https://www.mercadopago.com.pe/developers/en/docs/your-integrations/notifications/webhooks), [cobros recurrentes con tarjeta guardada](https://www.mercadopago.com.pe/developers/en/docs/automatic-payments/recurring-charges-legacy).
+
 ## Decisiones
 
 - **D1. Región:** `us-east-1` (decidido el 2026-10-27). Queda pendiente confirmar con Legal la transferencia internacional de datos personales (L3) antes de cargar datos reales.
@@ -307,6 +353,8 @@ Valores mensuales aproximados, en USD, para `us-east-1` y 730 horas. Las tarifas
 - **D3. Dominio:** `backend-ayni.solutionserj.com` (decidido el 2026-10-27), solo por HTTPS. El DNS de `solutionserj.com` está en GoDaddy: se delega el subdominio a una zona de Route 53 (decidido el 2026-10-28). DNSSEC queda pendiente: requiere el registro DS en GoDaddy.
 
 ## Consecuencias para el backlog
+
+- **COPAYNI-34:** pasarela decidida (Mercado Pago con Yape); adaptador, verificación de webhooks y configuración en el backend. Faltan la cuenta sandbox del equipo y pedir Automatic Payments a Mercado Pago.
 
 - **COPAYNI-12:** implementado en `infra/terraform`. dev está verificado contra floci; prd está validado y probado con provider simulado. Falta la cuenta (D2) para el bootstrap, el primer apply y el workflow de despliegue.
 - **COPAYNI-24:** la persistencia usa PostgreSQL. Las migraciones corren como tarea ECS.

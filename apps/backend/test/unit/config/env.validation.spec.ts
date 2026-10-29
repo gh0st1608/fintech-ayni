@@ -263,6 +263,30 @@ describe('validateEnvironment', () => {
       ).toThrow(/TRUST_FASTEST_MIN_COMPLETED_CIRCLES/);
     });
 
+    it('Mercado Pago exige su access token y su clave de webhooks (COPAYNI-34)', () => {
+      expect(validateEnvironment({ ...REQUIRED })).toMatchObject({
+        MERCADOPAGO_API_URL: 'https://api.mercadopago.com',
+        MERCADOPAGO_TIMEOUT_MS: 10000,
+      });
+      expect(() => validateEnvironment({ ...REQUIRED, PAYMENT_GATEWAY: 'mercadopago' })).toThrow(
+        /MERCADOPAGO_ACCESS_TOKEN[\s\S]*MERCADOPAGO_WEBHOOK_SECRET/,
+      );
+      expect(
+        validateEnvironment({
+          ...REQUIRED,
+          PAYMENT_GATEWAY: 'mercadopago',
+          MERCADOPAGO_ACCESS_TOKEN: 'APP_USR-x',
+          MERCADOPAGO_WEBHOOK_SECRET: 's',
+        }).PAYMENT_GATEWAY,
+      ).toBe('mercadopago');
+      expect(() => validateEnvironment({ ...REQUIRED, PAYMENT_GATEWAY: 'stripe' })).toThrow(
+        /PAYMENT_GATEWAY/,
+      );
+      expect(() =>
+        validateEnvironment({ ...REQUIRED, NODE_ENV: 'production', PAYMENT_GATEWAY: 'fake' }),
+      ).toThrow(/PAYMENT_GATEWAY: fake no se admite/);
+    });
+
     it('pide una autenticación reciente del personal para pausar (COPAYNI-61)', () => {
       expect(validateEnvironment({ ...REQUIRED })).toMatchObject({
         STAFF_STEP_UP_MAX_AGE_SECONDS: 300,

@@ -183,17 +183,17 @@ Con un círculo más que los del escenario, el fondo no alcanza y algún pozo se
 
 ## 4. Decisiones técnicas y de proveedores
 
-| #   | Decisión                                                                                                                                                                | Issue relacionado |
-| --- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------- |
-| T1  | Despliegue: AWS Lambda + API Gateway o contenedores (ECS/Fargate). **Propuesto: ECS Fargate** ([architecture.md](architecture.md)), pendiente de aprobación             | T1.4 (spike)      |
-| T2  | Base de datos (relacional recomendada por la naturaleza transaccional). **Propuesto: RDS for PostgreSQL** ([architecture.md](architecture.md)), pendiente de aprobación | T1.4 (spike)      |
-| T3  | Pasarela de pago y tokenización (PCI-DSS) disponible en el país                                                                                                         | T5.1 (spike)      |
-| T4  | Proveedor de verificación de identidad y OCR                                                                                                                            | T6.1 (spike)      |
-| T5  | Proveedores de payout: bancos, wallets locales (p. ej. Yape/Plin si es Perú), prepago                                                                                   | H5.3, D4          |
-| T6  | Proveedor de envío de OTP (SMS y email)                                                                                                                                 | H2.2              |
-| T7  | Proveedor de push notifications                                                                                                                                         | D6                |
-| T8  | Crash reporting y telemetría mobile                                                                                                                                     | T1.6              |
-| T9  | Firma electrónica de contrato y pagaré                                                                                                                                  | D3                |
+| #   | Decisión                                                                                                                                                                                                                                                                   | Issue relacionado |
+| --- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------- |
+| T1  | Despliegue: AWS Lambda + API Gateway o contenedores (ECS/Fargate). **Propuesto: ECS Fargate** ([architecture.md](architecture.md)), pendiente de aprobación                                                                                                                | T1.4 (spike)      |
+| T2  | Base de datos (relacional recomendada por la naturaleza transaccional). **Propuesto: RDS for PostgreSQL** ([architecture.md](architecture.md)), pendiente de aprobación                                                                                                    | T1.4 (spike)      |
+| T3  | Pasarela de pago y tokenización (PCI-DSS). **Decidido: Mercado Pago, con tarjetas y Yape** ([architecture.md](architecture.md#10-pasarela-de-pago-mercado-pago)). **Pendiente:** cuenta sandbox, habilitar Automatic Payments (débito automático con tarjeta) y comisiones | T5.1 (spike)      |
+| T4  | Proveedor de verificación de identidad y OCR                                                                                                                                                                                                                               | T6.1 (spike)      |
+| T5  | Proveedores de payout: bancos, wallets locales (p. ej. Yape/Plin si es Perú), prepago. Mercado Pago no documenta transferencias a cuentas bancarias en Perú: **sigue abierto**                                                                                             | H5.3, D4          |
+| T6  | Proveedor de envío de OTP (SMS y email)                                                                                                                                                                                                                                    | H2.2              |
+| T7  | Proveedor de push notifications                                                                                                                                                                                                                                            | D6                |
+| T8  | Crash reporting y telemetría mobile                                                                                                                                                                                                                                        | T1.6              |
+| T9  | Firma electrónica de contrato y pagaré                                                                                                                                                                                                                                     | D3                |
 
 ## 5. Cumplimiento y legal
 

@@ -7,6 +7,7 @@ import { type AppConfigService, configModuleOptions } from './config/configurati
 import { AuthModule } from './modules/auth/auth.module';
 import { CirclesModule } from './modules/circles/circles.module';
 import { HealthModule } from './modules/health/health.module';
+import { PaymentsModule } from './modules/payments/payments.module';
 import { PayoutsModule } from './modules/payouts/payouts.module';
 import { ClockModule } from './shared/infrastructure/clock/clock.module';
 import { DatabaseModule } from './shared/infrastructure/persistence/database.module';
@@ -38,6 +39,7 @@ import { createValidationPipe } from './shared/presentation/pipes/validation.pip
     AuthModule,
     CirclesModule,
     PayoutsModule,
+    PaymentsModule,
   ],
   providers: [
     TelemetryShutdown,
