@@ -388,6 +388,23 @@ Al expulsar a un miembro que todavía no cobró, su turno queda **vacante** y lo
 - **Ciclo:** si alguien toma la vacante después de abrirse el mes, la tarea diaria le abre la cuota de ese mes (`circles.cycle.replacement_admitted`). En su mes de cobro recibe el payout completo.
 - **Caso de §3.1:** si un nuevo toma el turno 7 en el mes 6, el fondo cubre solo el mes 5, recibe 15.000 de puesta al día y termina en +600. Quien tomó el turno cobra 30.000 en el mes 7. Hay un test para ese caso.
 
+### Pausa (COPAYNI-61)
+
+Solo el **admin general** (`super_admin`) pausa y reanuda un círculo en curso, con motivo obligatorio (pending-scope §3.1). Es la primera ruta de la API de administración ([backoffice-plan.md](../backoffice-plan.md)):
+
+| Ruta                                      | Cuerpo                | Respuesta (`data`)                                 |
+| ----------------------------------------- | --------------------- | -------------------------------------------------- |
+| `POST /admin/v1/circles/:circleId/pause`  | `{ "reason": "..." }` | `{ circleId, state, changed, startsOn, endsOn }`   |
+| `POST /admin/v1/circles/:circleId/resume` | `{ "reason": "..." }` | Igual; `startsOn` y `endsOn` ya corridos si aplica |
+
+- **Acceso:** token del personal (no el de la app), rol `super_admin` y autenticación de hace menos de `STAFF_STEP_UP_MAX_AGE_SECONDS` (300 por defecto). Sin token o con uno viejo, `401`; sin el rol, `403`. La identidad del personal llega con la fase 1 del back-office: hasta entonces la API rechaza todo con `401` (`UnconfiguredStaffAuthenticator`). Las rutas `/admin` no deben publicarse en el ALB público (BO8).
+- **Idempotente:** pausar un círculo pausado (o reanudar uno en curso) responde `changed: false` y no genera otro evento.
+- **Efectos:** mientras está pausado, la tarea diaria no lo avanza: no corren vencimientos, cobros, expulsiones ni payouts. Al reanudar:
+  - en el mismo mes, una cuota impaga que vencía durante la pausa vence el día en que se reanuda, y una que ya estaba en gracia se corre los días de la pausa;
+  - si la pausa pasó a otro mes, el calendario se corre esa cantidad de meses (`startsOn`, `endsOn` y el mes en curso), y las cuotas del mes en curso pasan al mes nuevo, sin vencer antes del día en que se reanuda.
+- **Auditoría:** cada cambio queda en `circle_admin_events` (solo inserción) con el actor, el motivo, el antes y el después, en la misma transacción que el cambio, y en el log como `circles.admin.paused` o `circles.admin.resumed`. Los avisos a los miembros y a los demás `super_admin` llegan con las notificaciones del back-office.
+- **Errores:** `VALIDATION_ERROR` (motivo vacío o `circleId` que no es UUID), `CIRCLE_NOT_FOUND` e `INVALID_CYCLE_TRANSITION` (422: el círculo no está en curso ni pausado).
+
 ### Fondo de garantía (COPAYNI-58)
 
 Fondo propio decidido por el PO (R16), con un **registro contable de doble entrada** (`ledger_transactions` y `ledger_entries`):

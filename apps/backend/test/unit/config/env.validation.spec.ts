@@ -262,6 +262,15 @@ describe('validateEnvironment', () => {
         validateEnvironment({ ...REQUIRED, TRUST_FASTEST_MIN_COMPLETED_CIRCLES: '-1' }),
       ).toThrow(/TRUST_FASTEST_MIN_COMPLETED_CIRCLES/);
     });
+
+    it('pide una autenticación reciente del personal para pausar (COPAYNI-61)', () => {
+      expect(validateEnvironment({ ...REQUIRED })).toMatchObject({
+        STAFF_STEP_UP_MAX_AGE_SECONDS: 300,
+      });
+      expect(() =>
+        validateEnvironment({ ...REQUIRED, STAFF_STEP_UP_MAX_AGE_SECONDS: '30' }),
+      ).toThrow(/STAFF_STEP_UP_MAX_AGE_SECONDS/);
+    });
   });
 
   describe('métodos de cobro', () => {

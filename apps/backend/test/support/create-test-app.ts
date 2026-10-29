@@ -10,6 +10,10 @@ import {
   type Principal,
 } from '@src/shared/application/ports/access-token-verifier.port';
 import { CLOCK, type ClockPort } from '@src/shared/application/ports/clock.port';
+import {
+  STAFF_AUTHENTICATOR,
+  type StaffAuthenticatorPort,
+} from '@src/shared/application/ports/staff-authenticator.port';
 import { UnauthorizedError } from '@src/shared/errors/app-error';
 
 export const VALID_TOKEN = 'token-valido';
@@ -45,12 +49,14 @@ export class TestClock implements ClockPort {
  * - `extraModules` monta rutas de prueba sobre la misma configuración global.
  * - `verifier: null` usa el verificador real de JWT (módulo auth).
  * - `clock` reemplaza el reloj del sistema.
+ * - `staff` reemplaza la autenticación del personal (por defecto, la que rechaza todo).
  */
 export async function createTestApp(
   options: {
     extraModules?: Type[];
     verifier?: AccessTokenVerifierPort | null;
     clock?: ClockPort;
+    staff?: StaffAuthenticatorPort;
   } = {},
 ): Promise<NestExpressApplication> {
   const builder = Test.createTestingModule({
@@ -60,6 +66,7 @@ export async function createTestApp(
     builder.overrideProvider(ACCESS_TOKEN_VERIFIER).useValue(options.verifier ?? fakeTokenVerifier);
   }
   if (options.clock) builder.overrideProvider(CLOCK).useValue(options.clock);
+  if (options.staff) builder.overrideProvider(STAFF_AUTHENTICATOR).useValue(options.staff);
   const moduleRef = await builder.compile();
   const app = configureApp(moduleRef.createNestApplication<NestExpressApplication>(APP_OPTIONS));
   await app.init();

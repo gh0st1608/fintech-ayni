@@ -270,6 +270,15 @@ export class EnvironmentVariables {
   PAYOUT_RETENTION_INSTALLMENTS: number = 2;
 
   /**
+   * Antigüedad máxima de la autenticación del personal para una acción crítica, como pausar un
+   * círculo (step-up, COPAYNI-61), en segundos.
+   */
+  @IsInt()
+  @Min(60)
+  @Max(3600)
+  STAFF_STEP_UP_MAX_AGE_SECONDS: number = 300;
+
+  /**
    * Cobro de cuotas y pago de payouts del ciclo mensual. `fake` simula ambos (desarrollo y
    * pruebas) y está prohibido en production; sin valor, el ciclo falla al intentar cobrar
    * (pasarela pendiente: D1, COPAYNI-34).

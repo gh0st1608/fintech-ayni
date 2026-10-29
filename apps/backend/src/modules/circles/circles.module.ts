@@ -10,6 +10,15 @@ import { PayoutsModule } from '../payouts/payouts.module';
 import { JOIN_CONFIG_REPOSITORY } from './application/ports/join-config-repository.port';
 import { JOIN_ELIGIBILITY } from './application/ports/join-eligibility.port';
 import { MEMBER_HISTORY } from './application/ports/member-history.port';
+import { SetCirclePauseUseCase } from './application/use-cases/set-circle-pause.use-case';
+import { AdminCirclesController } from './presentation/http/controllers/admin-circles.controller';
+import { STAFF_AUTHENTICATOR } from '../../shared/application/ports/staff-authenticator.port';
+import { UnconfiguredStaffAuthenticator } from '../../shared/infrastructure/staff/unconfigured-staff-authenticator';
+import {
+  STAFF_ACCESS_SETTINGS,
+  type StaffAccessSettings,
+  StaffGuard,
+} from '../../shared/presentation/guards/staff.guard';
 import { TRUST_SETTINGS, type TrustSettings } from './application/use-cases/trust';
 import { TypeOrmMemberHistory } from './infrastructure/persistence/typeorm/typeorm-member-history.repository';
 import { MEMBER_DEBTS } from './application/ports/member-debts.port';
@@ -61,7 +70,7 @@ import { MyCirclesController } from './presentation/http/controllers/my-circles.
 
 @Module({
   imports: [TypeOrmModule.forFeature([CircleEntity, CircleMembershipEntity]), PayoutsModule],
-  controllers: [CirclesController, MyCirclesController],
+  controllers: [CirclesController, MyCirclesController, AdminCirclesController],
   providers: [
     GetJoinConfigUseCase,
     GetInstallmentOptionsUseCase,
@@ -123,6 +132,18 @@ import { MyCirclesController } from './presentation/http/controllers/my-circles.
       inject: [ConfigService],
       useFactory: (config: AppConfigService): RecommendationSettings => ({
         limit: config.get('RECOMMENDED_CIRCLES_LIMIT', { infer: true }),
+      }),
+    },
+    // Pausa del admin general (COPAYNI-61). La identidad del personal llega con la fase 1 del
+    // back-office: hasta entonces, la API de administración rechaza todo con 401.
+    SetCirclePauseUseCase,
+    StaffGuard,
+    { provide: STAFF_AUTHENTICATOR, useClass: UnconfiguredStaffAuthenticator },
+    {
+      provide: STAFF_ACCESS_SETTINGS,
+      inject: [ConfigService],
+      useFactory: (config: AppConfigService): StaffAccessSettings => ({
+        stepUpMaxAgeSeconds: config.get('STAFF_STEP_UP_MAX_AGE_SECONDS', { infer: true }),
       }),
     },
     // Regla de confianza por tipo de turno (COPAYNI-60, valores propuestos de R18).

@@ -4,7 +4,7 @@ import { type Period } from '../../../../shared/domain/value-objects/period';
 import { DomainError } from '../../../../shared/errors/app-error';
 import { refundTransactions, settlePeriod } from '../services/period-settlement';
 import { retainedInstallments, type SlotQuote } from '../services/slot-pricing';
-import { type CircleTerms } from '../value-objects/circle-terms';
+import { CircleTerms } from '../value-objects/circle-terms';
 import { LedgerTransaction } from '../value-objects/ledger-transaction';
 
 /**
@@ -113,6 +113,24 @@ export interface PeriodClose {
   readonly returned: Money;
 }
 
+/** Pausa o reanudación del admin general (COPAYNI-61), para la auditoría. */
+export interface CycleAdminEvent {
+  readonly action: 'pause' | 'resume';
+  readonly actorId: string;
+  readonly reason: string;
+  readonly on: LocalDate;
+  readonly before: CycleSnapshot;
+  readonly after: CycleSnapshot;
+}
+
+/** Lo que cambia una pausa: estado y calendario. */
+export interface CycleSnapshot {
+  readonly state: CycleState;
+  readonly startsOn: string;
+  readonly endsOn: string;
+  readonly currentPeriod: string | null;
+}
+
 export class InvalidCycleTransitionError extends DomainError {
   constructor(message: string) {
     super('INVALID_CYCLE_TRANSITION', message);
@@ -136,9 +154,12 @@ export class InvalidCycleTransitionError extends DomainError {
  * el círculo espera en `collecting`.
  */
 export class CircleCycle {
+  private shift = 0;
+  private readonly adminLog: CycleAdminEvent[] = [];
+
   private constructor(
     readonly circleId: string,
-    readonly terms: CircleTerms,
+    private currentTerms: CircleTerms,
     /** Día del mes en que vence cada cuota (pending-scope R19). */
     private readonly dueDay: number,
     private readonly delinquency: DelinquencyPolicy,
@@ -154,7 +175,27 @@ export class CircleCycle {
     private readonly entries: LedgerTransaction[],
     private readonly closes: PeriodClose[],
     private readonly refundsToPay: Refund[],
+    private pausedSince: LocalDate | null,
   ) {}
+
+  get terms(): CircleTerms {
+    return this.currentTerms;
+  }
+
+  /** Desde cuándo está pausado; `null` si no lo está. */
+  get pausedOn(): LocalDate | null {
+    return this.pausedSince;
+  }
+
+  /** Meses que se corrió el calendario desde `restore` al reanudar (COPAYNI-61). */
+  get calendarShift(): number {
+    return this.shift;
+  }
+
+  /** Pausas y reanudaciones desde `restore`. */
+  get adminEvents(): readonly CycleAdminEvent[] {
+    return [...this.adminLog];
+  }
 
   /**
    * `members`: los no expulsados. `installments`: las del mes en curso. `pendingRefunds`: las
@@ -171,6 +212,7 @@ export class CircleCycle {
     members: readonly CycleMember[];
     installments: readonly Installment[];
     pendingRefunds?: readonly PendingRefund[];
+    pausedOn?: LocalDate | null;
   }): CircleCycle {
     const { circleId, terms, dueDay, delinquency, state, currentPeriod, members, installments } =
       props;
@@ -178,8 +220,12 @@ export class CircleCycle {
       throw new InvalidCycleTransitionError('El fondo debe estar en la moneda del círculo');
     }
     const notRunning = state === 'collecting' || state === 'finished';
-    if ((state === 'contributing' && currentPeriod === null) || (notRunning && currentPeriod)) {
+    const running = state === 'contributing' || state === 'paused';
+    if ((running && currentPeriod === null) || (notRunning && currentPeriod)) {
       throw new InvalidCycleTransitionError('Solo un círculo en curso tiene un mes en curso');
+    }
+    if ((state === 'paused') !== Boolean(props.pausedOn)) {
+      throw new InvalidCycleTransitionError('Solo un círculo pausado tiene fecha de pausa');
     }
     return new CircleCycle(
       circleId,
@@ -198,7 +244,79 @@ export class CircleCycle {
       [],
       [],
       [],
+      props.pausedOn ?? null,
     );
+  }
+
+  /**
+   * Pausa el ciclo (COPAYNI-61, solo el admin general): mientras dura no corren vencimientos,
+   * cobros, expulsiones ni payouts, porque la tarea diaria solo avanza los círculos en curso.
+   * Devuelve `false` si ya estaba pausado (pausar dos veces no es otro evento).
+   */
+  pause(today: LocalDate, by: { actorId: string; reason: string }): boolean {
+    if (this.currentState === 'paused') return false;
+    if (this.currentState !== 'contributing') {
+      throw new InvalidCycleTransitionError('Solo se pausa un círculo en curso');
+    }
+    const before = this.snapshot();
+    this.currentState = 'paused';
+    this.pausedSince = today;
+    this.adminLog.push({ action: 'pause', ...by, on: today, before, after: this.snapshot() });
+    return true;
+  }
+
+  /**
+   * Reanuda el ciclo (pending-scope §3.1, efectos recomendados de la pausa):
+   * - Si la pausa pasó a otro mes, el calendario se corre los meses que duró (inicio, fin y mes en
+   *   curso), y las cuotas del mes en curso pasan al mes nuevo.
+   * - Una cuota impaga que vencía durante la pausa pasa a vencer el día en que se reanuda; una que
+   *   ya estaba en gracia al pausar se corre los días que duró la pausa, que no cuentan para la
+   *   gracia.
+   * Devuelve `false` si ya estaba en curso.
+   */
+  resume(today: LocalDate, by: { actorId: string; reason: string }): boolean {
+    if (this.currentState === 'contributing') return false;
+    if (this.currentState !== 'paused' || !this.pausedSince) {
+      throw new InvalidCycleTransitionError('Solo se reanuda un círculo pausado');
+    }
+    const before = this.snapshot();
+    const pausedOn = this.pausedSince;
+    const months = Math.max(0, pausedOn.period.monthsUntil(today.period));
+    const pausedDays = Math.max(0, pausedOn.daysUntil(today));
+    const period = this.period!.addMonths(months);
+    this.touched.forEach((installment, index) => {
+      if (!installment.period.equals(this.period!)) return;
+      const unpaid = installment.status === 'pending' || installment.status === 'overdue';
+      let dueOn = months > 0 ? LocalDate.of(period, this.dueDay) : installment.dueOn;
+      if (unpaid && months === 0 && installment.dueOn.isBefore(pausedOn)) {
+        dueOn = installment.dueOn.addDays(pausedDays);
+      }
+      if (unpaid && dueOn.isBefore(today)) dueOn = today;
+      this.touched[index] = { ...installment, period, dueOn };
+    });
+    if (months > 0) {
+      const { payout } = this.currentTerms;
+      this.currentTerms = CircleTerms.create({
+        payout,
+        months: this.currentTerms.months,
+        startsOn: this.currentTerms.startsOn.addMonths(months),
+      });
+      this.period = period;
+      this.shift += months;
+    }
+    this.currentState = 'contributing';
+    this.pausedSince = null;
+    this.adminLog.push({ action: 'resume', ...by, on: today, before, after: this.snapshot() });
+    return true;
+  }
+
+  private snapshot(): CycleSnapshot {
+    return {
+      state: this.currentState,
+      startsOn: this.currentTerms.startsOn.toString(),
+      endsOn: this.currentTerms.endsOn.toString(),
+      currentPeriod: this.period?.toString() ?? null,
+    };
   }
 
   /** Movimientos contables decididos desde `restore` (COPAYNI-58). */

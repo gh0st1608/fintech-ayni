@@ -4,6 +4,7 @@ import { Logger } from '@nestjs/common';
 import { type NextFunction, type Request, type Response } from 'express';
 
 import { type Principal } from '../../application/ports/access-token-verifier.port';
+import { type StaffPrincipal } from '../../application/ports/staff-authenticator.port';
 import { currentTraceIds } from '../../infrastructure/observability/logger';
 import { HEALTH_PATH } from '../../infrastructure/observability/telemetry';
 
@@ -13,6 +14,8 @@ export const TRACE_ID_HEADER = 'x-trace-id';
 export interface AppRequest extends Request {
   traceId?: string;
   principal?: Principal;
+  /** Personal autenticado por `StaffGuard` en la API de administración. */
+  staff?: StaffPrincipal;
 }
 
 /** Mismo formato que un trace id de OpenTelemetry (32 hex), por si no hay traza activa. */

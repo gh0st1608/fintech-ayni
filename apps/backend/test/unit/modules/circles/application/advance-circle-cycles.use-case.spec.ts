@@ -18,6 +18,7 @@ import {
   FakeCyclePayments,
   UnconfiguredCyclePayments,
 } from '@src/modules/circles/infrastructure/payments/cycle-payments';
+import { LocalDate } from '@src/shared/domain/value-objects/local-date';
 import { Money } from '@src/shared/domain/value-objects/money';
 import { Period } from '@src/shared/domain/value-objects/period';
 import { TestClock } from '@test/support/create-test-app';
@@ -271,6 +272,7 @@ describe('AdvanceCircleCyclesUseCase', () => {
       currentPeriod: Period.of(2026, 11),
       members: MEMBERS,
       installments: [],
+      pausedOn: LocalDate.parse('2026-11-02'),
     });
     cycles.lock('c-1');
 

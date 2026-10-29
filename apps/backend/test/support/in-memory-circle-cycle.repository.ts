@@ -4,6 +4,7 @@ import {
 } from '@src/modules/circles/application/ports/circle-cycle-repository.port';
 import {
   type CircleCycle,
+  type CycleAdminEvent,
   type Disbursement,
   type Expulsion,
   type Installment,
@@ -11,6 +12,7 @@ import {
 import { type LedgerTransaction } from '@src/modules/circles/domain/value-objects/ledger-transaction';
 import { Money } from '@src/shared/domain/value-objects/money';
 import { type Period } from '@src/shared/domain/value-objects/period';
+import { NotFoundError } from '@src/shared/errors/app-error';
 
 /**
  * Doble de prueba con la semántica del puerto: bloqueo por círculo, guardado todo o nada y un
@@ -26,15 +28,18 @@ export class InMemoryCircleCycleRepository implements CircleCycleRepositoryPort 
   readonly expulsions: (Expulsion & { circleId: string })[] = [];
   /** Movimientos guardados, por clave. */
   readonly ledger = new Map<string, LedgerTransaction>();
+  /** Pausas y reanudaciones guardadas (COPAYNI-61). */
+  readonly adminEvents: (CycleAdminEvent & { circleId: string })[] = [];
 
   add(
-    stored: Omit<StoredCycle, 'fundBalance' | 'pendingRefunds'> &
-      Partial<Pick<StoredCycle, 'pendingRefunds'>>,
+    stored: Omit<StoredCycle, 'fundBalance' | 'pendingRefunds' | 'pausedOn'> &
+      Partial<Pick<StoredCycle, 'pendingRefunds' | 'pausedOn'>>,
   ): void {
     this.cycles.set(stored.circleId, {
       ...stored,
       fundBalance: Money.zero(stored.terms.currency),
       pendingRefunds: stored.pendingRefunds ?? [],
+      pausedOn: stored.pausedOn ?? null,
     });
   }
 
@@ -82,15 +87,17 @@ export class InMemoryCircleCycleRepository implements CircleCycleRepositoryPort 
     );
   }
 
+  /** Con `wait`, un círculo bloqueado no se salta: el doble no simula la espera. */
   async withLock(
     circleId: string,
     work: (stored: StoredCycle) => Promise<CircleCycle>,
+    options: { wait?: boolean } = {},
   ): Promise<boolean> {
-    if (this.locked.has(circleId)) return false;
+    if (this.locked.has(circleId) && !options.wait) return false;
     this.locked.add(circleId);
     try {
       const stored = this.cycles.get(circleId);
-      if (!stored) throw new Error(`No existe el círculo ${circleId}`);
+      if (!stored) throw new NotFoundError(`No existe el círculo ${circleId}`, 'CIRCLE_NOT_FOUND');
       this.save(
         await work({
           ...stored,
@@ -109,8 +116,10 @@ export class InMemoryCircleCycleRepository implements CircleCycleRepositoryPort 
     const current = cycle.currentPeriod;
     this.cycles.set(cycle.circleId, {
       ...stored,
+      terms: cycle.terms,
       state: cycle.state,
       currentPeriod: current,
+      pausedOn: cycle.pausedOn,
       pendingRefunds: cycle.isFinished()
         ? []
         : [
@@ -127,6 +136,16 @@ export class InMemoryCircleCycleRepository implements CircleCycleRepositoryPort 
         ? cycle.installments.filter(({ period }) => period.equals(current))
         : [],
     });
+    if (cycle.calendarShift > 0 && current) {
+      // Las cuotas del mes en curso pasaron al mes nuevo, como el UPDATE de PostgreSQL.
+      const old = `:${current.addMonths(-cycle.calendarShift).toString()}`;
+      for (const key of [...this.installments.keys()]) {
+        if (key.startsWith(`${cycle.circleId}:`) && key.endsWith(old))
+          this.installments.delete(key);
+      }
+    }
+    for (const event of cycle.adminEvents)
+      this.adminEvents.push({ ...event, circleId: cycle.circleId });
     for (const installment of cycle.installments) {
       const key = `${cycle.circleId}:${installment.position}:${installment.period.toString()}`;
       const previous = this.installments.get(key);

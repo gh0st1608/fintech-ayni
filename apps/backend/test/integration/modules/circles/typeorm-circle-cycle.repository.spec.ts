@@ -5,6 +5,7 @@ import { type DataSource } from 'typeorm';
 
 import { type ContributionsPort } from '@src/modules/circles/application/ports/cycle-payments.port';
 import { AdvanceCircleCyclesUseCase } from '@src/modules/circles/application/use-cases/advance-circle-cycles.use-case';
+import { SetCirclePauseUseCase } from '@src/modules/circles/application/use-cases/set-circle-pause.use-case';
 import { Circle } from '@src/modules/circles/domain/entities/circle';
 import { CircleCycle } from '@src/modules/circles/domain/entities/circle-cycle';
 import { priceOf, SlotPricing } from '@src/modules/circles/domain/services/slot-pricing';
@@ -371,6 +372,82 @@ describe('TypeOrmCircleCycleRepository', () => {
       [id],
     );
     expect(pot?.total).toBe('0');
+  });
+
+  it('pausa y reanuda en otro mes: corre el calendario y audita (COPAYNI-61)', async () => {
+    const { id } = await fullCircle();
+    await job([id])('2026-11-02');
+    const clock = new TestClock(at('2026-11-03'));
+    const settings = {
+      dueDay: 5,
+      timeZone: 'America/Lima',
+      delinquency: TEST_DELINQUENCY,
+      fundFeeShareBps: TEST_FUND_SHARE_BPS,
+    };
+    const pause = new SetCirclePauseUseCase(cycles, TEST_PRICING, settings, clock);
+    const command = { circleId: id, actorId: 'staff-1', reason: 'Reclamo' };
+    await pause.execute({ ...command, action: 'pause' });
+    await pause.execute({ ...command, action: 'pause' });
+    const state = () =>
+      dataSource.query<Record<string, string | null>[]>(
+        `SELECT cycle_state, to_char(paused_on, 'YYYY-MM-DD') AS paused_on,
+                to_char(starts_on, 'YYYY-MM') AS starts_on,
+                to_char(current_period, 'YYYY-MM') AS current_period
+           FROM circles WHERE id = $1`,
+        [id],
+      );
+    expect(await state()).toEqual([
+      {
+        cycle_state: 'paused',
+        paused_on: '2026-11-03',
+        starts_on: '2026-11',
+        current_period: '2026-11',
+      },
+    ]);
+    // La tarea diaria no avanza un círculo pausado.
+    expect(await cycles.listToAdvance(Period.of(2026, 11))).not.toContain(id);
+
+    clock.set(at('2026-12-02'));
+    await pause.execute({ ...command, action: 'resume', reason: 'Resuelto' });
+    expect(await state()).toEqual([
+      {
+        cycle_state: 'contributing',
+        paused_on: null,
+        starts_on: '2026-12',
+        current_period: '2026-12',
+      },
+    ]);
+    const installments = await dataSource.query<{ period: string; due_on: string }[]>(
+      `SELECT DISTINCT to_char(period, 'YYYY-MM') AS period, to_char(due_on, 'YYYY-MM-DD') AS due_on
+         FROM circle_installments WHERE circle_id = $1`,
+      [id],
+    );
+    expect(installments).toEqual([{ period: '2026-12', due_on: '2026-12-05' }]);
+    const events = await dataSource.query<{ action: string; actor_id: string; after: unknown }[]>(
+      'SELECT action, actor_id, after FROM circle_admin_events WHERE circle_id = $1 ORDER BY created_at',
+      [id],
+    );
+    expect(events).toEqual([
+      expect.objectContaining({ action: 'pause', actor_id: 'staff-1' }),
+      expect.objectContaining({
+        action: 'resume',
+        after: expect.objectContaining({ startsOn: '2026-12', endsOn: '2027-05' }),
+      }),
+    ]);
+    await expect(
+      dataSource.query('UPDATE circle_admin_events SET reason = $2 WHERE circle_id = $1', [
+        id,
+        'x',
+      ]),
+    ).rejects.toThrow();
+
+    // Sigue el ciclo con el calendario nuevo: cobra y paga diciembre.
+    await job([id])('2026-12-05');
+    const [payout] = await dataSource.query<{ period: string }[]>(
+      "SELECT to_char(period, 'YYYY-MM') AS period FROM circle_payouts WHERE circle_id = $1",
+      [id],
+    );
+    expect(payout).toEqual({ period: '2026-12' });
   });
 
   it('una segunda ejecución simultánea no procesa el círculo bloqueado', async () => {

@@ -309,6 +309,7 @@ describe('CircleCycle', () => {
         currentPeriod: period,
         members: [],
         installments: [],
+        pausedOn: state === 'paused' ? day('2026-11-02') : null,
       });
     expect(() =>
       CircleCycle.restore({
@@ -330,6 +331,23 @@ describe('CircleCycle', () => {
       expect.objectContaining({ code: 'INVALID_CYCLE_TRANSITION' }),
     );
     expect(restore('paused', Period.of(2026, 11)).dueInstallments(day('2026-11-05'))).toEqual([]);
-    expect(restore('paused', null).isStartDue(day('2027-01-01'))).toBe(false);
+    // Un círculo pausado sigue en curso: tiene mes en curso y fecha de pausa (COPAYNI-61).
+    expect(() => restore('paused', null)).toThrow(
+      expect.objectContaining({ code: 'INVALID_CYCLE_TRANSITION' }),
+    );
+    expect(() =>
+      CircleCycle.restore({
+        circleId: 'c-1',
+        terms: TERMS,
+        dueDay: 5,
+        delinquency: TEST_DELINQUENCY,
+        fund: { balance: Money.zero('PEN'), feeShareBps: TEST_FUND_SHARE_BPS },
+        state: 'contributing',
+        currentPeriod: Period.of(2026, 11),
+        members: [],
+        installments: [],
+        pausedOn: day('2026-11-02'),
+      }),
+    ).toThrow(expect.objectContaining({ code: 'INVALID_CYCLE_TRANSITION' }));
   });
 });

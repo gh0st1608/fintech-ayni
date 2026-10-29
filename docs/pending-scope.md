@@ -152,6 +152,8 @@ Lectura del aporte al fondo: un moroso que cobró en el turno 3 de ese ejemplo d
 - Si la pausa pasa a otro mes, el calendario del círculo se corre un mes, `endsOn` incluido, y se notifica a los miembros.
 - El motivo es obligatorio y queda en la auditoría.
 
+Implementado con esta recomendación en COPAYNI-61 ([circles.md](api/circles.md#pausa-copayni-61)). Supuestos **[?]**: una cuota que ya estaba en gracia al pausar se corre los días de la pausa (no cuentan para la gracia), y si la pausa dura varios meses el calendario se corre esa cantidad de meses. Los avisos a los miembros y a los demás `super_admin` quedan en el log hasta que existan las notificaciones del back-office.
+
 **Círculo incompleto al llegar su mes de inicio (decidido por el PO, R2):** el fondo de garantía **no** cubre turnos que nunca se llenaron. En su lugar se avisa a los miembros que se reducirán el pozo y los integrantes, y se les pide aprobar el inicio. Desde COPAYNI-58 el backend ya no empieza un círculo incompleto: queda en `collecting` y registra `circles.cycle.start_approval_required`. El flujo de aprobación es una historia nueva; recomendación técnica **[?]**:
 
 1. **Propuesta de reducción.** El primer día del mes de inicio, el círculo pasa a "esperando aprobación". La propuesta tiene tantos turnos como miembros y la misma cuota base, así que el pozo baja a miembros × cuota base. Los turnos se reordenan en el mismo orden relativo y los precios se recalculan con las reglas de slots vigentes para la nueva duración.

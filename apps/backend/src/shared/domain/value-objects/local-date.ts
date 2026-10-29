@@ -49,6 +49,16 @@ export class LocalDate {
     return LocalDate.parse(date.toISOString().slice(0, 10));
   }
 
+  /** Días corridos hasta `other`; negativo si `other` es anterior. */
+  daysUntil(other: LocalDate): number {
+    const utc = (date: LocalDate) => Date.UTC(date.period.year, date.period.month - 1, date.day);
+    return Math.round((utc(other) - utc(this)) / 86_400_000);
+  }
+
+  isBefore(other: LocalDate): boolean {
+    return this.toString() < other.toString();
+  }
+
   isAfter(other: LocalDate): boolean {
     return this.toString() > other.toString();
   }

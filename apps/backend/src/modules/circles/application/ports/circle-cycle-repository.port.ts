@@ -1,3 +1,4 @@
+import { type LocalDate } from '../../../../shared/domain/value-objects/local-date';
 import { type Money } from '../../../../shared/domain/value-objects/money';
 import { type Period } from '../../../../shared/domain/value-objects/period';
 import {
@@ -27,6 +28,8 @@ export interface StoredCycle {
   fundBalance: Money;
   /** Devoluciones de los expulsados de este círculo que todavía no se pagaron. */
   pendingRefunds: PendingRefund[];
+  /** Desde cuándo está pausado (COPAYNI-61); `null` si no lo está. */
+  pausedOn: LocalDate | null;
 }
 
 export interface CircleCycleRepositoryPort {
@@ -38,6 +41,14 @@ export interface CircleCycleRepositoryPort {
    * ejecución tiene el círculo bloqueado. Si `work` falla, no se guarda nada. También guarda los
    * movimientos contables (`CircleCycle.ledger`), una sola vez por clave, y marca pagadas las
    * devoluciones (`CircleCycle.refunds`).
+   *
+   * Con `wait` espera el bloqueo en vez de devolver `false` (la pausa del admin general,
+   * COPAYNI-61). Guarda también el calendario corrido (`calendarShift`), la fecha de pausa y los
+   * eventos de auditoría (`adminEvents`).
    */
-  withLock(circleId: string, work: (stored: StoredCycle) => Promise<CircleCycle>): Promise<boolean>;
+  withLock(
+    circleId: string,
+    work: (stored: StoredCycle) => Promise<CircleCycle>,
+    options?: { wait?: boolean },
+  ): Promise<boolean>;
 }

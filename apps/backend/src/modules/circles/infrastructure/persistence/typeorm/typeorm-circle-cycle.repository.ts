@@ -5,6 +5,7 @@ import { type EntityManager, type Repository } from 'typeorm';
 import { LocalDate } from '../../../../../shared/domain/value-objects/local-date';
 import { Money } from '../../../../../shared/domain/value-objects/money';
 import { Period } from '../../../../../shared/domain/value-objects/period';
+import { NotFoundError } from '../../../../../shared/errors/app-error';
 import {
   type CircleCycleRepositoryPort,
   type StoredCycle,
@@ -28,6 +29,7 @@ interface CircleRow {
   starts_on: string;
   cycle_state: CycleState;
   current_period: string | null;
+  paused_on: string | null;
 }
 
 interface InstallmentRow {
@@ -63,13 +65,18 @@ export class TypeOrmCircleCycleRepository implements CircleCycleRepositoryPort {
   withLock(
     circleId: string,
     work: (stored: StoredCycle) => Promise<CircleCycle>,
+    options: { wait?: boolean } = {},
   ): Promise<boolean> {
     return this.circles.manager.transaction(async (manager) => {
-      const [lock] = await manager.query<{ locked: boolean }[]>(
-        'SELECT pg_try_advisory_xact_lock(hashtextextended($1, 0)) AS locked',
-        [circleId],
-      );
-      if (!lock?.locked) return false;
+      if (options.wait) {
+        await manager.query('SELECT pg_advisory_xact_lock(hashtextextended($1, 0))', [circleId]);
+      } else {
+        const [lock] = await manager.query<{ locked: boolean }[]>(
+          'SELECT pg_try_advisory_xact_lock(hashtextextended($1, 0)) AS locked',
+          [circleId],
+        );
+        if (!lock?.locked) return false;
+      }
       await lockFund(manager);
       await this.save(manager, await work(await this.load(manager, circleId)));
       return true;
@@ -80,11 +87,12 @@ export class TypeOrmCircleCycleRepository implements CircleCycleRepositoryPort {
     const [circle] = await manager.query<CircleRow[]>(
       `SELECT payout_amount::text AS payout_amount, currency, months, cycle_state,
               to_char(starts_on, 'YYYY-MM') AS starts_on,
-              to_char(current_period, 'YYYY-MM') AS current_period
+              to_char(current_period, 'YYYY-MM') AS current_period,
+              to_char(paused_on, 'YYYY-MM-DD') AS paused_on
          FROM circles WHERE id = $1`,
       [circleId],
     );
-    if (!circle) throw new Error(`No existe el círculo ${circleId}`);
+    if (!circle) throw new NotFoundError(`No existe el círculo ${circleId}`, 'CIRCLE_NOT_FOUND');
     const members = await manager.query<
       { user_id: string; position: number; price: StoredSlotPrice | null }[]
     >(
@@ -126,6 +134,7 @@ export class TypeOrmCircleCycleRepository implements CircleCycleRepositoryPort {
       }),
       state: circle.cycle_state,
       currentPeriod: circle.current_period ? Period.parse(circle.current_period) : null,
+      pausedOn: circle.paused_on ? LocalDate.parse(circle.paused_on) : null,
       members: members.map(({ user_id, position, price }) => ({
         userId: user_id,
         position,
@@ -144,11 +153,43 @@ export class TypeOrmCircleCycleRepository implements CircleCycleRepositoryPort {
   }
 
   private async save(manager: EntityManager, cycle: CircleCycle): Promise<void> {
-    await manager.query('UPDATE circles SET cycle_state = $2, current_period = $3 WHERE id = $1', [
-      cycle.circleId,
-      cycle.state,
-      cycle.currentPeriod ? toDate(cycle.currentPeriod) : null,
-    ]);
+    await manager.query(
+      `UPDATE circles SET cycle_state = $2, current_period = $3, paused_on = $4, starts_on = $5
+        WHERE id = $1`,
+      [
+        cycle.circleId,
+        cycle.state,
+        cycle.currentPeriod ? toDate(cycle.currentPeriod) : null,
+        cycle.pausedOn?.toString() ?? null,
+        toDate(cycle.terms.startsOn),
+      ],
+    );
+    if (cycle.calendarShift > 0 && cycle.currentPeriod) {
+      // Al reanudar en otro mes, las cuotas del mes en curso pasan al mes nuevo (COPAYNI-61).
+      await manager.query(
+        `UPDATE circle_installments SET period = $3::date
+          WHERE circle_id = $1 AND period = $2::date`,
+        [
+          cycle.circleId,
+          toDate(cycle.currentPeriod.addMonths(-cycle.calendarShift)),
+          toDate(cycle.currentPeriod),
+        ],
+      );
+    }
+    for (const event of cycle.adminEvents) {
+      await manager.query(
+        `INSERT INTO circle_admin_events (circle_id, action, actor_id, reason, before, after)
+         VALUES ($1, $2, $3, $4, $5, $6)`,
+        [
+          cycle.circleId,
+          event.action,
+          event.actorId,
+          event.reason,
+          JSON.stringify(event.before),
+          JSON.stringify(event.after),
+        ],
+      );
+    }
     for (const installment of cycle.installments) {
       await manager.query(
         `INSERT INTO circle_installments
@@ -156,6 +197,7 @@ export class TypeOrmCircleCycleRepository implements CircleCycleRepositoryPort {
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9::varchar, CASE WHEN $9::varchar = 'paid' THEN now() END)
          ON CONFLICT ON CONSTRAINT uq_circle_installments_period DO UPDATE
            SET status = EXCLUDED.status,
+               due_on = EXCLUDED.due_on,
                paid_at = COALESCE(circle_installments.paid_at, EXCLUDED.paid_at)`,
         [
           installment.id,
