@@ -18,6 +18,11 @@ import {
   validateSync,
 } from 'class-validator';
 
+/** Resultados del proveedor de KYC simulado (COPAYNI-42). */
+export const KYC_SIMULATED_RESULTS = ['approved', 'rejected', 'in_review'] as const;
+/** Verificación de documentos (COPAYNI-42): simulada o revisión manual de operaciones. */
+export const KYC_PROVIDERS = ['simulated', 'manual'] as const;
+
 /** Pasarelas de pago admitidas (COPAYNI-34). */
 export const PAYMENT_GATEWAYS = ['fake', 'mercadopago'] as const;
 
@@ -351,6 +356,33 @@ export class EnvironmentVariables {
   @Matches(/^\d{1,3}:\d{1,5}(,\d{1,3}:\d{1,5})*$/)
   SAVING_CASHBACK_BPS: string = '6:500,12:1000,24:2000';
 
+  /**
+   * Verificación de documentos (spike COPAYNI-42): `simulated` responde `KYC_SIMULATED_RESULT`
+   * (desarrollo y pruebas, prohibido en production); `manual` deja todo en revisión para
+   * operaciones hasta elegir el proveedor.
+   */
+  @IsIn(KYC_PROVIDERS)
+  KYC_PROVIDER: (typeof KYC_PROVIDERS)[number] = 'simulated';
+
+  /** Resultado del proveedor simulado para el National ID y el comprobante de ingresos. */
+  @IsIn(KYC_SIMULATED_RESULTS)
+  KYC_SIMULATED_RESULT: (typeof KYC_SIMULATED_RESULTS)[number] = 'approved';
+
+  /** Vigencia de la URL prefirmada de subida de documentos (COPAYNI-43), en segundos. */
+  @IsInt()
+  @Min(60)
+  @Max(900)
+  DOCUMENT_UPLOAD_URL_TTL_SECONDS: number = 300;
+
+  /**
+   * Límite mensual de pay-in con el ingreso aprobado (R5, provisional): este porcentaje del
+   * ingreso, en puntos básicos. Sin ingreso aprobado se usa `JOIN_MONTHLY_PAYIN_LIMIT`.
+   */
+  @IsInt()
+  @Min(1)
+  @Max(10000)
+  PAYIN_LIMIT_INCOME_SHARE_BPS: number = 3000;
+
   /** Zona horaria del negocio: define en qué mes estamos para los cronogramas. */
   @IsTimeZone()
   BUSINESS_TIME_ZONE: string = 'America/Lima';
@@ -586,6 +618,11 @@ export function validateEnvironment(config: Record<string, unknown>): Environmen
   if (env.NODE_ENV === 'production' && env.CIRCLE_PAYMENTS_ADAPTER === 'fake') {
     throw new Error(
       'Configuración inválida:\n- CIRCLE_PAYMENTS_ADAPTER: fake no se admite en production',
+    );
+  }
+  if (env.NODE_ENV === 'production' && env.KYC_PROVIDER === 'simulated') {
+    throw new Error(
+      'Configuración inválida:\n- KYC_PROVIDER: simulated no se admite en production',
     );
   }
   if (errors.length > 0) {

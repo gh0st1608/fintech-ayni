@@ -20,10 +20,10 @@ Usa el contrato común de respuestas descrito en [auth.md](auth.md). Requiere `A
 }
 ```
 
-| Campo               | Notas                                                                                                                                                                                                                                                  |
-| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `fullName`          | Nombre y apellido (COPAYNI-45); `null` si no cargó ninguno. Cuando exista el KYC (COPAYNI-47), el nombre del documento podría reemplazarlo **[?]**.                                                                                                    |
-| `monthlyPayInLimit` | Límite mensual de pay-in ([Money](circles.md#modelo-money)); `null` si no se le restringe. **Provisional (R5):** es `JOIN_MONTHLY_PAYIN_LIMIT`, igual para todos y el mismo que valida la unión, hasta definir la fórmula con el ingreso (COPAYNI-48). |
+| Campo               | Notas                                                                                                                                                                                                                                                            |
+| ------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `fullName`          | Nombre y apellido (COPAYNI-45); `null` si no cargó ninguno. Cuando exista el KYC (COPAYNI-47), el nombre del documento podría reemplazarlo **[?]**.                                                                                                              |
+| `monthlyPayInLimit` | Límite mensual de pay-in ([Money](circles.md#modelo-money)); `null` si no se le restringe. **Provisional (R5):** el 30 % del ingreso aprobado ([documents.md](documents.md)); sin ingreso aprobado, `JOIN_MONTHLY_PAYIN_LIMIT`. Es el mismo que valida la unión. |
 
 ## `GET /v1/me`
 

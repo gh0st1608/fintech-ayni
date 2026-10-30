@@ -346,6 +346,25 @@ sequenceDiagram
 
 Fuentes: [Yape en Checkout API](https://www.mercadopago.com.pe/developers/en/docs/checkout-api-payments/integration-configuration/yape), [webhooks](https://www.mercadopago.com.pe/developers/en/docs/your-integrations/notifications/webhooks), [cobros recurrentes con tarjeta guardada](https://www.mercadopago.com.pe/developers/en/docs/automatic-payments/recurring-charges-legacy).
 
+## 11. Verificación de identidad (KYC)
+
+**Estado:** pendiente de elegir proveedor (spike COPAYNI-42, pending-scope T4). El backend ya tiene los puertos y adaptadores simulados ([documents.md](api/documents.md)).
+
+- **Puertos:** `DocumentStoragePort` (URL prefirmada y comprobación de la subida), `IdentityVerifierPort` (National ID con anverso y reverso) e `IncomeReviewerPort` (comprobante de ingresos). Cambiar de proveedor es escribir un adaptador.
+- **Almacenamiento:** S3 privado con SSE-KMS y URLs prefirmadas de pocos minutos; la app sube directo y el backend solo guarda la clave. Hoy, `SimulatedDocumentStorage`.
+- **Sin proveedor en production:** `KYC_PROVIDER=manual` deja los documentos en revisión de operaciones; `simulated` está prohibido.
+
+Criterios para el spike:
+
+| Criterio       | Qué se evalúa                                                                    |
+| -------------- | -------------------------------------------------------------------------------- |
+| Cobertura      | DNI peruano (anverso y reverso), OCR y validación contra RENIEC                  |
+| Prueba de vida | Selfie con liveness, si Legal o el regulador lo exigen                           |
+| Integración    | SDK para Expo/React Native o API con imágenes ya subidas a S3; webhooks firmados |
+| Resultado      | Aprobado, rechazado con motivo legible y revisión manual                         |
+| Datos          | Región de procesamiento y retención (L3, L5); sin reutilizar las imágenes        |
+| Costo          | Precio por verificación y mínimos mensuales                                      |
+
 ## Decisiones
 
 - **D1. Región:** `us-east-1` (decidido el 2026-10-27). Queda pendiente confirmar con Legal la transferencia internacional de datos personales (L3) antes de cargar datos reales.

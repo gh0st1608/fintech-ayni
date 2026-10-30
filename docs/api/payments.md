@@ -99,7 +99,7 @@ Checklist de Payout Eligibility (COPAYNI-36, Figma 55:9892). El backend calcula 
 
 | `requirement`    | Cumplido (`met`) cuando…                                                                                | Acción en la app |
 | ---------------- | ------------------------------------------------------------------------------------------------------- | ---------------- |
-| `national_id`    | El KYC verificó la identidad. **Provisional:** `JOIN_IDENTITY_CHECK` hasta COPAYNI-47                   | Scan National ID |
+| `national_id`    | El KYC aprobó el National ID, o lo asume `JOIN_IDENTITY_CHECK`                                          | Scan National ID |
 | `insurance_note` | Firmó el pagaré. **Sin firma electrónica todavía (D3, T9): siempre `unavailable`**                      | —                |
 | `payout_method`  | Eligió un método de cobro que sigue disponible (COPAYNI-37)                                             | Payout Method    |
 | `contract`       | Firmó el contrato. **Siempre `unavailable`, como el pagaré**                                            | —                |

@@ -76,6 +76,7 @@ import {
 } from './application/use-cases/list-recommended-circles.use-case';
 import { SlotPricing } from './domain/services/slot-pricing';
 import { SlotPricingRules } from './domain/value-objects/slot-pricing-rules';
+import { DocumentsModule } from '../documents/documents.module';
 import { ProvisionalJoinEligibility } from './infrastructure/eligibility/provisional-join-eligibility';
 import {
   FakeCyclePayments,
@@ -101,6 +102,7 @@ import { MyCirclesController } from './presentation/http/controllers/my-circles.
     PayoutsModule,
     PaymentsModule,
     ReferralsModule,
+    DocumentsModule,
   ],
   controllers: [
     CirclesController,

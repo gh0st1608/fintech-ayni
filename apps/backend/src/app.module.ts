@@ -8,6 +8,7 @@ import { AuthModule } from './modules/auth/auth.module';
 import { CirclesModule } from './modules/circles/circles.module';
 import { HealthModule } from './modules/health/health.module';
 import { PaymentsModule } from './modules/payments/payments.module';
+import { DocumentsModule } from './modules/documents/documents.module';
 import { SavingsModule } from './modules/savings/savings.module';
 import { ReferralsModule } from './modules/referrals/referrals.module';
 import { PayoutsModule } from './modules/payouts/payouts.module';
@@ -44,6 +45,7 @@ import { createValidationPipe } from './shared/presentation/pipes/validation.pip
     PaymentsModule,
     ReferralsModule,
     SavingsModule,
+    DocumentsModule,
   ],
   providers: [
     TelemetryShutdown,

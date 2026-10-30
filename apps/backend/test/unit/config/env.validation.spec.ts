@@ -162,6 +162,7 @@ describe('validateEnvironment', () => {
     const PRODUCTION = {
       ...REQUIRED,
       NODE_ENV: 'production',
+      KYC_PROVIDER: 'manual',
       JWT_PRIVATE_KEY: '-----BEGIN PRIVATE KEY-----\nabc\n-----END PRIVATE KEY-----',
       OTP_PEPPER: 'p'.repeat(32),
     };
@@ -179,6 +180,16 @@ describe('validateEnvironment', () => {
 
     it('en production los exige', () => {
       expect(() => validateEnvironment(PRODUCTION)).not.toThrow();
+      // Sin proveedor de KYC (COPAYNI-42) el simulado aprobaría cualquier documento.
+      expect(() => validateEnvironment({ ...PRODUCTION, KYC_PROVIDER: 'simulated' })).toThrow(
+        /KYC_PROVIDER: simulated no se admite/,
+      );
+      expect(validateEnvironment({ ...REQUIRED })).toMatchObject({
+        KYC_PROVIDER: 'simulated',
+        KYC_SIMULATED_RESULT: 'approved',
+        DOCUMENT_UPLOAD_URL_TTL_SECONDS: 300,
+        PAYIN_LIMIT_INCOME_SHARE_BPS: 3000,
+      });
       expect(() => validateEnvironment({ ...PRODUCTION, JWT_PRIVATE_KEY: undefined })).toThrow(
         /JWT_PRIVATE_KEY/,
       );

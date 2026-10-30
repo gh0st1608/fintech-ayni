@@ -14,6 +14,7 @@ import { CreateSavedCards1762689600000 } from './1762689600000-create-saved-card
 import { AddPersonalInfo1762776000000 } from './1762776000000-add-personal-info';
 import { CreateReferrals1762862400000 } from './1762862400000-create-referrals';
 import { AddReferralDiscount1762948800000 } from './1762948800000-add-referral-discount';
+import { CreateKycDocuments1763035200000 } from './1763035200000-create-kyc-documents';
 
 /** Migraciones en orden. Se listan explícitamente: el build no depende de globs. */
 export const MIGRATIONS = [
@@ -33,4 +34,5 @@ export const MIGRATIONS = [
   AddPersonalInfo1762776000000,
   CreateReferrals1762862400000,
   AddReferralDiscount1762948800000,
+  CreateKycDocuments1763035200000,
 ];

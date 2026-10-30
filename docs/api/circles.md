@@ -212,12 +212,12 @@ La unión guarda con la membresía el precio del slot: tipo, fee, descuento, Adm
 
 Se comprueba en este orden, que es el orden en que la app resuelve cada caso:
 
-| Requisito                                   | Regla provisional                                                                                                                                                        | Error                          |
-| ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------ |
-| National ID válido ("Central Bank")         | `JOIN_IDENTITY_CHECK`: `assume_verified` (defecto) deja unirse a todos; `assume_unverified` los trata como no verificados, para probar la redirección. Hasta COPAYNI-47. | `NATIONAL_ID_REQUIRED`         |
-| Cuota bajo el límite mensual de pay-in (R5) | `JOIN_MONTHLY_PAYIN_LIMIT`, en unidades menores; 0 (defecto) = sin límite. Se compara con cada cuota del slot, sin sumar las de otros círculos.                          | `MONTHLY_LIMIT_EXCEEDED`       |
-| Método de cobro elegido (COPAYNI-37)        | El método guardado tiene que seguir disponible en el catálogo.                                                                                                           | `PAYOUT_METHOD_REQUIRED`       |
-| Payout dentro del límite del método         | Por ejemplo, la tarjeta prepago (`PAYOUT_PREPAID_CARD_LIMIT`).                                                                                                           | `PAYOUT_METHOD_LIMIT_EXCEEDED` |
+| Requisito                                   | Regla provisional                                                                                                                                                                 | Error                          |
+| ------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------ |
+| National ID válido ("Central Bank")         | National ID aprobado en el KYC ([documents.md](documents.md)). `JOIN_IDENTITY_CHECK=assume_verified` (defecto, hasta tener proveedor) lo asume; `assume_unverified` exige el KYC. | `NATIONAL_ID_REQUIRED`         |
+| Cuota bajo el límite mensual de pay-in (R5) | 30 % del ingreso aprobado o, sin él, `JOIN_MONTHLY_PAYIN_LIMIT` (0 = sin límite). Se compara con cada cuota del slot, sin sumar las de otros círculos.                            | `MONTHLY_LIMIT_EXCEEDED`       |
+| Método de cobro elegido (COPAYNI-37)        | El método guardado tiene que seguir disponible en el catálogo.                                                                                                                    | `PAYOUT_METHOD_REQUIRED`       |
+| Payout dentro del límite del método         | Por ejemplo, la tarjeta prepago (`PAYOUT_PREPAID_CARD_LIMIT`).                                                                                                                    | `PAYOUT_METHOD_LIMIT_EXCEEDED` |
 
 ### Regla de confianza y retención (COPAYNI-60, valores propuestos de R18)
 

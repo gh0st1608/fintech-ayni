@@ -28,7 +28,7 @@ export interface PayoutEligibility {
 
 /**
  * Qué le falta al usuario para cobrar su payout (COPAYNI-36). El backend es la fuente de verdad:
- * - National ID: el estado del KYC (provisional, `JOIN_IDENTITY_CHECK`, hasta COPAYNI-47).
+ * - National ID: el estado del KYC (COPAYNI-47), o asumido con `JOIN_IDENTITY_CHECK`.
  * - Método de cobro: elegido y todavía disponible (COPAYNI-37).
  * - Pagos al día: ninguna cuota con el cobro fallido ni deuda por impago (COPAYNI-57).
  * - Contrato y pagaré: sin firma electrónica todavía; quedan `unavailable`.
