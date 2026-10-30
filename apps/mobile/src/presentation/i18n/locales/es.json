@@ -241,5 +241,44 @@
       "attemptsExceeded": "Superaste el número de intentos. Pide un código nuevo.",
       "retry": "Reintentar verificación"
     }
+  },
+  "payment": {
+    "empty": {
+      "title": "Todavía no tienes pagos pendientes",
+      "description": "Tus pagos pendientes y tu saldo aparecerán aquí cuando te unas a un círculo.",
+      "join": "Unirme a un círculo"
+    },
+    "due": {
+      "total": "Total por pagar",
+      "next": "Próximo vencimiento: {{date}}",
+      "dueOn": "Vence el {{date}}",
+      "overdue": "En gracia",
+      "debt": "Deuda por impago: {{amount}}",
+      "debtDescription": "Mientras tengas deuda no puedes unirte a nuevos círculos."
+    },
+    "others": {
+      "title": "Otros",
+      "eligibility": "Elegibilidad del payout",
+      "settings": "Configuración de pagos",
+      "history": "Historial de pagos",
+      "policy": "Política de pagos",
+      "help": "Ayuda"
+    },
+    "history": {
+      "title": "Historial de pagos",
+      "payments": "Pagos",
+      "payouts": "Cobros",
+      "emptyPayments": "Todavía no tienes pagos.",
+      "emptyPayouts": "Todavía no tienes cobros.",
+      "explore": "Explorar círculos",
+      "forMonth": "Círculo de {{month}}",
+      "stale": "No se pudo actualizar: {{reason}}",
+      "kind": {
+        "installment": "Cuota mensual",
+        "debtSettlement": "Deuda saldada",
+        "payout": "Payout recibido",
+        "refund": "Devolución"
+      }
+    }
   }
 }

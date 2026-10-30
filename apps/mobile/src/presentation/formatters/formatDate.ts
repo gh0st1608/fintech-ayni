@@ -1,10 +1,11 @@
 import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 
-/** Formatos del Figma: tarjetas ("Nov, 2024"), mes suelto e historial (fecha y hora). */
+/** Formatos del Figma: tarjetas ("Nov, 2024"), mes suelto, vencimientos e historial (fecha y hora). */
 const PRESETS = {
   monthYear: { month: 'short', year: 'numeric' },
   month: { month: 'long' },
+  date: { day: 'numeric', month: 'short', year: 'numeric' },
   dateTime: {
     day: '2-digit',
     month: '2-digit',

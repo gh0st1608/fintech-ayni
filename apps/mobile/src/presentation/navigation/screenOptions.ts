@@ -23,6 +23,14 @@ export function useCatalogScreenOptions() {
   return { title: t('catalog.title'), headerBackButtonDisplayMode: 'minimal' } as const;
 }
 
+/** Pantallas de la sección Payment apiladas sobre las pestañas. */
+export function usePaymentScreenOptions() {
+  const { t } = useTranslation();
+  return {
+    history: { title: t('payment.history.title'), headerBackButtonDisplayMode: 'minimal' },
+  } as const;
+}
+
 /** El catálogo de componentes solo existe en el ambiente dev. */
 export function useIsDevEnvironment(): boolean {
   return useContainer().config.environment === 'dev';

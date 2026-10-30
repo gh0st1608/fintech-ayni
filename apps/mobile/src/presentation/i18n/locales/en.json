@@ -241,5 +241,44 @@
       "attemptsExceeded": "Too many attempts. Request a new code.",
       "retry": "Retry verification"
     }
+  },
+  "payment": {
+    "empty": {
+      "title": "You don't have any payment due yet",
+      "description": "Your due payment and your balance will appear here after you join a circle.",
+      "join": "Join New Circle"
+    },
+    "due": {
+      "total": "Total due",
+      "next": "Next due date: {{date}}",
+      "dueOn": "Due on {{date}}",
+      "overdue": "In grace period",
+      "debt": "Outstanding debt: {{amount}}",
+      "debtDescription": "While you have debt you can't join new circles."
+    },
+    "others": {
+      "title": "Others",
+      "eligibility": "Payout Eligibility",
+      "settings": "Payment Settings",
+      "history": "Payment History",
+      "policy": "Payment Policy",
+      "help": "Help"
+    },
+    "history": {
+      "title": "Payment History",
+      "payments": "Payments",
+      "payouts": "Payouts",
+      "emptyPayments": "You don't have any payments yet.",
+      "emptyPayouts": "You don't have any payouts yet.",
+      "explore": "Explore Circles",
+      "forMonth": "{{month}} circle",
+      "stale": "Couldn't refresh: {{reason}}",
+      "kind": {
+        "installment": "Monthly installment",
+        "debtSettlement": "Debt settled",
+        "payout": "Payout received",
+        "refund": "Refund"
+      }
+    }
   }
 }

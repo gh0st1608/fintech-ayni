@@ -5,6 +5,7 @@ import { InMemoryAuthApi } from '@/infrastructure/auth/InMemoryAuthApi';
 import { InMemoryCircleMembershipRepository } from '@/infrastructure/circles/InMemoryCircleMembershipRepository';
 import { InMemoryCircleQuoteRepository } from '@/infrastructure/circles/InMemoryCircleQuoteRepository';
 import { InMemoryJoinConfigRepository } from '@/infrastructure/circles/InMemoryJoinConfigRepository';
+import { InMemoryPaymentRepository } from '@/infrastructure/payments/InMemoryPaymentRepository';
 import { InMemoryPayoutMethodRepository } from '@/infrastructure/payouts/InMemoryPayoutMethodRepository';
 import { InMemoryUserProfileRepository } from '@/infrastructure/profile/InMemoryUserProfileRepository';
 
@@ -29,6 +30,7 @@ interface TestAdapters {
   circleMembership: InMemoryCircleMembershipRepository;
   userProfile: InMemoryUserProfileRepository;
   payoutMethods: InMemoryPayoutMethodRepository;
+  payments: InMemoryPaymentRepository;
   ids: FakeIdGenerator;
 }
 
@@ -46,6 +48,7 @@ export function createTestContainer(overrides: Partial<TestAdapters> = {}) {
     circleMembership: new InMemoryCircleMembershipRepository({ latencyMs: 0 }),
     userProfile: new InMemoryUserProfileRepository({ latencyMs: 0 }),
     payoutMethods: new InMemoryPayoutMethodRepository('PEN', { latencyMs: 0 }),
+    payments: new InMemoryPaymentRepository('PEN', { latencyMs: 0 }),
     ids: new FakeIdGenerator(),
     ...overrides,
   };

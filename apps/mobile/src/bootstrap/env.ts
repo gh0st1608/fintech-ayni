@@ -24,6 +24,8 @@ const envSchema = z
     profileApi: z.enum(['http', 'fake']).default('http'),
     /** Igual que authApi, para los métodos de cobro (/me/payout-method). */
     payoutsApi: z.enum(['http', 'fake']).default('http'),
+    /** Igual que authApi, para la sección Payment (/me/payments, /me/transactions). */
+    paymentsApi: z.enum(['http', 'fake']).default('http'),
     termsUrl: optionalHttpsUrl,
     privacyUrl: optionalHttpsUrl,
   })
@@ -41,6 +43,10 @@ const envSchema = z
   })
   .refine((env) => env.payoutsApi === 'http' || env.appEnv === 'dev', {
     path: ['payoutsApi'],
+    message: 'fake is only allowed in dev',
+  })
+  .refine((env) => env.paymentsApi === 'http' || env.appEnv === 'dev', {
+    path: ['paymentsApi'],
     message: 'fake is only allowed in dev',
   });
 
@@ -70,6 +76,7 @@ export function loadEnv(): Env {
     circlesApi: process.env.EXPO_PUBLIC_CIRCLES_API,
     profileApi: process.env.EXPO_PUBLIC_PROFILE_API,
     payoutsApi: process.env.EXPO_PUBLIC_PAYOUTS_API,
+    paymentsApi: process.env.EXPO_PUBLIC_PAYMENTS_API,
     termsUrl: process.env.EXPO_PUBLIC_TERMS_URL,
     privacyUrl: process.env.EXPO_PUBLIC_PRIVACY_URL,
   });

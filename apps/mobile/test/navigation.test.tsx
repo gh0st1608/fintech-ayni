@@ -50,7 +50,8 @@ describe('shell de navegación', () => {
   it.each([
     // Mis círculos (COPAYNI-26): pestañas Activos y Finalizados.
     ['Círculos', '/circles', 'Activos'],
-    ['Pagos', '/payment', 'Próximamente'],
+    // Pagos (COPAYNI-35): sin pagos pendientes, el estado vacío y los accesos.
+    ['Pagos', '/payment', 'Historial de pagos'],
   ])('la pestaña %s abre su pantalla', async (tab, pathname, content) => {
     await storeSession();
     await renderRouter(APP_DIR, { initialUrl: '/home' });

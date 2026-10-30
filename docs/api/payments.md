@@ -1,6 +1,6 @@
 # Contrato de API: sección Payment
 
-**Estado:** implementado en el backend (`apps/backend/src/modules/circles`). Las pantallas de mobile están pendientes del diseño (Figma bloqueado hasta noviembre).
+**Estado:** implementado en el backend (`apps/backend/src/modules/circles`). En mobile están el resumen y el historial (COPAYNI-35 y 41), armados con la captura del Figma: falta validarlos con el contexto de diseño cuando se renueve el plan.
 
 Usa el contrato común de respuestas descrito en [auth.md](auth.md) y el modelo [Money](circles.md#modelo-money). Requiere `Authorization: Bearer <accessToken>`.
 

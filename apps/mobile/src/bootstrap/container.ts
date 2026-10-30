@@ -14,6 +14,10 @@ import { ListInstallmentOptionsUseCase } from '@/application/circles/usecases/Li
 import { ListMyCirclesUseCase } from '@/application/circles/usecases/ListMyCirclesUseCase';
 import { ListRecommendedCirclesUseCase } from '@/application/circles/usecases/ListRecommendedCirclesUseCase';
 import {
+  GetPaymentSummaryUseCase,
+  ListTransactionsUseCase,
+} from '@/application/payments/usecases/paymentUseCases';
+import {
   ListPayoutMethodsUseCase,
   SelectPayoutMethodUseCase,
 } from '@/application/payouts/usecases/payoutMethodUseCases';
@@ -29,6 +33,7 @@ import type { DeviceLocalePort } from '@/domain/i18n/ports/DeviceLocalePort';
 import type { LanguagePreferencePort } from '@/domain/i18n/ports/LanguagePreferencePort';
 import type { LanguageSyncStatePort } from '@/domain/i18n/ports/LanguageSyncStatePort';
 import type { LayoutDirectionPort } from '@/domain/i18n/ports/LayoutDirectionPort';
+import type { PaymentRepositoryPort } from '@/domain/payments/ports/PaymentRepositoryPort';
 import type { PayoutMethodRepositoryPort } from '@/domain/payouts/ports/PayoutMethodRepositoryPort';
 import type { UserProfileRepositoryPort } from '@/domain/profile/ports/UserProfileRepositoryPort';
 import type { IdGeneratorPort } from '@/domain/shared/ports/IdGeneratorPort';
@@ -44,6 +49,8 @@ import { ExpoCryptoIdGenerator } from '@/infrastructure/device/ExpoCryptoIdGener
 import { ExpoDeviceLocale } from '@/infrastructure/device/ExpoDeviceLocale';
 import { ReactNativeLayoutDirection } from '@/infrastructure/device/ReactNativeLayoutDirection';
 import { FetchHttpClient } from '@/infrastructure/http/FetchHttpClient';
+import { InMemoryPaymentRepository } from '@/infrastructure/payments/InMemoryPaymentRepository';
+import { PaymentApiRepository } from '@/infrastructure/payments/PaymentApiRepository';
 import { InMemoryPayoutMethodRepository } from '@/infrastructure/payouts/InMemoryPayoutMethodRepository';
 import { PayoutMethodApiRepository } from '@/infrastructure/payouts/PayoutMethodApiRepository';
 import { InMemoryUserProfileRepository } from '@/infrastructure/profile/InMemoryUserProfileRepository';
@@ -67,6 +74,7 @@ export interface ContainerAdapters {
   circleMembership: CircleMembershipRepositoryPort;
   userProfile: UserProfileRepositoryPort;
   payoutMethods: PayoutMethodRepositoryPort;
+  payments: PaymentRepositoryPort;
   ids: IdGeneratorPort;
 }
 
@@ -113,6 +121,10 @@ export function createContainer(
       env.payoutsApi === 'fake'
         ? new InMemoryPayoutMethodRepository(env.defaultCurrency)
         : new PayoutMethodApiRepository(http),
+    payments:
+      env.paymentsApi === 'fake'
+        ? new InMemoryPaymentRepository(env.defaultCurrency)
+        : new PaymentApiRepository(http),
     ids: new ExpoCryptoIdGenerator(),
     ...overrides,
   };
@@ -149,6 +161,10 @@ export function createContainer(
       joinCircle: new JoinCircleUseCase(adapters.circleMembership, adapters.ids),
       listMyCircles: new ListMyCirclesUseCase(adapters.circleMembership),
       listRecommended: new ListRecommendedCirclesUseCase(adapters.circleQuote),
+    },
+    payments: {
+      getSummary: new GetPaymentSummaryUseCase(adapters.payments),
+      listTransactions: new ListTransactionsUseCase(adapters.payments),
     },
     payouts: {
       listPayoutMethods: new ListPayoutMethodsUseCase(adapters.payoutMethods),
