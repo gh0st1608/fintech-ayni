@@ -28,6 +28,15 @@ export function usePaymentScreenOptions() {
   const { t } = useTranslation();
   return {
     history: { title: t('payment.history.title'), headerBackButtonDisplayMode: 'minimal' },
+    eligibility: {
+      title: t('payment.eligibility.title'),
+      headerBackButtonDisplayMode: 'minimal',
+    },
+    settings: { title: t('payment.settings.title'), headerBackButtonDisplayMode: 'minimal' },
+    payoutMethod: {
+      title: t('payment.settings.changePayoutMethod'),
+      headerBackButtonDisplayMode: 'minimal',
+    },
   } as const;
 }
 

@@ -13,8 +13,11 @@ import type { ListInstallmentOptionsUseCase } from '@/application/circles/usecas
 import type { ListMyCirclesUseCase } from '@/application/circles/usecases/ListMyCirclesUseCase';
 import type { ListRecommendedCirclesUseCase } from '@/application/circles/usecases/ListRecommendedCirclesUseCase';
 import type {
+  GetPaymentSettingsUseCase,
   GetPaymentSummaryUseCase,
+  GetPayoutEligibilityUseCase,
   ListTransactionsUseCase,
+  UpdatePaymentSettingsUseCase,
 } from '@/application/payments/usecases/paymentUseCases';
 import type {
   ListPayoutMethodsUseCase,
@@ -58,6 +61,9 @@ export interface AppContainer {
   payments: {
     getSummary: GetPaymentSummaryUseCase;
     listTransactions: ListTransactionsUseCase;
+    getPayoutEligibility: GetPayoutEligibilityUseCase;
+    getSettings: GetPaymentSettingsUseCase;
+    updateSettings: UpdatePaymentSettingsUseCase;
   };
   payouts: {
     listPayoutMethods: ListPayoutMethodsUseCase;

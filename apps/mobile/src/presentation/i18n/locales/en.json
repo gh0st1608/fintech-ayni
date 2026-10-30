@@ -279,6 +279,33 @@
         "payout": "Payout received",
         "refund": "Refund"
       }
+    },
+    "eligibility": {
+      "title": "Payout Eligibility",
+      "eligible": "You meet all the requirements to receive your payout.",
+      "notEligible": "Complete the pending requirements to receive your payout.",
+      "info": "Check these requirements before your payout month.",
+      "requirements": {
+        "nationalId": "National ID",
+        "insuranceNote": "Insurance Note",
+        "payoutMethod": "Payout Method",
+        "contract": "Contract",
+        "duePayments": "Due Payments"
+      },
+      "status": {
+        "met": "Completed",
+        "pending": "Pending",
+        "unavailable": "Available soon"
+      }
+    },
+    "settings": {
+      "title": "Payment Settings",
+      "deduct": "Deduct pay-in from payout",
+      "deductDescription": "In your payout month, that month's pay-in is deducted from your payout instead of being charged.",
+      "saveError": "Couldn't save the change: {{reason}}",
+      "changePayoutMethod": "Change Payout Method",
+      "savedCards": "Saved Cards",
+      "save": "Save"
     }
   }
 }

@@ -7,6 +7,8 @@ export default function PaymentRoute() {
     <PaymentScreen
       onJoin={() => router.push('/join')}
       onOpenHistory={() => router.push('/payment/history')}
+      onOpenEligibility={() => router.push('/payment/eligibility')}
+      onOpenSettings={() => router.push('/payment/settings')}
     />
   );
 }

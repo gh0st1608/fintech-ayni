@@ -1,7 +1,13 @@
 import { InMemoryPaymentRepository } from '@/infrastructure/payments/InMemoryPaymentRepository';
 import { Money } from '@/domain/shared/value-objects/Money';
 
-import { GetPaymentSummaryUseCase, ListTransactionsUseCase } from './paymentUseCases';
+import {
+  GetPaymentSettingsUseCase,
+  GetPaymentSummaryUseCase,
+  GetPayoutEligibilityUseCase,
+  ListTransactionsUseCase,
+  UpdatePaymentSettingsUseCase,
+} from './paymentUseCases';
 
 describe('Casos de uso de pagos', () => {
   it('sin círculos, el resumen no tiene pagos pendientes', async () => {
@@ -40,5 +46,29 @@ describe('Casos de uso de pagos', () => {
     expect(second.items[0]!.id).not.toBe(first.items[0]!.id);
     const payouts = await listTransactions.execute('payout', null);
     expect(payouts.items.every((item) => item.type === 'payout')).toBe(true);
+  });
+
+  it('la elegibilidad trae los cinco requisitos', async () => {
+    const repository = new InMemoryPaymentRepository('PEN', { latencyMs: 0 });
+    const eligibility = await new GetPayoutEligibilityUseCase(repository).execute();
+    expect(eligibility.isEligible).toBe(false);
+    expect(eligibility.requirements.map(({ requirement }) => requirement)).toEqual([
+      'nationalId',
+      'insuranceNote',
+      'payoutMethod',
+      'contract',
+      'duePayments',
+    ]);
+  });
+
+  it('guarda la preferencia de deducción y la devuelve al leer', async () => {
+    const repository = new InMemoryPaymentRepository('PEN', { latencyMs: 0 });
+    await expect(new GetPaymentSettingsUseCase(repository).execute()).resolves.toEqual({
+      deductPayInFromPayout: false,
+    });
+    await new UpdatePaymentSettingsUseCase(repository).execute({ deductPayInFromPayout: true });
+    await expect(new GetPaymentSettingsUseCase(repository).execute()).resolves.toEqual({
+      deductPayInFromPayout: true,
+    });
   });
 });

@@ -279,6 +279,33 @@
         "payout": "Payout recibido",
         "refund": "Devolución"
       }
+    },
+    "eligibility": {
+      "title": "Elegibilidad del payout",
+      "eligible": "Cumples todos los requisitos para recibir tu payout.",
+      "notEligible": "Completa los requisitos pendientes para recibir tu payout.",
+      "info": "Revisa estos requisitos antes de tu mes de cobro.",
+      "requirements": {
+        "nationalId": "Documento de identidad",
+        "insuranceNote": "Pagaré",
+        "payoutMethod": "Método de cobro",
+        "contract": "Contrato",
+        "duePayments": "Pagos al día"
+      },
+      "status": {
+        "met": "Completado",
+        "pending": "Pendiente",
+        "unavailable": "Disponible pronto"
+      }
+    },
+    "settings": {
+      "title": "Configuración de pagos",
+      "deduct": "Descontar la cuota del payout",
+      "deductDescription": "En tu mes de cobro, la cuota de ese mes se descuenta de tu payout en vez de cobrarse.",
+      "saveError": "No se pudo guardar el cambio: {{reason}}",
+      "changePayoutMethod": "Cambiar método de cobro",
+      "savedCards": "Tarjetas guardadas",
+      "save": "Guardar"
     }
   }
 }

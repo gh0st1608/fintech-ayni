@@ -14,8 +14,11 @@ import { ListInstallmentOptionsUseCase } from '@/application/circles/usecases/Li
 import { ListMyCirclesUseCase } from '@/application/circles/usecases/ListMyCirclesUseCase';
 import { ListRecommendedCirclesUseCase } from '@/application/circles/usecases/ListRecommendedCirclesUseCase';
 import {
+  GetPaymentSettingsUseCase,
   GetPaymentSummaryUseCase,
+  GetPayoutEligibilityUseCase,
   ListTransactionsUseCase,
+  UpdatePaymentSettingsUseCase,
 } from '@/application/payments/usecases/paymentUseCases';
 import {
   ListPayoutMethodsUseCase,
@@ -165,6 +168,9 @@ export function createContainer(
     payments: {
       getSummary: new GetPaymentSummaryUseCase(adapters.payments),
       listTransactions: new ListTransactionsUseCase(adapters.payments),
+      getPayoutEligibility: new GetPayoutEligibilityUseCase(adapters.payments),
+      getSettings: new GetPaymentSettingsUseCase(adapters.payments),
+      updateSettings: new UpdatePaymentSettingsUseCase(adapters.payments),
     },
     payouts: {
       listPayoutMethods: new ListPayoutMethodsUseCase(adapters.payoutMethods),

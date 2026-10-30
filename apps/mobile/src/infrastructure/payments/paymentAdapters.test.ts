@@ -11,6 +11,10 @@ function httpReturning(data: unknown) {
       calls.push({ path, options });
       return Promise.resolve(options.parse ? options.parse(data) : data);
     }),
+    patch: jest.fn((path: string, options: HttpRequestOptions<unknown>) => {
+      calls.push({ path, options });
+      return Promise.resolve(options.parse ? options.parse(data) : data);
+    }),
   } as unknown as HttpClientPort;
   return { http, calls };
 }
@@ -68,5 +72,35 @@ describe('PaymentApiRepository', () => {
     const { http } = httpReturning({ hasDuePayments: 'sí' });
     await expect(new PaymentApiRepository(http).getSummary()).rejects.toBeTruthy();
     void AppError;
+  });
+
+  it('traduce la elegibilidad e ignora requisitos que esta versión no conoce', async () => {
+    const { http, calls } = httpReturning({
+      isEligible: false,
+      requirements: [
+        { requirement: 'national_id', status: 'met' },
+        { requirement: 'due_payments', status: 'pending' },
+        { requirement: 'selfie', status: 'pending' },
+      ],
+    });
+    const eligibility = await new PaymentApiRepository(http).getPayoutEligibility();
+    expect(calls[0]!.path).toBe('/me/payout-eligibility');
+    expect(eligibility.requirements).toEqual([
+      { requirement: 'nationalId', status: 'met' },
+      { requirement: 'duePayments', status: 'pending' },
+    ]);
+  });
+
+  it('lee y guarda las preferencias de pago', async () => {
+    const { http, calls } = httpReturning({ deductPayInFromPayout: true });
+    const repository = new PaymentApiRepository(http);
+    await expect(repository.getSettings()).resolves.toEqual({ deductPayInFromPayout: true });
+    await expect(repository.updateSettings({ deductPayInFromPayout: true })).resolves.toEqual({
+      deductPayInFromPayout: true,
+    });
+    expect(calls[1]).toMatchObject({
+      path: '/me/payment-settings',
+      options: { body: { deductPayInFromPayout: true } },
+    });
   });
 });

@@ -1,5 +1,7 @@
 import type { PaymentRepositoryPort } from '@/domain/payments/ports/PaymentRepositoryPort';
+import type { PaymentSettings } from '@/domain/payments/PaymentSettings';
 import type { PaymentSummary } from '@/domain/payments/PaymentSummary';
+import type { PayoutEligibility } from '@/domain/payments/PayoutEligibility';
 import type { Transaction, TransactionsPage, TransactionType } from '@/domain/payments/Transaction';
 import { Money } from '@/domain/shared/value-objects/Money';
 import { simulateLatency } from '@/infrastructure/fake/simulateLatency';
@@ -9,13 +11,28 @@ export interface InMemoryPaymentOptions {
   /** Un círculo en curso con una cuota pendiente y movimientos; sin él, todo vacío. */
   withDuePayments?: boolean;
   pageSize?: number;
+  /** Requisitos de la elegibilidad; por defecto, los del backend sin documentos ni firmas. */
+  eligibility?: PayoutEligibility;
 }
+
+const DEFAULT_ELIGIBILITY: PayoutEligibility = {
+  isEligible: false,
+  requirements: [
+    { requirement: 'nationalId', status: 'pending' },
+    { requirement: 'insuranceNote', status: 'unavailable' },
+    { requirement: 'payoutMethod', status: 'met' },
+    { requirement: 'contract', status: 'unavailable' },
+    { requirement: 'duePayments', status: 'met' },
+  ],
+};
 
 /** Pagos falsos (solo dev y pruebas), con los mismos montos que los círculos falsos. */
 export class InMemoryPaymentRepository implements PaymentRepositoryPort {
   private readonly latencyMs: number;
   private readonly withDuePayments: boolean;
   private readonly pageSize: number;
+  private readonly eligibility: PayoutEligibility;
+  settings: PaymentSettings = { deductPayInFromPayout: false };
 
   constructor(
     private readonly currency: string,
@@ -24,6 +41,23 @@ export class InMemoryPaymentRepository implements PaymentRepositoryPort {
     this.latencyMs = options.latencyMs ?? 300;
     this.withDuePayments = options.withDuePayments ?? false;
     this.pageSize = options.pageSize ?? 20;
+    this.eligibility = options.eligibility ?? DEFAULT_ELIGIBILITY;
+  }
+
+  async getPayoutEligibility(signal?: AbortSignal): Promise<PayoutEligibility> {
+    await simulateLatency(this.latencyMs, signal);
+    return this.eligibility;
+  }
+
+  async getSettings(signal?: AbortSignal): Promise<PaymentSettings> {
+    await simulateLatency(this.latencyMs, signal);
+    return { ...this.settings };
+  }
+
+  async updateSettings(settings: PaymentSettings): Promise<PaymentSettings> {
+    await simulateLatency(this.latencyMs);
+    this.settings = { ...settings };
+    return { ...this.settings };
   }
 
   async getSummary(signal?: AbortSignal): Promise<PaymentSummary> {

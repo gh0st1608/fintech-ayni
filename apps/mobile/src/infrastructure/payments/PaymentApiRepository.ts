@@ -1,7 +1,9 @@
 import { z } from 'zod';
 
 import type { PaymentRepositoryPort } from '@/domain/payments/ports/PaymentRepositoryPort';
+import type { PaymentSettings } from '@/domain/payments/PaymentSettings';
 import type { PaymentSummary } from '@/domain/payments/PaymentSummary';
+import type { PayoutEligibility, PayoutRequirement } from '@/domain/payments/PayoutEligibility';
 import type {
   TransactionKind,
   TransactionsPage,
@@ -53,7 +55,35 @@ const transactionsDto = z.object({
   nextCursor: z.string().min(1).nullable(),
 });
 
-/** Adaptador HTTP de la sección Payment: resumen (COPAYNI-35) e historial (COPAYNI-41). */
+const REQUIREMENT_BY_DTO = {
+  national_id: 'nationalId',
+  insurance_note: 'insuranceNote',
+  payout_method: 'payoutMethod',
+  contract: 'contract',
+  due_payments: 'duePayments',
+} as const satisfies Record<string, PayoutRequirement>;
+
+/** DTO de GET /me/payout-eligibility. Un requisito que esta versión no conoce se ignora. */
+const eligibilityDto = z.object({
+  isEligible: z.boolean(),
+  requirements: z.array(
+    z.object({
+      requirement: z.string(),
+      status: z.enum(['met', 'pending', 'unavailable']),
+    }),
+  ),
+});
+
+/** DTO de GET y PATCH /me/payment-settings. */
+const settingsDto = z.object({ deductPayInFromPayout: z.boolean() });
+
+const isKnownRequirement = (value: string): value is keyof typeof REQUIREMENT_BY_DTO =>
+  value in REQUIREMENT_BY_DTO;
+
+/**
+ * Adaptador HTTP de la sección Payment: resumen (COPAYNI-35), historial (COPAYNI-41),
+ * elegibilidad del payout (COPAYNI-36) y preferencias (COPAYNI-38).
+ */
 export class PaymentApiRepository implements PaymentRepositoryPort {
   constructor(private readonly http: HttpClientPort) {}
 
@@ -90,5 +120,34 @@ export class PaymentApiRepository implements PaymentRepositoryPort {
       })),
       nextCursor: dto.nextCursor,
     };
+  }
+
+  async getPayoutEligibility(signal?: AbortSignal): Promise<PayoutEligibility> {
+    const dto = await this.http.get('/me/payout-eligibility', {
+      signal,
+      parse: (data) => eligibilityDto.parse(data),
+    });
+    return {
+      isEligible: dto.isEligible,
+      requirements: dto.requirements.flatMap(({ requirement, status }) =>
+        isKnownRequirement(requirement)
+          ? [{ requirement: REQUIREMENT_BY_DTO[requirement], status }]
+          : [],
+      ),
+    };
+  }
+
+  getSettings(signal?: AbortSignal): Promise<PaymentSettings> {
+    return this.http.get('/me/payment-settings', {
+      signal,
+      parse: (data) => settingsDto.parse(data),
+    });
+  }
+
+  updateSettings(settings: PaymentSettings): Promise<PaymentSettings> {
+    return this.http.patch('/me/payment-settings', {
+      body: { deductPayInFromPayout: settings.deductPayInFromPayout },
+      parse: (data) => settingsDto.parse(data),
+    });
   }
 }
