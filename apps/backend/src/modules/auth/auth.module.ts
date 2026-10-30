@@ -12,12 +12,13 @@ import {
   ACCESS_TOKEN_ISSUER,
   AUTH_CHALLENGE_REPOSITORY,
   AUTH_POLICY,
-  type AuthPolicy,
+  CONTACT_CHANGES,
   OTP_GENERATOR,
   OTP_HASHER,
   OTP_SENDER,
   REFRESH_TOKEN_REPOSITORY,
   REFRESH_TOKEN_SECRETS,
+  type AuthPolicy,
 } from './application/ports/auth.ports';
 import { SessionIssuer } from './application/services/session-issuer';
 import {
@@ -47,6 +48,12 @@ import {
 import { TypeOrmAuthChallengeRepository } from './infrastructure/persistence/typeorm/typeorm-auth-challenge.repository';
 import { TypeOrmRefreshTokenRepository } from './infrastructure/persistence/typeorm/typeorm-refresh-token.repository';
 import { AuthController } from './presentation/http/controllers/auth.controller';
+import { ContactChangeController } from './presentation/http/controllers/contact-change.controller';
+import {
+  StartContactChangeUseCase,
+  VerifyContactChangeUseCase,
+} from './application/use-cases/contact-change.use-cases';
+import { SqlContactChangeRepository } from './infrastructure/persistence/typeorm/sql-contact-change.repository';
 
 const JWT_SETTINGS = Symbol('JWT_SETTINGS');
 const logger = new Logger('Auth');
@@ -89,8 +96,12 @@ function authPolicy(config: AppConfigService): AuthPolicy {
  */
 @Module({
   imports: [UsersModule, TypeOrmModule.forFeature([AuthChallengeEntity, RefreshTokenEntity])],
-  controllers: [AuthController],
+  controllers: [AuthController, ContactChangeController],
   providers: [
+    StartContactChangeUseCase,
+    VerifyContactChangeUseCase,
+    SqlContactChangeRepository,
+    { provide: CONTACT_CHANGES, useExisting: SqlContactChangeRepository },
     StartAuthenticationUseCase,
     VerifyOtpUseCase,
     ResendOtpUseCase,

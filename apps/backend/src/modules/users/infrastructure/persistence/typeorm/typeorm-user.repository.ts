@@ -6,6 +6,11 @@ import { type Repository } from 'typeorm';
 
 import { isUuid } from '../../../../../shared/infrastructure/persistence/postgres-errors';
 import { type UserRepositoryPort } from '../../../application/ports/user-repository.port';
+import { ContactTakenError } from '../../../application/ports/user-repository.port';
+import {
+  PG_UNIQUE_VIOLATION,
+  violatedConstraint,
+} from '../../../../../shared/infrastructure/persistence/postgres-errors';
 import { User } from '../../../domain/entities/user';
 import { type LoginIdentifier } from '../../../domain/value-objects/login-identifier';
 import { UserEntity } from './user.entity';
@@ -17,6 +22,11 @@ export class TypeOrmUserRepository implements UserRepositoryPort {
   async findById(id: string): Promise<User | null> {
     if (!isUuid(id)) return null;
     const row = await this.users.findOneBy({ id });
+    return row ? TypeOrmUserRepository.toDomain(row) : null;
+  }
+
+  async findByIdentifier(identifier: LoginIdentifier): Promise<User | null> {
+    const row = await this.users.findOneBy({ [identifier.type]: identifier.value });
     return row ? TypeOrmUserRepository.toDomain(row) : null;
   }
 
@@ -35,10 +45,23 @@ export class TypeOrmUserRepository implements UserRepositoryPort {
   }
 
   async save(user: User): Promise<void> {
-    await this.users.update(
-      { id: user.id },
-      { status: user.status, preferredLanguage: user.preferredLanguage },
-    );
+    try {
+      await this.users.update(
+        { id: user.id },
+        {
+          status: user.status,
+          preferredLanguage: user.preferredLanguage,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          email: user.email,
+          phone: user.phone,
+        },
+      );
+    } catch (error) {
+      // Otro usuario ya tiene ese email o teléfono (índices únicos de users).
+      if (violatedConstraint(error, PG_UNIQUE_VIOLATION)) throw new ContactTakenError();
+      throw error;
+    }
   }
 
   private static toDomain(row: UserEntity): User {
@@ -48,6 +71,8 @@ export class TypeOrmUserRepository implements UserRepositoryPort {
       phone: row.phone,
       status: row.status,
       preferredLanguage: row.preferredLanguage,
+      firstName: row.firstName,
+      lastName: row.lastName,
     });
   }
 }

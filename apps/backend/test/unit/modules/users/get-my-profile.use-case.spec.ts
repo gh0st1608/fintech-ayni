@@ -23,6 +23,7 @@ function useCase(user: User | null, amount = 0) {
   const users: UserRepositoryPort = {
     findById: () => Promise.resolve(user),
     findOrRegister: jest.fn(),
+    findByIdentifier: jest.fn(),
     save: jest.fn(),
   };
   return new GetMyProfileUseCase(users, limitFrom(amount));
@@ -38,6 +39,8 @@ describe('GetMyProfileUseCase (COPAYNI-44)', () => {
       phone: null,
       status: 'active',
       preferredLanguage: 'es',
+      firstName: null,
+      lastName: null,
       fullName: null,
       monthlyPayInLimit: { amount: 500_000, currency: 'PEN' },
     });

@@ -13,14 +13,16 @@ Usa el contrato común de respuestas descrito en [auth.md](auth.md). Requiere `A
   "phone": null,
   "status": "active",
   "preferredLanguage": "en",
-  "fullName": null,
+  "firstName": "Ana",
+  "lastName": "Quispe",
+  "fullName": "Ana Quispe",
   "monthlyPayInLimit": { "amount": 500000, "currency": "PEN" }
 }
 ```
 
 | Campo               | Notas                                                                                                                                                                                                                                                  |
 | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `fullName`          | `null` hasta capturar la información personal (COPAYNI-45) o el KYC (COPAYNI-47).                                                                                                                                                                      |
+| `fullName`          | Nombre y apellido (COPAYNI-45); `null` si no cargó ninguno. Cuando exista el KYC (COPAYNI-47), el nombre del documento podría reemplazarlo **[?]**.                                                                                                    |
 | `monthlyPayInLimit` | Límite mensual de pay-in ([Money](circles.md#modelo-money)); `null` si no se le restringe. **Provisional (R5):** es `JOIN_MONTHLY_PAYIN_LIMIT`, igual para todos y el mismo que valida la unión, hasta definir la fórmula con el ingreso (COPAYNI-48). |
 
 ## `GET /v1/me`
@@ -30,10 +32,15 @@ Devuelve el modelo `Me` del usuario autenticado. Errores: `UNAUTHORIZED` (401) y
 ## `PATCH /v1/me`
 
 ```json
-{ "preferredLanguage": "en" }
+{ "firstName": "Ana", "lastName": "Quispe", "preferredLanguage": "en" }
 ```
 
+Todos los campos son opcionales, pero el cuerpo no puede venir vacío. Un campo ausente no cambia (COPAYNI-45 y 50).
+
 - `preferredLanguage`: etiqueta BCP 47 sencilla (`es`, `en`, `pt-BR`). El backend valida el formato; qué idiomas existen lo decide el catálogo de la app.
+- `firstName` y `lastName`: de 1 a 80 caracteres; se recortan los espacios y se rechazan los caracteres de control y `<` `>`.
+- El log de auditoría `users.profile_updated` registra qué campos cambiaron, nunca sus valores.
+- El email y el teléfono no se cambian aquí: ver abajo.
 
 **200**: el modelo `Me`, con el idioma nuevo.
 
@@ -43,4 +50,15 @@ Devuelve el modelo `Me` del usuario autenticado. Errores: `UNAUTHORIZED` (401) y
 | `UNAUTHORIZED`     | 401  | Sin token o token inválido.                                  |
 | `USER_NOT_FOUND`   | 404  | El usuario del token ya no existe.                           |
 
-**Pendiente:** la edición de la información personal y la foto de perfil (COPAYNI-45; ¿se puede subir una foto?, pregunta abierta de COPAYNI-44).
+## Cambiar el email o el teléfono: `POST /v1/me/contact/start` y `/verify`
+
+**Supuesto R9 [?]:** cambiar el email o el teléfono exige verificar un OTP enviado al dato **nuevo** (COPAYNI-45). Reutiliza los desafíos OTP de [auth.md](auth.md) y su política (duración, intentos, límite de envíos).
+
+1. `POST /v1/me/contact/start` con `{ "identifier": "nueva@mail.com", "type": "email" }` (o `phone` en E.164) responde un `AuthChallenge` y envía el código al dato nuevo. El dato no cambia todavía. Si es el mismo que ya tiene, responde `VALIDATION_ERROR`.
+2. `POST /v1/me/contact/verify` con `{ "challengeId": "…", "code": "1234" }` aplica el cambio y responde el modelo `Me`.
+
+- No dice si el dato ya está en otra cuenta hasta verificarlo: así no revela qué emails o teléfonos están registrados. Al verificar, si otra cuenta lo tiene, responde `CONTACT_TAKEN` (409) y no cambia nada.
+- Un desafío ajeno, inexistente o ya usado responde `OTP_EXPIRED`. Los demás errores son los de `/auth/verify` (`OTP_INVALID`, `OTP_ATTEMPTS_EXCEEDED`) y `RATE_LIMITED`.
+- Desbloquea guardar tarjetas para quien entró solo con teléfono: Mercado Pago necesita un email (`EMAIL_REQUIRED`, [payments.md](payments.md)).
+
+**Pendiente:** la foto de perfil (¿se puede subir una?, pregunta abierta de COPAYNI-44).

@@ -32,6 +32,22 @@ export interface AuthChallengeRepositoryPort {
   issuedSince(userId: string, since: Date): Promise<{ count: number; oldest: Date | null }>;
 }
 
+export const CONTACT_CHANGES = Symbol('CONTACT_CHANGES');
+
+/** Cambio de email o teléfono pendiente de verificar por OTP (COPAYNI-45, supuesto R9). */
+export interface ContactChange {
+  userId: string;
+  type: 'email' | 'phone';
+  value: string;
+  appliedAt: Date | null;
+}
+
+export interface ContactChangeRepositoryPort {
+  create(challengeId: string, change: Omit<ContactChange, 'appliedAt'>): Promise<void>;
+  find(challengeId: string): Promise<ContactChange | null>;
+  markApplied(challengeId: string): Promise<void>;
+}
+
 export type RefreshTokenUse =
   | { readonly status: 'valid'; readonly familyId: string; readonly userId: string }
   /** Ya se había usado: posible robo. La familia entera debe revocarse. */

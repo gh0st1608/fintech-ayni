@@ -23,6 +23,7 @@ const ANA = User.restore({
 const users: UserRepositoryPort = {
   findById: () => Promise.resolve(ANA),
   findOrRegister: jest.fn(),
+  findByIdentifier: jest.fn(),
   save: jest.fn(),
 };
 const card = (gatewayCardId: string, isDefault = true) => ({

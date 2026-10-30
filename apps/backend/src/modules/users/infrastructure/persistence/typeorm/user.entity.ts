@@ -19,6 +19,12 @@ export class UserEntity {
   @Column('varchar', { name: 'preferred_language', length: 35, nullable: true })
   preferredLanguage!: string | null;
 
+  @Column('varchar', { name: 'first_name', length: 80, nullable: true })
+  firstName!: string | null;
+
+  @Column('varchar', { name: 'last_name', length: 80, nullable: true })
+  lastName!: string | null;
+
   @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
   createdAt!: Date;
 

@@ -20,6 +20,7 @@ const user = (email: string | null) =>
 const users = (found: User | null): UserRepositoryPort => ({
   findById: () => Promise.resolve(found),
   findOrRegister: jest.fn(),
+  findByIdentifier: jest.fn(),
   save: jest.fn(),
 });
 

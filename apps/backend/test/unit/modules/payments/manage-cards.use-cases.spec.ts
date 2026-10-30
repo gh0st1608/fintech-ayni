@@ -24,6 +24,7 @@ async function withCards(count: number) {
   const add = new AddCardUseCase(gateway, cards, {
     findById: () => Promise.resolve(user),
     findOrRegister: jest.fn(),
+    findByIdentifier: jest.fn(),
     save: jest.fn(),
   });
   const ids: string[] = [];
