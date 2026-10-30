@@ -1,6 +1,6 @@
 # Contrato de API: documentos y KYC
 
-**Estado:** implementado en el backend (`apps/backend/src/modules/documents`, COPAYNI-43, 46, 47, 48 y 49) con el **almacenamiento y el proveedor de verificación simulados**. El proveedor real depende del spike COPAYNI-42 ([architecture.md §11](../architecture.md#11-verificación-de-identidad-kyc)) y el almacenamiento real es S3 con SSE-KMS. Las pantallas de mobile esperan esta API.
+**Estado:** implementado en el backend (`apps/backend/src/modules/documents`, COPAYNI-43, 46, 47, 48 y 49) con **almacenamiento en S3** (`DOCUMENT_STORAGE=s3`, probado contra floci) o simulado, y el **proveedor de verificación simulado o manual**. El proveedor real depende del spike COPAYNI-42 ([architecture.md §11](../architecture.md#11-verificación-de-identidad-kyc)). Las pantallas de mobile esperan esta API.
 
 Usa el contrato común de respuestas descrito en [auth.md](auth.md) y el modelo [Money](circles.md#modelo-money). Requiere `Authorization: Bearer <accessToken>`.
 
@@ -20,7 +20,7 @@ Usa el contrato común de respuestas descrito en [auth.md](auth.md) y el modelo 
 ## Flujo
 
 1. `POST /v1/me/documents/uploads` por cada imagen o página: devuelve `uploadId` y una URL prefirmada.
-2. La app hace `PUT` del archivo a `uploadUrl` con su `Content-Type`. El backend nunca recibe el archivo.
+2. La app hace `PUT` del archivo a `uploadUrl` con el mismo `Content-Type` y el tamaño declarado, sin cabeceras de checksum. El backend nunca recibe el archivo; al enviar el documento comprueba que exista con ese tamaño.
 3. La app envía el documento con los `uploadId`. Cada subida se usa una sola vez.
 
 ## `POST /v1/me/documents/uploads`

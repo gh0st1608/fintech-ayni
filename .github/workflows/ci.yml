@@ -62,7 +62,7 @@ jobs:
       run:
         working-directory: apps/backend
     # Las pruebas de integración y e2e usan PostgreSQL real, la misma versión que RDS y que
-    # compose.yaml. Credenciales solo de prueba (test/setup-env.ts).
+    # compose.yaml, y floci para S3. Credenciales solo de prueba (test/setup-env.ts).
     services:
       postgres:
         image: postgres:17.6-alpine
@@ -77,10 +77,22 @@ jobs:
           --health-interval 2s
           --health-timeout 3s
           --health-retries 30
+      # Emulador de AWS: las pruebas del SDK (S3 de documentos, COPAYNI-43) nunca llegan a AWS.
+      floci:
+        image: floci/floci:2.2.0
+        ports:
+          - 4566:4566
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+      - name: floci listo
+        run: |
+          for i in $(seq 1 30); do
+            curl -sf http://127.0.0.1:4566/_localstack/health > /dev/null && exit 0
+            sleep 2
+          done
+          echo "floci no respondió" && exit 1
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: apps/backend/.nvmrc

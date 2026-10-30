@@ -34,3 +34,12 @@ export const TEST_ENV = {
 } as const;
 
 Object.assign(process.env, TEST_ENV);
+
+/**
+ * floci, el emulador de AWS (infra/local/compose.yaml; en CI, un service): las pruebas del SDK de
+ * AWS van contra él, nunca contra una cuenta real. Credenciales ficticias que floci acepta.
+ */
+export const FLOCI_ENDPOINT = process.env.FLOCI_ENDPOINT ?? 'http://127.0.0.1:4566';
+// Sin el perfil de la máquina: el SDK lo preferiría y firmaría con credenciales reales.
+delete process.env.AWS_PROFILE;
+Object.assign(process.env, { AWS_ACCESS_KEY_ID: 'test', AWS_SECRET_ACCESS_KEY: 'test' });

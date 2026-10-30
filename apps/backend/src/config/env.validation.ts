@@ -20,6 +20,8 @@ import {
 
 /** Resultados del proveedor de KYC simulado (COPAYNI-42). */
 export const KYC_SIMULATED_RESULTS = ['approved', 'rejected', 'in_review'] as const;
+/** Almacenamiento de documentos KYC (COPAYNI-43). */
+export const DOCUMENT_STORAGES = ['simulated', 's3'] as const;
 /** Verificación de documentos (COPAYNI-42): simulada o revisión manual de operaciones. */
 export const KYC_PROVIDERS = ['simulated', 'manual'] as const;
 
@@ -368,6 +370,32 @@ export class EnvironmentVariables {
   @IsIn(KYC_SIMULATED_RESULTS)
   KYC_SIMULATED_RESULT: (typeof KYC_SIMULATED_RESULTS)[number] = 'approved';
 
+  /**
+   * Dónde se guardan los documentos KYC (COPAYNI-43): `s3` (floci en dev, AWS en prd) o
+   * `simulated` (sin archivos; prohibido en production).
+   */
+  @IsIn(DOCUMENT_STORAGES)
+  DOCUMENT_STORAGE: (typeof DOCUMENT_STORAGES)[number] = 'simulated';
+
+  /** Bucket privado de documentos (infra/terraform/modules/documents-bucket). */
+  @ValidateIf((env: EnvironmentVariables) => env.DOCUMENT_STORAGE === 's3')
+  @Matches(/^[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$/, {
+    message: 'DOCUMENTS_BUCKET no es un bucket S3 válido',
+  })
+  DOCUMENTS_BUCKET?: string;
+
+  /** Región de AWS de los servicios que usa la API. */
+  @IsString()
+  @IsNotEmpty()
+  AWS_REGION: string = 'us-east-1';
+
+  /**
+   * Endpoint de S3 para el emulador (floci: `http://localhost:4566`). Sin valor, el de AWS.
+   */
+  @IsOptional()
+  @IsUrl({ require_tld: false, require_protocol: true, protocols: ['http', 'https'] })
+  DOCUMENTS_S3_ENDPOINT?: string;
+
   /** Vigencia de la URL prefirmada de subida de documentos (COPAYNI-43), en segundos. */
   @IsInt()
   @Min(60)
@@ -618,6 +646,11 @@ export function validateEnvironment(config: Record<string, unknown>): Environmen
   if (env.NODE_ENV === 'production' && env.CIRCLE_PAYMENTS_ADAPTER === 'fake') {
     throw new Error(
       'Configuración inválida:\n- CIRCLE_PAYMENTS_ADAPTER: fake no se admite en production',
+    );
+  }
+  if (env.NODE_ENV === 'production' && env.DOCUMENT_STORAGE === 'simulated') {
+    throw new Error(
+      'Configuración inválida:\n- DOCUMENT_STORAGE: simulated no se admite en production',
     );
   }
   if (env.NODE_ENV === 'production' && env.KYC_PROVIDER === 'simulated') {

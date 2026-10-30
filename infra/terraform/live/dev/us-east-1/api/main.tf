@@ -92,6 +92,15 @@ module "api" {
     NODE_ENV               = "production"
     PORT                   = "3000"
     TRUST_PROXY            = "true"
+    # Documentos KYC en el bucket de este stack (COPAYNI-43). Sin proveedor de verificación
+    # (COPAYNI-42), los documentos quedan en revisión manual.
+    AWS_REGION       = var.region
+    DOCUMENT_STORAGE = "s3"
+    DOCUMENTS_BUCKET = module.documents.bucket_name
+    KYC_PROVIDER     = "manual"
+    # La tarea corre en el Docker de esta máquina: llega a floci por el host. Las URLs prefirmadas
+    # apuntan ahí, así que solo sirven desde esta máquina.
+    DOCUMENTS_S3_ENDPOINT = "http://host.docker.internal:4566"
   })
 
   secrets = var.new_relic.enabled ? {

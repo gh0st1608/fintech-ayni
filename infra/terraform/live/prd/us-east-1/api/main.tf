@@ -127,7 +127,13 @@ module "api" {
     NODE_ENV               = "production"
     PORT                   = "3000"
     TRUST_PROXY            = "true"
-    ENABLE_SWAGGER         = "false"
+    # Documentos KYC en el bucket de este stack (COPAYNI-43). Sin proveedor de verificación
+    # (COPAYNI-42), los documentos quedan en revisión manual.
+    AWS_REGION       = var.region
+    DOCUMENT_STORAGE = "s3"
+    DOCUMENTS_BUCKET = module.documents.bucket_name
+    KYC_PROVIDER     = "manual"
+    ENABLE_SWAGGER   = "false"
   })
   secrets = var.new_relic.enabled ? {
     NEW_RELIC_LICENSE_KEY = "${data.aws_secretsmanager_secret.newrelic_license_key[0].arn}:api_key::"

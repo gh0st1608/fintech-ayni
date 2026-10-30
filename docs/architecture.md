@@ -351,10 +351,10 @@ Fuentes: [Yape en Checkout API](https://www.mercadopago.com.pe/developers/en/doc
 **Estado:** pendiente de elegir proveedor (spike COPAYNI-42, pending-scope T4). El backend ya tiene los puertos y adaptadores simulados ([documents.md](api/documents.md)).
 
 - **Puertos:** `DocumentStoragePort` (URL prefirmada y comprobación de la subida), `IdentityVerifierPort` (National ID con anverso y reverso) e `IncomeReviewerPort` (comprobante de ingresos). Cambiar de proveedor es escribir un adaptador.
-- **Almacenamiento:** S3 privado con SSE-KMS y URLs prefirmadas de pocos minutos; la app sube directo y el backend solo guarda la clave. Hoy, `SimulatedDocumentStorage`.
+- **Almacenamiento:** S3 privado con SSE-KMS por defecto del bucket y URLs prefirmadas de pocos minutos; la app sube directo y el backend solo guarda la clave (`S3DocumentStorage`, probado contra floci en las pruebas y en CI). Las URLs no firman checksum: el SDK v3 firmaría el CRC32 de un cuerpo vacío y S3 rechazaría la subida.
 - **Sin proveedor en production:** `KYC_PROVIDER=manual` deja los documentos en revisión de operaciones; `simulated` está prohibido.
 
-Criterios para el spike:
+Propuesta de documentos obligatorios y de proveedores para Perú: [kyc-peru.md](kyc-peru.md). Criterios para el spike:
 
 | Criterio       | Qué se evalúa                                                                    |
 | -------------- | -------------------------------------------------------------------------------- |

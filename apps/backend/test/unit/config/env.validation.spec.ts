@@ -163,6 +163,8 @@ describe('validateEnvironment', () => {
       ...REQUIRED,
       NODE_ENV: 'production',
       KYC_PROVIDER: 'manual',
+      DOCUMENT_STORAGE: 's3',
+      DOCUMENTS_BUCKET: 'ayni-prd-documents',
       JWT_PRIVATE_KEY: '-----BEGIN PRIVATE KEY-----\nabc\n-----END PRIVATE KEY-----',
       OTP_PEPPER: 'p'.repeat(32),
     };
@@ -184,7 +186,18 @@ describe('validateEnvironment', () => {
       expect(() => validateEnvironment({ ...PRODUCTION, KYC_PROVIDER: 'simulated' })).toThrow(
         /KYC_PROVIDER: simulated no se admite/,
       );
+      expect(() => validateEnvironment({ ...PRODUCTION, DOCUMENT_STORAGE: 'simulated' })).toThrow(
+        /DOCUMENT_STORAGE: simulated no se admite/,
+      );
+      expect(() => validateEnvironment({ ...PRODUCTION, DOCUMENTS_BUCKET: undefined })).toThrow(
+        /DOCUMENTS_BUCKET/,
+      );
+      expect(() => validateEnvironment({ ...PRODUCTION, DOCUMENTS_S3_ENDPOINT: 'floci' })).toThrow(
+        /DOCUMENTS_S3_ENDPOINT/,
+      );
       expect(validateEnvironment({ ...REQUIRED })).toMatchObject({
+        DOCUMENT_STORAGE: 'simulated',
+        AWS_REGION: 'us-east-1',
         KYC_PROVIDER: 'simulated',
         KYC_SIMULATED_RESULT: 'approved',
         DOCUMENT_UPLOAD_URL_TTL_SECONDS: 300,
