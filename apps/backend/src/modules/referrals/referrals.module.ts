@@ -11,6 +11,7 @@ import {
 import {
   ClaimReferralUseCase,
   GetMyReferralUseCase,
+  GetReferralSummaryUseCase,
 } from './application/use-cases/referral.use-cases';
 import { SqlReferralRepository } from './infrastructure/sql-referral.repository';
 import { ReferralsController } from './presentation/referrals.controller';
@@ -21,6 +22,7 @@ import { ReferralsController } from './presentation/referrals.controller';
   providers: [
     GetMyReferralUseCase,
     ClaimReferralUseCase,
+    GetReferralSummaryUseCase,
     SqlReferralRepository,
     { provide: REFERRALS, useExisting: SqlReferralRepository },
     {

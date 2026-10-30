@@ -45,3 +45,28 @@ El invitado usa el código después de registrarse: la app lo guarda al abrir el
 | `REFERRAL_ALREADY_CLAIMED` | 409  | Ya usó un código: una sola vez por usuario.                       |
 | `REFERRAL_NOT_ELIGIBLE`    | 409  | Ya se unió a un círculo: el beneficio es para el primero. **[?]** |
 | `OWN_REFERRAL_CODE`        | 422  | Es su propio código.                                              |
+
+## `GET /v1/me/referrals?cursor=<texto>&limit=<entero>`
+
+Saldo e invitados de My Referrals (COPAYNI-52). Los invitados van del más reciente al más antiguo, paginados por cursor (`limit` de 1 a 50, 20 por defecto).
+
+```json
+{
+  "earned": { "amount": 30000, "currency": "PEN" },
+  "redeemed": { "amount": 10000, "currency": "PEN" },
+  "balance": { "amount": 20000, "currency": "PEN" },
+  "invitees": [
+    {
+      "displayName": "Ana Q.",
+      "status": "first_pay_in_paid",
+      "claimedAt": "2026-11-02T15:00:00.000Z"
+    }
+  ],
+  "nextCursor": null
+}
+```
+
+- **Ganado (`earned`):** su propio beneficio si usó un código, más el de cada invitado que ya pagó su primera cuota, hasta el tope (cuentan los primeros en usar su código). Se calcula a partir de los referidos y las cuotas pagadas; no hay un saldo que pueda desfasarse.
+- **Canjeado (`redeemed`):** la suma de los descuentos aplicados a sus cuotas (COPAYNI-53). `balance` = ganado − canjeado.
+- **Invitados:** el nombre minimizado (nombre e inicial del apellido) o, sin nombre, el email o teléfono enmascarado. `status`: `registered`, `joined_circle` o `first_pay_in_paid`.
+- Errores: `VALIDATION_ERROR` (400, `limit` fuera de rango o cursor inválido) y `UNAUTHORIZED`.

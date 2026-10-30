@@ -28,9 +28,24 @@ export class CreateReferrals1762862400000 implements MigrationInterface {
     await queryRunner.query(
       'CREATE INDEX ix_referrals_inviter ON referrals (inviter_id, claimed_at)',
     );
+    // Descuentos aplicados (COPAYNI-53): uno por cuota; solo inserción.
+    await queryRunner.query(`
+      CREATE TABLE referral_redemptions (
+        id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        user_id uuid NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+        reference varchar(64) NOT NULL UNIQUE,
+        amount bigint NOT NULL CHECK (amount > 0),
+        currency char(3) NOT NULL CHECK (currency ~ '^[A-Z]{3}$'),
+        created_at timestamptz NOT NULL DEFAULT now()
+      )
+    `);
+    await queryRunner.query(
+      'CREATE INDEX ix_referral_redemptions_user ON referral_redemptions (user_id)',
+    );
   }
 
   async down(queryRunner: QueryRunner): Promise<void> {
+    await queryRunner.query('DROP TABLE referral_redemptions');
     await queryRunner.query('DROP TABLE referrals');
     await queryRunner.query('DROP TABLE referral_codes');
   }

@@ -1,4 +1,4 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Inject, Post } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, HttpStatus, Inject, Post, Query } from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiConflictResponse,
@@ -15,8 +15,15 @@ import { MoneyResponse } from '../../circles/presentation/http/dto/join-config.r
 import {
   ClaimReferralUseCase,
   GetMyReferralUseCase,
+  GetReferralSummaryUseCase,
 } from '../application/use-cases/referral.use-cases';
-import { ClaimReferralRequest, ClaimReferralResponse, MyReferralResponse } from './referrals.dto';
+import {
+  ClaimReferralRequest,
+  ClaimReferralResponse,
+  MyReferralResponse,
+  ReferralSummaryResponse,
+  ReferralsQuery,
+} from './referrals.dto';
 
 /** Referidos (COPAYNI-51 a 53, docs/api/referrals.md). */
 @ApiTags('referrals')
@@ -26,7 +33,23 @@ export class ReferralsController {
   constructor(
     @Inject(GetMyReferralUseCase) private readonly getMine: GetMyReferralUseCase,
     @Inject(ClaimReferralUseCase) private readonly claim: ClaimReferralUseCase,
+    @Inject(GetReferralSummaryUseCase) private readonly summary: GetReferralSummaryUseCase,
   ) {}
+
+  @Get('referrals')
+  @ApiOkResponse({
+    type: ReferralSummaryResponse,
+    description: 'Envuelto en { success, data, traceId }',
+  })
+  @ApiUnauthorizedResponse({ description: 'Sin token o token inválido (UNAUTHORIZED)' })
+  async referrals(
+    @CurrentPrincipal() principal: Principal,
+    @Query() query: ReferralsQuery,
+  ): Promise<ReferralSummaryResponse> {
+    return ReferralSummaryResponse.from(
+      await this.summary.execute(principal, { limit: query.limit, cursor: query.cursor ?? null }),
+    );
+  }
 
   @Get('referral')
   @ApiOkResponse({

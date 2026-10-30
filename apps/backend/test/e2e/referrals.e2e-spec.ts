@@ -95,6 +95,70 @@ describe('Referidos', () => {
       .expect(({ body }) => expect(body.error.code).toBe('REFERRAL_NOT_ELIGIBLE'));
   });
 
+  it('el resumen muestra lo ganado, el saldo y los invitados con su estado (COPAYNI-52)', async () => {
+    const inviter = await signIn();
+    const { code } = (await get('/v1/me/referral', inviter.token)).body.data as { code: string };
+    const empty = await get('/v1/me/referrals', inviter.token).expect(200);
+    expect(empty.body.data).toEqual({
+      earned: { amount: 0, currency: 'PEN' },
+      redeemed: { amount: 0, currency: 'PEN' },
+      balance: { amount: 0, currency: 'PEN' },
+      invitees: [],
+      nextCursor: null,
+    });
+
+    const first = await signIn();
+    const second = await signIn();
+    await claim(first.token, code).expect(200);
+    await claim(second.token, code).expect(200);
+    await request(app.getHttpServer())
+      .patch('/v1/me')
+      .set('Authorization', `Bearer ${second.token}`)
+      .send({ firstName: 'Ana', lastName: 'Quispe' })
+      .expect(200);
+    // El primer invitado pagó su primera cuota.
+    const db = app.get(DataSource);
+    const circleId = randomUUID();
+    await db.query(
+      `INSERT INTO circles (id, payout_amount, currency, months, starts_on, cycle_state, current_period)
+       VALUES ($1, 600000, 'PEN', 6, '2026-11-01', 'contributing', '2026-11-01')`,
+      [circleId],
+    );
+    await db.query(
+      `INSERT INTO circle_memberships (id, circle_id, user_id, position, idempotency_key)
+       VALUES ($1, $2, $3, 1, 'k')`,
+      [randomUUID(), circleId, first.userId],
+    );
+    await db.query(
+      `INSERT INTO circle_installments (id, circle_id, user_id, position, period, due_on, amount, currency, status, paid_at)
+       VALUES ($1, $2, $3, 1, '2026-11-01', '2026-11-05', 100000, 'PEN', 'paid', now())`,
+      [randomUUID(), circleId, first.userId],
+    );
+
+    const page = await get('/v1/me/referrals?limit=1', inviter.token).expect(200);
+    expect(page.body.data).toMatchObject({
+      earned: { amount: 15000 },
+      balance: { amount: 15000 },
+      invitees: [{ displayName: 'Ana Q.', status: 'registered' }],
+    });
+    const next = await get(
+      `/v1/me/referrals?limit=1&cursor=${page.body.data.nextCursor}`,
+      inviter.token,
+    ).expect(200);
+    expect(next.body.data.invitees).toEqual([
+      expect.objectContaining({
+        displayName: expect.stringContaining('@'),
+        status: 'first_pay_in_paid',
+      }),
+    ]);
+    expect(next.body.data.nextCursor).toBeNull();
+    // El invitado tiene su propio beneficio desde que usó el código.
+    await get('/v1/me/referrals', second.token).expect(({ body }) => {
+      expect(body.data.balance).toEqual({ amount: 15000, currency: 'PEN' });
+    });
+    await get('/v1/me/referrals?cursor=otro', inviter.token).expect(400);
+  });
+
   it('exige autenticación', async () => {
     await request(app.getHttpServer()).get('/v1/me/referral').expect(401);
   });

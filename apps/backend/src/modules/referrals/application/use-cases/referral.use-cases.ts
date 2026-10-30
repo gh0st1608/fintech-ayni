@@ -1,10 +1,11 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 
 import { type Principal } from '../../../../shared/application/ports/access-token-verifier.port';
-import { type Money } from '../../../../shared/domain/value-objects/money';
+import { Money } from '../../../../shared/domain/value-objects/money';
 import { ConflictError, DomainError, NotFoundError } from '../../../../shared/errors/app-error';
 import { ReferralCode } from '../../domain/referral-code';
 import {
+  type InviteePage,
   REFERRAL_SETTINGS,
   REFERRALS,
   type ReferralRepositoryPort,
@@ -32,6 +33,37 @@ export class GetMyReferralUseCase {
       link: `${this.settings.linkBaseUrl}?code=${code}`,
       reward: this.settings.reward,
     };
+  }
+}
+
+export interface ReferralSummary {
+  earned: Money;
+  redeemed: Money;
+  /** Ganado menos canjeado: se descuenta solo en la próxima cuota (COPAYNI-53). */
+  balance: Money;
+  invitees: InviteePage;
+}
+
+/** `GET /v1/me/referrals` (COPAYNI-52): saldo e invitados. */
+@Injectable()
+export class GetReferralSummaryUseCase {
+  constructor(
+    @Inject(REFERRALS) private readonly referrals: ReferralRepositoryPort,
+    @Inject(REFERRAL_SETTINGS) private readonly settings: ReferralSettings,
+  ) {}
+
+  async execute(
+    principal: Principal,
+    query: { limit?: number; cursor: string | null },
+  ): Promise<ReferralSummary> {
+    const { currency } = this.settings.reward;
+    const [totals, invitees] = await Promise.all([
+      this.referrals.totalsOf(principal.userId, this.settings.maxRewardedInvites),
+      this.referrals.inviteesOf(principal.userId, query.limit ?? 20, query.cursor),
+    ]);
+    const earned = Money.of(totals.earned, currency);
+    const redeemed = Money.of(totals.redeemed, currency);
+    return { earned, redeemed, balance: earned.subtract(redeemed), invitees };
   }
 }
 

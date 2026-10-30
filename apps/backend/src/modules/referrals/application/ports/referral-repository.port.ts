@@ -13,7 +13,36 @@ export interface ReferralSettings {
   linkBaseUrl: string;
 }
 
+/** Estado del invitado, de menos a más avanzado (COPAYNI-52). */
+export type InviteeStatus = 'registered' | 'joined_circle' | 'first_pay_in_paid';
+
+export interface Invitee {
+  /** Nombre minimizado (nombre e inicial del apellido) o el contacto enmascarado. */
+  displayName: string;
+  status: InviteeStatus;
+  claimedAt: Date;
+}
+
+export interface InviteePage {
+  items: Invitee[];
+  nextCursor: string | null;
+}
+
+/** Montos en unidades menores de la moneda de operación. */
+export interface ReferralTotals {
+  earned: number;
+  redeemed: number;
+}
+
 export interface ReferralRepositoryPort {
+  /**
+   * Lo ganado: su propio beneficio si usó un código, más el de sus invitados que ya pagaron su
+   * primera cuota, hasta `maxRewardedInvites` (los primeros en usar el código). Lo canjeado: la
+   * suma de los descuentos aplicados.
+   */
+  totalsOf(userId: string, maxRewardedInvites: number): Promise<ReferralTotals>;
+  /** Sus invitados, del más reciente al más antiguo. Rechaza un cursor ajeno con InvalidCursorError. */
+  inviteesOf(userId: string, limit: number, cursor: string | null): Promise<InviteePage>;
   /** El código del usuario; lo crea la primera vez (único en todos los usuarios). */
   codeOf(userId: string): Promise<string>;
   /** El dueño de un código, o `null` si no existe. */
