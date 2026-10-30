@@ -6,6 +6,7 @@ export default function ProfileRoute() {
   return (
     <ProfileScreen
       onOpenPersonalInfo={() => router.push('/profile/personal-info')}
+      onOpenDocuments={() => router.push('/profile/documents')}
       onOpenCatalog={() => router.push('/catalog')}
     />
   );

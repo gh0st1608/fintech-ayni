@@ -8,6 +8,13 @@ import { InMemoryJoinConfigRepository } from '@/infrastructure/circles/InMemoryJ
 import { FakePaymentTokenizer } from '@/infrastructure/payments/FakePaymentTokenizer';
 import { InMemoryCardRepository } from '@/infrastructure/payments/InMemoryCardRepository';
 import { InMemoryPaymentRepository } from '@/infrastructure/payments/InMemoryPaymentRepository';
+import {
+  FakeFileUploader,
+  FakeLocalFileCleaner,
+  InMemoryDocumentRepository,
+} from '@/infrastructure/documents/InMemoryDocumentRepository';
+
+import { FakeFilePicker } from './FakeFilePicker';
 import { InMemoryPayoutMethodRepository } from '@/infrastructure/payouts/InMemoryPayoutMethodRepository';
 import { InMemoryUserProfileRepository } from '@/infrastructure/profile/InMemoryUserProfileRepository';
 
@@ -35,6 +42,10 @@ interface TestAdapters {
   payments: InMemoryPaymentRepository;
   cards: InMemoryCardRepository;
   paymentTokenizer: FakePaymentTokenizer;
+  documents: InMemoryDocumentRepository;
+  filePicker: FakeFilePicker;
+  fileUploader: FakeFileUploader;
+  fileCleaner: FakeLocalFileCleaner;
   ids: FakeIdGenerator;
 }
 
@@ -55,6 +66,10 @@ export function createTestContainer(overrides: Partial<TestAdapters> = {}) {
     payments: new InMemoryPaymentRepository('PEN', { latencyMs: 0 }),
     cards: new InMemoryCardRepository({ latencyMs: 0 }),
     paymentTokenizer: new FakePaymentTokenizer({ latencyMs: 0 }),
+    documents: new InMemoryDocumentRepository({ latencyMs: 0 }),
+    filePicker: new FakeFilePicker(),
+    fileUploader: new FakeFileUploader(),
+    fileCleaner: new FakeLocalFileCleaner(),
     ids: new FakeIdGenerator(),
     ...overrides,
   };

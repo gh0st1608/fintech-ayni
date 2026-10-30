@@ -31,6 +31,8 @@ const envSchema = z
      * permite agregar tarjetas ni pagar con Yape hasta conectar la cuenta (COPAYNI-34).
      */
     paymentTokenizer: z.enum(['fake', 'unconfigured']).default('unconfigured'),
+    /** Igual que authApi, para los documentos KYC (/me/documents). */
+    documentsApi: z.enum(['http', 'fake']).default('http'),
     termsUrl: optionalHttpsUrl,
     privacyUrl: optionalHttpsUrl,
   })
@@ -56,6 +58,10 @@ const envSchema = z
   })
   .refine((env) => env.paymentTokenizer !== 'fake' || env.appEnv === 'dev', {
     path: ['paymentTokenizer'],
+    message: 'fake is only allowed in dev',
+  })
+  .refine((env) => env.documentsApi === 'http' || env.appEnv === 'dev', {
+    path: ['documentsApi'],
     message: 'fake is only allowed in dev',
   });
 
@@ -87,6 +93,7 @@ export function loadEnv(): Env {
     payoutsApi: process.env.EXPO_PUBLIC_PAYOUTS_API,
     paymentsApi: process.env.EXPO_PUBLIC_PAYMENTS_API,
     paymentTokenizer: process.env.EXPO_PUBLIC_PAYMENT_TOKENIZER,
+    documentsApi: process.env.EXPO_PUBLIC_DOCUMENTS_API,
     termsUrl: process.env.EXPO_PUBLIC_TERMS_URL,
     privacyUrl: process.env.EXPO_PUBLIC_PRIVACY_URL,
   });

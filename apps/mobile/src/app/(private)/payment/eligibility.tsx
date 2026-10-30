@@ -6,7 +6,7 @@ export default function PayoutEligibilityRoute() {
   return (
     <PayoutEligibilityScreen
       actions={{
-        // Scan National ID llega con los documentos (COPAYNI-47); hasta entonces, sin acción.
+        nationalId: () => router.push('/profile/documents/national-id'),
         payoutMethod: () => router.push('/payment/payout-method'),
         duePayments: () => router.navigate('/payment'),
       }}

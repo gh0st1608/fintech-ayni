@@ -39,6 +39,12 @@ import type {
   UpdatePersonalInfoUseCase,
   VerifyContactChangeUseCase,
 } from '@/application/profile/usecases/profileUseCases';
+import type {
+  ListDocumentsUseCase,
+  SubmitNationalIdUseCase,
+  SubmitProofOfIncomeUseCase,
+} from '@/application/documents/usecases/documentUseCases';
+import type { FilePickerPort } from '@/domain/documents/ports/FilePorts';
 import type { SyncLanguagePreferenceUseCase } from '@/application/i18n/usecases/SyncLanguagePreferenceUseCase';
 
 /**
@@ -91,6 +97,13 @@ export interface AppContainer {
     updatePersonalInfo: UpdatePersonalInfoUseCase;
     startContactChange: StartContactChangeUseCase;
     verifyContactChange: VerifyContactChangeUseCase;
+  };
+  documents: {
+    list: ListDocumentsUseCase;
+    submitNationalId: SubmitNationalIdUseCase;
+    submitProofOfIncome: SubmitProofOfIncomeUseCase;
+    /** Cámara, galería y archivos del dispositivo. */
+    picker: FilePickerPort;
   };
   payouts: {
     listPayoutMethods: ListPayoutMethodsUseCase;

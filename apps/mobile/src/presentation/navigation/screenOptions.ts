@@ -52,6 +52,9 @@ export function useProfileScreenOptions() {
       headerBackButtonDisplayMode: 'minimal',
     },
     contact: { title: t('profile.contact.title'), headerBackButtonDisplayMode: 'minimal' },
+    documents: { title: t('documents.list.title'), headerBackButtonDisplayMode: 'minimal' },
+    nationalId: { title: t('documents.nationalId.title'), headerBackButtonDisplayMode: 'minimal' },
+    proofOfIncome: { title: t('documents.income.title'), headerBackButtonDisplayMode: 'minimal' },
   } as const;
 }
 

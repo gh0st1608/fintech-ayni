@@ -20,6 +20,7 @@ import { useProfile } from '../useProfile';
 
 interface ProfileScreenProps {
   onOpenPersonalInfo?: () => void;
+  onOpenDocuments?: () => void;
   /** Abre el catálogo del design system; solo se muestra en el ambiente dev. */
   onOpenCatalog?: () => void;
 }
@@ -31,7 +32,11 @@ const AVATAR_SIZE = 56;
  * personal, el idioma y el cierre de sesión. Sin el contexto de diseño (límite de Figma): se armó
  * con el inventario y los componentes existentes. Los accesos no dependen de que cargue el perfil.
  */
-export function ProfileScreen({ onOpenPersonalInfo, onOpenCatalog }: ProfileScreenProps) {
+export function ProfileScreen({
+  onOpenPersonalInfo,
+  onOpenDocuments,
+  onOpenCatalog,
+}: ProfileScreenProps) {
   const { t } = useTranslation();
   const { signOut } = useSession();
   const { environment } = useContainer().config;
@@ -52,6 +57,14 @@ export function ProfileScreen({ onOpenPersonalInfo, onOpenCatalog }: ProfileScre
             icon="person-outline"
             onPress={onOpenPersonalInfo}
             testID="profile-personal-info"
+          />
+        )}
+        {onOpenDocuments && (
+          <ListItem
+            title={t('documents.list.title')}
+            icon="document-text-outline"
+            onPress={onOpenDocuments}
+            testID="profile-documents"
           />
         )}
         <ListItem

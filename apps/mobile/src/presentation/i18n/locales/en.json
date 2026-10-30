@@ -409,5 +409,74 @@
       "PAYMENT_PENDING": "A payment for this installment is already in progress.",
       "PAYMENT_REJECTED": "The payment was rejected. Try another method."
     }
+  },
+  "documents": {
+    "list": {
+      "title": "My documents",
+      "intro": "We verify your identity and income so you can join circles and receive your payout."
+    },
+    "types": {
+      "nationalId": "National ID",
+      "proofOfIncome": "Proof of income",
+      "additional": "Additional documents"
+    },
+    "status": {
+      "approved": "Verified",
+      "inReview": "In review",
+      "rejected": "Rejected: send it again",
+      "notSubmitted": "Not submitted"
+    },
+    "capture": {
+      "empty": "You haven't added this image yet.",
+      "takePhoto": "Take photo",
+      "retake": "Retake",
+      "gallery": "Gallery",
+      "pdf": "Choose PDF",
+      "remove": "Remove",
+      "pdfSelected": "PDF selected",
+      "preview": "Preview: {{title}}"
+    },
+    "nationalId": {
+      "title": "National ID",
+      "intro": "Take a photo of each side of your ID, in good light and without glare.",
+      "front": "Front",
+      "back": "Back",
+      "submit": "Submit document"
+    },
+    "income": {
+      "title": "Proof of income",
+      "amount": "Monthly income",
+      "invalidAmount": "Enter your monthly income, for example 3500.",
+      "kindLabel": "Type of proof",
+      "kinds": {
+        "hrLetter": "HR letter",
+        "bankStatement": "Bank statement"
+      },
+      "page": "Page {{number}}",
+      "addPage": "Add page",
+      "submit": "Submit proof"
+    },
+    "result": {
+      "approved": "Document verified!",
+      "inReview": "We received your document. We'll let you know when we finish reviewing it.",
+      "rejected": "We couldn't verify your document.",
+      "retry": "Try again",
+      "done": "Done"
+    },
+    "errors": {
+      "permission": {
+        "camera": "Ayni needs camera access. Turn it on in your phone settings.",
+        "photos": "Ayni needs access to your photos. Turn it on in your phone settings."
+      },
+      "file": {
+        "type": "Use a JPG or PNG photo, or a PDF.",
+        "size": "The file is larger than 10 MB."
+      },
+      "income": {
+        "income": "Income must be greater than zero.",
+        "pages": "Add 1 to 10 pages."
+      },
+      "uploadNotUsable": "One of the images didn't upload correctly. Take it again."
+    }
   }
 }

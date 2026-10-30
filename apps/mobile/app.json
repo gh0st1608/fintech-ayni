@@ -49,6 +49,14 @@
           "resizeMode": "contain",
           "backgroundColor": "#FAFAFA"
         }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Ayni usa tus fotos para subir tus documentos de verificación.",
+          "cameraPermission": "Ayni usa la cámara para escanear tus documentos de verificación.",
+          "microphonePermission": false
+        }
       ]
     ],
     "experiments": {

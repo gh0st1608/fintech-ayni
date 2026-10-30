@@ -409,5 +409,74 @@
       "PAYMENT_PENDING": "Ya hay un pago de esta cuota en proceso.",
       "PAYMENT_REJECTED": "El pago fue rechazado. Intenta con otro método."
     }
+  },
+  "documents": {
+    "list": {
+      "title": "Mis documentos",
+      "intro": "Verificamos tu identidad y tus ingresos para que puedas unirte a círculos y cobrar tu payout."
+    },
+    "types": {
+      "nationalId": "Documento de identidad",
+      "proofOfIncome": "Comprobante de ingresos",
+      "additional": "Documentos adicionales"
+    },
+    "status": {
+      "approved": "Verificado",
+      "inReview": "En revisión",
+      "rejected": "Rechazado: vuelve a enviarlo",
+      "notSubmitted": "Pendiente de enviar"
+    },
+    "capture": {
+      "empty": "Todavía no agregaste esta imagen.",
+      "takePhoto": "Tomar foto",
+      "retake": "Tomar otra",
+      "gallery": "Galería",
+      "pdf": "Elegir PDF",
+      "remove": "Quitar",
+      "pdfSelected": "PDF seleccionado",
+      "preview": "Vista previa: {{title}}"
+    },
+    "nationalId": {
+      "title": "Documento de identidad",
+      "intro": "Toma una foto de cada cara de tu DNI, con buena luz y sin reflejos.",
+      "front": "Anverso",
+      "back": "Reverso",
+      "submit": "Enviar documento"
+    },
+    "income": {
+      "title": "Comprobante de ingresos",
+      "amount": "Ingreso mensual",
+      "invalidAmount": "Escribe tu ingreso mensual, por ejemplo 3500.",
+      "kindLabel": "Tipo de comprobante",
+      "kinds": {
+        "hrLetter": "Carta de recursos humanos",
+        "bankStatement": "Extracto bancario"
+      },
+      "page": "Página {{number}}",
+      "addPage": "Agregar página",
+      "submit": "Enviar comprobante"
+    },
+    "result": {
+      "approved": "¡Documento verificado!",
+      "inReview": "Recibimos tu documento. Te avisaremos cuando terminemos de revisarlo.",
+      "rejected": "No pudimos verificar tu documento.",
+      "retry": "Volver a intentarlo",
+      "done": "Listo"
+    },
+    "errors": {
+      "permission": {
+        "camera": "Ayni necesita acceso a la cámara. Actívalo en la configuración del teléfono.",
+        "photos": "Ayni necesita acceso a tus fotos. Actívalo en la configuración del teléfono."
+      },
+      "file": {
+        "type": "Usa una foto JPG o PNG, o un PDF.",
+        "size": "El archivo pesa más de 10 MB."
+      },
+      "income": {
+        "income": "El ingreso debe ser mayor que cero.",
+        "pages": "Agrega de 1 a 10 páginas."
+      },
+      "uploadNotUsable": "Una de las imágenes no se subió bien. Vuelve a tomarla."
+    }
   }
 }

@@ -37,6 +37,12 @@ import {
   UpdatePersonalInfoUseCase,
   VerifyContactChangeUseCase,
 } from '@/application/profile/usecases/profileUseCases';
+import {
+  DocumentUploader,
+  ListDocumentsUseCase,
+  SubmitNationalIdUseCase,
+  SubmitProofOfIncomeUseCase,
+} from '@/application/documents/usecases/documentUseCases';
 import { ChangeLanguageUseCase } from '@/application/i18n/usecases/ChangeLanguageUseCase';
 import { ResolveLanguageUseCase } from '@/application/i18n/usecases/ResolveLanguageUseCase';
 import { SyncLanguagePreferenceUseCase } from '@/application/i18n/usecases/SyncLanguagePreferenceUseCase';
@@ -45,6 +51,12 @@ import type { TokenStoragePort } from '@/domain/auth/ports/TokenStoragePort';
 import type { CircleMembershipRepositoryPort } from '@/domain/circles/ports/CircleMembershipRepositoryPort';
 import type { CircleQuoteRepositoryPort } from '@/domain/circles/ports/CircleQuoteRepositoryPort';
 import type { JoinConfigRepositoryPort } from '@/domain/circles/ports/JoinConfigRepositoryPort';
+import type { DocumentRepositoryPort } from '@/domain/documents/ports/DocumentRepositoryPort';
+import type {
+  FilePickerPort,
+  FileUploaderPort,
+  LocalFileCleanerPort,
+} from '@/domain/documents/ports/FilePorts';
 import type { DeviceLocalePort } from '@/domain/i18n/ports/DeviceLocalePort';
 import type { LanguagePreferencePort } from '@/domain/i18n/ports/LanguagePreferencePort';
 import type { LanguageSyncStatePort } from '@/domain/i18n/ports/LanguageSyncStatePort';
@@ -63,6 +75,16 @@ import { InMemoryCircleMembershipRepository } from '@/infrastructure/circles/InM
 import { InMemoryCircleQuoteRepository } from '@/infrastructure/circles/InMemoryCircleQuoteRepository';
 import { InMemoryJoinConfigRepository } from '@/infrastructure/circles/InMemoryJoinConfigRepository';
 import { JoinConfigApiRepository } from '@/infrastructure/circles/JoinConfigApiRepository';
+import { DocumentApiRepository } from '@/infrastructure/documents/DocumentApiRepository';
+import {
+  ExpoFilePicker,
+  ExpoLocalFileCleaner,
+  FetchFileUploader,
+} from '@/infrastructure/documents/ExpoFileAdapters';
+import {
+  FakeFileUploader,
+  InMemoryDocumentRepository,
+} from '@/infrastructure/documents/InMemoryDocumentRepository';
 import { ExpoCryptoIdGenerator } from '@/infrastructure/device/ExpoCryptoIdGenerator';
 import { ExpoDeviceLocale } from '@/infrastructure/device/ExpoDeviceLocale';
 import { ReactNativeLayoutDirection } from '@/infrastructure/device/ReactNativeLayoutDirection';
@@ -101,6 +123,10 @@ export interface ContainerAdapters {
   payments: PaymentRepositoryPort;
   cards: CardRepositoryPort;
   paymentTokenizer: PaymentTokenizerPort;
+  documents: DocumentRepositoryPort;
+  filePicker: FilePickerPort;
+  fileUploader: FileUploaderPort;
+  fileCleaner: LocalFileCleanerPort;
   ids: IdGeneratorPort;
 }
 
@@ -157,10 +183,23 @@ export function createContainer(
       env.paymentTokenizer === 'fake'
         ? new FakePaymentTokenizer()
         : new UnconfiguredPaymentTokenizer(),
+    documents:
+      env.documentsApi === 'fake'
+        ? new InMemoryDocumentRepository()
+        : new DocumentApiRepository(http),
+    filePicker: new ExpoFilePicker(),
+    // Con documentos falsos no hay URL real a la que subir.
+    fileUploader: env.documentsApi === 'fake' ? new FakeFileUploader() : new FetchFileUploader(),
+    fileCleaner: new ExpoLocalFileCleaner(),
     ids: new ExpoCryptoIdGenerator(),
     ...overrides,
   };
 
+  const documentUploader = new DocumentUploader(
+    adapters.documents,
+    adapters.fileUploader,
+    adapters.fileCleaner,
+  );
   const sessionEvents = new SessionEvents();
   const signOut = new SignOutUseCase(adapters.tokenStorage, adapters.authApi);
   const refreshSession = new RefreshSessionUseCase(
@@ -212,6 +251,12 @@ export function createContainer(
       updatePersonalInfo: new UpdatePersonalInfoUseCase(adapters.userProfile),
       startContactChange: new StartContactChangeUseCase(adapters.userProfile),
       verifyContactChange: new VerifyContactChangeUseCase(adapters.userProfile),
+    },
+    documents: {
+      list: new ListDocumentsUseCase(adapters.documents),
+      submitNationalId: new SubmitNationalIdUseCase(adapters.documents, documentUploader),
+      submitProofOfIncome: new SubmitProofOfIncomeUseCase(adapters.documents, documentUploader),
+      picker: adapters.filePicker,
     },
     payouts: {
       listPayoutMethods: new ListPayoutMethodsUseCase(adapters.payoutMethods),

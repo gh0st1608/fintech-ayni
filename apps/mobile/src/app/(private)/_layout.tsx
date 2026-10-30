@@ -41,6 +41,12 @@ export default function PrivateLayout() {
         <Stack.Screen name="payment/pay/[installmentId]" options={paymentOptions.pay} />
         <Stack.Screen name="profile/personal-info" options={profileOptions.personalInfo} />
         <Stack.Screen name="profile/contact/[type]" options={profileOptions.contact} />
+        <Stack.Screen name="profile/documents/index" options={profileOptions.documents} />
+        <Stack.Screen name="profile/documents/national-id" options={profileOptions.nationalId} />
+        <Stack.Screen
+          name="profile/documents/proof-of-income"
+          options={profileOptions.proofOfIncome}
+        />
         <Stack.Protected guard={isDev}>
           <Stack.Screen name="catalog" options={catalogOptions} />
         </Stack.Protected>
