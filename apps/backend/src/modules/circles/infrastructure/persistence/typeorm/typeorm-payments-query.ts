@@ -121,6 +121,7 @@ export class TypeOrmPaymentsQuery implements PaymentsQueryPort {
     if (!isUuid(userId)) return [];
     const rows = await this.circles.query<
       {
+        id: string;
         circle_id: string;
         period: string;
         due_on: string;
@@ -129,7 +130,7 @@ export class TypeOrmPaymentsQuery implements PaymentsQueryPort {
         status: DueInstallment['status'];
       }[]
     >(
-      `SELECT i.circle_id, to_char(i.period, 'YYYY-MM') AS period,
+      `SELECT i.id, i.circle_id, to_char(i.period, 'YYYY-MM') AS period,
               to_char(i.due_on, 'YYYY-MM-DD') AS due_on, i.amount::text AS amount, i.currency,
               i.status
          FROM circle_installments i
@@ -139,6 +140,7 @@ export class TypeOrmPaymentsQuery implements PaymentsQueryPort {
       [userId],
     );
     return rows.map((row) => ({
+      installmentId: row.id,
       circleId: row.circle_id,
       period: Period.parse(row.period),
       dueOn: LocalDate.parse(row.due_on),

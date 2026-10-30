@@ -8,6 +8,7 @@ import { NO_DEBTS } from '@test/support/join-circle.fixture';
 
 const pen = (major: number) => Money.of(major * 100, 'PEN');
 const due = (circleId: string, dueOn: string, amount: number): DueInstallment => ({
+  installmentId: `i-${circleId}-${dueOn}`,
   circleId,
   period: Period.parse(dueOn.slice(0, 7)),
   dueOn: LocalDate.parse(dueOn),
@@ -55,6 +56,7 @@ describe('GetPaymentSummaryUseCase (COPAYNI-35)', () => {
       debt: { amount: 309_000, currency: 'PEN' },
     });
     expect(PaymentSummaryResponse.from(summary).duePayments[0]).toEqual({
+      installmentId: 'i-c-1-2026-12-05',
       circleId: 'c-1',
       period: '2026-12',
       dueOn: '2026-12-05',

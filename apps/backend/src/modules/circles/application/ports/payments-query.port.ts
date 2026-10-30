@@ -6,6 +6,8 @@ export const PAYMENTS_QUERY = Symbol('PAYMENTS_QUERY');
 
 /** Una cuota que el usuario todavía debe pagar (COPAYNI-35). */
 export interface DueInstallment {
+  /** Para pagarla desde la app (POST /v1/me/installments/:id/pay, COPAYNI-63). */
+  installmentId: string;
   circleId: string;
   period: Period;
   dueOn: LocalDate;

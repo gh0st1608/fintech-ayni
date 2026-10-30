@@ -8,6 +8,7 @@ import { Period } from '@src/shared/domain/value-objects/period';
 import { ELIGIBLE, NO_DEBTS } from '@test/support/join-circle.fixture';
 
 const due = (status: DueInstallment['status']): DueInstallment => ({
+  installmentId: 'i-1',
   circleId: 'c-1',
   period: Period.of(2026, 12),
   dueOn: LocalDate.parse('2026-12-05'),

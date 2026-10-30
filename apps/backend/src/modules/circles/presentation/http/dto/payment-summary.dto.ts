@@ -4,6 +4,9 @@ import { type PaymentSummary } from '../../../application/use-cases/get-payment-
 import { MoneyResponse } from './join-config.response';
 
 export class DuePaymentResponse {
+  @ApiProperty({ format: 'uuid', description: 'Para pagarla: POST /v1/me/installments/:id/pay' })
+  installmentId!: string;
+
   @ApiProperty({ format: 'uuid' })
   circleId!: string;
 
@@ -45,6 +48,7 @@ export class PaymentSummaryResponse {
       nextDueOn: nextDueOn?.toString() ?? null,
       debt: debt && MoneyResponse.from(debt),
       duePayments: duePayments.map((due) => ({
+        installmentId: due.installmentId,
         circleId: due.circleId,
         period: due.period.toString(),
         dueOn: due.dueOn.toString(),

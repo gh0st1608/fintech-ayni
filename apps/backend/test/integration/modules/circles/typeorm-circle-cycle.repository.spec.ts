@@ -554,6 +554,7 @@ describe('TypeOrmCircleCycleRepository', () => {
     await job([id])('2026-11-02');
     await expect(payments.dueInstallmentsOf(first!.userId)).resolves.toEqual([
       {
+        installmentId: expect.any(String),
         circleId: id,
         period: Period.of(2026, 11),
         dueOn: LocalDate.parse('2026-11-05'),
