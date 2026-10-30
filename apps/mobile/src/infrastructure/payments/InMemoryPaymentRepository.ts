@@ -1,8 +1,10 @@
 import type { PaymentRepositoryPort } from '@/domain/payments/ports/PaymentRepositoryPort';
+import type { InstallmentPaymentResult } from '@/domain/payments/InstallmentPayment';
 import type { PaymentSettings } from '@/domain/payments/PaymentSettings';
 import type { PaymentSummary } from '@/domain/payments/PaymentSummary';
 import type { PayoutEligibility } from '@/domain/payments/PayoutEligibility';
 import type { Transaction, TransactionsPage, TransactionType } from '@/domain/payments/Transaction';
+import { AppError } from '@/domain/shared/errors/AppError';
 import { Money } from '@/domain/shared/value-objects/Money';
 import { simulateLatency } from '@/infrastructure/fake/simulateLatency';
 
@@ -33,6 +35,8 @@ export class InMemoryPaymentRepository implements PaymentRepositoryPort {
   private readonly pageSize: number;
   private readonly eligibility: PayoutEligibility;
   settings: PaymentSettings = { deductPayInFromPayout: false };
+  /** Cuotas ya pagadas desde la app. */
+  readonly paid = new Set<string>();
 
   constructor(
     private readonly currency: string,
@@ -54,6 +58,15 @@ export class InMemoryPaymentRepository implements PaymentRepositoryPort {
     return { ...this.settings };
   }
 
+  async payInstallment(installmentId: string): Promise<InstallmentPaymentResult> {
+    await simulateLatency(this.latencyMs);
+    if (this.paid.has(installmentId)) {
+      throw new AppError('conflict', 'Already paid', { code: 'INSTALLMENT_NOT_PAYABLE' });
+    }
+    this.paid.add(installmentId);
+    return { status: 'paid', paymentId: `pay-${installmentId}` };
+  }
+
   async updateSettings(settings: PaymentSettings): Promise<PaymentSettings> {
     await simulateLatency(this.latencyMs);
     this.settings = { ...settings };
@@ -62,7 +75,7 @@ export class InMemoryPaymentRepository implements PaymentRepositoryPort {
 
   async getSummary(signal?: AbortSignal): Promise<PaymentSummary> {
     await simulateLatency(this.latencyMs, signal);
-    if (!this.withDuePayments) {
+    if (!this.withDuePayments || this.paid.has('i-1')) {
       return {
         hasDuePayments: false,
         totalDue: null,
@@ -78,7 +91,14 @@ export class InMemoryPaymentRepository implements PaymentRepositoryPort {
       nextDueOn: '2026-12-05',
       debt: null,
       duePayments: [
-        { circleId: 'c-1', period: '2026-12', dueOn: '2026-12-05', amount, status: 'pending' },
+        {
+          installmentId: 'i-1',
+          circleId: 'c-1',
+          period: '2026-12',
+          dueOn: '2026-12-05',
+          amount,
+          status: 'pending',
+        },
       ],
     };
   }

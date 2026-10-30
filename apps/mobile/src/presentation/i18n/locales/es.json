@@ -254,7 +254,8 @@
       "dueOn": "Vence el {{date}}",
       "overdue": "En gracia",
       "debt": "Deuda por impago: {{amount}}",
-      "debtDescription": "Mientras tengas deuda no puedes unirte a nuevos círculos."
+      "debtDescription": "Mientras tengas deuda no puedes unirte a nuevos círculos.",
+      "pay": "Pagar"
     },
     "others": {
       "title": "Otros",
@@ -306,6 +307,64 @@
       "changePayoutMethod": "Cambiar método de cobro",
       "savedCards": "Tarjetas guardadas",
       "save": "Guardar"
+    },
+    "cards": {
+      "empty": "Todavía no tienes tarjetas guardadas.",
+      "add": "Agregar tarjeta",
+      "masked": "{{brand}} •••• {{lastFour}}",
+      "expires": "Vence {{month}}/{{year}}",
+      "default": "Predeterminada",
+      "makeDefault": "Usar para cobros",
+      "remove": "Eliminar",
+      "cancel": "Cancelar",
+      "removeTitle": "Eliminar tarjeta",
+      "removeMessage": "¿Eliminar la tarjeta terminada en {{lastFour}}?"
+    },
+    "addCard": {
+      "title": "Agregar tarjeta",
+      "number": "Número de tarjeta",
+      "holderName": "Nombre del titular",
+      "expiration": "Vencimiento",
+      "expirationPlaceholder": "MM/AA",
+      "securityCode": "Código de seguridad",
+      "documentNumber": "DNI del titular",
+      "secure": "Tus datos van directo a la pasarela de pago. Ayni no guarda el número ni el código de seguridad.",
+      "submit": "Guardar tarjeta",
+      "invalid": {
+        "number": "Revisa el número de la tarjeta.",
+        "holderName": "Escribe el nombre como aparece en la tarjeta.",
+        "expiration": "Revisa el vencimiento (MM/AA).",
+        "securityCode": "El código tiene 3 o 4 dígitos.",
+        "documentNumber": "Revisa el número de documento."
+      }
+    },
+    "pay": {
+      "title": "Pagar cuota",
+      "amount": "Monto a pagar",
+      "methodLabel": "Método de pago",
+      "yape": "Yape",
+      "yapeDescription": "Pagas con el código que te muestra la app de Yape.",
+      "phone": "Celular de Yape",
+      "otp": "Código de aprobación de Yape",
+      "invalidPhone": "Escribe los 9 dígitos de tu celular.",
+      "invalidOtp": "El código tiene 6 dígitos.",
+      "submit": "Pagar {{amount}}",
+      "paid": "¡Listo! Tu cuota quedó pagada.",
+      "pending": "Tu pago está en proceso. Te avisaremos cuando se confirme.",
+      "done": "Volver a pagos",
+      "notDue": "Esta cuota ya no está pendiente.",
+      "back": "Volver"
+    },
+    "errors": {
+      "CARD_REJECTED": "La tarjeta fue rechazada. Revisa los datos o usa otra.",
+      "EMAIL_REQUIRED": "Agrega un email a tu perfil para usar tarjetas.",
+      "DEFAULT_CARD_REPLACEMENT_REQUIRED": "Elige otra tarjeta para los cobros antes de eliminar esta.",
+      "CARD_NOT_FOUND": "La tarjeta ya no existe.",
+      "GATEWAY_NOT_CONFIGURED": "Los pagos con tarjeta y Yape todavía no están disponibles.",
+      "YAPE_REJECTED": "Yape rechazó el pago. Revisa el celular y el código.",
+      "INSTALLMENT_NOT_PAYABLE": "Esta cuota ya no se puede pagar.",
+      "PAYMENT_PENDING": "Ya hay un pago de esta cuota en proceso.",
+      "PAYMENT_REJECTED": "El pago fue rechazado. Intenta con otro método."
     }
   }
 }

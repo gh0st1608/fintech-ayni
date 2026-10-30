@@ -254,7 +254,8 @@
       "dueOn": "Due on {{date}}",
       "overdue": "In grace period",
       "debt": "Outstanding debt: {{amount}}",
-      "debtDescription": "While you have debt you can't join new circles."
+      "debtDescription": "While you have debt you can't join new circles.",
+      "pay": "Pay"
     },
     "others": {
       "title": "Others",
@@ -306,6 +307,64 @@
       "changePayoutMethod": "Change Payout Method",
       "savedCards": "Saved Cards",
       "save": "Save"
+    },
+    "cards": {
+      "empty": "You don't have any saved cards yet.",
+      "add": "Add card",
+      "masked": "{{brand}} •••• {{lastFour}}",
+      "expires": "Expires {{month}}/{{year}}",
+      "default": "Default",
+      "makeDefault": "Use for charges",
+      "remove": "Remove",
+      "cancel": "Cancel",
+      "removeTitle": "Remove card",
+      "removeMessage": "Remove the card ending in {{lastFour}}?"
+    },
+    "addCard": {
+      "title": "Add Card",
+      "number": "Card number",
+      "holderName": "Cardholder name",
+      "expiration": "Expiration",
+      "expirationPlaceholder": "MM/YY",
+      "securityCode": "Security code",
+      "documentNumber": "Cardholder ID number",
+      "secure": "Your details go straight to the payment gateway. Ayni doesn't store the card number or security code.",
+      "submit": "Save card",
+      "invalid": {
+        "number": "Check the card number.",
+        "holderName": "Write the name as it appears on the card.",
+        "expiration": "Check the expiration (MM/YY).",
+        "securityCode": "The code has 3 or 4 digits.",
+        "documentNumber": "Check the ID number."
+      }
+    },
+    "pay": {
+      "title": "Pay installment",
+      "amount": "Amount due",
+      "methodLabel": "Payment method",
+      "yape": "Yape",
+      "yapeDescription": "Pay with the code shown in the Yape app.",
+      "phone": "Yape phone number",
+      "otp": "Yape approval code",
+      "invalidPhone": "Enter the 9 digits of your phone number.",
+      "invalidOtp": "The code has 6 digits.",
+      "submit": "Pay {{amount}}",
+      "paid": "Done! Your installment is paid.",
+      "pending": "Your payment is being processed. We'll let you know when it's confirmed.",
+      "done": "Back to payments",
+      "notDue": "This installment is no longer due.",
+      "back": "Back"
+    },
+    "errors": {
+      "CARD_REJECTED": "The card was rejected. Check the details or use another one.",
+      "EMAIL_REQUIRED": "Add an email to your profile to use cards.",
+      "DEFAULT_CARD_REPLACEMENT_REQUIRED": "Choose another card for charges before removing this one.",
+      "CARD_NOT_FOUND": "The card no longer exists.",
+      "GATEWAY_NOT_CONFIGURED": "Card and Yape payments are not available yet.",
+      "YAPE_REJECTED": "Yape rejected the payment. Check the phone number and code.",
+      "INSTALLMENT_NOT_PAYABLE": "This installment can no longer be paid.",
+      "PAYMENT_PENDING": "A payment for this installment is already in progress.",
+      "PAYMENT_REJECTED": "The payment was rejected. Try another method."
     }
   }
 }

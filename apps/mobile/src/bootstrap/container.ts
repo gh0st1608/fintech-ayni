@@ -14,6 +14,13 @@ import { ListInstallmentOptionsUseCase } from '@/application/circles/usecases/Li
 import { ListMyCirclesUseCase } from '@/application/circles/usecases/ListMyCirclesUseCase';
 import { ListRecommendedCirclesUseCase } from '@/application/circles/usecases/ListRecommendedCirclesUseCase';
 import {
+  AddCardUseCase,
+  ListCardsUseCase,
+  PayInstallmentUseCase,
+  RemoveCardUseCase,
+  SetDefaultCardUseCase,
+} from '@/application/payments/usecases/cardUseCases';
+import {
   GetPaymentSettingsUseCase,
   GetPaymentSummaryUseCase,
   GetPayoutEligibilityUseCase,
@@ -36,6 +43,8 @@ import type { DeviceLocalePort } from '@/domain/i18n/ports/DeviceLocalePort';
 import type { LanguagePreferencePort } from '@/domain/i18n/ports/LanguagePreferencePort';
 import type { LanguageSyncStatePort } from '@/domain/i18n/ports/LanguageSyncStatePort';
 import type { LayoutDirectionPort } from '@/domain/i18n/ports/LayoutDirectionPort';
+import type { CardRepositoryPort } from '@/domain/payments/ports/CardRepositoryPort';
+import type { PaymentTokenizerPort } from '@/domain/payments/ports/CardTokenizerPort';
 import type { PaymentRepositoryPort } from '@/domain/payments/ports/PaymentRepositoryPort';
 import type { PayoutMethodRepositoryPort } from '@/domain/payouts/ports/PayoutMethodRepositoryPort';
 import type { UserProfileRepositoryPort } from '@/domain/profile/ports/UserProfileRepositoryPort';
@@ -52,6 +61,12 @@ import { ExpoCryptoIdGenerator } from '@/infrastructure/device/ExpoCryptoIdGener
 import { ExpoDeviceLocale } from '@/infrastructure/device/ExpoDeviceLocale';
 import { ReactNativeLayoutDirection } from '@/infrastructure/device/ReactNativeLayoutDirection';
 import { FetchHttpClient } from '@/infrastructure/http/FetchHttpClient';
+import { CardApiRepository } from '@/infrastructure/payments/CardApiRepository';
+import {
+  FakePaymentTokenizer,
+  UnconfiguredPaymentTokenizer,
+} from '@/infrastructure/payments/FakePaymentTokenizer';
+import { InMemoryCardRepository } from '@/infrastructure/payments/InMemoryCardRepository';
 import { InMemoryPaymentRepository } from '@/infrastructure/payments/InMemoryPaymentRepository';
 import { PaymentApiRepository } from '@/infrastructure/payments/PaymentApiRepository';
 import { InMemoryPayoutMethodRepository } from '@/infrastructure/payouts/InMemoryPayoutMethodRepository';
@@ -78,6 +93,8 @@ export interface ContainerAdapters {
   userProfile: UserProfileRepositoryPort;
   payoutMethods: PayoutMethodRepositoryPort;
   payments: PaymentRepositoryPort;
+  cards: CardRepositoryPort;
+  paymentTokenizer: PaymentTokenizerPort;
   ids: IdGeneratorPort;
 }
 
@@ -128,6 +145,12 @@ export function createContainer(
       env.paymentsApi === 'fake'
         ? new InMemoryPaymentRepository(env.defaultCurrency)
         : new PaymentApiRepository(http),
+    cards: env.paymentsApi === 'fake' ? new InMemoryCardRepository() : new CardApiRepository(http),
+    // Mercado Pago simulado hasta usar la cuenta sandbox (COPAYNI-34).
+    paymentTokenizer:
+      env.paymentTokenizer === 'fake'
+        ? new FakePaymentTokenizer()
+        : new UnconfiguredPaymentTokenizer(),
     ids: new ExpoCryptoIdGenerator(),
     ...overrides,
   };
@@ -156,6 +179,7 @@ export function createContainer(
       verifyOtp: new VerifyOtpUseCase(adapters.authApi, adapters.tokenStorage),
       resendOtp: new ResendOtpUseCase(adapters.authApi),
     },
+    ids: adapters.ids,
     circles: {
       getJoinConfig: new GetJoinConfigUseCase(adapters.joinConfig),
       listInstallmentOptions: new ListInstallmentOptionsUseCase(adapters.circleQuote),
@@ -171,6 +195,11 @@ export function createContainer(
       getPayoutEligibility: new GetPayoutEligibilityUseCase(adapters.payments),
       getSettings: new GetPaymentSettingsUseCase(adapters.payments),
       updateSettings: new UpdatePaymentSettingsUseCase(adapters.payments),
+      listCards: new ListCardsUseCase(adapters.cards),
+      addCard: new AddCardUseCase(adapters.paymentTokenizer, adapters.cards),
+      setDefaultCard: new SetDefaultCardUseCase(adapters.cards),
+      removeCard: new RemoveCardUseCase(adapters.cards),
+      payInstallment: new PayInstallmentUseCase(adapters.paymentTokenizer, adapters.payments),
     },
     payouts: {
       listPayoutMethods: new ListPayoutMethodsUseCase(adapters.payoutMethods),

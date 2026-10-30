@@ -26,6 +26,11 @@ const envSchema = z
     payoutsApi: z.enum(['http', 'fake']).default('http'),
     /** Igual que authApi, para la sección Payment (/me/payments, /me/transactions). */
     paymentsApi: z.enum(['http', 'fake']).default('http'),
+    /**
+     * Tokenización de tarjetas y Yape: `fake` simula Mercado Pago (solo dev); `unconfigured` no
+     * permite agregar tarjetas ni pagar con Yape hasta conectar la cuenta (COPAYNI-34).
+     */
+    paymentTokenizer: z.enum(['fake', 'unconfigured']).default('unconfigured'),
     termsUrl: optionalHttpsUrl,
     privacyUrl: optionalHttpsUrl,
   })
@@ -47,6 +52,10 @@ const envSchema = z
   })
   .refine((env) => env.paymentsApi === 'http' || env.appEnv === 'dev', {
     path: ['paymentsApi'],
+    message: 'fake is only allowed in dev',
+  })
+  .refine((env) => env.paymentTokenizer !== 'fake' || env.appEnv === 'dev', {
+    path: ['paymentTokenizer'],
     message: 'fake is only allowed in dev',
   });
 
@@ -77,6 +86,7 @@ export function loadEnv(): Env {
     profileApi: process.env.EXPO_PUBLIC_PROFILE_API,
     payoutsApi: process.env.EXPO_PUBLIC_PAYOUTS_API,
     paymentsApi: process.env.EXPO_PUBLIC_PAYMENTS_API,
+    paymentTokenizer: process.env.EXPO_PUBLIC_PAYMENT_TOKENIZER,
     termsUrl: process.env.EXPO_PUBLIC_TERMS_URL,
     privacyUrl: process.env.EXPO_PUBLIC_PRIVACY_URL,
   });

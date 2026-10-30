@@ -5,6 +5,8 @@ export type DuePaymentStatus = 'pending' | 'overdue';
 
 /** Una cuota que el usuario todavía debe pagar. */
 export interface DuePayment {
+  /** Para pagarla desde la app (COPAYNI-63). */
+  installmentId: string;
   circleId: string;
   /** Mes del círculo (YYYY-MM). */
   period: string;

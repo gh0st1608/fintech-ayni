@@ -25,6 +25,8 @@ interface PaymentScreenProps {
   /** Sin pantalla todavía (COPAYNI-36 y 38): el acceso queda deshabilitado. */
   onOpenEligibility?: () => void;
   onOpenSettings?: () => void;
+  /** Pagar una cuota desde la app (COPAYNI-63). */
+  onPay?: (installmentId: string) => void;
 }
 
 /** Fecha `YYYY-MM-DD` como fecha local, para formatearla con el idioma activo. */
@@ -44,6 +46,7 @@ export function PaymentScreen({
   onOpenHistory,
   onOpenEligibility,
   onOpenSettings,
+  onPay,
 }: PaymentScreenProps) {
   const { t } = useTranslation();
   const summary = usePaymentSummary();
@@ -76,7 +79,7 @@ export function PaymentScreen({
             />
           </View>
         ) : summary.data.hasDuePayments ? (
-          <DuePayments summary={summary.data} />
+          <DuePayments summary={summary.data} onPay={onPay} />
         ) : (
           <EmptyState
             title={t('payment.empty.title')}
@@ -114,7 +117,13 @@ export function PaymentScreen({
   );
 }
 
-function DuePayments({ summary }: { summary: PaymentSummary }) {
+function DuePayments({
+  summary,
+  onPay,
+}: {
+  summary: PaymentSummary;
+  onPay?: (installmentId: string) => void;
+}) {
   const { t } = useTranslation();
   const formatMoney = useFormatMoney();
   const formatDate = useFormatDate();
@@ -153,6 +162,14 @@ function DuePayments({ summary }: { summary: PaymentSummary }) {
             </AppText>
           </View>
           {due.status === 'overdue' && <Badge label={t('payment.due.overdue')} tone="subtle" />}
+          {onPay && (
+            <Button
+              label={t('payment.due.pay')}
+              variant="secondary"
+              onPress={() => onPay(due.installmentId)}
+              style={styles.payButton}
+            />
+          )}
         </Card>
       ))}
     </View>
@@ -190,6 +207,7 @@ const styles = StyleSheet.create({
   due: { gap: spacing.m },
   dueRow: { flexDirection: 'row', alignItems: 'center' },
   dueText: { flex: 1, gap: spacing.xs },
+  payButton: { marginStart: spacing.m },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.m },
   shortcut: { flexBasis: '47%', flexGrow: 0, gap: spacing.m },
 });

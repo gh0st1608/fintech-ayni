@@ -34,6 +34,9 @@ export default function PrivateLayout() {
         <Stack.Screen name="payment/eligibility" options={paymentOptions.eligibility} />
         <Stack.Screen name="payment/settings" options={paymentOptions.settings} />
         <Stack.Screen name="payment/payout-method" options={paymentOptions.payoutMethod} />
+        <Stack.Screen name="payment/cards" options={paymentOptions.cards} />
+        <Stack.Screen name="payment/add-card" options={paymentOptions.addCard} />
+        <Stack.Screen name="payment/pay/[installmentId]" options={paymentOptions.pay} />
         <Stack.Protected guard={isDev}>
           <Stack.Screen name="catalog" options={catalogOptions} />
         </Stack.Protected>

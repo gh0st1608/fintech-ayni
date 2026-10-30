@@ -37,6 +37,9 @@ export function usePaymentScreenOptions() {
       title: t('payment.settings.changePayoutMethod'),
       headerBackButtonDisplayMode: 'minimal',
     },
+    cards: { title: t('payment.settings.savedCards'), headerBackButtonDisplayMode: 'minimal' },
+    addCard: { title: t('payment.addCard.title'), headerBackButtonDisplayMode: 'minimal' },
+    pay: { title: t('payment.pay.title'), headerBackButtonDisplayMode: 'minimal' },
   } as const;
 }
 

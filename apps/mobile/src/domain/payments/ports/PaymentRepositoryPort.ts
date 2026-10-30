@@ -1,3 +1,4 @@
+import type { InstallmentPaymentResult } from '../InstallmentPayment';
 import type { PaymentSettings } from '../PaymentSettings';
 import type { PaymentSummary } from '../PaymentSummary';
 import type { PayoutEligibility } from '../PayoutEligibility';
@@ -16,4 +17,10 @@ export interface PaymentRepositoryPort {
   getSettings(signal?: AbortSignal): Promise<PaymentSettings>;
   /** Devuelve las preferencias guardadas. */
   updateSettings(settings: PaymentSettings): Promise<PaymentSettings>;
+  /** Paga la cuota con un token de Yape o una tarjeta guardada. */
+  payInstallment(
+    installmentId: string,
+    payment: { method: 'yape'; token: string } | { method: 'card'; cardId: string },
+    idempotencyKey: string,
+  ): Promise<InstallmentPaymentResult>;
 }

@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
 import type { PaymentRepositoryPort } from '@/domain/payments/ports/PaymentRepositoryPort';
+import type { InstallmentPaymentResult } from '@/domain/payments/InstallmentPayment';
 import type { PaymentSettings } from '@/domain/payments/PaymentSettings';
 import type { PaymentSummary } from '@/domain/payments/PaymentSummary';
 import type { PayoutEligibility, PayoutRequirement } from '@/domain/payments/PayoutEligibility';
@@ -23,6 +24,7 @@ const summaryDto = z.object({
   debt: moneyDto.nullable(),
   duePayments: z.array(
     z.object({
+      installmentId: z.string().min(1),
       circleId: z.string().min(1),
       period: z.string().regex(PERIOD),
       dueOn: z.string().regex(DATE),
@@ -72,6 +74,12 @@ const eligibilityDto = z.object({
       status: z.enum(['met', 'pending', 'unavailable']),
     }),
   ),
+});
+
+/** DTO de POST /me/installments/:id/pay. */
+const paymentResultDto = z.object({
+  status: z.enum(['paid', 'pending']),
+  paymentId: z.string().min(1),
 });
 
 /** DTO de GET y PATCH /me/payment-settings. */
@@ -148,6 +156,18 @@ export class PaymentApiRepository implements PaymentRepositoryPort {
     return this.http.patch('/me/payment-settings', {
       body: { deductPayInFromPayout: settings.deductPayInFromPayout },
       parse: (data) => settingsDto.parse(data),
+    });
+  }
+
+  payInstallment(
+    installmentId: string,
+    payment: { method: 'yape'; token: string } | { method: 'card'; cardId: string },
+    idempotencyKey: string,
+  ): Promise<InstallmentPaymentResult> {
+    return this.http.post(`/me/installments/${encodeURIComponent(installmentId)}/pay`, {
+      idempotencyKey,
+      body: payment,
+      parse: (data) => paymentResultDto.parse(data),
     });
   }
 }

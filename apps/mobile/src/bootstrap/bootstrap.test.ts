@@ -16,6 +16,7 @@ describe('parseEnv', () => {
       profileApi: 'http',
       payoutsApi: 'http',
       paymentsApi: 'http',
+      paymentTokenizer: 'unconfigured',
     });
   });
 
@@ -75,5 +76,11 @@ describe('createContainer', () => {
 
   it('expone el ambiente configurado a la presentación', () => {
     expect(createTestContainer().container.config.environment).toBe('dev');
+  });
+
+  it('la pasarela simulada solo se admite en dev', () => {
+    const base = { apiUrl: 'https://api.example.com/v1', paymentTokenizer: 'fake' };
+    expect(parseEnv({ ...base, appEnv: 'dev' }).paymentTokenizer).toBe('fake');
+    expect(() => parseEnv({ ...base, appEnv: 'prod' })).toThrow();
   });
 });

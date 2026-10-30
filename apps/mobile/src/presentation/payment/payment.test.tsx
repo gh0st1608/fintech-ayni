@@ -48,6 +48,7 @@ describe('PaymentScreen (COPAYNI-35)', () => {
       debt: pen(5_880),
       duePayments: [
         {
+          installmentId: 'i-1',
           circleId: 'c-1',
           period: '2026-12',
           dueOn: '2026-12-05',

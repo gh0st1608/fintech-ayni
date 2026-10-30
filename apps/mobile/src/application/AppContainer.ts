@@ -13,6 +13,13 @@ import type { ListInstallmentOptionsUseCase } from '@/application/circles/usecas
 import type { ListMyCirclesUseCase } from '@/application/circles/usecases/ListMyCirclesUseCase';
 import type { ListRecommendedCirclesUseCase } from '@/application/circles/usecases/ListRecommendedCirclesUseCase';
 import type {
+  AddCardUseCase,
+  ListCardsUseCase,
+  PayInstallmentUseCase,
+  RemoveCardUseCase,
+  SetDefaultCardUseCase,
+} from '@/application/payments/usecases/cardUseCases';
+import type {
   GetPaymentSettingsUseCase,
   GetPaymentSummaryUseCase,
   GetPayoutEligibilityUseCase,
@@ -25,6 +32,7 @@ import type {
 } from '@/application/payouts/usecases/payoutMethodUseCases';
 import type { ChangeLanguageUseCase } from '@/application/i18n/usecases/ChangeLanguageUseCase';
 import type { ResolveLanguageUseCase } from '@/application/i18n/usecases/ResolveLanguageUseCase';
+import type { IdGeneratorPort } from '@/domain/shared/ports/IdGeneratorPort';
 import type { SyncLanguagePreferenceUseCase } from '@/application/i18n/usecases/SyncLanguagePreferenceUseCase';
 
 /**
@@ -39,6 +47,8 @@ export interface AppContainer {
     /** Enlaces legales del login; sin URL configurada el texto no es pulsable (pending-scope L4). */
     legal: { termsUrl?: string; privacyUrl?: string };
   };
+  /** Claves de idempotencia de los formularios (una por formulario). */
+  ids: IdGeneratorPort;
   auth: {
     restoreSession: RestoreSessionUseCase;
     signOut: SignOutUseCase;
@@ -64,6 +74,11 @@ export interface AppContainer {
     getPayoutEligibility: GetPayoutEligibilityUseCase;
     getSettings: GetPaymentSettingsUseCase;
     updateSettings: UpdatePaymentSettingsUseCase;
+    listCards: ListCardsUseCase;
+    addCard: AddCardUseCase;
+    setDefaultCard: SetDefaultCardUseCase;
+    removeCard: RemoveCardUseCase;
+    payInstallment: PayInstallmentUseCase;
   };
   payouts: {
     listPayoutMethods: ListPayoutMethodsUseCase;
