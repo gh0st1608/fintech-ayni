@@ -33,6 +33,12 @@ import type {
 import type { ChangeLanguageUseCase } from '@/application/i18n/usecases/ChangeLanguageUseCase';
 import type { ResolveLanguageUseCase } from '@/application/i18n/usecases/ResolveLanguageUseCase';
 import type { IdGeneratorPort } from '@/domain/shared/ports/IdGeneratorPort';
+import type {
+  GetMyProfileUseCase,
+  StartContactChangeUseCase,
+  UpdatePersonalInfoUseCase,
+  VerifyContactChangeUseCase,
+} from '@/application/profile/usecases/profileUseCases';
 import type { SyncLanguagePreferenceUseCase } from '@/application/i18n/usecases/SyncLanguagePreferenceUseCase';
 
 /**
@@ -79,6 +85,12 @@ export interface AppContainer {
     setDefaultCard: SetDefaultCardUseCase;
     removeCard: RemoveCardUseCase;
     payInstallment: PayInstallmentUseCase;
+  };
+  profile: {
+    getMyProfile: GetMyProfileUseCase;
+    updatePersonalInfo: UpdatePersonalInfoUseCase;
+    startContactChange: StartContactChangeUseCase;
+    verifyContactChange: VerifyContactChangeUseCase;
   };
   payouts: {
     listPayoutMethods: ListPayoutMethodsUseCase;

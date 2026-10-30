@@ -13,7 +13,7 @@ import { AppError } from '@/domain/shared/errors/AppError';
 import type { HttpClientPort } from '@/domain/shared/ports/HttpClientPort';
 
 /** DTO del desafío OTP en /auth/start y /auth/resend (docs/api/auth.md). */
-const challengeDto = z.object({
+export const challengeDto = z.object({
   challengeId: z.string().min(1),
   channel: z.enum(['email', 'sms']),
   maskedDestination: z.string().min(1),
@@ -33,7 +33,7 @@ const OTP_REJECTIONS: Record<string, OtpRejectionReason> = {
   OTP_ATTEMPTS_EXCEEDED: 'attempts_exceeded',
 };
 
-function toChallenge(dto: z.infer<typeof challengeDto>): AuthChallenge {
+export function toChallenge(dto: z.infer<typeof challengeDto>): AuthChallenge {
   return {
     challengeId: dto.challengeId,
     channel: dto.channel,
@@ -43,7 +43,7 @@ function toChallenge(dto: z.infer<typeof challengeDto>): AuthChallenge {
   };
 }
 
-function toOtpRejection(error: unknown): unknown {
+export function toOtpRejection(error: unknown): unknown {
   const reason = error instanceof AppError && error.code ? OTP_REJECTIONS[error.code] : undefined;
   if (!reason || !(error instanceof AppError)) return error;
   const remaining = Number(error.fieldErrors?.attemptsRemaining);

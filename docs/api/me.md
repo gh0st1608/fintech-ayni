@@ -1,6 +1,6 @@
 # Contrato de API: perfil del usuario
 
-**Estado:** `GET /v1/me` (COPAYNI-44) y `PATCH /v1/me` (COPAYNI-50) implementados en el backend (`apps/backend/src/modules/users`). La app mobile usa el `PATCH` al cambiar de idioma (`UserProfileApiRepository`); la pantalla de Perfil que usa el `GET` está pendiente.
+**Estado:** `GET /v1/me` (COPAYNI-44) y `PATCH /v1/me` (COPAYNI-50) implementados en el backend (`apps/backend/src/modules/users`). En mobile están Perfil (nombre, contacto y límite mensual), Información personal y el cambio de email o teléfono con código (`UserProfileApiRepository`), armados sin el contexto de diseño de Figma.
 
 Usa el contrato común de respuestas descrito en [auth.md](auth.md). Requiere `Authorization: Bearer <accessToken>`.
 

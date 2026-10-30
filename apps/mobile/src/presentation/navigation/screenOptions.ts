@@ -43,6 +43,18 @@ export function usePaymentScreenOptions() {
   } as const;
 }
 
+/** Pantallas de Perfil apiladas sobre las pestañas. */
+export function useProfileScreenOptions() {
+  const { t } = useTranslation();
+  return {
+    personalInfo: {
+      title: t('profile.personalInfo.title'),
+      headerBackButtonDisplayMode: 'minimal',
+    },
+    contact: { title: t('profile.contact.title'), headerBackButtonDisplayMode: 'minimal' },
+  } as const;
+}
+
 /** El catálogo de componentes solo existe en el ambiente dev. */
 export function useIsDevEnvironment(): boolean {
   return useContainer().config.environment === 'dev';

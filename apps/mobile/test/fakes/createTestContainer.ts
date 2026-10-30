@@ -50,7 +50,7 @@ export function createTestContainer(overrides: Partial<TestAdapters> = {}) {
     joinConfig: new InMemoryJoinConfigRepository('PEN', { latencyMs: 0 }),
     circleQuote: new InMemoryCircleQuoteRepository({ latencyMs: 0 }),
     circleMembership: new InMemoryCircleMembershipRepository({ latencyMs: 0 }),
-    userProfile: new InMemoryUserProfileRepository({ latencyMs: 0 }),
+    userProfile: new InMemoryUserProfileRepository({ latencyMs: 0, currency: 'PEN' }),
     payoutMethods: new InMemoryPayoutMethodRepository('PEN', { latencyMs: 0 }),
     payments: new InMemoryPaymentRepository('PEN', { latencyMs: 0 }),
     cards: new InMemoryCardRepository({ latencyMs: 0 }),

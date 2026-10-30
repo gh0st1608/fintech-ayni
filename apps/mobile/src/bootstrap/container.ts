@@ -31,6 +31,12 @@ import {
   ListPayoutMethodsUseCase,
   SelectPayoutMethodUseCase,
 } from '@/application/payouts/usecases/payoutMethodUseCases';
+import {
+  GetMyProfileUseCase,
+  StartContactChangeUseCase,
+  UpdatePersonalInfoUseCase,
+  VerifyContactChangeUseCase,
+} from '@/application/profile/usecases/profileUseCases';
 import { ChangeLanguageUseCase } from '@/application/i18n/usecases/ChangeLanguageUseCase';
 import { ResolveLanguageUseCase } from '@/application/i18n/usecases/ResolveLanguageUseCase';
 import { SyncLanguagePreferenceUseCase } from '@/application/i18n/usecases/SyncLanguagePreferenceUseCase';
@@ -135,7 +141,7 @@ export function createContainer(
         : new CircleMembershipApiRepository(http),
     userProfile:
       env.profileApi === 'fake'
-        ? new InMemoryUserProfileRepository()
+        ? new InMemoryUserProfileRepository({ currency: env.defaultCurrency })
         : new UserProfileApiRepository(http),
     payoutMethods:
       env.payoutsApi === 'fake'
@@ -200,6 +206,12 @@ export function createContainer(
       setDefaultCard: new SetDefaultCardUseCase(adapters.cards),
       removeCard: new RemoveCardUseCase(adapters.cards),
       payInstallment: new PayInstallmentUseCase(adapters.paymentTokenizer, adapters.payments),
+    },
+    profile: {
+      getMyProfile: new GetMyProfileUseCase(adapters.userProfile),
+      updatePersonalInfo: new UpdatePersonalInfoUseCase(adapters.userProfile),
+      startContactChange: new StartContactChangeUseCase(adapters.userProfile),
+      verifyContactChange: new VerifyContactChangeUseCase(adapters.userProfile),
     },
     payouts: {
       listPayoutMethods: new ListPayoutMethodsUseCase(adapters.payoutMethods),

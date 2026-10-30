@@ -213,6 +213,49 @@
       "close": "Cerrar",
       "save": "Guardar",
       "restartNotice": "El diseño de la app se actualizará a la nueva dirección de lectura cuando la reinicies."
+    },
+    "noName": "Agrega tu nombre",
+    "limit": {
+      "title": "Límite mensual de pago",
+      "none": "Sin límite",
+      "description": "Es el máximo de cuota mensual que puedes tener. Sube al aprobar tu comprobante de ingresos."
+    },
+    "personalInfo": {
+      "item": "Información personal",
+      "title": "Información personal",
+      "firstName": "Nombre",
+      "lastName": "Apellido",
+      "invalidName": "Escribe entre 1 y 80 caracteres, sin < ni >.",
+      "save": "Guardar cambios",
+      "saved": "Cambios guardados.",
+      "email": "Email",
+      "phone": "Teléfono",
+      "notSet": "Sin registrar",
+      "change": "Cambiar"
+    },
+    "contact": {
+      "title": "Cambiar dato de contacto",
+      "new": {
+        "email": "Email nuevo",
+        "phone": "Teléfono nuevo"
+      },
+      "phonePlaceholder": "+51 987 654 321",
+      "explain": "Te enviaremos un código al dato nuevo para confirmar que es tuyo.",
+      "sendCode": "Enviar código",
+      "invalid": {
+        "email": "Revisa el email.",
+        "phone": "Escribe el teléfono con el código de país (+51…)."
+      },
+      "same": "Es el mismo dato que ya tienes.",
+      "codeSent": "Escribe el código que enviamos a {{destination}}.",
+      "codeLabel": "Código de verificación",
+      "verify": "Confirmar",
+      "taken": "Ese dato ya está registrado en otra cuenta.",
+      "otp": {
+        "invalid": "El código no es correcto.",
+        "expired": "El código venció. Vuelve a empezar para recibir otro.",
+        "attempts_exceeded": "Superaste los intentos. Vuelve a empezar para recibir otro código."
+      }
     }
   },
   "catalog": {

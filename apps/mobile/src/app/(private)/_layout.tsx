@@ -8,12 +8,14 @@ import {
   useIsDevEnvironment,
   useJoinScreenOptions,
   usePaymentScreenOptions,
+  useProfileScreenOptions,
 } from '@/presentation/navigation/screenOptions';
 
 export default function PrivateLayout() {
   const joinOptions = useJoinScreenOptions();
   const catalogOptions = useCatalogScreenOptions();
   const paymentOptions = usePaymentScreenOptions();
+  const profileOptions = useProfileScreenOptions();
   const isDev = useIsDevEnvironment();
   // El perfil del backend exige sesión: el idioma pendiente se reintenta al entrar a la zona privada.
   useRetryPendingLanguageSync();
@@ -37,6 +39,8 @@ export default function PrivateLayout() {
         <Stack.Screen name="payment/cards" options={paymentOptions.cards} />
         <Stack.Screen name="payment/add-card" options={paymentOptions.addCard} />
         <Stack.Screen name="payment/pay/[installmentId]" options={paymentOptions.pay} />
+        <Stack.Screen name="profile/personal-info" options={profileOptions.personalInfo} />
+        <Stack.Screen name="profile/contact/[type]" options={profileOptions.contact} />
         <Stack.Protected guard={isDev}>
           <Stack.Screen name="catalog" options={catalogOptions} />
         </Stack.Protected>

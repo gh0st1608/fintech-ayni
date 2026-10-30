@@ -213,6 +213,49 @@
       "close": "Close",
       "save": "Save",
       "restartNotice": "The app layout will switch to the new reading direction after you restart it."
+    },
+    "noName": "Add your name",
+    "limit": {
+      "title": "Monthly pay-in limit",
+      "none": "No limit",
+      "description": "The highest monthly installment you can have. It goes up when your proof of income is approved."
+    },
+    "personalInfo": {
+      "item": "Personal information",
+      "title": "Personal information",
+      "firstName": "First name",
+      "lastName": "Last name",
+      "invalidName": "Use 1 to 80 characters, without < or >.",
+      "save": "Save changes",
+      "saved": "Changes saved.",
+      "email": "Email",
+      "phone": "Phone",
+      "notSet": "Not set",
+      "change": "Change"
+    },
+    "contact": {
+      "title": "Change contact details",
+      "new": {
+        "email": "New email",
+        "phone": "New phone number"
+      },
+      "phonePlaceholder": "+51 987 654 321",
+      "explain": "We'll send a code to the new contact to confirm it's yours.",
+      "sendCode": "Send code",
+      "invalid": {
+        "email": "Check the email.",
+        "phone": "Enter the phone with the country code (+51…)."
+      },
+      "same": "This is the same contact you already have.",
+      "codeSent": "Enter the code we sent to {{destination}}.",
+      "codeLabel": "Verification code",
+      "verify": "Confirm",
+      "taken": "That contact is already registered to another account.",
+      "otp": {
+        "invalid": "The code is not correct.",
+        "expired": "The code expired. Start again to get a new one.",
+        "attempts_exceeded": "Too many attempts. Start again to get a new code."
+      }
     }
   },
   "catalog": {
