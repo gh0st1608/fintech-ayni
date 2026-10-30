@@ -9,6 +9,7 @@ import { isUuid } from '../../../../../shared/infrastructure/persistence/postgre
 import { InvalidCursorError } from '../../../application/ports/circle-repository.port';
 import {
   type DueInstallment,
+  type InstallmentRef,
   type PaymentsQueryPort,
   type TransactionKind,
   type TransactionPage,
@@ -80,6 +81,41 @@ import { CircleEntity } from './circle.entity';
 @Injectable()
 export class TypeOrmPaymentsQuery implements PaymentsQueryPort {
   constructor(@InjectRepository(CircleEntity) private readonly circles: Repository<CircleEntity>) {}
+
+  async installment(id: string): Promise<InstallmentRef | null> {
+    if (!isUuid(id)) return null;
+    const [row] = await this.circles.query<
+      {
+        id: string;
+        circle_id: string;
+        user_id: string;
+        period: string;
+        amount: string;
+        currency: string;
+        status: string;
+        expelled: boolean;
+      }[]
+    >(
+      `SELECT i.id, i.circle_id, i.user_id, to_char(i.period, 'YYYY-MM') AS period,
+              i.amount::text AS amount, i.currency, i.status,
+              COALESCE(m.expelled_at IS NOT NULL, false) AS expelled
+         FROM circle_installments i
+         LEFT JOIN circle_memberships m ON m.circle_id = i.circle_id AND m.user_id = i.user_id
+        WHERE i.id = $1`,
+      [id],
+    );
+    return row
+      ? {
+          id: row.id,
+          circleId: row.circle_id,
+          userId: row.user_id,
+          period: Period.parse(row.period),
+          amount: Money.of(Number(row.amount), row.currency),
+          status: row.status,
+          expelled: row.expelled,
+        }
+      : null;
+  }
 
   async dueInstallmentsOf(userId: string): Promise<DueInstallment[]> {
     if (!isUuid(userId)) return [];

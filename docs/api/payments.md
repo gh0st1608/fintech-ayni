@@ -175,6 +175,42 @@ Con `CIRCLE_PAYMENTS_ADAPTER=gateway`, el ciclo mensual cobra cada cuota con la 
 
 - Antes de cobrar busca los pagos de la cuota en Mercado Pago (`external_reference` = id de la cuota). Uno aprobado la da por pagada; uno pendiente no se vuelve a cobrar.
 - Un intento por día: la clave de idempotencia es la cuota y la fecha. Si se rechaza, la cuota queda vencida y se reintenta durante la gracia (COPAYNI-57).
-- **Sin tarjeta guardada no hay débito automático.** Quien paga con Yape lo hace desde la app cada mes, porque Yape pide un OTP en cada pago; ese flujo de pago (D1) todavía no tiene ticket.
+- **Sin tarjeta guardada no hay débito automático.** Quien paga con Yape lo hace desde la app cada mes, porque Yape pide un OTP en cada pago ([pagar una cuota](#pagar-una-cuota-desde-la-app-post-v1meinstallmentsidpay), COPAYNI-63).
 - **Pendiente con Mercado Pago:** cobrar una tarjeta guardada sin CVV requiere habilitar "Automatic Payments".
 - **Payouts y devoluciones:** sin riel todavía (T5). Con `gateway`, el ciclo falla al pagar un payout hasta tenerlo.
+
+## Pagar una cuota desde la app: `POST /v1/me/installments/:id/pay`
+
+Pago manual de una cuota `pending` u `overdue` (en gracia) con **Yape** o con una **tarjeta guardada** (COPAYNI-63, flujo D1 sin diseño). Requiere `Idempotency-Key`.
+
+```json
+{ "method": "yape", "token": "token-del-sdk" }
+```
+
+```json
+{ "method": "card", "cardId": "0b9e…" }
+```
+
+- **Yape:** la app genera el token con el SDK de Mercado Pago, el celular y el OTP de la app de Yape. El token es de un solo uso.
+- **200** `{ "status": "paid" | "pending", "paymentId": "…" }`. Con `paid`, la cuota ya está pagada en el ciclo y el débito automático no la vuelve a cobrar. Con `pending`, la confirma el webhook.
+- Antes de cobrar busca los pagos de la cuota en Mercado Pago: si ya hay uno aprobado (p. ej. del débito automático) no cobra de nuevo, y si hay uno pendiente responde `PAYMENT_PENDING`.
+- **Supuesto [?]:** se puede pagar desde que se abre el mes de la cuota, antes del vencimiento.
+
+| Error                     | HTTP | Cuándo                                                                       |
+| ------------------------- | ---- | ---------------------------------------------------------------------------- |
+| `VALIDATION_ERROR`        | 400  | Método inválido, falta el token o el `cardId`, o falta la `Idempotency-Key`. |
+| `INSTALLMENT_NOT_FOUND`   | 404  | La cuota no existe o no es del usuario.                                      |
+| `CARD_NOT_FOUND`          | 404  | La tarjeta no es del usuario.                                                |
+| `INSTALLMENT_NOT_PAYABLE` | 409  | Ya está pagada, la paga la retención o la deducción, o fue expulsado.        |
+| `PAYMENT_PENDING`         | 409  | Ya hay un pago de la cuota en proceso.                                       |
+| `PAYMENT_REJECTED`        | 422  | Mercado Pago lo rechazó; `details.detail` trae el motivo de la pasarela.     |
+| `EMAIL_REQUIRED`          | 422  | El usuario no tiene email (Mercado Pago lo pide como pagador).               |
+
+## Webhook de Mercado Pago: `POST /v1/webhooks/mercadopago`
+
+Lo llama Mercado Pago, no la app (COPAYNI-63). Se configura en el panel de la aplicación de Mercado Pago, con el evento de pagos.
+
+- **Autenticación:** la firma `x-signature` con `MERCADOPAGO_WEBHOOK_SECRET`. Sin firma válida, o sin la clave configurada, responde 401.
+- **Nunca confía en el cuerpo:** consulta el pago en Mercado Pago y, si está aprobado, marca pagada la cuota de su `external_reference`, con el círculo bloqueado. Es idempotente: los reintentos no cambian nada.
+- Responde 200 a todo webhook firmado, también a los de otros tipos, para que Mercado Pago no reintente. Un pago aprobado de una cuota que ya no se cobra (expulsado, mes cerrado) queda en el log `circles.cycle.payment_unmatched` para revisarlo a mano.
+- En desarrollo y pruebas la pasarela es la simulada (`PAYMENT_GATEWAY=fake`); la cuenta sandbox de Mercado Pago se conecta cuando haya credenciales.

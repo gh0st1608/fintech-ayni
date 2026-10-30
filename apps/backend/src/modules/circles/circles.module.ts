@@ -22,6 +22,16 @@ import {
 import { TypeOrmPaymentSettings } from './infrastructure/persistence/typeorm/typeorm-payment-settings.repository';
 import { TypeOrmPaymentsQuery } from './infrastructure/persistence/typeorm/typeorm-payments-query';
 import { MyPaymentsController } from './presentation/http/controllers/my-payments.controller';
+import {
+  InstallmentSettlement,
+  PayInstallmentUseCase,
+  ReconcilePaymentUseCase,
+} from './application/use-cases/pay-installment.use-cases';
+import {
+  MercadoPagoWebhookController,
+  WEBHOOK_SETTINGS,
+  type WebhookSettings,
+} from './presentation/http/controllers/mercadopago-webhook.controller';
 import { SetCirclePauseUseCase } from './application/use-cases/set-circle-pause.use-case';
 import { AdminCirclesController } from './presentation/http/controllers/admin-circles.controller';
 import { STAFF_AUTHENTICATOR } from '../../shared/application/ports/staff-authenticator.port';
@@ -93,6 +103,7 @@ import { MyCirclesController } from './presentation/http/controllers/my-circles.
     CirclesController,
     MyCirclesController,
     MyPaymentsController,
+    MercadoPagoWebhookController,
     AdminCirclesController,
   ],
   providers: [
@@ -158,6 +169,17 @@ import { MyCirclesController } from './presentation/http/controllers/my-circles.
       inject: [ConfigService],
       useFactory: (config: AppConfigService): RecommendationSettings => ({
         limit: config.get('RECOMMENDED_CIRCLES_LIMIT', { infer: true }),
+      }),
+    },
+    // Pago de la cuota desde la app y webhooks de Mercado Pago (COPAYNI-63).
+    InstallmentSettlement,
+    PayInstallmentUseCase,
+    ReconcilePaymentUseCase,
+    {
+      provide: WEBHOOK_SETTINGS,
+      inject: [ConfigService],
+      useFactory: (config: AppConfigService): WebhookSettings => ({
+        secret: config.get('MERCADOPAGO_WEBHOOK_SECRET', { infer: true }) ?? null,
       }),
     },
     // Sección Payment de la app (COPAYNI-35).

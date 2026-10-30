@@ -40,8 +40,22 @@ export interface TransactionPage {
   nextCursor: string | null;
 }
 
+/** Una cuota por su id, con su círculo (COPAYNI-63). */
+export interface InstallmentRef {
+  id: string;
+  circleId: string;
+  userId: string;
+  period: Period;
+  amount: Money;
+  status: string;
+  /** El miembro fue expulsado del círculo. */
+  expelled: boolean;
+}
+
 /** Lecturas de los pagos del usuario, para la sección Payment de la app. */
 export interface PaymentsQueryPort {
+  /** La cuota, o `null` si no existe. */
+  installment(id: string): Promise<InstallmentRef | null>;
   /** Cuotas pendientes o vencidas en gracia, de la que vence antes a la que vence después. */
   dueInstallmentsOf(userId: string): Promise<DueInstallment[]>;
   /**

@@ -6,6 +6,7 @@ import { UsersModule } from '../users/users.module';
 import { PAYMENT_GATEWAY } from './application/ports/payment-gateway.port';
 import { SAVED_CARDS } from './application/ports/saved-card-repository.port';
 import { AddCardUseCase, ListCardsUseCase } from './application/use-cases/add-card.use-case';
+import { ChargeInstallmentUseCase } from './application/use-cases/charge-installment.use-case';
 import {
   RemoveCardUseCase,
   SetDefaultCardUseCase,
@@ -34,6 +35,7 @@ import { CardsController } from './presentation/http/controllers/cards.controlle
     SetDefaultCardUseCase,
     RemoveCardUseCase,
     CollectInstallmentUseCase,
+    ChargeInstallmentUseCase,
     {
       provide: AUTO_DEBIT_SETTINGS,
       inject: [ConfigService],
@@ -60,6 +62,6 @@ import { CardsController } from './presentation/http/controllers/cards.controlle
       },
     },
   ],
-  exports: [PAYMENT_GATEWAY, SAVED_CARDS, CollectInstallmentUseCase],
+  exports: [PAYMENT_GATEWAY, SAVED_CARDS, CollectInstallmentUseCase, ChargeInstallmentUseCase],
 })
 export class PaymentsModule {}

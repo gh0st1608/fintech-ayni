@@ -22,7 +22,11 @@ async function eligibilityOf(
 ) {
   const useCase = new GetPayoutEligibilityUseCase(
     { applicantFor: () => Promise.resolve({ ...ELIGIBLE, ...applicant }) },
-    { dueInstallmentsOf: () => Promise.resolve(dues), transactionsOf: jest.fn() },
+    {
+      dueInstallmentsOf: () => Promise.resolve(dues),
+      transactionsOf: jest.fn(),
+      installment: jest.fn(),
+    },
     debts,
   );
   return PayoutEligibilityResponse.from(await useCase.execute({ userId: 'u-1' }));
