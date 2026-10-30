@@ -320,6 +320,25 @@ export class EnvironmentVariables {
   @Max(30000)
   MERCADOPAGO_TIMEOUT_MS: number = 10000;
 
+  /**
+   * Beneficio de referidos en unidades menores de DEFAULT_CURRENCY (COPAYNI-51, R7 provisional:
+   * el del Figma). Lo reciben el invitado y el invitador.
+   */
+  @IsInt()
+  @Min(0)
+  REFERRAL_REWARD_AMOUNT: number = 15000;
+
+  /** Invitados por los que un invitador recibe beneficio (R7, provisional). */
+  @IsInt()
+  @Min(0)
+  @Max(1000)
+  REFERRAL_MAX_REWARDED_INVITES: number = 10;
+
+  /** Base del enlace de invitación: el deep link de la app (`scheme` de app.json). */
+  @IsString()
+  @IsNotEmpty()
+  REFERRAL_LINK_BASE_URL: string = 'ayni://invite';
+
   /** Zona horaria del negocio: define en qué mes estamos para los cronogramas. */
   @IsTimeZone()
   BUSINESS_TIME_ZONE: string = 'America/Lima';
