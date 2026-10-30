@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectDataSource } from '@nestjs/typeorm';
-import { DataSource } from 'typeorm';
+import { DataSource, type EntityManager } from 'typeorm';
 
 import { type Money } from '../../../shared/domain/value-objects/money';
 import {
@@ -113,9 +113,17 @@ export class SqlReferralRepository implements ReferralRepositoryPort {
     return row !== undefined;
   }
 
-  async totalsOf(userId: string, maxRewardedInvites: number): Promise<ReferralTotals> {
+  totalsOf(userId: string, maxRewardedInvites: number): Promise<ReferralTotals> {
+    return this.totalsOfWith(this.dataSource.manager, userId, maxRewardedInvites);
+  }
+
+  private async totalsOfWith(
+    manager: EntityManager,
+    userId: string,
+    maxRewardedInvites: number,
+  ): Promise<ReferralTotals> {
     if (!isUuid(userId)) return { earned: 0, redeemed: 0 };
-    const [row] = await this.dataSource.query<{ earned: string; redeemed: string }[]>(
+    const [row] = await manager.query<{ earned: string; redeemed: string }[]>(
       `SELECT (COALESCE((SELECT reward_amount FROM referrals WHERE invitee_id = $1), 0)
                + COALESCE((SELECT sum(q.reward_amount) FROM (
                    SELECT r.reward_amount FROM referrals r
@@ -129,6 +137,34 @@ export class SqlReferralRepository implements ReferralRepositoryPort {
       [userId, maxRewardedInvites],
     );
     return { earned: Number(row?.earned ?? 0), redeemed: Number(row?.redeemed ?? 0) };
+  }
+
+  redeem(
+    userId: string,
+    reference: string,
+    amount: Money,
+    maxRewardedInvites: number,
+  ): Promise<number> {
+    return this.dataSource.transaction(async (manager) => {
+      // Dos cuotas del mismo usuario no pueden gastar el mismo saldo.
+      await manager.query("SELECT pg_advisory_xact_lock(hashtextextended('referral:' || $1, 0))", [
+        userId,
+      ]);
+      const [existing] = await manager.query<unknown[]>(
+        'SELECT 1 FROM referral_redemptions WHERE reference = $1',
+        [reference],
+      );
+      if (existing) return 0;
+      const totals = await this.totalsOfWith(manager, userId, maxRewardedInvites);
+      const redeemed = Math.min(amount.amount, Math.max(0, totals.earned - totals.redeemed));
+      if (redeemed === 0) return 0;
+      await manager.query(
+        `INSERT INTO referral_redemptions (user_id, reference, amount, currency)
+         VALUES ($1, $2, $3, $4)`,
+        [userId, reference, redeemed, amount.currency],
+      );
+      return redeemed;
+    });
   }
 
   async inviteesOf(userId: string, limit: number, cursor: string | null): Promise<InviteePage> {

@@ -54,6 +54,8 @@ export const LEDGER_KINDS = [
   'retention_to_fund',
   /** La cuota de quien cobra se descontó de su payout: fees y Admin Fees a `operator`. */
   'payin_deducted',
+  /** La cooperativa paga el descuento de referidos de una cuota (COPAYNI-53). */
+  'referral_discount',
   /** Movimientos manuales del back-office, con motivo. */
   'seed_capital',
   'adjustment',

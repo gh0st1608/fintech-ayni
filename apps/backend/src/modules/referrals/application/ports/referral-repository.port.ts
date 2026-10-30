@@ -41,6 +41,16 @@ export interface ReferralRepositoryPort {
    * suma de los descuentos aplicados.
    */
   totalsOf(userId: string, maxRewardedInvites: number): Promise<ReferralTotals>;
+  /**
+   * Canjea hasta `amount` del saldo para `reference` (una cuota), una sola vez por referencia y
+   * con el saldo bloqueado: devuelve lo canjeado (0 si no había saldo o ya se canjeó).
+   */
+  redeem(
+    userId: string,
+    reference: string,
+    amount: Money,
+    maxRewardedInvites: number,
+  ): Promise<number>;
   /** Sus invitados, del más reciente al más antiguo. Rechaza un cursor ajeno con InvalidCursorError. */
   inviteesOf(userId: string, limit: number, cursor: string | null): Promise<InviteePage>;
   /** El código del usuario; lo crea la primera vez (único en todos los usuarios). */

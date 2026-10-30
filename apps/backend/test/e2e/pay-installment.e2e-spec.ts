@@ -127,6 +127,70 @@ describe('Pagar una cuota desde la app', () => {
     }
   });
 
+  it('aplica el saldo de referidos: cobra la cuota menos el descuento (COPAYNI-53)', async () => {
+    const inviter = await request(app.getHttpServer())
+      .post('/v1/auth/start')
+      .send({ identifier: `${randomUUID()}@mail.com`, type: 'email' })
+      .expect(200);
+    const inviterToken = (
+      await request(app.getHttpServer())
+        .post('/v1/auth/verify')
+        .send({ challengeId: inviter.body.data.challengeId, code: '1234' })
+        .expect(200)
+    ).body.data.accessToken as string;
+    const { code } = (
+      await request(app.getHttpServer())
+        .get('/v1/me/referral')
+        .set('Authorization', `Bearer ${inviterToken}`)
+        .expect(200)
+    ).body.data as { code: string };
+    // El código es para el primer círculo: el usuario de las otras pruebas ya tiene cuotas.
+    const fresh = await request(app.getHttpServer())
+      .post('/v1/auth/start')
+      .send({ identifier: `${randomUUID()}@mail.com`, type: 'email' })
+      .expect(200);
+    const freshToken = (
+      await request(app.getHttpServer())
+        .post('/v1/auth/verify')
+        .send({ challengeId: fresh.body.data.challengeId, code: '1234' })
+        .expect(200)
+    ).body.data.accessToken as string;
+    const freshId = (
+      await request(app.getHttpServer())
+        .get('/v1/me')
+        .set('Authorization', `Bearer ${freshToken}`)
+        .expect(200)
+    ).body.data.id as string;
+    await request(app.getHttpServer())
+      .post('/v1/me/referral/claim')
+      .set('Authorization', `Bearer ${freshToken}`)
+      .send({ code })
+      .expect(200);
+
+    const id = await pendingInstallment(freshId);
+    await request(app.getHttpServer())
+      .post(`/v1/me/installments/${id}/pay`)
+      .set('Authorization', `Bearer ${freshToken}`)
+      .set('Idempotency-Key', randomUUID())
+      .send({ method: 'yape', token: 'yape-ref' })
+      .expect(200);
+    const db = app.get(DataSource);
+    const [ledger] = await db.query<{ amount: string }[]>(
+      `SELECT e.amount::text AS amount FROM ledger_entries e
+        WHERE e.transaction_key = $1 AND e.account = 'external'`,
+      [`referral_discount:${id}`],
+    );
+    expect(ledger?.amount).toBe('15000');
+    const summary = await request(app.getHttpServer())
+      .get('/v1/me/referrals')
+      .set('Authorization', `Bearer ${freshToken}`)
+      .expect(200);
+    expect(summary.body.data).toMatchObject({
+      redeemed: { amount: 15000 },
+      balance: { amount: 0 },
+    });
+  });
+
   it('el webhook sin firma válida se rechaza', async () => {
     await request(app.getHttpServer())
       .post('/v1/webhooks/mercadopago?data.id=1')

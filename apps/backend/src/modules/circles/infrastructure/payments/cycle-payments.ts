@@ -6,6 +6,7 @@ import {
 } from '../../application/ports/cycle-payments.port';
 import { type CollectionOutcome, type Installment } from '../../domain/entities/circle-cycle';
 import { type CollectInstallmentUseCase } from '../../../payments/application/use-cases/collect-installment.use-case';
+import { type ReferralDiscounts } from '../../application/use-cases/referral-discounts';
 
 export const CYCLE_PAYMENTS_ADAPTERS = ['fake', 'gateway'] as const;
 export type CyclePaymentsAdapter = (typeof CYCLE_PAYMENTS_ADAPTERS)[number];
@@ -60,15 +61,23 @@ export class UnconfiguredCyclePayments implements ContributionsPort, Disbursemen
  * riel: Mercado Pago no documenta transferencias bancarias en Perú (pending-scope T5).
  */
 export class GatewayCyclePayments implements ContributionsPort, DisbursementsPort {
-  constructor(private readonly collectInstallment: CollectInstallmentUseCase) {}
+  constructor(
+    private readonly collectInstallment: CollectInstallmentUseCase,
+    private readonly discounts: ReferralDiscounts,
+  ) {}
 
+  /** Con saldo de referidos (COPAYNI-53) se cobra la cuota menos el descuento. */
   async collect(installment: Installment & { circleId: string }): Promise<CollectionOutcome> {
-    const paid = await this.collectInstallment.execute({
-      installmentId: installment.id,
-      userId: installment.userId,
-      amount: installment.amount,
-      description: `Ayni: cuota de ${installment.period.toString()}`,
-    });
+    const discount = await this.discounts.quote(installment.userId, installment.amount);
+    const paid =
+      discount.equals(installment.amount) ||
+      (await this.collectInstallment.execute({
+        installmentId: installment.id,
+        userId: installment.userId,
+        amount: installment.amount.subtract(discount),
+        description: `Ayni: cuota de ${installment.period.toString()}`,
+      }));
+    if (paid) await this.discounts.apply(installment, discount);
     return paid ? 'paid' : 'failed';
   }
 

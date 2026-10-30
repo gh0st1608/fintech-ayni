@@ -128,7 +128,14 @@ describe('Débito automático de la cuota (COPAYNI-40)', () => {
 
   it('el adaptador del ciclo traduce el resultado y todavía no paga payouts (T5)', async () => {
     const { useCase } = setup();
-    const payments = new GatewayCyclePayments(useCase);
+    const discounts = {
+      quote: (_userId: string, amount: Money) => Promise.resolve(Money.zero(amount.currency)),
+      apply: jest.fn(),
+    };
+    const payments = new GatewayCyclePayments(
+      useCase,
+      discounts as unknown as ConstructorParameters<typeof GatewayCyclePayments>[1],
+    );
     const installment = {
       id: 'inst-9',
       circleId: 'c-1',

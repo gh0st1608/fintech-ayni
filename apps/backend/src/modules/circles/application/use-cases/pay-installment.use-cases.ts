@@ -21,6 +21,7 @@ import {
 import { PAYMENTS_QUERY, type PaymentsQueryPort } from '../ports/payments-query.port';
 import { CIRCLE_CYCLE, type CircleCycleSettings } from './cycle-settings';
 import { SLOT_PRICING } from './get-available-slots.use-case';
+import { ReferralDiscounts } from './referral-discounts';
 
 /** La cuota no se puede pagar: ya está pagada, la cubre el fondo o la retención, o fue expulsado. */
 export class InstallmentNotPayableError extends ConflictError {
@@ -99,6 +100,7 @@ export class PayInstallmentUseCase {
     @Inject(PAYMENTS_QUERY) private readonly payments: PaymentsQueryPort,
     @Inject(ChargeInstallmentUseCase) private readonly charge: ChargeInstallmentUseCase,
     @Inject(InstallmentSettlement) private readonly settlement: InstallmentSettlement,
+    @Inject(ReferralDiscounts) private readonly discounts: ReferralDiscounts,
   ) {}
 
   async execute(
@@ -112,16 +114,24 @@ export class PayInstallmentUseCase {
     if (installment.expelled || !['pending', 'overdue'].includes(installment.status)) {
       throw new InstallmentNotPayableError();
     }
+    // Con saldo de referidos (COPAYNI-53) se cobra la cuota menos el descuento.
+    const discount = await this.discounts.quote(principal.userId, installment.amount);
+    if (discount.equals(installment.amount)) {
+      await this.discounts.apply(installment, discount);
+      await this.settlement.markPaid(installment.circleId, installment.id, 'referral');
+      return { status: 'paid', paymentId: 'referral' };
+    }
     const payment = await this.charge.execute({
       installmentId: installment.id,
       userId: principal.userId,
-      amount: installment.amount,
+      amount: installment.amount.subtract(discount),
       description: `Ayni: cuota de ${installment.period.toString()}`,
       idempotencyKey: command.idempotencyKey,
       method: command.method,
     });
     if (payment.status === 'rejected') throw new PaymentRejectedError(payment.statusDetail);
     if (payment.status === 'pending') return { status: 'pending', paymentId: payment.id };
+    await this.discounts.apply(installment, discount);
     await this.settlement.markPaid(installment.circleId, installment.id, payment.id);
     return { status: 'paid', paymentId: payment.id };
   }

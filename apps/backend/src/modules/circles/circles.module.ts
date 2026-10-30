@@ -83,6 +83,8 @@ import {
   UnconfiguredCyclePayments,
 } from './infrastructure/payments/cycle-payments';
 import { PaymentsModule } from '../payments/payments.module';
+import { ReferralsModule } from '../referrals/referrals.module';
+import { ReferralDiscounts } from './application/use-cases/referral-discounts';
 import { CollectInstallmentUseCase } from '../payments/application/use-cases/collect-installment.use-case';
 import { ConfigJoinConfigRepository } from './infrastructure/persistence/config-join-config.repository';
 import { CircleMembershipEntity } from './infrastructure/persistence/typeorm/circle-membership.entity';
@@ -98,6 +100,7 @@ import { MyCirclesController } from './presentation/http/controllers/my-circles.
     TypeOrmModule.forFeature([CircleEntity, CircleMembershipEntity]),
     PayoutsModule,
     PaymentsModule,
+    ReferralsModule,
   ],
   controllers: [
     CirclesController,
@@ -154,11 +157,15 @@ import { MyCirclesController } from './presentation/http/controllers/my-circles.
     {
       // Pasarela pendiente (D1, COPAYNI-34): solo pagos simulados o ninguno.
       provide: CONTRIBUTIONS,
-      inject: [ConfigService, CollectInstallmentUseCase],
-      useFactory: (config: AppConfigService, collect: CollectInstallmentUseCase) => {
+      inject: [ConfigService, CollectInstallmentUseCase, ReferralDiscounts],
+      useFactory: (
+        config: AppConfigService,
+        collect: CollectInstallmentUseCase,
+        discounts: ReferralDiscounts,
+      ) => {
         const adapter = config.get('CIRCLE_PAYMENTS_ADAPTER', { infer: true });
         if (adapter === 'fake') return new FakeCyclePayments();
-        if (adapter === 'gateway') return new GatewayCyclePayments(collect);
+        if (adapter === 'gateway') return new GatewayCyclePayments(collect, discounts);
         return new UnconfiguredCyclePayments();
       },
     },
@@ -173,6 +180,7 @@ import { MyCirclesController } from './presentation/http/controllers/my-circles.
     },
     // Pago de la cuota desde la app y webhooks de Mercado Pago (COPAYNI-63).
     InstallmentSettlement,
+    ReferralDiscounts,
     PayInstallmentUseCase,
     ReconcilePaymentUseCase,
     {

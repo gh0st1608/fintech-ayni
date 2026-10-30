@@ -70,3 +70,12 @@ Saldo e invitados de My Referrals (COPAYNI-52). Los invitados van del más recie
 - **Canjeado (`redeemed`):** la suma de los descuentos aplicados a sus cuotas (COPAYNI-53). `balance` = ganado − canjeado.
 - **Invitados:** el nombre minimizado (nombre e inicial del apellido) o, sin nombre, el email o teléfono enmascarado. `status`: `registered`, `joined_circle` o `first_pay_in_paid`.
 - Errores: `VALIDATION_ERROR` (400, `limit` fuera de rango o cursor inválido) y `UNAUTHORIZED`.
+
+## Descuento en la próxima cuota (COPAYNI-53)
+
+El saldo se descuenta solo, sin superar la cuota, al cobrarla: en el débito automático y en el pago desde la app ([payments.md](payments.md)).
+
+- Se cobra la cuota menos el descuento. Si el saldo cubre toda la cuota, no se cobra nada y la cuota queda pagada.
+- La cooperativa paga el descuento: el movimiento contable `referral_discount` (de `operator` al pagador) mantiene el registro de doble entrada cuadrado con el dinero real.
+- **Asientos:** cada canje queda en `referral_redemptions`, uno por cuota (idempotente) y con el saldo bloqueado, así dos cuotas del mismo usuario no gastan el mismo saldo. Si eso pasara igual, la cooperativa absorbe la diferencia y queda el log `referrals.discount_exceeded_balance`.
+- Los créditos se derivan de los referidos: el del invitado al usar el código y el del invitador cuando su invitado paga su primera cuota (también si se descontó del payout).
