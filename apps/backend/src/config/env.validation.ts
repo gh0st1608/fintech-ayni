@@ -339,6 +339,18 @@ export class EnvironmentVariables {
   @IsNotEmpty()
   REFERRAL_LINK_BASE_URL: string = 'ayni://invite';
 
+  /**
+   * Planes de ahorro (COPAYNI-32): `clave:monto` en unidades menores, separados por comas.
+   * Provisional, del Figma (R6, R12, M6); los dos últimos se llamaban "Silver" (duplicado).
+   */
+  @Matches(/^[a-z][a-z0-9_]{0,31}:\d+(,[a-z][a-z0-9_]{0,31}:\d+)*$/)
+  SAVING_PLANS: string =
+    'lite:300000,bronze:600000,silver:1200000,gold:3000000,platinum:6000000,diamond:10000000';
+
+  /** Cashback por duración (COPAYNI-33): `meses:bps`. Provisional: 5 %, 10 % y 20 % (R6). */
+  @Matches(/^\d{1,3}:\d{1,5}(,\d{1,3}:\d{1,5})*$/)
+  SAVING_CASHBACK_BPS: string = '6:500,12:1000,24:2000';
+
   /** Zona horaria del negocio: define en qué mes estamos para los cronogramas. */
   @IsTimeZone()
   BUSINESS_TIME_ZONE: string = 'America/Lima';
