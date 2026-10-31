@@ -19,6 +19,8 @@ interface RadioCardProps {
   disabled?: boolean;
   /** Motivo visible cuando la opción no está disponible ("Not available"). */
   disabledReason?: string;
+  /** Fila simple con el radio a la izquierda, sin tarjeta (Change Language del Figma). */
+  plain?: boolean;
   testID?: string;
 }
 
@@ -32,8 +34,14 @@ export function RadioCard({
   onSelect,
   disabled = false,
   disabledReason,
+  plain = false,
   testID,
 }: RadioCardProps) {
+  const radio = (
+    <View style={[styles.radio, selected && styles.radioSelected]}>
+      {selected && <View style={styles.radioDot} />}
+    </View>
+  );
   // El badge se ve, así que también se anuncia (p. ej. "Sin costo").
   const accessibilityLabel = [title, badge, description, disabled ? disabledReason : undefined]
     .filter(Boolean)
@@ -47,13 +55,14 @@ export function RadioCard({
       disabled={disabled}
       onPress={onSelect}
       style={({ pressed }) => [
-        styles.card,
-        selected && styles.selected,
+        plain ? styles.plain : styles.card,
+        selected && !plain && styles.selected,
         disabled && styles.disabled,
         pressed && styles.pressed,
       ]}
       testID={testID}
     >
+      {plain && radio}
       <View style={styles.content} importantForAccessibility="no-hide-descendants">
         {badge && <Badge label={badge} />}
         <View style={styles.titleRow}>
@@ -71,9 +80,7 @@ export function RadioCard({
           </AppText>
         )}
       </View>
-      <View style={[styles.radio, selected && styles.radioSelected]}>
-        {selected && <View style={styles.radioDot} />}
-      </View>
+      {!plain && radio}
     </Pressable>
   );
 }
@@ -101,6 +108,12 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.secondary100,
     backgroundColor: colors.background,
+  },
+  plain: {
+    minHeight: MIN_TOUCH_TARGET,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
   },
   selected: { borderColor: colors.primary, backgroundColor: colors.surface },
   disabled: { opacity: 0.5 },

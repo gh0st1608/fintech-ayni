@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ActivityIndicator, ScrollView, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { InvalidPersonNameError } from '@/application/profile/usecases/profileUseCases';
 import type { UserProfile } from '@/domain/profile/UserProfile';
@@ -8,10 +8,9 @@ import { PERSON_NAME_MAX_LENGTH } from '@/domain/profile/UserProfile';
 import { errorMessage } from '@/presentation/i18n/errorMessageKey';
 import { AppText } from '@/presentation/shared/components/AppText';
 import { Button } from '@/presentation/shared/components/Button';
-import { ListItem } from '@/presentation/shared/components/ListItem';
 import { Screen } from '@/presentation/shared/components/Screen';
 import { TextField } from '@/presentation/shared/components/TextField';
-import { colors, spacing } from '@/presentation/theme/tokens';
+import { BUTTON_HEIGHT, colors, radius, spacing } from '@/presentation/theme/tokens';
 
 import { useProfile, useUpdatePersonalInfo } from '../useProfile';
 
@@ -96,21 +95,18 @@ function PersonalInfoForm({
             {errorMessage(t, update.error)}
           </AppText>
         )}
-        <ListItem
-          title={t('profile.personalInfo.email')}
-          description={profile.email ?? t('profile.personalInfo.notSet')}
-          icon="mail-outline"
-          trailing={<AppText color={colors.primary}>{t('profile.personalInfo.change')}</AppText>}
-          onPress={() => onChangeContact('email')}
-          testID="contact-email"
-        />
-        <ListItem
-          title={t('profile.personalInfo.phone')}
-          description={profile.phone ?? t('profile.personalInfo.notSet')}
-          icon="call-outline"
-          trailing={<AppText color={colors.primary}>{t('profile.personalInfo.change')}</AppText>}
+        {/* Figma 55:10379: teléfono y email como campos; se cambian aparte con un código (R9). */}
+        <ContactField
+          label={t('profile.personalInfo.phone')}
+          value={profile.phone ?? t('profile.personalInfo.notSet')}
           onPress={() => onChangeContact('phone')}
           testID="contact-phone"
+        />
+        <ContactField
+          label={t('profile.personalInfo.email')}
+          value={profile.email ?? t('profile.personalInfo.notSet')}
+          onPress={() => onChangeContact('email')}
+          testID="contact-email"
         />
       </ScrollView>
       <Button
@@ -123,7 +119,50 @@ function PersonalInfoForm({
   );
 }
 
+interface ContactFieldProps {
+  label: string;
+  value: string;
+  onPress: () => void;
+  testID: string;
+}
+
+/** Se ve como un campo de texto, pero abre el cambio verificado del dato. */
+function ContactField({ label, value, onPress, testID }: ContactFieldProps) {
+  const { t } = useTranslation();
+  return (
+    <View style={styles.field}>
+      <AppText weight="semibold" importantForAccessibility="no">
+        {label}
+      </AppText>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={`${label}. ${value}`}
+        accessibilityHint={t('profile.personalInfo.change')}
+        onPress={onPress}
+        style={({ pressed }) => [styles.box, pressed && styles.pressed]}
+        testID={testID}
+      >
+        <AppText style={styles.value}>{value}</AppText>
+        <AppText color={colors.primary}>{t('profile.personalInfo.change')}</AppText>
+      </Pressable>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: spacing.lg },
   content: { gap: spacing.l, paddingVertical: spacing.l },
+  field: { gap: spacing.sm },
+  box: {
+    minHeight: BUTTON_HEIGHT,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingHorizontal: spacing.lg,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.borderNormal,
+  },
+  value: { flex: 1 },
+  pressed: { opacity: 0.85 },
 });

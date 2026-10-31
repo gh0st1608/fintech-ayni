@@ -63,6 +63,7 @@ function LanguageForm({ onSaved }: { onSaved: () => void }) {
             title={nativeName}
             selected={selected === code}
             onSelect={() => setSelected(code)}
+            plain
             testID={`language-option-${code}`}
           />
         ))}

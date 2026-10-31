@@ -246,7 +246,7 @@
     "limit": {
       "title": "Límite mensual de pago",
       "none": "Sin límite",
-      "description": "Es el máximo de cuota mensual que puedes tener. Sube al aprobar tu comprobante de ingresos."
+      "hint": "Sube tu límite con tus documentos"
     },
     "personalInfo": {
       "item": "Información personal",
@@ -284,7 +284,12 @@
         "expired": "El código venció. Vuelve a empezar para recibir otro.",
         "attempts_exceeded": "Superaste los intentos. Vuelve a empezar para recibir otro código."
       }
-    }
+    },
+    "sections": {
+      "account": "Cuenta",
+      "settings": "Configuración"
+    },
+    "inviteFriends": "Invitar amigos"
   },
   "catalog": {
     "title": "Catálogo de componentes"

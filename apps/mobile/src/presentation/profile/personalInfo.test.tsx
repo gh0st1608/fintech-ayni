@@ -13,16 +13,17 @@ const profiles = (profile = {}) =>
   new InMemoryUserProfileRepository({ latencyMs: 0, currency: 'PEN', profile });
 
 describe('ProfileScreen (COPAYNI-44)', () => {
-  it('muestra el nombre, el contacto, las iniciales y el límite mensual', async () => {
+  it('muestra el nombre, el contacto y el límite mensual, que abre los documentos', async () => {
     const onOpenPersonalInfo = jest.fn();
+    const onOpenDocuments = jest.fn();
     await renderWithProviders(
-      <ProfileScreen onOpenPersonalInfo={onOpenPersonalInfo} />,
+      <ProfileScreen onOpenPersonalInfo={onOpenPersonalInfo} onOpenDocuments={onOpenDocuments} />,
       createTestContainer({
         userProfile: profiles({ firstName: 'Ana', lastName: 'Quispe', fullName: 'Ana Quispe' }),
       }),
     );
     expect(await screen.findByTestId('profile-header')).toHaveTextContent(
-      /AQ.*Ana Quispe.*ana@mail\.com/,
+      /Ana Quispe.*ana@mail\.com/,
     );
     expect(screen.getByTestId('profile-limit')).toHaveTextContent(
       /Límite mensual de pago.*5\.?000/,
@@ -30,6 +31,8 @@ describe('ProfileScreen (COPAYNI-44)', () => {
 
     await fireEvent.press(screen.getByRole('button', { name: 'Información personal' }));
     expect(onOpenPersonalInfo).toHaveBeenCalled();
+    await fireEvent.press(screen.getByTestId('profile-limit'));
+    expect(onOpenDocuments).toHaveBeenCalled();
   });
 
   it('sin nombre invita a agregarlo; sin límite lo dice', async () => {
