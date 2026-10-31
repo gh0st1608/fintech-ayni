@@ -1,0 +1,80 @@
+[
+  {
+    "id": "GHSA-2328-f5f3-gj25",
+    "package": "node-forge",
+    "reason": "Dependencia de postman-runtime (newman 6.2.3, la última) para certificados de cliente y TLS. Corregido en node-forge 1.4.1, publicada el 2026-10-27: no cumple las dos semanas de la política de versiones. Agregar el override a 1.4.1 desde el 2026-11-10. La colección no usa certificados de cliente y solo corre contra la API propia (dev y CI).",
+    "expires": "2026-11-15"
+  },
+  {
+    "id": "GHSA-554w-wpv2-vw27",
+    "package": "node-forge",
+    "reason": "Dependencia de postman-runtime (newman 6.2.3, la última) para certificados de cliente y TLS. Corregido en node-forge 1.4.1, publicada el 2026-10-27: no cumple las dos semanas de la política de versiones. Agregar el override a 1.4.1 desde el 2026-11-10. La colección no usa certificados de cliente y solo corre contra la API propia (dev y CI).",
+    "expires": "2026-11-15"
+  },
+  {
+    "id": "GHSA-5gfm-wpxj-wjgq",
+    "package": "node-forge",
+    "reason": "Dependencia de postman-runtime (newman 6.2.3, la última) para certificados de cliente y TLS. Corregido en node-forge 1.4.1, publicada el 2026-10-27: no cumple las dos semanas de la política de versiones. Agregar el override a 1.4.1 desde el 2026-11-10. La colección no usa certificados de cliente y solo corre contra la API propia (dev y CI).",
+    "expires": "2026-11-15"
+  },
+  {
+    "id": "GHSA-5m6q-g25r-mvwx",
+    "package": "node-forge",
+    "reason": "Dependencia de postman-runtime (newman 6.2.3, la última) para certificados de cliente y TLS. Corregido en node-forge 1.4.1, publicada el 2026-10-27: no cumple las dos semanas de la política de versiones. Agregar el override a 1.4.1 desde el 2026-11-10. La colección no usa certificados de cliente y solo corre contra la API propia (dev y CI).",
+    "expires": "2026-11-15"
+  },
+  {
+    "id": "GHSA-5x38-2vff-x55p",
+    "package": "node-forge",
+    "reason": "Dependencia de postman-runtime (newman 6.2.3, la última) para certificados de cliente y TLS. Corregido en node-forge 1.4.1, publicada el 2026-10-27: no cumple las dos semanas de la política de versiones. Agregar el override a 1.4.1 desde el 2026-11-10. La colección no usa certificados de cliente y solo corre contra la API propia (dev y CI).",
+    "expires": "2026-11-15"
+  },
+  {
+    "id": "GHSA-7wch-p9px-956x",
+    "package": "node-forge",
+    "reason": "Dependencia de postman-runtime (newman 6.2.3, la última) para certificados de cliente y TLS. Corregido en node-forge 1.4.1, publicada el 2026-10-27: no cumple las dos semanas de la política de versiones. Agregar el override a 1.4.1 desde el 2026-11-10. La colección no usa certificados de cliente y solo corre contra la API propia (dev y CI).",
+    "expires": "2026-11-15"
+  },
+  {
+    "id": "GHSA-86w9-cpqp-85rv",
+    "package": "node-forge",
+    "reason": "Dependencia de postman-runtime (newman 6.2.3, la última) para certificados de cliente y TLS. Corregido en node-forge 1.4.1, publicada el 2026-10-27: no cumple las dos semanas de la política de versiones. Agregar el override a 1.4.1 desde el 2026-11-10. La colección no usa certificados de cliente y solo corre contra la API propia (dev y CI).",
+    "expires": "2026-11-15"
+  },
+  {
+    "id": "GHSA-8hrf-8g6f-7xwp",
+    "package": "node-forge",
+    "reason": "Dependencia de postman-runtime (newman 6.2.3, la última) para certificados de cliente y TLS. Corregido en node-forge 1.4.1, publicada el 2026-10-27: no cumple las dos semanas de la política de versiones. Agregar el override a 1.4.1 desde el 2026-11-10. La colección no usa certificados de cliente y solo corre contra la API propia (dev y CI).",
+    "expires": "2026-11-15"
+  },
+  {
+    "id": "GHSA-hqq3-7jhf-c5jx",
+    "package": "node-forge",
+    "reason": "Dependencia de postman-runtime (newman 6.2.3, la última) para certificados de cliente y TLS. Corregido en node-forge 1.4.1, publicada el 2026-10-27: no cumple las dos semanas de la política de versiones. Agregar el override a 1.4.1 desde el 2026-11-10. La colección no usa certificados de cliente y solo corre contra la API propia (dev y CI).",
+    "expires": "2026-11-15"
+  },
+  {
+    "id": "GHSA-jc66-7q78-782g",
+    "package": "node-forge",
+    "reason": "Dependencia de postman-runtime (newman 6.2.3, la última) para certificados de cliente y TLS. Corregido en node-forge 1.4.1, publicada el 2026-10-27: no cumple las dos semanas de la política de versiones. Agregar el override a 1.4.1 desde el 2026-11-10. La colección no usa certificados de cliente y solo corre contra la API propia (dev y CI).",
+    "expires": "2026-11-15"
+  },
+  {
+    "id": "GHSA-ppp5-5v6c-4jwp",
+    "package": "node-forge",
+    "reason": "Dependencia de postman-runtime (newman 6.2.3, la última) para certificados de cliente y TLS. Corregido en node-forge 1.4.1, publicada el 2026-10-27: no cumple las dos semanas de la política de versiones. Agregar el override a 1.4.1 desde el 2026-11-10. La colección no usa certificados de cliente y solo corre contra la API propia (dev y CI).",
+    "expires": "2026-11-15"
+  },
+  {
+    "id": "GHSA-q67f-28xg-22rw",
+    "package": "node-forge",
+    "reason": "Dependencia de postman-runtime (newman 6.2.3, la última) para certificados de cliente y TLS. Corregido en node-forge 1.4.1, publicada el 2026-10-27: no cumple las dos semanas de la política de versiones. Agregar el override a 1.4.1 desde el 2026-11-10. La colección no usa certificados de cliente y solo corre contra la API propia (dev y CI).",
+    "expires": "2026-11-15"
+  },
+  {
+    "id": "GHSA-qxc2-j82w-r537",
+    "package": "@faker-js/faker",
+    "reason": "postman-collection (newman 6.2.3) usa faker 5 para las variables dinámicas {{$random...}}; faker 10 corregido rompe newman. El riesgo es helpers.fake con plantillas no confiables: la colección no usa variables dinámicas. Revisar cuando newman actualice faker.",
+    "expires": "2027-01-31"
+  }
+]

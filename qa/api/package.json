@@ -1,0 +1,25 @@
+{
+  "name": "@ayni/api-qa",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Colección Postman y ejecución con Newman de las pruebas de la API de Ayni",
+  "engines": {
+    "node": ">=22.13"
+  },
+  "scripts": {
+    "build": "node scripts/build-collection.mjs",
+    "test:dev": "newman run collections/ayni-api.postman_collection.json -e environments/dev.postman_environment.json --reporters cli,junit,htmlextra --reporter-junit-export reports/dev-junit.xml --reporter-htmlextra-export reports/dev-report.html --reporter-htmlextra-title \"Ayni API · dev\"",
+    "test:smoke:dev": "newman run collections/ayni-api.postman_collection.json -e environments/dev.postman_environment.json --folder 00-Framework --folder Smoke --folder 09-Operational --reporters cli,junit --reporter-junit-export reports/dev-smoke-junit.xml",
+    "test:prd": "newman run collections/ayni-api.postman_collection.json -e environments/prd.postman_environment.json --reporters cli,junit,htmlextra --reporter-junit-export reports/prd-junit.xml --reporter-htmlextra-export reports/prd-report.html --reporter-htmlextra-title \"Ayni API · prd\""
+  },
+  "devDependencies": {
+    "newman": "6.2.3",
+    "newman-reporter-htmlextra": "1.23.1"
+  },
+  "overrides": {
+    "lodash": "4.18.1",
+    "underscore": "1.13.8",
+    "flatted": "3.4.4",
+    "handlebars": "4.7.10"
+  }
+}

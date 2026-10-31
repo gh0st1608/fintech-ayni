@@ -1,0 +1,5 @@
+node_modules/
+# Evidencia de cada ejecución: se publica como artefacto de CI, no se versiona.
+reports/
+# Copias locales de los environments con secretos (p. ej. ENV_PRD_ACCESS_TOKEN).
+environments/*.local.json

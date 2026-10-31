@@ -1,0 +1,4 @@
+# Generados por scripts/build-collection.mjs: CI compara el build con lo versionado.
+collections/
+docs/traceability-matrix.md
+reports/
