@@ -218,20 +218,18 @@
     "duration": {
       "title": "Choose Duration",
       "close": "Close duration choice",
-      "subtitle": "{{plan}} plan: save {{amount}}.",
-      "months_one": "{{count}} month",
-      "months_other": "{{count}} months",
-      "perMonth": "{{amount}} per month",
+      "perMonth": "monthly",
       "unavailable": "Not available",
       "details": {
-        "startsOn": "First pay-in",
-        "payout": "You get the total",
-        "cashback": "Cashback",
-        "total": "Total to receive"
+        "startsOn": "Starts on",
+        "payout": "Payout date",
+        "total": "Total payout"
       },
       "invalidQuote": "We couldn't calculate this plan. Try again later.",
       "next": "Next",
-      "confirmationPending": "Soon you'll be able to subscribe to this plan from here."
+      "confirmationPending": "Soon you'll be able to subscribe to this plan from here.",
+      "monthsLabel_one": "Month",
+      "monthsLabel_other": "Months"
     }
   },
   "profile": {

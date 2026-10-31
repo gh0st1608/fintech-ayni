@@ -61,16 +61,19 @@ describe('DurationSheet (COPAYNI-33)', () => {
     await renderWithProviders(<SavingCirclesScreen />);
     await fireEvent.press(await screen.findByTestId('saving-plan-lite'));
 
-    expect(await screen.findByTestId('duration-6')).toHaveTextContent(/6 meses.*500.*al mes/);
-    expect(screen.getByTestId('duration-12')).toHaveTextContent(/12 meses.*250.*al mes/);
-    expect(screen.getByTestId('duration-24')).toHaveTextContent(/24 meses.*125.*al mes/);
-    expect(screen.getByRole('button', { name: 'Siguiente' })).toBeDisabled();
-
-    await fireEvent.press(screen.getByTestId('duration-6'));
-    expect(await screen.findByTestId('quote-startsOn')).toHaveTextContent(/nov.*2026/i);
+    // Figma 55:9220: la primera duración viene elegida, con su detalle a la vista.
+    expect(await screen.findByTestId('duration-6')).toHaveTextContent(/6\s*Meses.*500.*al mes/);
+    expect(screen.getByTestId('duration-12')).toHaveTextContent(/12\s*Meses.*250.*al mes/);
+    expect(screen.getByTestId('duration-24')).toHaveTextContent(/24\s*Meses.*125.*al mes/);
+    expect(screen.getByRole('radio', { name: /^6 Meses/ })).toBeChecked();
+    expect(await screen.findByTestId('quote-startsOn')).toHaveTextContent(/Inicio.*nov.*2026/i);
     expect(screen.getByTestId('quote-payout')).toHaveTextContent(/may.*2027/i);
-    expect(screen.getByTestId('quote-cashback')).toHaveTextContent(/150/);
-    expect(screen.getByTestId('quote-total')).toHaveTextContent(/3\.?150/);
+    // El total del Figma ya incluye el cashback.
+    expect(screen.getByTestId('quote-total')).toHaveTextContent(/Total a recibir.*3\.?150/);
+
+    await fireEvent.press(screen.getByTestId('duration-12'));
+    await waitFor(() => expect(screen.getByTestId('quote-payout')).toHaveTextContent(/nov.*2027/i));
+    expect(screen.getByRole('radio', { name: /^12 Meses/ })).toBeChecked();
 
     // La confirmación espera el diseño (D5): Siguiente lo explica sin cerrar la hoja.
     await fireEvent.press(screen.getByRole('button', { name: 'Siguiente' }));

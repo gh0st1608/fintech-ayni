@@ -218,20 +218,18 @@
     "duration": {
       "title": "Elige la duración",
       "close": "Cerrar la elección de duración",
-      "subtitle": "Plan {{plan}}: ahorra {{amount}}.",
-      "months_one": "{{count}} mes",
-      "months_other": "{{count}} meses",
-      "perMonth": "{{amount}} al mes",
+      "perMonth": "al mes",
       "unavailable": "No disponible",
       "details": {
-        "startsOn": "Primera cuota",
-        "payout": "Recibes el total",
-        "cashback": "Cashback",
+        "startsOn": "Inicio",
+        "payout": "Fecha de payout",
         "total": "Total a recibir"
       },
       "invalidQuote": "No pudimos calcular este plan. Inténtalo más tarde.",
       "next": "Siguiente",
-      "confirmationPending": "Pronto podrás suscribirte a este plan desde aquí."
+      "confirmationPending": "Pronto podrás suscribirte a este plan desde aquí.",
+      "monthsLabel_one": "Mes",
+      "monthsLabel_other": "Meses"
     }
   },
   "profile": {

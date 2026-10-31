@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ActivityIndicator, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
 
 import {
   InvalidSavingQuoteError,
@@ -14,10 +14,8 @@ import { AppText } from '@/presentation/shared/components/AppText';
 import { BottomSheet } from '@/presentation/shared/components/BottomSheet';
 import { Button } from '@/presentation/shared/components/Button';
 import { InfoBanner } from '@/presentation/shared/components/InfoBanner';
-import { RadioCard, RadioGroup } from '@/presentation/shared/components/RadioCard';
-import { colors, spacing } from '@/presentation/theme/tokens';
+import { colors, radius, spacing } from '@/presentation/theme/tokens';
 
-import { savingPlanName } from '../savingPlanName';
 import { useSavingQuotes } from '../useSavings';
 
 interface DurationSheetProps {
@@ -44,7 +42,7 @@ export function DurationSheet({ plan, durations, onClose }: DurationSheetProps) 
       onClose={onClose}
       testID="duration-sheet"
     >
-      {/* Se monta en cada apertura: siempre parte sin duración elegida. */}
+      {/* Se monta en cada apertura: siempre parte de la primera duración. */}
       {plan && <DurationForm plan={plan} durations={durations} />}
     </BottomSheet>
   );
@@ -52,43 +50,32 @@ export function DurationSheet({ plan, durations, onClose }: DurationSheetProps) 
 
 function DurationForm({ plan, durations }: { plan: SavingPlan; durations: number[] }) {
   const { t } = useTranslation();
-  const formatMoney = useFormatMoney();
   const quotes = useSavingQuotes(plan.id, durations);
-  const [months, setMonths] = useState<number | null>(null);
+  // Como el Figma 55:9220: la primera duración viene elegida y su detalle a la vista.
+  const [months, setMonths] = useState<number | undefined>(durations[0]);
   const [continued, setContinued] = useState(false);
-  const selected = months === null ? undefined : quotes[durations.indexOf(months)];
-
-  const optionDescription = (index: number) => {
-    const quote = quotes[index]!;
-    if (quote.data) {
-      return t('saving.duration.perMonth', { amount: formatMoney(quote.data.monthlyInstallment) });
-    }
-    return quote.isError ? t('saving.duration.unavailable') : t('common.loading');
-  };
+  const selected = months === undefined ? undefined : quotes[durations.indexOf(months)];
 
   return (
     <>
-      <AppText color={colors.neutral500}>
-        {t('saving.duration.subtitle', {
-          plan: savingPlanName(t, plan.id),
-          amount: formatMoney(plan.target, { trimZeroDecimals: true }),
-        })}
-      </AppText>
-      <RadioGroup label={t('saving.duration.title')}>
+      <View
+        accessibilityRole="radiogroup"
+        accessibilityLabel={t('saving.duration.title')}
+        style={styles.options}
+      >
         {durations.map((option, index) => (
-          <RadioCard
+          <DurationOption
             key={option}
-            title={t('saving.duration.months', { count: option })}
-            description={optionDescription(index)}
+            months={option}
+            quote={quotes[index]!}
             selected={months === option}
             onSelect={() => {
               setMonths(option);
               setContinued(false);
             }}
-            testID={`duration-${option}`}
           />
         ))}
-      </RadioGroup>
+      </View>
       {selected?.isPending && <ActivityIndicator accessibilityLabel={t('common.loading')} />}
       {selected?.isError && (
         <View style={styles.error} testID="quote-error">
@@ -117,21 +104,81 @@ function DurationForm({ plan, durations }: { plan: SavingPlan; durations: number
   );
 }
 
+interface DurationOptionProps {
+  months: number;
+  quote: { data?: SavingQuote; isError: boolean };
+  selected: boolean;
+  onSelect: () => void;
+}
+
+/** Tarjeta de duración del Figma: los meses arriba y la cuota mensual debajo de una línea. */
+function DurationOption({ months, quote, selected, onSelect }: DurationOptionProps) {
+  const { t } = useTranslation();
+  const formatMoney = useFormatMoney();
+  const color = selected ? colors.primary : colors.black;
+  let installment: string;
+  if (quote.data) {
+    installment = formatMoney(quote.data.monthlyInstallment, { trimZeroDecimals: true });
+  } else {
+    installment = quote.isError ? t('saving.duration.unavailable') : t('common.loading');
+  }
+  const monthsLabel = t('saving.duration.monthsLabel', { count: months });
+  const perMonth = t('saving.duration.perMonth');
+
+  return (
+    <Pressable
+      accessibilityRole="radio"
+      accessibilityLabel={`${months} ${monthsLabel}. ${installment} ${perMonth}`}
+      accessibilityState={{ checked: selected }}
+      onPress={onSelect}
+      style={({ pressed }) => [
+        styles.option,
+        selected && styles.optionSelected,
+        pressed && styles.pressed,
+      ]}
+      testID={`duration-${months}`}
+    >
+      <View style={styles.optionTop} importantForAccessibility="no-hide-descendants">
+        <AppText variant="title" weight="semibold" color={color}>
+          {months}
+        </AppText>
+        <AppText variant="caption" color={color}>
+          {monthsLabel}
+        </AppText>
+      </View>
+      <View style={styles.optionBottom} importantForAccessibility="no-hide-descendants">
+        <AppText weight="semibold" color={color}>
+          {installment}
+        </AppText>
+        <AppText variant="caption" color={color} style={styles.small}>
+          {perMonth}
+        </AppText>
+      </View>
+    </Pressable>
+  );
+}
+
 function QuoteDetails({ quote }: { quote: SavingQuote }) {
   const { t } = useTranslation();
   const formatMoney = useFormatMoney();
   const formatDate = useFormatDate();
-  const rows = [
+  // El total ya incluye el cashback (Total Payout del Figma).
+  const columns = [
     { key: 'startsOn', value: formatDate(periodDate(quote.startsOn), 'monthYear') },
     { key: 'payout', value: formatDate(periodDate(quote.payoutPeriod), 'monthYear') },
-    { key: 'cashback', value: formatMoney(quote.cashback) },
-    { key: 'total', value: formatMoney(quote.total) },
+    { key: 'total', value: formatMoney(quote.total, { trimZeroDecimals: true }) },
   ] as const;
   return (
     <View style={styles.details} testID="quote-details" accessibilityLiveRegion="polite">
-      {rows.map(({ key, value }) => (
-        <View key={key} style={styles.row} testID={`quote-${key}`}>
-          <AppText color={colors.neutral500}>{t(`saving.duration.details.${key}`)}</AppText>
+      {columns.map(({ key, value }, index) => (
+        <View
+          key={key}
+          style={[styles.column, index < columns.length - 1 && styles.columnDivider]}
+          testID={`quote-${key}`}
+        >
+          <AppText variant="caption" color={colors.neutral500} style={styles.label}>
+            {t(`saving.duration.details.${key}`)}
+          </AppText>
           <AppText weight="semibold">{value}</AppText>
         </View>
       ))}
@@ -141,6 +188,37 @@ function QuoteDetails({ quote }: { quote: SavingQuote }) {
 
 const styles = StyleSheet.create({
   error: { gap: spacing.m },
-  details: { gap: spacing.sm },
-  row: { flexDirection: 'row', justifyContent: 'space-between', gap: spacing.m },
+  options: { flexDirection: 'row', gap: spacing.m },
+  option: {
+    flex: 1,
+    alignItems: 'center',
+    paddingVertical: spacing.m,
+    paddingHorizontal: spacing.sm,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.secondary200,
+    backgroundColor: colors.background,
+  },
+  optionSelected: { borderWidth: 2, borderColor: colors.primary },
+  pressed: { opacity: 0.85 },
+  optionTop: {
+    alignSelf: 'stretch',
+    alignItems: 'center',
+    gap: spacing.xs,
+    paddingBottom: spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.secondary100,
+  },
+  optionBottom: { alignItems: 'center', gap: spacing.xxs, paddingTop: spacing.sm },
+  small: { fontSize: 10, lineHeight: 14 },
+  details: {
+    flexDirection: 'row',
+    padding: spacing.lg,
+    borderRadius: radius.sm,
+    borderWidth: 1,
+    borderColor: colors.secondary200,
+  },
+  column: { flex: 1, gap: spacing.xxs, paddingHorizontal: spacing.sm },
+  columnDivider: { borderRightWidth: 1, borderRightColor: colors.secondary300 },
+  label: { fontSize: 10, textTransform: 'uppercase' },
 });
