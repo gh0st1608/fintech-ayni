@@ -2,6 +2,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 
+import NO_PAYMENTS from '@assets/images/payment/no-payments.png';
 import type { PaymentSummary } from '@/domain/payments/PaymentSummary';
 import { useFormatDate } from '@/presentation/formatters/formatDate';
 import { useFormatMoney } from '@/presentation/formatters/formatMoney';
@@ -84,6 +85,8 @@ export function PaymentScreen({
           <EmptyState
             title={t('payment.empty.title')}
             description={t('payment.empty.description')}
+            illustration={NO_PAYMENTS}
+            illustrationSize={128}
             action={{ label: t('payment.empty.join'), onPress: onJoin }}
             testID="payment-empty"
           />

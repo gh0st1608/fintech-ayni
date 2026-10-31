@@ -12,6 +12,8 @@ interface ListItemProps {
   title: string;
   description?: string;
   icon?: IconName;
+  /** Color del icono; primario por defecto. */
+  iconColor?: string;
   /** Contenido a la derecha (badge, toggle, icono de estado). Por defecto, una flecha de avance. */
   trailing?: React.ReactNode;
   onPress?: () => void;
@@ -25,6 +27,7 @@ export function ListItem({
   title,
   description,
   icon,
+  iconColor = colors.primary,
   trailing,
   onPress,
   disabled = false,
@@ -46,7 +49,7 @@ export function ListItem({
         <Ionicons
           name={icon}
           size={22}
-          color={colors.primary}
+          color={iconColor}
           accessibilityElementsHidden
           importantForAccessibility="no"
         />

@@ -340,7 +340,7 @@
       "title": "Payment History",
       "payments": "Payments",
       "payouts": "Payouts",
-      "emptyPayments": "You don't have any payments yet.",
+      "emptyPayments": "You don't have any payment history yet.",
       "emptyPayouts": "You don't have any payouts yet.",
       "explore": "Explore Circles",
       "forMonth": "{{month}} circle",
@@ -350,13 +350,19 @@
         "debtSettlement": "Debt settled",
         "payout": "Payout received",
         "refund": "Refund"
+      },
+      "emptyDescription": "Transactions will appear here whenever you pay an installment or receive a payout.",
+      "description": {
+        "installment": "You have paid for circle for the month of <month>{{month}}</month>.",
+        "debtSettlement": "You settled the debt for the month of <month>{{month}}</month>.",
+        "payout": "You received the payout for the month of <month>{{month}}</month>.",
+        "refund": "You were refunded for the month of <month>{{month}}</month>."
       }
     },
     "eligibility": {
       "title": "Payout Eligibility",
       "eligible": "You meet all the requirements to receive your payout.",
-      "notEligible": "Complete the pending requirements to receive your payout.",
-      "info": "Check these requirements before your payout month.",
+      "notEligible": "Make sure to correct the following:",
       "requirements": {
         "nationalId": "National ID",
         "insuranceNote": "Insurance Note",
@@ -368,6 +374,13 @@
         "met": "Completed",
         "pending": "Pending",
         "unavailable": "Available soon"
+      },
+      "descriptions": {
+        "nationalId": "You will need to upload a valid National ID.",
+        "insuranceNote": "You will need to sign the Insurance Note first. If you signed it, ignore this.",
+        "payoutMethod": "You will need to select a payout method.",
+        "contract": "You will need to sign the contract first.",
+        "duePayments": "You will need to be up to date with your pay-ins."
       }
     },
     "settings": {
@@ -377,37 +390,46 @@
       "saveError": "Couldn't save the change: {{reason}}",
       "changePayoutMethod": "Change Payout Method",
       "savedCards": "Saved Cards",
-      "save": "Save"
+      "save": "Save",
+      "changePayoutMethodDescription": "You can change the payout method before your payout month.",
+      "savedCardsDescription": "Manage your pay-in cards."
     },
     "cards": {
-      "empty": "You don't have any saved cards yet.",
+      "empty": "There are no saved cards",
       "add": "Add card",
       "masked": "{{brand}} •••• {{lastFour}}",
-      "expires": "Expires {{month}}/{{year}}",
-      "default": "Default",
-      "makeDefault": "Use for charges",
       "remove": "Remove",
       "cancel": "Cancel",
       "removeTitle": "Remove card",
-      "removeMessage": "Remove the card ending in {{lastFour}}?"
+      "removeMessage": "Remove the card ending in {{lastFour}}?",
+      "title": "Saved Cards",
+      "emptyDescription": "You can add new cards now or save your card information for future payments.",
+      "addNew": "Add New",
+      "brands": "Visa, Mastercard and more",
+      "defaultHint": "Use this card for your pay-ins",
+      "removeLabel": "Remove the card ending in {{lastFour}}"
     },
     "addCard": {
       "title": "Add Card",
       "number": "Card number",
       "holderName": "Cardholder name",
       "expiration": "Expiration",
-      "expirationPlaceholder": "MM/YY",
       "securityCode": "Security code",
       "documentNumber": "Cardholder ID number",
       "secure": "Your details go straight to the payment gateway. Ayni doesn't store the card number or security code.",
-      "submit": "Save card",
+      "submit": "Save",
       "invalid": {
         "number": "Check the card number.",
         "holderName": "Write the name as it appears on the card.",
         "expiration": "Check the expiration (MM/YY).",
         "securityCode": "The code has 3 or 4 digits.",
         "documentNumber": "Check the ID number."
-      }
+      },
+      "numberPlaceholder": "0000 0000 0000 0000",
+      "holderNamePlaceholder": "As it appears on the card",
+      "month": "Month",
+      "year": "Year",
+      "securityCodePlaceholder": "CVC"
     },
     "pay": {
       "title": "Pay installment",

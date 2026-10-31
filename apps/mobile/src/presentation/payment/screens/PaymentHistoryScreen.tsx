@@ -1,7 +1,9 @@
 import { useState } from 'react';
-import { useTranslation } from 'react-i18next';
+import Ionicons from '@expo/vector-icons/Ionicons';
+import { Trans, useTranslation } from 'react-i18next';
 import { ActivityIndicator, FlatList, RefreshControl, StyleSheet, View } from 'react-native';
 
+import NO_HISTORY from '@assets/images/payment/no-history.png';
 import type { Transaction, TransactionType } from '@/domain/payments/Transaction';
 import { useFormatDate } from '@/presentation/formatters/formatDate';
 import { useFormatMoney } from '@/presentation/formatters/formatMoney';
@@ -99,7 +101,13 @@ function TransactionList({
           title={t(
             type === 'payment' ? 'payment.history.emptyPayments' : 'payment.history.emptyPayouts',
           )}
-          action={{ label: t('payment.history.explore'), onPress: onExploreCircles }}
+          description={t('payment.history.emptyDescription')}
+          illustration={NO_HISTORY}
+          action={{
+            label: t('payment.history.explore'),
+            onPress: onExploreCircles,
+            variant: 'link',
+          }}
           testID="transactions-empty"
         />
       }
@@ -124,28 +132,42 @@ function TransactionList({
   );
 }
 
+const KIND_ICON = {
+  installment: { name: 'arrow-up-circle-outline', color: colors.error },
+  debtSettlement: { name: 'arrow-up-circle-outline', color: colors.error },
+  payout: { name: 'arrow-down-circle-outline', color: colors.success },
+  refund: { name: 'arrow-down-circle-outline', color: colors.success },
+} as const satisfies Record<Transaction['kind'], { name: string; color: string }>;
+
+/** Fila del Figma: monto y fecha arriba; debajo, qué fue con el mes del círculo resaltado. */
 function TransactionRow({ transaction }: { transaction: Transaction }) {
   const { t } = useTranslation();
   const formatMoney = useFormatMoney();
   const formatDate = useFormatDate();
   const occurredAt = formatDate(transaction.occurredAt, 'dateTime');
-
+  const icon = KIND_ICON[transaction.kind];
   return (
     <Card style={styles.row} testID={`transaction-${transaction.id}`}>
       <View style={styles.rowText}>
-        <AppText weight="semibold">{t(`payment.history.kind.${transaction.kind}`)}</AppText>
-        <AppText variant="caption" color={colors.neutral500}>
-          {occurredAt}
-        </AppText>
-        {transaction.period && (
-          <AppText variant="caption" color={colors.neutral500}>
-            {t('payment.history.forMonth', {
-              month: formatDate(periodDate(transaction.period), 'monthYear'),
-            })}
+        <View style={styles.rowHeader}>
+          <Ionicons name={icon.name} size={20} color={icon.color} />
+          <AppText weight="semibold">{formatMoney(transaction.amount)}</AppText>
+          <AppText variant="caption" color={colors.neutral500} style={styles.small}>
+            {occurredAt}
           </AppText>
-        )}
+        </View>
+        <AppText variant="caption" color={colors.neutral500}>
+          {transaction.period ? (
+            <Trans
+              i18nKey={`payment.history.description.${transaction.kind}`}
+              values={{ month: formatDate(periodDate(transaction.period), 'monthYear') }}
+              components={{ month: <AppText variant="caption" color={colors.primary} /> }}
+            />
+          ) : (
+            t(`payment.history.kind.${transaction.kind}`)
+          )}
+        </AppText>
       </View>
-      <AppText weight="semibold">{formatMoney(transaction.amount)}</AppText>
     </Card>
   );
 }
@@ -156,4 +178,6 @@ const styles = StyleSheet.create({
   list: { flexGrow: 1, gap: spacing.m, paddingVertical: spacing.l },
   row: { flexDirection: 'row', alignItems: 'center', gap: spacing.m },
   rowText: { flex: 1, gap: spacing.xs },
+  rowHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
+  small: { fontSize: 10 },
 });

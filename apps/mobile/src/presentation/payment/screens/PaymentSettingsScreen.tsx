@@ -19,8 +19,7 @@ interface PaymentSettingsScreenProps {
 
 /**
  * Payment Settings (Figma 55:10052, COPAYNI-38): deducir el pay-in del payout y accesos a
- * "Change Payout Method" y "Saved Cards". Sin el contexto de diseño (límite de Figma): se armó
- * con el inventario y los componentes existentes.
+ * "Change Payout Method" y "Saved Cards", cada uno con la descripción del Figma.
  */
 export function PaymentSettingsScreen({
   onChangePayoutMethod,
@@ -68,13 +67,16 @@ export function PaymentSettingsScreen({
         )}
         <ListItem
           title={t('payment.settings.changePayoutMethod')}
+          description={t('payment.settings.changePayoutMethodDescription')}
           icon="wallet-outline"
           onPress={onChangePayoutMethod}
           testID="settings-payout-method"
         />
         <ListItem
           title={t('payment.settings.savedCards')}
-          description={onOpenSavedCards ? undefined : t('common.comingSoon')}
+          description={
+            onOpenSavedCards ? t('payment.settings.savedCardsDescription') : t('common.comingSoon')
+          }
           icon="card-outline"
           onPress={onOpenSavedCards}
           disabled={!onOpenSavedCards}

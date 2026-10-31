@@ -32,16 +32,26 @@ describe('PayoutEligibilityScreen (COPAYNI-36)', () => {
     );
 
     expect(await screen.findByTestId('eligibility-status')).toHaveTextContent(
-      /Completa los requisitos pendientes/,
+      /Asegúrate de corregir lo siguiente/,
     );
-    expect(screen.getByTestId('requirement-duePayments')).toHaveTextContent(
-      /Pagos al día.*Completado/,
+    // Figma 55:9892: cada requisito explica qué falta; el estado va en el icono y se anuncia.
+    expect(screen.getByTestId('requirement-duePayments')).toHaveTextContent(/Pagos al día/);
+    expect(screen.getByTestId('requirement-duePayments')).toHaveProp(
+      'accessibilityHint',
+      'Completado',
     );
     expect(screen.getByTestId('requirement-contract')).toHaveTextContent(
-      /Contrato.*Disponible pronto/,
+      /Contrato.*Necesitas firmar el contrato/,
+    );
+    expect(screen.getByTestId('requirement-contract')).toHaveProp(
+      'accessibilityHint',
+      'Disponible pronto',
     );
     // Pendiente sin acción en la app todavía (documentos, COPAYNI-47): no es pulsable.
-    expect(screen.getByTestId('requirement-nationalId')).toHaveTextContent(/Pendiente/);
+    expect(screen.getByTestId('requirement-nationalId')).toHaveProp(
+      'accessibilityHint',
+      'Pendiente',
+    );
     expect(screen.queryByRole('button', { name: /Documento de identidad/ })).toBeNull();
 
     await fireEvent.press(screen.getByRole('button', { name: /Método de cobro/ }));

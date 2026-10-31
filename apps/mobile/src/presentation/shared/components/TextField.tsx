@@ -18,6 +18,8 @@ type IconName = React.ComponentProps<typeof Ionicons>['name'];
 
 export interface TextFieldProps extends Omit<TextInputProps, 'style' | 'placeholderTextColor'> {
   label: string;
+  /** Oculta la etiqueta visible (p. ej. Mes y Año bajo "Vencimiento"); se sigue anunciando. */
+  hideLabel?: boolean;
   /** Mensaje de error del campo; cambia el borde y se anuncia como alerta. */
   error?: string;
   icon?: IconName;
@@ -27,6 +29,7 @@ export interface TextFieldProps extends Omit<TextInputProps, 'style' | 'placehol
 /** Campo de texto del Figma: etiqueta encima, icono opcional, borde de foco y error. */
 export function TextField({
   label,
+  hideLabel = false,
   error,
   icon,
   editable = true,
@@ -40,9 +43,11 @@ export function TextField({
 
   return (
     <View style={styles.field}>
-      <AppText weight="semibold" importantForAccessibility="no">
-        {label}
-      </AppText>
+      {!hideLabel && (
+        <AppText weight="semibold" importantForAccessibility="no">
+          {label}
+        </AppText>
+      )}
       <View style={[styles.box, { borderColor }, !editable && styles.readOnly]}>
         {icon && (
           <Ionicons

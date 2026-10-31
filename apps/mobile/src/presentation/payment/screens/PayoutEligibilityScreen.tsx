@@ -6,7 +6,6 @@ import type { PayoutRequirement, RequirementStatus } from '@/domain/payments/Pay
 import { errorMessage } from '@/presentation/i18n/errorMessageKey';
 import { AppText } from '@/presentation/shared/components/AppText';
 import { Button } from '@/presentation/shared/components/Button';
-import { InfoBanner } from '@/presentation/shared/components/InfoBanner';
 import { ListItem } from '@/presentation/shared/components/ListItem';
 import { Screen } from '@/presentation/shared/components/Screen';
 import { colors, spacing } from '@/presentation/theme/tokens';
@@ -20,15 +19,15 @@ interface PayoutEligibilityScreenProps {
 
 const STATUS_ICON = {
   met: { name: 'checkmark-circle', color: colors.success },
-  pending: { name: 'warning', color: colors.error },
+  pending: { name: 'alert-circle-outline', color: colors.error },
   unavailable: { name: 'time-outline', color: colors.neutral500 },
 } as const satisfies Record<RequirementStatus, { name: string; color: string }>;
 
 /**
  * Payout Eligibility (Figma 55:9892, COPAYNI-36): checklist de National ID, Insurance Note,
  * Payout Method, Contract y Due Payments con su estado (✔ o ⚠) y la acción que lo corrige. El
- * backend calcula cada requisito. Sin el contexto de diseño (límite de Figma): se armó con el
- * inventario y los componentes existentes.
+ * backend calcula cada requisito. Como en el Figma, Due Payments va aparte, con su estado a la
+ * derecha.
  */
 export function PayoutEligibilityScreen({ actions }: PayoutEligibilityScreenProps) {
   const { t } = useTranslation();
@@ -59,6 +58,8 @@ export function PayoutEligibilityScreen({ actions }: PayoutEligibilityScreenProp
   }
 
   const { isEligible, requirements } = eligibility.data;
+  const checklist = requirements.filter(({ requirement }) => requirement !== 'duePayments');
+  const duePayments = requirements.find(({ requirement }) => requirement === 'duePayments');
   return (
     <Screen edges={['bottom']}>
       <ScrollView
@@ -73,24 +74,40 @@ export function PayoutEligibilityScreen({ actions }: PayoutEligibilityScreenProp
         <AppText testID="eligibility-status" weight="semibold">
           {t(isEligible ? 'payment.eligibility.eligible' : 'payment.eligibility.notEligible')}
         </AppText>
-        {requirements.map(({ requirement, status }) => {
+        {checklist.map(({ requirement, status }) => {
           const action = status === 'pending' ? actions[requirement] : undefined;
           const icon = STATUS_ICON[status];
           return (
             <ListItem
               key={requirement}
               title={t(`payment.eligibility.requirements.${requirement}`)}
-              description={t(`payment.eligibility.status.${status}`)}
+              description={t(`payment.eligibility.descriptions.${requirement}`)}
+              icon={icon.name}
+              iconColor={icon.color}
+              accessibilityHint={t(`payment.eligibility.status.${status}`)}
               onPress={action}
-              trailing={
-                action ? undefined : <Ionicons name={icon.name} size={24} color={icon.color} />
-              }
               testID={`requirement-${requirement}`}
             />
           );
         })}
-        {/* Hoy el ciclo paga aunque falte un requisito: qué pasa entonces está pendiente con el PO. */}
-        <InfoBanner message={t('payment.eligibility.info')} />
+        {duePayments && (
+          <View style={styles.divided}>
+            <ListItem
+              title={t('payment.eligibility.requirements.duePayments')}
+              icon="card-outline"
+              accessibilityHint={t(`payment.eligibility.status.${duePayments.status}`)}
+              onPress={duePayments.status === 'pending' ? actions.duePayments : undefined}
+              trailing={
+                <Ionicons
+                  name={STATUS_ICON[duePayments.status].name}
+                  size={24}
+                  color={STATUS_ICON[duePayments.status].color}
+                />
+              }
+              testID="requirement-duePayments"
+            />
+          </View>
+        )}
       </ScrollView>
     </Screen>
   );
@@ -100,4 +117,5 @@ const styles = StyleSheet.create({
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: spacing.lg },
   centerText: { textAlign: 'center' },
   content: { gap: spacing.m, paddingVertical: spacing.l },
+  divided: { paddingTop: spacing.l, borderTopWidth: 1, borderTopColor: colors.secondary100 },
 });

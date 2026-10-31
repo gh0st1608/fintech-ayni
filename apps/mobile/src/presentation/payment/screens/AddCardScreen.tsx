@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ScrollView, StyleSheet } from 'react-native';
+import { ScrollView, StyleSheet, View } from 'react-native';
 
 import { type CardField, digitsOnly, invalidCardFields } from '@/domain/payments/CardDetails';
 import { useContainer } from '@/presentation/providers/ContainerProvider';
 import { AppText } from '@/presentation/shared/components/AppText';
 import { Button } from '@/presentation/shared/components/Button';
+import { FieldError } from '@/presentation/shared/components/FieldError';
 import { Screen } from '@/presentation/shared/components/Screen';
 import { TextField } from '@/presentation/shared/components/TextField';
 import { colors, spacing } from '@/presentation/theme/tokens';
@@ -13,18 +14,19 @@ import { colors, spacing } from '@/presentation/theme/tokens';
 import { paymentErrorMessage } from '../paymentErrorMessage';
 import { useAddCard } from '../useCards';
 
-/** "MM/AA" → mes y año completos; NaN si no se puede leer. */
-function parseExpiration(value: string): { month: number; year: number } {
-  const match = /^(\d{1,2})\s*\/\s*(\d{2}|\d{4})$/.exec(value.trim());
-  if (!match) return { month: Number.NaN, year: Number.NaN };
-  const year = Number(match[2]);
-  return { month: Number(match[1]), year: year < 100 ? 2000 + year : year };
+/** Mes (MM) y año (AA o AAAA) del vencimiento; NaN si no se pueden leer. */
+function parseExpiration(month: string, year: string): { month: number; year: number } {
+  if (!/^\d{1,2}$/.test(month.trim()) || !/^(\d{2}|\d{4})$/.test(year.trim())) {
+    return { month: Number.NaN, year: Number.NaN };
+  }
+  const fullYear = Number(year);
+  return { month: Number(month), year: fullYear < 100 ? 2000 + fullYear : fullYear };
 }
 
 /**
  * Add Card (Figma 55:10158, COPAYNI-40). La tarjeta se tokeniza en la pasarela y al backend solo
- * llega el token: los datos viven en el estado de esta pantalla y se descartan al salir. Sin el
- * contexto de diseño (límite de Figma): se armó con los componentes existentes.
+ * llega el token: los datos viven en el estado de esta pantalla y se descartan al salir. El DNI
+ * del titular no está en el Figma: la pasarela lo pide para tarjetas peruanas.
  */
 export function AddCardScreen({ onAdded }: { onAdded: () => void }) {
   const { t } = useTranslation();
@@ -33,7 +35,8 @@ export function AddCardScreen({ onAdded }: { onAdded: () => void }) {
   const [idempotencyKey] = useState(() => ids.next());
   const [number, setNumber] = useState('');
   const [holderName, setHolderName] = useState('');
-  const [expiration, setExpiration] = useState('');
+  const [expirationMonth, setExpirationMonth] = useState('');
+  const [expirationYear, setExpirationYear] = useState('');
   const [securityCode, setSecurityCode] = useState('');
   const [documentNumber, setDocumentNumber] = useState('');
   const [invalid, setInvalid] = useState<CardField[]>([]);
@@ -43,7 +46,7 @@ export function AddCardScreen({ onAdded }: { onAdded: () => void }) {
     invalid.includes(field) ? t(`payment.addCard.invalid.${field}`) : undefined;
 
   const submit = () => {
-    const { month, year } = parseExpiration(expiration);
+    const { month, year } = parseExpiration(expirationMonth, expirationYear);
     const card = {
       number,
       holderName,
@@ -63,6 +66,7 @@ export function AddCardScreen({ onAdded }: { onAdded: () => void }) {
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         <TextField
           label={t('payment.addCard.number')}
+          placeholder={t('payment.addCard.numberPlaceholder')}
           value={number}
           onChangeText={setNumber}
           keyboardType="number-pad"
@@ -74,6 +78,7 @@ export function AddCardScreen({ onAdded }: { onAdded: () => void }) {
         />
         <TextField
           label={t('payment.addCard.holderName')}
+          placeholder={t('payment.addCard.holderNamePlaceholder')}
           value={holderName}
           onChangeText={setHolderName}
           autoCapitalize="characters"
@@ -81,19 +86,41 @@ export function AddCardScreen({ onAdded }: { onAdded: () => void }) {
           error={fieldError('holderName')}
           testID="card-holder"
         />
-        <TextField
-          label={t('payment.addCard.expiration')}
-          placeholder={t('payment.addCard.expirationPlaceholder')}
-          value={expiration}
-          onChangeText={setExpiration}
-          keyboardType="numbers-and-punctuation"
-          autoComplete="cc-exp"
-          maxLength={7}
-          error={fieldError('expiration')}
-          testID="card-expiration"
-        />
+        <View style={styles.expiration}>
+          <AppText weight="semibold">{t('payment.addCard.expiration')}</AppText>
+          <View style={styles.expirationFields}>
+            <View style={styles.expirationField}>
+              <TextField
+                label={t('payment.addCard.month')}
+                hideLabel
+                placeholder={t('payment.addCard.month')}
+                value={expirationMonth}
+                onChangeText={setExpirationMonth}
+                keyboardType="number-pad"
+                autoComplete="cc-exp-month"
+                maxLength={2}
+                testID="card-exp-month"
+              />
+            </View>
+            <View style={styles.expirationField}>
+              <TextField
+                label={t('payment.addCard.year')}
+                hideLabel
+                placeholder={t('payment.addCard.year')}
+                value={expirationYear}
+                onChangeText={setExpirationYear}
+                keyboardType="number-pad"
+                autoComplete="cc-exp-year"
+                maxLength={4}
+                testID="card-exp-year"
+              />
+            </View>
+          </View>
+          <FieldError message={fieldError('expiration')} />
+        </View>
         <TextField
           label={t('payment.addCard.securityCode')}
+          placeholder={t('payment.addCard.securityCodePlaceholder')}
           value={securityCode}
           onChangeText={setSecurityCode}
           keyboardType="number-pad"
@@ -128,4 +155,7 @@ export function AddCardScreen({ onAdded }: { onAdded: () => void }) {
 
 const styles = StyleSheet.create({
   content: { gap: spacing.l, paddingVertical: spacing.l },
+  expiration: { gap: spacing.sm },
+  expirationFields: { flexDirection: 'row', gap: spacing.sm },
+  expirationField: { flex: 1 },
 });

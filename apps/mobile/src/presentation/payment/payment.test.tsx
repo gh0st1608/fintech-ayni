@@ -100,13 +100,16 @@ describe('PaymentHistoryScreen (COPAYNI-41)', () => {
       new InMemoryPaymentRepository('PEN', { latencyMs: 0, withDuePayments: true }),
     );
     const installment = await screen.findByTestId('transaction-t-2');
-    expect(installment).toHaveTextContent(/Cuota mensual/);
     expect(installment).toHaveTextContent(/5\.?600/);
-    expect(installment).toHaveTextContent(/Círculo de nov\.? 2026/i);
-    expect(screen.getByTestId('transaction-t-1')).toHaveTextContent(/Deuda saldada/);
+    expect(installment).toHaveTextContent(/Pagaste el círculo del mes de nov\.? 2026/i);
+    expect(screen.getByTestId('transaction-t-1')).toHaveTextContent(
+      /Saldaste la deuda|Deuda saldada/,
+    );
 
     await fireEvent.press(screen.getByRole('tab', { name: 'Cobros' }));
-    expect(await screen.findByTestId('transaction-t-3')).toHaveTextContent(/Payout recibido/);
+    expect(await screen.findByTestId('transaction-t-3')).toHaveTextContent(
+      /Recibiste el payout|Payout recibido/,
+    );
     expect(screen.queryByTestId('transaction-t-2')).toBeNull();
   });
 

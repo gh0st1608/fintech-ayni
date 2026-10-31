@@ -34,7 +34,7 @@ function confirmAlerts() {
 describe('SavedCardsScreen (COPAYNI-39)', () => {
   afterEach(() => jest.restoreAllMocks());
 
-  it('lista las tarjetas con la predeterminada primero y cambia la predeterminada', async () => {
+  it('marca la tarjeta de cobro y permite cambiarla', async () => {
     const cards = new InMemoryCardRepository({
       latencyMs: 0,
       cards: [
@@ -46,14 +46,12 @@ describe('SavedCardsScreen (COPAYNI-39)', () => {
       <SavedCardsScreen onAddCard={jest.fn()} />,
       createTestContainer({ cards }),
     );
-    expect(await screen.findByTestId('card-card-1')).toHaveTextContent(
-      /VISA •••• 3704.*Predeterminada.*Vence 11\/2030/,
-    );
+    expect(await screen.findByTestId('card-card-1')).toHaveTextContent(/VISA •••• 3704/);
+    expect(screen.getByRole('radio', { name: /3704/ })).toBeChecked();
 
-    await fireEvent.press(screen.getByRole('button', { name: 'Usar para cobros' }));
-    await waitFor(() =>
-      expect(screen.getByTestId('card-card-2')).toHaveTextContent(/Predeterminada/),
-    );
+    await fireEvent.press(screen.getByRole('radio', { name: /0604/ }));
+    await waitFor(() => expect(screen.getByRole('radio', { name: /0604/ })).toBeChecked());
+    expect(screen.getByRole('radio', { name: /3704/ })).not.toBeChecked();
   });
 
   it('no deja borrar la predeterminada si hay otras y explica qué hacer', async () => {
@@ -67,20 +65,26 @@ describe('SavedCardsScreen (COPAYNI-39)', () => {
       createTestContainer({ cards }),
     );
     await screen.findByTestId('card-card-1');
-    await fireEvent.press(screen.getAllByRole('button', { name: 'Eliminar' })[0]!);
+    await fireEvent.press(
+      screen.getByRole('button', { name: 'Eliminar la tarjeta terminada en 3704' }),
+    );
 
     expect(await screen.findByText(/Elige otra tarjeta para los cobros/)).toBeTruthy();
     expect(screen.getByTestId('card-card-1')).toBeTruthy();
 
-    await fireEvent.press(screen.getAllByRole('button', { name: 'Eliminar' })[1]!);
+    await fireEvent.press(
+      screen.getByRole('button', { name: 'Eliminar la tarjeta terminada en 0604' }),
+    );
     await waitFor(() => expect(screen.queryByTestId('card-card-2')).toBeNull());
   });
 
   it('sin tarjetas muestra el estado vacío y "Agregar tarjeta"', async () => {
     const onAddCard = jest.fn();
     await renderWithProviders(<SavedCardsScreen onAddCard={onAddCard} />);
-    expect(await screen.findByTestId('cards-empty')).toBeTruthy();
-    await fireEvent.press(screen.getByRole('button', { name: 'Agregar tarjeta' }));
+    expect(await screen.findByTestId('cards-empty')).toHaveTextContent(
+      /No tienes tarjetas guardadas/,
+    );
+    await fireEvent.press(screen.getByRole('button', { name: /Agregar tarjeta/ }));
     expect(onAddCard).toHaveBeenCalled();
   });
 });
@@ -89,7 +93,8 @@ describe('AddCardScreen (COPAYNI-40)', () => {
   async function fill(number: string) {
     await fireEvent.changeText(screen.getByTestId('card-number'), number);
     await fireEvent.changeText(screen.getByTestId('card-holder'), 'ANA QUISPE');
-    await fireEvent.changeText(screen.getByTestId('card-expiration'), '11/30');
+    await fireEvent.changeText(screen.getByTestId('card-exp-month'), '11');
+    await fireEvent.changeText(screen.getByTestId('card-exp-year'), '30');
     await fireEvent.changeText(screen.getByTestId('card-cvc'), '123');
     await fireEvent.changeText(screen.getByTestId('card-document'), '45678912');
   }
@@ -99,8 +104,9 @@ describe('AddCardScreen (COPAYNI-40)', () => {
     const tokenize = jest.spyOn(setup.adapters.paymentTokenizer, 'tokenizeCard');
     await renderWithProviders(<AddCardScreen onAdded={jest.fn()} />, setup);
     await fireEvent.changeText(screen.getByTestId('card-number'), '4509 9535 6623 3705');
-    await fireEvent.changeText(screen.getByTestId('card-expiration'), '13/30');
-    await fireEvent.press(screen.getByRole('button', { name: 'Guardar tarjeta' }));
+    await fireEvent.changeText(screen.getByTestId('card-exp-month'), '13');
+    await fireEvent.changeText(screen.getByTestId('card-exp-year'), '30');
+    await fireEvent.press(screen.getByRole('button', { name: 'Guardar' }));
 
     expect(screen.getByText('Revisa el número de la tarjeta.')).toBeTruthy();
     expect(screen.getByText('Revisa el vencimiento (MM/AA).')).toBeTruthy();
@@ -114,7 +120,7 @@ describe('AddCardScreen (COPAYNI-40)', () => {
     const onAdded = jest.fn();
     await renderWithProviders(<AddCardScreen onAdded={onAdded} />, setup);
     await fill('4509 9535 6623 3704');
-    await fireEvent.press(screen.getByRole('button', { name: 'Guardar tarjeta' }));
+    await fireEvent.press(screen.getByRole('button', { name: 'Guardar' }));
 
     await waitFor(() => expect(onAdded).toHaveBeenCalled());
     const [token, key] = add.mock.calls[0]!;
@@ -125,7 +131,7 @@ describe('AddCardScreen (COPAYNI-40)', () => {
   it('muestra el rechazo de la pasarela', async () => {
     await renderWithProviders(<AddCardScreen onAdded={jest.fn()} />);
     await fill('4000 0000 0000 0002');
-    await fireEvent.press(screen.getByRole('button', { name: 'Guardar tarjeta' }));
+    await fireEvent.press(screen.getByRole('button', { name: 'Guardar' }));
     expect(await screen.findByText(/La tarjeta fue rechazada/)).toBeTruthy();
   });
 });

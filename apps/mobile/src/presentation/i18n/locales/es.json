@@ -350,13 +350,19 @@
         "debtSettlement": "Deuda saldada",
         "payout": "Payout recibido",
         "refund": "Devolución"
+      },
+      "emptyDescription": "Las transacciones aparecerán aquí cuando pagues una cuota o recibas un payout.",
+      "description": {
+        "installment": "Pagaste el círculo del mes de <month>{{month}}</month>.",
+        "debtSettlement": "Saldaste la deuda del círculo del mes de <month>{{month}}</month>.",
+        "payout": "Recibiste el payout del círculo del mes de <month>{{month}}</month>.",
+        "refund": "Te devolvimos el pago del círculo del mes de <month>{{month}}</month>."
       }
     },
     "eligibility": {
       "title": "Elegibilidad del payout",
       "eligible": "Cumples todos los requisitos para recibir tu payout.",
-      "notEligible": "Completa los requisitos pendientes para recibir tu payout.",
-      "info": "Revisa estos requisitos antes de tu mes de cobro.",
+      "notEligible": "Asegúrate de corregir lo siguiente:",
       "requirements": {
         "nationalId": "Documento de identidad",
         "insuranceNote": "Pagaré",
@@ -368,6 +374,13 @@
         "met": "Completado",
         "pending": "Pendiente",
         "unavailable": "Disponible pronto"
+      },
+      "descriptions": {
+        "nationalId": "Necesitas subir un documento de identidad vigente.",
+        "insuranceNote": "Necesitas firmar el pagaré. Si ya lo firmaste, ignora este paso.",
+        "payoutMethod": "Necesitas elegir un método de cobro.",
+        "contract": "Necesitas firmar el contrato.",
+        "duePayments": "Necesitas estar al día con tus cuotas."
       }
     },
     "settings": {
@@ -377,37 +390,46 @@
       "saveError": "No se pudo guardar el cambio: {{reason}}",
       "changePayoutMethod": "Cambiar método de cobro",
       "savedCards": "Tarjetas guardadas",
-      "save": "Guardar"
+      "save": "Guardar",
+      "changePayoutMethodDescription": "Puedes cambiar el método de cobro antes de tu mes de payout.",
+      "savedCardsDescription": "Administra las tarjetas con las que pagas tus cuotas."
     },
     "cards": {
-      "empty": "Todavía no tienes tarjetas guardadas.",
+      "empty": "No tienes tarjetas guardadas",
       "add": "Agregar tarjeta",
       "masked": "{{brand}} •••• {{lastFour}}",
-      "expires": "Vence {{month}}/{{year}}",
-      "default": "Predeterminada",
-      "makeDefault": "Usar para cobros",
       "remove": "Eliminar",
       "cancel": "Cancelar",
       "removeTitle": "Eliminar tarjeta",
-      "removeMessage": "¿Eliminar la tarjeta terminada en {{lastFour}}?"
+      "removeMessage": "¿Eliminar la tarjeta terminada en {{lastFour}}?",
+      "title": "Tarjetas guardadas",
+      "emptyDescription": "Puedes agregar una tarjeta ahora o guardarla al pagar para usarla después.",
+      "addNew": "Agregar nueva",
+      "brands": "Visa, Mastercard y más",
+      "defaultHint": "Usar esta tarjeta para cobrar las cuotas",
+      "removeLabel": "Eliminar la tarjeta terminada en {{lastFour}}"
     },
     "addCard": {
       "title": "Agregar tarjeta",
       "number": "Número de tarjeta",
       "holderName": "Nombre del titular",
       "expiration": "Vencimiento",
-      "expirationPlaceholder": "MM/AA",
       "securityCode": "Código de seguridad",
       "documentNumber": "DNI del titular",
       "secure": "Tus datos van directo a la pasarela de pago. Ayni no guarda el número ni el código de seguridad.",
-      "submit": "Guardar tarjeta",
+      "submit": "Guardar",
       "invalid": {
         "number": "Revisa el número de la tarjeta.",
         "holderName": "Escribe el nombre como aparece en la tarjeta.",
         "expiration": "Revisa el vencimiento (MM/AA).",
         "securityCode": "El código tiene 3 o 4 dígitos.",
         "documentNumber": "Revisa el número de documento."
-      }
+      },
+      "numberPlaceholder": "0000 0000 0000 0000",
+      "holderNamePlaceholder": "Como aparece en la tarjeta",
+      "month": "Mes",
+      "year": "Año",
+      "securityCodePlaceholder": "CVC"
     },
     "pay": {
       "title": "Pagar cuota",
