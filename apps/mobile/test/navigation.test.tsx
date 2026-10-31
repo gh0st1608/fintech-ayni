@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as SecureStore from 'expo-secure-store';
+import { router } from 'expo-router';
 import { act, fireEvent, renderRouter, screen, waitFor } from 'expo-router/testing-library';
 
 import { SessionEvents } from '@/application/auth/SessionEvents';
@@ -195,6 +196,24 @@ describe('shell de navegación', () => {
     expect(await AsyncStorage.getItem('referral.pendingCode')).toBeNull();
   });
 
+  it('en el comprobante de ingresos, atrás vuelve al paso anterior y desde el primero sale', async () => {
+    await storeSession();
+    await renderRouter(APP_DIR, { initialUrl: '/profile/documents' });
+    await fireEvent.press(
+      await screen.findByRole('button', { name: /Comprobante de ingresos/ }, { timeout: 5000 }),
+    );
+    await waitFor(() => expect(screen).toHavePathname('/profile/documents/proof-of-income'));
+    await fireEvent.press(screen.getByRole('button', { name: 'Siguiente' }));
+    expect(screen.getByTestId('monthly-income')).toBeTruthy();
+
+    await act(() => router.back());
+    expect(await screen.findByTestId('income-kind-hrLetter')).toBeTruthy();
+    expect(screen).toHavePathname('/profile/documents/proof-of-income');
+
+    await act(() => router.back());
+    await waitFor(() => expect(screen).toHavePathname('/profile/documents'));
+  });
+
   it('el perfil abre "Invita a un amigo"', async () => {
     await storeSession();
     await renderRouter(APP_DIR, { initialUrl: '/profile' });
@@ -218,6 +237,7 @@ describe('shell de navegación', () => {
       process.env.EXPO_PUBLIC_CIRCLES_API = 'http';
       process.env.EXPO_PUBLIC_PROFILE_API = 'http';
       process.env.EXPO_PUBLIC_PAYOUTS_API = 'http';
+      process.env.EXPO_PUBLIC_DOCUMENTS_API = 'http';
     });
     afterEach(() => {
       process.env.EXPO_PUBLIC_APP_ENV = original.EXPO_PUBLIC_APP_ENV;
@@ -225,6 +245,7 @@ describe('shell de navegación', () => {
       process.env.EXPO_PUBLIC_CIRCLES_API = original.EXPO_PUBLIC_CIRCLES_API;
       process.env.EXPO_PUBLIC_PROFILE_API = original.EXPO_PUBLIC_PROFILE_API;
       process.env.EXPO_PUBLIC_PAYOUTS_API = original.EXPO_PUBLIC_PAYOUTS_API;
+      process.env.EXPO_PUBLIC_DOCUMENTS_API = original.EXPO_PUBLIC_DOCUMENTS_API;
     });
 
     it('el catálogo no existe ni se ofrece en el perfil', async () => {

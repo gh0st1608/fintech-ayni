@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ScrollView, StyleSheet, TextInput, View } from 'react-native';
 
@@ -6,6 +6,7 @@ import ROCKET from '@assets/images/shared/rocket.png';
 import { INCOME_PROOF_KINDS, type IncomeProofKind } from '@/domain/documents/KycDocument';
 import { type LocalFile, MAX_PAGES } from '@/domain/documents/LocalFile';
 import { Money } from '@/domain/shared/value-objects/Money';
+import { useStepBack } from '@/presentation/navigation/useStepBack';
 import { useContainer } from '@/presentation/providers/ContainerProvider';
 import { AppText } from '@/presentation/shared/components/AppText';
 import { Button } from '@/presentation/shared/components/Button';
@@ -27,19 +28,57 @@ function parseMajorAmount(raw: string): number {
   return /^\d+(\.\d{1,2})?$/.test(normalized) ? Number(normalized) : Number.NaN;
 }
 
-type Step = 'kind' | 'income' | 'upload';
+const STEPS = ['kind', 'income', 'upload'] as const;
+export type ProofOfIncomeStep = (typeof STEPS)[number];
+
+/** Paso al que vuelve "atrás"; `null` en el primero (atrás sale de la pantalla). */
+export function previousIncomeStep(step: ProofOfIncomeStep): ProofOfIncomeStep | null {
+  return STEPS[STEPS.indexOf(step) - 1] ?? null;
+}
 
 const UPLOAD_TIPS = ['light', 'frame'] as const;
+
+/**
+ * Pantalla de la ruta: la flecha atrás vuelve al paso anterior del comprobante y, desde el primero,
+ * sale. Al terminar ("Listo") deja salir sin interceptar.
+ */
+export function ProofOfIncomeFlowScreen({ onDone }: { onDone: () => void }) {
+  const [step, setStep] = useState<ProofOfIncomeStep>('kind');
+  const [leaving, setLeaving] = useState(false);
+  const previous = previousIncomeStep(step);
+  useStepBack(previous !== null && !leaving, () => {
+    if (previous) setStep(previous);
+  });
+  // Se sale cuando la intercepción ya se quitó.
+  useEffect(() => {
+    if (leaving) onDone();
+  }, [leaving, onDone]);
+
+  return <ProofOfIncomeScreen step={step} onStepChange={setStep} onDone={() => setLeaving(true)} />;
+}
 
 /**
  * Proof of Income (COPAYNI-48) en los tres pasos del Figma: el tipo de comprobante (55:10630), el
  * ingreso mensual (55:10662) y la guía para subirlo (55:10677), de una a diez páginas (fotos o
  * PDF). El ingreso aprobado fija el límite mensual (R5).
+ *
+ * La ruta puede controlar el paso (`step` y `onStepChange`) para que la flecha atrás vuelva al
+ * paso anterior; sin ellos, la pantalla lo maneja sola.
  */
-export function ProofOfIncomeScreen({ onDone }: { onDone: () => void }) {
+export function ProofOfIncomeScreen({
+  onDone,
+  step: controlledStep,
+  onStepChange,
+}: {
+  onDone: () => void;
+  step?: ProofOfIncomeStep;
+  onStepChange?: (step: ProofOfIncomeStep) => void;
+}) {
   const { t } = useTranslation();
   const { defaultCurrency } = useContainer().config;
-  const [step, setStep] = useState<Step>('kind');
+  const [ownStep, setOwnStep] = useState<ProofOfIncomeStep>('kind');
+  const step = controlledStep ?? ownStep;
+  const setStep = onStepChange ?? setOwnStep;
   const [kind, setKind] = useState<IncomeProofKind>('hrLetter');
   const [income, setIncome] = useState('');
   const [pages, setPages] = useState<LocalFile[]>([]);
