@@ -40,6 +40,10 @@ import type {
   ListReferralsUseCase,
   ShareInviteUseCase,
 } from '@/application/referrals/usecases/referralUseCases';
+import type {
+  GetSavingQuoteUseCase,
+  ListSavingPlansUseCase,
+} from '@/application/savings/usecases/savingUseCases';
 import type { IdGeneratorPort } from '@/domain/shared/ports/IdGeneratorPort';
 import type {
   GetMyProfileUseCase,
@@ -122,6 +126,10 @@ export interface AppContainer {
     capturePending: CapturePendingReferralUseCase;
     /** Envía el código pendiente al entrar con sesión, sin bloquear la UI. */
     claimPending: ClaimPendingReferralUseCase;
+  };
+  savings: {
+    listPlans: ListSavingPlansUseCase;
+    getQuote: GetSavingQuoteUseCase;
   };
   payouts: {
     listPayoutMethods: ListPayoutMethodsUseCase;

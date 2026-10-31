@@ -18,6 +18,7 @@ import { FakeFilePicker } from './FakeFilePicker';
 import { InMemoryPayoutMethodRepository } from '@/infrastructure/payouts/InMemoryPayoutMethodRepository';
 import { InMemoryUserProfileRepository } from '@/infrastructure/profile/InMemoryUserProfileRepository';
 import { InMemoryReferralRepository } from '@/infrastructure/referrals/InMemoryReferralRepository';
+import { InMemorySavingPlanRepository } from '@/infrastructure/savings/InMemorySavingPlanRepository';
 
 import {
   FakeClipboard,
@@ -54,6 +55,7 @@ interface TestAdapters {
   sharer: FakeShare;
   clipboard: FakeClipboard;
   pendingReferral: InMemoryPendingReferral;
+  savings: InMemorySavingPlanRepository;
   ids: FakeIdGenerator;
 }
 
@@ -82,6 +84,11 @@ export function createTestContainer(overrides: Partial<TestAdapters> = {}) {
     sharer: new FakeShare(),
     clipboard: new FakeClipboard(),
     pendingReferral: new InMemoryPendingReferral(),
+    savings: new InMemorySavingPlanRepository({
+      latencyMs: 0,
+      currency: 'PEN',
+      now: () => new Date(2026, 9, 31),
+    }),
     ids: new FakeIdGenerator(),
     ...overrides,
   };

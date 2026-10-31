@@ -51,6 +51,10 @@ import {
   ListReferralsUseCase,
   ShareInviteUseCase,
 } from '@/application/referrals/usecases/referralUseCases';
+import {
+  GetSavingQuoteUseCase,
+  ListSavingPlansUseCase,
+} from '@/application/savings/usecases/savingUseCases';
 import { ChangeLanguageUseCase } from '@/application/i18n/usecases/ChangeLanguageUseCase';
 import { ResolveLanguageUseCase } from '@/application/i18n/usecases/ResolveLanguageUseCase';
 import { SyncLanguagePreferenceUseCase } from '@/application/i18n/usecases/SyncLanguagePreferenceUseCase';
@@ -79,6 +83,7 @@ import type {
   SharePort,
 } from '@/domain/referrals/ports/DevicePorts';
 import type { ReferralRepositoryPort } from '@/domain/referrals/ports/ReferralRepositoryPort';
+import type { SavingPlanRepositoryPort } from '@/domain/savings/ports/SavingPlanRepositoryPort';
 import type { UserProfileRepositoryPort } from '@/domain/profile/ports/UserProfileRepositoryPort';
 import type { IdGeneratorPort } from '@/domain/shared/ports/IdGeneratorPort';
 import { AuthApiRepository } from '@/infrastructure/auth/AuthApiRepository';
@@ -122,6 +127,8 @@ import {
 } from '@/infrastructure/referrals/DeviceReferralAdapters';
 import { InMemoryReferralRepository } from '@/infrastructure/referrals/InMemoryReferralRepository';
 import { ReferralApiRepository } from '@/infrastructure/referrals/ReferralApiRepository';
+import { InMemorySavingPlanRepository } from '@/infrastructure/savings/InMemorySavingPlanRepository';
+import { SavingPlanApiRepository } from '@/infrastructure/savings/SavingPlanApiRepository';
 import { AsyncStorageLanguagePreference } from '@/infrastructure/storage/AsyncStorageLanguagePreference';
 import { AsyncStorageLanguageSyncState } from '@/infrastructure/storage/AsyncStorageLanguageSyncState';
 import { SecureStoreTokenStorage } from '@/infrastructure/storage/SecureStoreTokenStorage';
@@ -152,6 +159,7 @@ export interface ContainerAdapters {
   sharer: SharePort;
   clipboard: ClipboardPort;
   pendingReferral: PendingReferralPort;
+  savings: SavingPlanRepositoryPort;
   ids: IdGeneratorPort;
 }
 
@@ -223,6 +231,10 @@ export function createContainer(
     sharer: new ReactNativeShare(),
     clipboard: new ExpoClipboard(),
     pendingReferral: new AsyncStoragePendingReferral(),
+    savings:
+      env.savingsApi === 'fake'
+        ? new InMemorySavingPlanRepository({ currency: env.defaultCurrency })
+        : new SavingPlanApiRepository(http),
     ids: new ExpoCryptoIdGenerator(),
     ...overrides,
   };
@@ -297,6 +309,10 @@ export function createContainer(
       shareInvite: new ShareInviteUseCase(adapters.sharer),
       capturePending: new CapturePendingReferralUseCase(adapters.pendingReferral),
       claimPending: new ClaimPendingReferralUseCase(adapters.referrals, adapters.pendingReferral),
+    },
+    savings: {
+      listPlans: new ListSavingPlansUseCase(adapters.savings),
+      getQuote: new GetSavingQuoteUseCase(adapters.savings),
     },
     payouts: {
       listPayoutMethods: new ListPayoutMethodsUseCase(adapters.payoutMethods),

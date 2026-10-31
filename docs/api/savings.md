@@ -1,6 +1,6 @@
 # Contrato de API: programa de ahorro
 
-**Estado:** catálogo y cotización implementados en el backend (`apps/backend/src/modules/savings`, COPAYNI-32 y 33). La suscripción y el primer pago esperan el diseño de la confirmación (D5). Las pantallas de mobile esperan el Figma.
+**Estado:** catálogo y cotización implementados en el backend (`apps/backend/src/modules/savings`, COPAYNI-32 y 33) y en mobile (`apps/mobile/src/presentation/saving`: Choose a Saving Circle y Choose Duration, sin validar contra el Figma). La app no muestra una cotización incoherente (payout no posterior al inicio, cuotas que no suman el objetivo o un total sin el cashback). La suscripción y el primer pago esperan el diseño de la confirmación (D5): "Siguiente" lo avisa sin cerrar la hoja.
 
 Usa el contrato común de respuestas descrito en [auth.md](auth.md) y el modelo [Money](circles.md#modelo-money). Requiere `Authorization: Bearer <accessToken>`.
 

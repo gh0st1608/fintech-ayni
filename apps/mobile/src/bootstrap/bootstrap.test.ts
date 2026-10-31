@@ -19,6 +19,7 @@ describe('parseEnv', () => {
       paymentTokenizer: 'unconfigured',
       documentsApi: 'http',
       referralsApi: 'http',
+      savingsApi: 'http',
     });
   });
 
@@ -30,6 +31,7 @@ describe('parseEnv', () => {
     'paymentsApi',
     'documentsApi',
     'referralsApi',
+    'savingsApi',
   ] as const)('solo admite %s falsa en dev', (key) => {
     const base = { apiUrl: 'https://api.example.com/v1', [key]: 'fake' };
     expect(parseEnv({ ...base, appEnv: 'dev' })[key]).toBe('fake');

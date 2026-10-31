@@ -35,6 +35,8 @@ const envSchema = z
     documentsApi: z.enum(['http', 'fake']).default('http'),
     /** Igual que authApi, para los referidos (/me/referral, /me/referrals). */
     referralsApi: z.enum(['http', 'fake']).default('http'),
+    /** Igual que authApi, para el programa de ahorro (/savings/plans). */
+    savingsApi: z.enum(['http', 'fake']).default('http'),
     termsUrl: optionalHttpsUrl,
     privacyUrl: optionalHttpsUrl,
   })
@@ -69,6 +71,10 @@ const envSchema = z
   .refine((env) => env.referralsApi === 'http' || env.appEnv === 'dev', {
     path: ['referralsApi'],
     message: 'fake is only allowed in dev',
+  })
+  .refine((env) => env.savingsApi === 'http' || env.appEnv === 'dev', {
+    path: ['savingsApi'],
+    message: 'fake is only allowed in dev',
   });
 
 export type Env = z.infer<typeof envSchema>;
@@ -101,6 +107,7 @@ export function loadEnv(): Env {
     paymentTokenizer: process.env.EXPO_PUBLIC_PAYMENT_TOKENIZER,
     documentsApi: process.env.EXPO_PUBLIC_DOCUMENTS_API,
     referralsApi: process.env.EXPO_PUBLIC_REFERRALS_API,
+    savingsApi: process.env.EXPO_PUBLIC_SAVINGS_API,
     termsUrl: process.env.EXPO_PUBLIC_TERMS_URL,
     privacyUrl: process.env.EXPO_PUBLIC_PRIVACY_URL,
   });

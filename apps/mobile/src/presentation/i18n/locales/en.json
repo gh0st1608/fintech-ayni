@@ -201,7 +201,37 @@
   },
   "saving": {
     "chooseCircle": {
-      "title": "Choose a Saving Circle"
+      "title": "Choose a Saving Circle",
+      "intro": "Choose how much you want to save. You get the total at the end of the term, with cashback.",
+      "upTo": "Up to {{amount}} extra",
+      "empty": "There are no saving plans available right now."
+    },
+    "plans": {
+      "lite": "Lite",
+      "bronze": "Bronze",
+      "silver": "Silver",
+      "gold": "Gold",
+      "platinum": "Platinum",
+      "diamond": "Diamond"
+    },
+    "offline": "You're offline: showing the last saved information.",
+    "duration": {
+      "title": "Choose Duration",
+      "close": "Close duration choice",
+      "subtitle": "{{plan}} plan: save {{amount}}.",
+      "months_one": "{{count}} month",
+      "months_other": "{{count}} months",
+      "perMonth": "{{amount}} per month",
+      "unavailable": "Not available",
+      "details": {
+        "startsOn": "First pay-in",
+        "payout": "You get the total",
+        "cashback": "Cashback",
+        "total": "Total to receive"
+      },
+      "invalidQuote": "We couldn't calculate this plan. Try again later.",
+      "next": "Next",
+      "confirmationPending": "Soon you'll be able to subscribe to this plan from here."
     }
   },
   "profile": {
