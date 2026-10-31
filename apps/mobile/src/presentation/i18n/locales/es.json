@@ -509,26 +509,21 @@
   },
   "referrals": {
     "title": "Invita a un amigo",
-    "headline": "Regálale {{amount}} a un amigo y gana {{amount}}",
+    "headline": "Difunde Ayni y obtén {{amount}} de descuento",
     "steps": {
       "invite": {
-        "title": "Invita",
-        "description": "Comparte tu código o tu enlace con tus amigos."
+        "title": "Invita a tus amigos",
+        "description": "Comparte tu enlace y tu código con los amigos que aún no descargan la app."
       },
       "gift": {
         "title": "Regálales un descuento",
-        "description": "Al registrarse con tu código reciben {{amount}} de descuento en su primera cuota."
+        "description": "Cuando se registren con tu código y se unan a su primer Game'ya con el enlace de invitación, tendrán {{amount}} de descuento en su primera cuota."
       },
       "enjoy": {
-        "title": "Disfruta tu descuento",
-        "description": "Ganas {{amount}} cuando tu amigo paga su primera cuota."
-      }
-    },
-    "code": {
-      "label": "Tu código",
-      "copy": "Copiar código",
-      "copied": "Código copiado.",
-      "copyFailed": "No pudimos copiar el código. Inténtalo de nuevo."
+        "title": "¡Disfruta tu propio descuento!",
+        "description": "Cuando paguen su primera cuota, tendrás {{amount}} de descuento en tu próxima cuota."
+      },
+      "numbered": "{{number}}. {{title}}"
     },
     "share": {
       "action": "Compartir invitación",
@@ -543,14 +538,22 @@
       "earned": "Ganado",
       "redeemed": "Canjeado",
       "balance": "Saldo",
-      "autoApply": "El descuento se aplica automáticamente en tu próximo pago.",
-      "invitees": "Tus invitados",
-      "empty": "Aún no has invitado amigos o no se han registrado.",
+      "autoApply": "El descuento por referidos se aplicará automáticamente a tu próxima cuota.",
+      "invitees": "Invitados",
+      "empty": "Aún no has invitado amigos o tus amigos todavía no se registran.",
       "status": {
         "registered": "Registrado",
         "joinedCircle": "Se unió a un Game'ya",
         "firstPayInPaid": "Pagó su primera cuota"
-      }
+      },
+      "description": "Por cada amigo que se una con tu invitación, obtienes {{amount}} de descuento en tu próxima cuota.",
+      "emptyTitle": "Invita a tus amigos"
+    },
+    "code": {
+      "copy": "Copiar código: {{code}}",
+      "copyLabel": "Copiar código {{code}}",
+      "copied": "Código copiado.",
+      "copyFailed": "No pudimos copiar el código. Inténtalo de nuevo."
     }
   }
 }

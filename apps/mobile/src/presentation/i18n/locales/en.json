@@ -509,26 +509,21 @@
   },
   "referrals": {
     "title": "Refer a friend",
-    "headline": "Give a friend {{amount}} and get {{amount}}",
+    "headline": "Spread the word & Get {{amount}} OFF!",
     "steps": {
       "invite": {
-        "title": "Invite",
-        "description": "Share your code or your link with your friends."
+        "title": "Invite your friends",
+        "description": "Share your referral link and code with friends who haven't downloaded the app yet."
       },
       "gift": {
-        "title": "Give them a discount",
-        "description": "When they sign up with your code they get {{amount}} off their first pay-in."
+        "title": "Gift them a discount",
+        "description": "Once they sign up with your code and join their first Game'ya through the invitation link, they will enjoy {{amount}} OFF their first pay-in."
       },
       "enjoy": {
-        "title": "Enjoy your discount",
-        "description": "You earn {{amount}} when your friend pays their first pay-in."
-      }
-    },
-    "code": {
-      "label": "Your code",
-      "copy": "Copy code",
-      "copied": "Code copied.",
-      "copyFailed": "We couldn't copy the code. Try again."
+        "title": "Enjoy your own discount!",
+        "description": "On settling their first pay-in, you'll get {{amount}} OFF your next pay-in."
+      },
+      "numbered": "{{number}}. {{title}}"
     },
     "share": {
       "action": "Share your invite",
@@ -543,14 +538,22 @@
       "earned": "Earned",
       "redeemed": "Redeemed",
       "balance": "Balance",
-      "autoApply": "The discount is applied automatically to your next pay-in.",
-      "invitees": "Your invitees",
-      "empty": "You haven't invited friends yet, or they haven't signed up.",
+      "autoApply": "Referral discount will be automatically deducted from your next pay-in.",
+      "invitees": "Invitees",
+      "empty": "You haven't invited any friends or your friends haven't signed up yet.",
       "status": {
         "registered": "Registered",
         "joinedCircle": "Joined a Game'ya",
         "firstPayInPaid": "First pay-in paid"
-      }
+      },
+      "description": "For every friend who joins through your invitation, you get {{amount}} OFF your next pay-in.",
+      "emptyTitle": "Invite friends"
+    },
+    "code": {
+      "copy": "Copy code: {{code}}",
+      "copyLabel": "Copy code {{code}}",
+      "copied": "Code copied.",
+      "copyFailed": "We couldn't copy the code. Try again."
     }
   }
 }

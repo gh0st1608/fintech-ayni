@@ -1,7 +1,10 @@
 import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, FlatList, StyleSheet, View } from 'react-native';
 
+import INVITEES_EMPTY from '@assets/images/referrals/invitees-empty.png';
+import ROCKET from '@assets/images/shared/rocket.png';
 import type { Invitee, ReferralSummary } from '@/domain/referrals/Referral';
+import type { Money } from '@/domain/shared/value-objects/Money';
 import { useFormatDate } from '@/presentation/formatters/formatDate';
 import { useFormatMoney } from '@/presentation/formatters/formatMoney';
 import { errorMessage } from '@/presentation/i18n/errorMessageKey';
@@ -11,12 +14,14 @@ import { BottomSheet } from '@/presentation/shared/components/BottomSheet';
 import { Button } from '@/presentation/shared/components/Button';
 import { EmptyState } from '@/presentation/shared/components/EmptyState';
 import { InfoBanner } from '@/presentation/shared/components/InfoBanner';
-import { colors, spacing } from '@/presentation/theme/tokens';
+import { colors, radius, spacing } from '@/presentation/theme/tokens';
 
 import { useReferrals } from '../useReferrals';
 
 interface MyReferralsSheetProps {
   visible: boolean;
+  /** El beneficio por cada amigo, para el texto de la cabecera. */
+  reward: Money;
   onClose: () => void;
 }
 
@@ -26,9 +31,13 @@ const STATUS_TONE = {
   firstPayInPaid: 'success',
 } as const;
 
-/** My Referrals (COPAYNI-52): ganado, canjeado y saldo, con los invitados y su estado. */
-export function MyReferralsSheet({ visible, onClose }: MyReferralsSheetProps) {
+/**
+ * My Referrals (Figma 55:10456, COPAYNI-52): ganado, canjeado y saldo, con los invitados y su
+ * estado. El Figma solo tiene el estado vacío: la fila del invitado es propia.
+ */
+export function MyReferralsSheet({ visible, reward, onClose }: MyReferralsSheetProps) {
   const { t } = useTranslation();
+  const formatMoney = useFormatMoney();
   return (
     <BottomSheet
       visible={visible}
@@ -37,6 +46,11 @@ export function MyReferralsSheet({ visible, onClose }: MyReferralsSheetProps) {
       onClose={onClose}
       testID="my-referrals-sheet"
     >
+      <AppText color={colors.neutral500}>
+        {t('referrals.mine.description', {
+          amount: formatMoney(reward, { trimZeroDecimals: true }),
+        })}
+      </AppText>
       {visible && <MyReferralsContent />}
     </BottomSheet>
   );
@@ -79,15 +93,22 @@ function MyReferralsContent() {
             <InfoBanner message={t('referrals.offline')} testID="referrals-offline" />
           )}
           <SummaryRow summary={pages[0]!.summary} />
-          <AppText variant="caption" color={colors.neutral500}>
-            {t('referrals.mine.autoApply')}
+          <InfoBanner message={t('referrals.mine.autoApply')} illustration={ROCKET} />
+          <AppText variant="highlight" accessibilityRole="header">
+            {t('referrals.mine.invitees')}
           </AppText>
-          {invitees.length > 0 && (
-            <AppText weight="semibold">{t('referrals.mine.invitees')}</AppText>
-          )}
         </View>
       }
-      ListEmptyComponent={<EmptyState title={t('referrals.mine.empty')} testID="invitees-empty" />}
+      ListEmptyComponent={
+        <View style={styles.emptyCard}>
+          <EmptyState
+            title={t('referrals.mine.emptyTitle')}
+            description={t('referrals.mine.empty')}
+            illustration={INVITEES_EMPTY}
+            testID="invitees-empty"
+          />
+        </View>
+      }
       ListFooterComponent={
         referrals.isFetchingNextPage ? (
           <ActivityIndicator accessibilityLabel={t('common.loading')} />
@@ -113,12 +134,18 @@ function SummaryRow({ summary }: { summary: ReferralSummary }) {
   ] as const;
   return (
     <View style={styles.summary} testID="referrals-summary">
-      {items.map(({ key, value }) => (
-        <View key={key} style={styles.summaryItem} testID={`referrals-${key}`}>
-          <AppText variant="caption" color={colors.neutral500}>
+      {items.map(({ key, value }, index) => (
+        <View
+          key={key}
+          style={[styles.summaryItem, index < items.length - 1 && styles.summaryDivider]}
+          testID={`referrals-${key}`}
+        >
+          <AppText variant="caption" color={colors.neutral500} style={styles.summaryLabel}>
             {t(`referrals.mine.${key}`)}
           </AppText>
-          <AppText weight="semibold">{formatMoney(value)}</AppText>
+          <AppText weight="semibold" color={key === 'balance' ? colors.success : colors.black}>
+            {formatMoney(value, { trimZeroDecimals: true })}
+          </AppText>
         </View>
       ))}
     </View>
@@ -151,8 +178,22 @@ const styles = StyleSheet.create({
   list: { maxHeight: 480 },
   listContent: { gap: spacing.m },
   header: { gap: spacing.m },
-  summary: { flexDirection: 'row', gap: spacing.m },
+  summary: {
+    flexDirection: 'row',
+    gap: spacing.lg,
+    padding: spacing.lg,
+    borderRadius: radius.sm,
+    borderWidth: 1,
+    borderColor: colors.secondary200,
+  },
   summaryItem: { flex: 1, gap: spacing.xxs },
+  summaryDivider: { borderRightWidth: 1, borderRightColor: colors.secondary300 },
+  summaryLabel: { fontSize: 10, textTransform: 'uppercase' },
+  emptyCard: {
+    borderRadius: radius.sm,
+    borderWidth: 1,
+    borderColor: colors.secondary200,
+  },
   invitee: { flexDirection: 'row', alignItems: 'center', gap: spacing.m },
   inviteeText: { flex: 1, gap: spacing.xxs },
 });

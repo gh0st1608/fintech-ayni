@@ -14,11 +14,11 @@ describe('ReferFriendScreen (COPAYNI-51)', () => {
   it('muestra el beneficio, los 3 pasos y el código; copia el código', async () => {
     const setup = createTestContainer();
     await renderWithProviders(<ReferFriendScreen />, setup);
-    expect(await screen.findByText(/Regálale .*150.* a un amigo y gana .*150/)).toBeTruthy();
+    expect(await screen.findByText(/Difunde Ayni y obtén .*150.* de descuento/)).toBeTruthy();
     for (const step of [1, 2, 3]) expect(screen.getByTestId(`referral-step-${step}`)).toBeTruthy();
     expect(screen.getByTestId('referral-code')).toHaveTextContent(/K7M2Q9XA/);
 
-    await fireEvent.press(screen.getByRole('button', { name: 'Copiar código' }));
+    await fireEvent.press(screen.getByRole('button', { name: 'Copiar código K7M2Q9XA' }));
     expect(await screen.findByTestId('referral-copied')).toHaveTextContent('Código copiado.');
     expect(setup.adapters.clipboard.text).toBe('K7M2Q9XA');
   });
@@ -61,7 +61,8 @@ describe('MyReferralsSheet (COPAYNI-52)', () => {
     expect(await screen.findByTestId('referrals-earned')).toHaveTextContent(/Ganado.*150/);
     expect(screen.getByTestId('referrals-redeemed')).toHaveTextContent(/Canjeado.*50/);
     expect(screen.getByTestId('referrals-balance')).toHaveTextContent(/Saldo.*100/);
-    expect(screen.getByText(/se aplica automáticamente/)).toBeTruthy();
+    expect(screen.getByText(/se aplicará automáticamente/)).toBeTruthy();
+    expect(screen.getByText(/obtienes .*150.* de descuento en tu próxima cuota/)).toBeTruthy();
 
     const rows = screen.getAllByTestId('invitee');
     expect(rows).toHaveLength(3);
