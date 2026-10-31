@@ -16,6 +16,8 @@
     "db:down": "docker compose down",
     "migrate": "node dist/migrate.js",
     "migrate:dev": "npm run build && node dist/migrate.js",
+    "dev:jwt-key": "node scripts/dev-jwt-key.mjs",
+    "dev:documents-bucket": "node scripts/dev-documents-bucket.mjs",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",

@@ -53,6 +53,7 @@ import { DOCUMENT_CURRENCY, DocumentsController } from './presentation/documents
               bucket: config.get('DOCUMENTS_BUCKET', { infer: true }),
               region: config.get('AWS_REGION', { infer: true }),
               endpoint: config.get('DOCUMENTS_S3_ENDPOINT', { infer: true }),
+              publicEndpoint: config.get('DOCUMENTS_S3_PUBLIC_ENDPOINT', { infer: true }),
               now: () => clock.now(),
             })
           : new SimulatedDocumentStorage(() => clock.now()),

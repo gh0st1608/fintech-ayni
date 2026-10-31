@@ -7,9 +7,9 @@ services:
     # Versión fijada: subirla después de probar el stack dev con la nueva.
     image: floci/floci:2.2.0
     ports:
-      - '127.0.0.1:4566:4566'
+      - "127.0.0.1:4566:4566"
       # Proxies de RDS: cada instancia de PostgreSQL recibe un puerto de este rango.
-      - '127.0.0.1:7001-7099:7001-7099'
+      - "127.0.0.1:7001-7099:7001-7099"
     volumes:
       # ECS, RDS y ECR levantan contenedores reales (la API, PostgreSQL, el registry).
       - /var/run/docker.sock:/var/run/docker.sock
@@ -27,7 +27,45 @@ services:
       # *.localhost, y localhost es un registry inseguro permitido sin configurar el daemon.
       FLOCI_SERVICES_ECR_URI_STYLE: path
       # La consola web usa una imagen sin versión fija: apagada.
-      FLOCI_SERVICES_UI_ENABLED: 'false'
+      FLOCI_SERVICES_UI_ENABLED: "false"
+
+  # Perfil "tunnel": la app en un teléfono llega a la API local por ngrok (docs/dev-environment.md).
+  #   docker compose -f infra/local/compose.yaml --profile tunnel up -d
+  gateway:
+    image: caddy:2.11.6-alpine
+    profiles: [tunnel]
+    volumes:
+      - ./gateway/Caddyfile:/etc/caddy/Caddyfile:ro
+    environment:
+      DOCUMENTS_BUCKET: ${DOCUMENTS_BUCKET:-ayni-local-documents}
+    ports:
+      # Para probar el gateway sin el túnel: http://localhost:8080/health/live
+      - "127.0.0.1:8080:8080"
+    # La API corre en la máquina; en Linux este alias no existe sin host-gateway.
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      - floci
+
+  ngrok:
+    image: ngrok/ngrok:3.39.11-alpine
+    profiles: [tunnel]
+    # Se valida al arrancar y no al leer el archivo: compose interpola todos los servicios aunque el
+    # perfil no esté activo, y el `up` de floci no debe exigir las variables de ngrok.
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - >-
+        [ -n "$$NGROK_AUTHTOKEN" ] && [ -n "$$NGROK_URL" ]
+        || { echo 'Configura NGROK_AUTHTOKEN y NGROK_URL en infra/local/.env' >&2; exit 1; };
+        exec ngrok http gateway:8080 --url="$$NGROK_URL"
+    environment:
+      NGROK_AUTHTOKEN: ${NGROK_AUTHTOKEN:-}
+      NGROK_URL: ${NGROK_URL:-}
+    ports:
+      # Inspector de peticiones del túnel: http://localhost:4040
+      - "127.0.0.1:4040:4040"
+    depends_on:
+      - gateway
 
 volumes:
   floci-data:

@@ -8,10 +8,28 @@ import {
   type PaymentGatewayPort,
 } from '../application/ports/payment-gateway.port';
 
+/** Token del tokenizador falso de la app: `fake-<marca>-<últimos 4>-<mes>-<año>`. */
+const APP_FAKE_TOKEN = /^fake-([a-z]+)-(\d{4})-(\d{1,2})-(\d{4})$/;
+
+/** La tarjeta que describe el token de la app; con otro token, una Visa de prueba. */
+function cardFromToken(token: string): Omit<GatewayCard, 'id'> {
+  const match = APP_FAKE_TOKEN.exec(token);
+  if (!match) return { brand: 'visa', lastFour: '4242', expirationMonth: 12, expirationYear: 2030 };
+  const [, brand, lastFour, month, year] = match as unknown as [
+    string,
+    string,
+    string,
+    string,
+    string,
+  ];
+  return { brand, lastFour, expirationMonth: Number(month), expirationYear: Number(year) };
+}
+
 /**
  * Pasarela simulada para desarrollo y pruebas (prohibida en production). Acepta todo token salvo
  * los que empiezan con `rejected`, como las tarjetas de prueba de Mercado Pago; un cobro con un
- * token o una tarjeta `rejected…` se rechaza. Idempotente por clave.
+ * token o una tarjeta `rejected…` se rechaza. Idempotente por clave. Los tokens del tokenizador
+ * falso de la app conservan la marca, los últimos cuatro y el vencimiento de la tarjeta.
  */
 export class FakePaymentGateway implements PaymentGatewayPort {
   private readonly customers = new Map<string, string>();
@@ -27,13 +45,7 @@ export class FakePaymentGateway implements PaymentGatewayPort {
 
   saveCard(customerId: string, cardToken: string): Promise<GatewayCard> {
     if (cardToken.startsWith('rejected')) return Promise.reject(new CardRejectedError(null));
-    const card: GatewayCard = {
-      id: `card-${cardToken}`,
-      brand: 'visa',
-      lastFour: '4242',
-      expirationMonth: 12,
-      expirationYear: 2030,
-    };
+    const card: GatewayCard = { id: `card-${cardToken}`, ...cardFromToken(cardToken) };
     this.cards.set(card.id, { ...card, customerId });
     return Promise.resolve(card);
   }

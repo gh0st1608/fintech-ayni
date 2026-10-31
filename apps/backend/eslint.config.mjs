@@ -106,7 +106,8 @@ export default tseslint.config(
     },
   },
   {
-    files: ['eslint.config.mjs', '.lintstagedrc.mjs'],
+    // Archivos de configuración y scripts de desarrollo (scripts/*.mjs): fuera del tsconfig.
+    files: ['eslint.config.mjs', '.lintstagedrc.mjs', 'scripts/*.mjs'],
     extends: [tseslint.configs.disableTypeChecked],
   },
 );

@@ -1,0 +1,2 @@
+# Secretos locales (authtoken de ngrok): solo .env.example se versiona.
+.env

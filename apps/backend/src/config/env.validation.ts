@@ -396,6 +396,14 @@ export class EnvironmentVariables {
   @IsUrl({ require_tld: false, require_protocol: true, protocols: ['http', 'https'] })
   DOCUMENTS_S3_ENDPOINT?: string;
 
+  /**
+   * Host público con el que se firman las URLs de subida (dev con ngrok: la URL del túnel). La
+   * API sigue hablando con S3 por `DOCUMENTS_S3_ENDPOINT`. Sin valor, firma con ese mismo.
+   */
+  @IsOptional()
+  @IsUrl({ require_tld: false, require_protocol: true, protocols: ['http', 'https'] })
+  DOCUMENTS_S3_PUBLIC_ENDPOINT?: string;
+
   /** Vigencia de la URL prefirmada de subida de documentos (COPAYNI-43), en segundos. */
   @IsInt()
   @Min(60)

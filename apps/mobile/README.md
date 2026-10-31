@@ -26,6 +26,8 @@ Sin backend, el login funciona con la API de autenticación falsa (`EXPO_PUBLIC_
 
 Otro código descuenta intentos; el reenvío se habilita a los 30 s.
 
+**Con el backend real en un teléfono:** ver [docs/dev-environment.md](../../docs/dev-environment.md). Ahí está el `.env.local` con las nueve APIs en `http`, la URL de ngrok y los datos de prueba (tarjetas, Yape, OTP).
+
 ## Scripts
 
 | Script                                      | Uso                                                                 |

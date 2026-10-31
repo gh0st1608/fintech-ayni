@@ -1,4 +1,6 @@
 import { randomUUID } from 'node:crypto';
+import { createServer, request, type Server } from 'node:http';
+import type { AddressInfo } from 'node:net';
 
 import {
   CreateBucketCommand,
@@ -70,6 +72,57 @@ describe('S3DocumentStorage con floci', () => {
 
   it('sin archivo subido, no existe', async () => {
     await expect(storage.exists(`kyc/u-1/additional/${randomUUID()}`, 10)).resolves.toBe(false);
+  });
+
+  it('con publicEndpoint, la URL se firma para el host público y la subida llega por el gateway', async () => {
+    // El gateway de dev (infra/local/gateway) reenvía la petición a floci sin cambiar la ruta ni
+    // el Host, así la firma sigue siendo válida.
+    const floci = new URL(FLOCI_ENDPOINT);
+    const gateway: Server = createServer((incoming, outgoing) => {
+      const forward = request(
+        {
+          host: floci.hostname,
+          port: floci.port,
+          method: incoming.method,
+          path: incoming.url,
+          headers: incoming.headers,
+        },
+        (response) => {
+          outgoing.writeHead(response.statusCode ?? 502, response.headers);
+          response.pipe(outgoing);
+        },
+      );
+      incoming.pipe(forward);
+    });
+    await new Promise<void>((resolve) => gateway.listen(0, '127.0.0.1', resolve));
+    const publicEndpoint = `http://localhost:${(gateway.address() as AddressInfo).port}`;
+    const viaGateway = new S3DocumentStorage({
+      bucket,
+      region: 'us-east-1',
+      endpoint: FLOCI_ENDPOINT,
+      publicEndpoint,
+    });
+    try {
+      const key = `kyc/u-1/proof_of_income/${randomUUID()}`;
+      keys.push(key);
+      const { url } = await viaGateway.presignUpload({
+        key,
+        contentType: 'application/pdf',
+        expiresInSeconds: 300,
+      });
+      expect(url.startsWith(`${publicEndpoint}/${bucket}/`)).toBe(true);
+      const response = await fetch(url, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/pdf' },
+        body: Buffer.alloc(512, 1),
+      });
+      expect(response.status).toBe(200);
+      // La comprobación va directo a floci.
+      await expect(viaGateway.exists(key, 512)).resolves.toBe(true);
+    } finally {
+      viaGateway.destroy();
+      await new Promise<void>((resolve) => gateway.close(() => resolve()));
+    }
   });
 
   it('si el almacenamiento no responde, es un error de infraestructura', async () => {

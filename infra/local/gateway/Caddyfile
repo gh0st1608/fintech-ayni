@@ -1,0 +1,29 @@
+# Gateway del ambiente dev (docs/dev-environment.md): un solo origen público, detrás de ngrok,
+# para que la app en un teléfono llegue a la API y suba documentos. No se usa en prd.
+{
+	admin off
+	auto_https off
+}
+
+:8080 {
+	# `handle` es excluyente y respeta el orden; con matchers sueltos, `respond` se evaluaría
+	# antes que `reverse_proxy` y todo daría 404.
+
+	# La API corriendo en esta máquina (npm run start:dev).
+	handle /v1/* {
+		reverse_proxy host.docker.internal:3000
+	}
+	handle /health/* {
+		reverse_proxy host.docker.internal:3000
+	}
+
+	# Subidas con URL prefirmada: se reenvían a floci con la ruta y el Host intactos (Caddy no los
+	# cambia), así la firma de S3 sigue siendo válida. La API firma con DOCUMENTS_S3_PUBLIC_ENDPOINT.
+	handle /{$DOCUMENTS_BUCKET}/* {
+		reverse_proxy floci:4566
+	}
+
+	handle {
+		respond 404
+	}
+}

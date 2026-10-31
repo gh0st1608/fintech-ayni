@@ -15,6 +15,12 @@ export interface S3DocumentStorageOptions {
   region: string;
   /** Endpoint propio (floci en dev y pruebas); sin valor, el de AWS. Usa path-style. */
   endpoint?: string;
+  /**
+   * Endpoint con el que se firman las URLs de subida, si la app llega a S3 por otro host que la
+   * API (dev con ngrok: el gateway reenvía `/<bucket>/…` a floci sin tocar la ruta ni el Host).
+   * Sin valor, se firma con `endpoint`.
+   */
+  publicEndpoint?: string;
   now?: () => Date;
 }
 
@@ -26,20 +32,22 @@ export interface S3DocumentStorageOptions {
  */
 export class S3DocumentStorage implements DocumentStoragePort {
   private readonly client: S3Client;
+  /** Firma las URLs de subida; es `client` salvo que haya `publicEndpoint`. */
+  private readonly presigner: S3Client;
   private readonly now: () => Date;
 
   constructor(private readonly options: S3DocumentStorageOptions) {
     // Sin checksum por defecto: el SDK firmaría el CRC32 de un cuerpo vacío y S3 rechazaría la
     // subida de la app (BadDigest). La integridad la cubre la comprobación del tamaño.
-    const config: S3ClientConfig = {
+    const configFor = (endpoint?: string): S3ClientConfig => ({
       region: options.region,
       requestChecksumCalculation: 'WHEN_REQUIRED',
-    };
-    if (options.endpoint) {
-      config.endpoint = options.endpoint;
-      config.forcePathStyle = true;
-    }
-    this.client = new S3Client(config);
+      ...(endpoint && { endpoint, forcePathStyle: true }),
+    });
+    this.client = new S3Client(configFor(options.endpoint));
+    this.presigner = options.publicEndpoint
+      ? new S3Client(configFor(options.publicEndpoint))
+      : this.client;
     this.now = options.now ?? ((): Date => new Date());
   }
 
@@ -51,7 +59,7 @@ export class S3DocumentStorage implements DocumentStoragePort {
     const expiresAt = new Date(this.now().getTime() + props.expiresInSeconds * 1000);
     try {
       const url = await getSignedUrl(
-        this.client,
+        this.presigner,
         new PutObjectCommand({
           Bucket: this.options.bucket,
           Key: props.key,
@@ -82,5 +90,6 @@ export class S3DocumentStorage implements DocumentStoragePort {
 
   destroy(): void {
     this.client.destroy();
+    if (this.presigner !== this.client) this.presigner.destroy();
   }
 }
