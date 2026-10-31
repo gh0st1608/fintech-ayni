@@ -34,7 +34,6 @@
     "profile": "Perfil"
   },
   "home": {
-    "title": "Descubre cómo ahorrar",
     "empty": {
       "title": "Todavía no hay círculos abiertos para ti",
       "description": "Elige tu monto y tu mes de cobro: abriremos un Game'ya nuevo para ti.",
@@ -73,12 +72,13 @@
       "editA11y": "Editar el monto de payout",
       "optionsLabel": "Cuotas disponibles",
       "option": "{{amount}} al mes",
-      "optionMonths": "Durante {{months}} meses",
+      "optionMonths": "por {{months}} meses",
       "exceedsLimit": "Supera tu límite mensual de pay-in.",
       "info": "La cuota mensual puede variar según los fees o descuentos de tu slot.",
       "empty": "No hay cuotas disponibles para este monto. Prueba con otro monto de payout.",
       "missingPayout": "Primero elige el monto de payout.",
-      "choosePayout": "Elegir el monto"
+      "choosePayout": "Elegir el monto",
+      "perMonth": "/mes"
     },
     "slot": {
       "title": "Turno de cobro",
@@ -114,11 +114,20 @@
         "trustRequired": "Disponible al completar tu primer círculo",
         "identityRequired": "Verifica tu identidad para elegirlo",
         "incomeRequired": "Declara tu ingreso para elegirlo"
+      },
+      "typeTagShort": {
+        "fastestPayout": "aplican fees",
+        "highestReturn": "descuento en pay-ins"
+      },
+      "typeSlots": {
+        "fastestPayout": "Primeros turnos (de {{from}} a {{to}})",
+        "lowestFees": "Turnos intermedios (de {{from}} a {{to}})",
+        "highestReturn": "Últimos turnos (de {{from}} a {{to}})"
       }
     },
     "payoutMethod": {
       "title": "Método de cobro",
-      "question": "¿Cómo quieres recibir tu payout?",
+      "question": "Elige cómo quieres recibir tu payout en los próximos círculos.",
       "optionsLabel": "Métodos de cobro",
       "types": {
         "digitalWallet": "Billetera digital",
@@ -133,7 +142,13 @@
       "changeNotAllowed": "Estás en tu mes de payout: ya no puedes cambiar el método de cobro.",
       "continue": "Continuar",
       "missingSteps": "Primero elige el monto, la cuota y tu turno.",
-      "startOver": "Elegir el monto"
+      "startOver": "Elegir el monto",
+      "descriptions": {
+        "digitalWallet": "Recibe tu payout en cualquier billetera digital.",
+        "prepaidCard": "Recibe tu payout en cualquier tarjeta prepago.",
+        "bankTransfer": "Recibe tu payout en tu cuenta bancaria.",
+        "fawry": "Recibe tu payout en cualquier tienda Fawry Plus, sin cuenta bancaria."
+      }
     },
     "confirm": {
       "title": "Confirmar",
@@ -612,6 +627,10 @@
       "copyLabel": "Copiar código {{code}}",
       "copied": "Código copiado.",
       "copyFailed": "No pudimos copiar el código. Inténtalo de nuevo."
+    },
+    "banner": {
+      "text": "Envía una invitación a tus amigos y ambos tendrán <amount>{{amount}}</amount> de descuento.",
+      "label": "Invita a tus amigos: ambos tendrán {{amount}} de descuento"
     }
   }
 }

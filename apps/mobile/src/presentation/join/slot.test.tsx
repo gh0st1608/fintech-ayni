@@ -52,10 +52,21 @@ async function renderSlot({
 
 const slot = (position: number) => screen.findByTestId(`slot-${position}`);
 const tab = (name: string) => screen.getByRole('tab', { name });
+/** Figma 55:9377: primero se elige el tipo de turno; luego aparecen los meses. */
+const pickType = async (type = 'fastestPayout') =>
+  fireEvent.press(await screen.findByTestId(`slot-type-${type}`));
 
 describe('SlotScreen', () => {
   it('muestra el paso 3 de 4 con el resumen editable y los tres tipos de turno', async () => {
     const { onEditPayout, onEditInstallment } = await renderSlot();
+    expect(await screen.findByTestId('slot-type-fastestPayout')).toHaveAccessibleName(
+      /Cobro más rápido\. aplican fees\. Primeros turnos \(de noviembre a diciembre\)/,
+    );
+    expect(screen.getByTestId('slot-type-lowestFees')).toHaveAccessibleName(/^Menos fees\. /);
+    expect(screen.getByTestId('slot-type-highestReturn')).toHaveAccessibleName(
+      /Mayor retorno\. descuento en pay-ins/,
+    );
+    await pickType();
     expect(await slot(1)).toBeTruthy();
     expect(screen.getByLabelText('Paso 3 de 4')).toBeTruthy();
     expect(screen.getByTestId('join-summary')).toHaveTextContent(/30\.000.*3\.?000.* al mes · 10/);
@@ -79,19 +90,21 @@ describe('SlotScreen', () => {
 
   it('cada tipo muestra sus meses con la posición y el fee o el descuento', async () => {
     await renderSlot();
-    expect(await slot(1)).toHaveAccessibleName(/Turno 1 · .*3\.?000.* de fees/);
-    expect(await slot(2)).toHaveAccessibleName(/Turno 2 · .*1\.?500.* de fees/);
+    await pickType();
+    expect(await slot(1)).toHaveAccessibleName(/Turno 1\. .*3\.?000.* de fees/);
+    expect(await slot(2)).toHaveAccessibleName(/Turno 2\. .*1\.?500.* de fees/);
 
     await fireEvent.press(tab('Menos fees'));
-    expect(await slot(5)).toHaveAccessibleName(/Turno 5 · Sin fees$/);
+    expect(await slot(5)).toHaveAccessibleName(/Turno 5\. Sin fees$/);
 
     await fireEvent.press(tab('Mayor retorno'));
-    expect(await slot(10)).toHaveAccessibleName(/Turno 10 · Sin fees · .*1\.?500.* de descuento/);
+    expect(await slot(10)).toHaveAccessibleName(/Turno 10\. Sin fees\. .*1\.?500.* de descuento/);
     expect(screen.getByTestId('slot-type-summary')).toHaveTextContent(/Descuento en tus pay-ins\./);
   });
 
   it('un slot ocupado aparece deshabilitado', async () => {
     await renderSlot({ circleQuote: quote({ takenPositions: [1] }) });
+    await pickType();
     expect(await slot(1)).toBeDisabled();
     expect(await slot(1)).toHaveAccessibleName(/Ocupado/);
     expect(await slot(2)).toBeEnabled();
@@ -105,12 +118,14 @@ describe('SlotScreen', () => {
         notAllowed: { fastestPayout: 'trustRequired' },
       }),
     });
+    await pickType();
     expect(await slot(1)).toBeDisabled();
     expect(await slot(1)).toHaveAccessibleName(/Disponible al completar tu primer círculo/);
   });
 
   it('al elegir un mes lo resalta, el botón lo nombra y continuar lo guarda', async () => {
     const { onNext } = await renderSlot();
+    await pickType();
     await slot(1);
     await fireEvent.press(tab('Mayor retorno'));
     await fireEvent.press(await slot(9));
@@ -125,6 +140,7 @@ describe('SlotScreen', () => {
 
   it('si el slot se ocupó mientras elegía, avisa, refresca y quita la selección', async () => {
     const { circleQuote, onNext } = await renderSlot();
+    await pickType();
     await fireEvent.press(await slot(2));
     circleQuote.take(2);
     await fireEvent.press(screen.getByRole('button', { name: 'Continuar con diciembre' }));
@@ -154,7 +170,7 @@ describe('SlotScreen', () => {
     expect(screen.getByTestId('join-summary')).toHaveTextContent(/30\.000/);
     online = true;
     await fireEvent.press(screen.getByRole('button', { name: 'Reintentar' }));
-    expect(await slot(1)).toBeTruthy();
+    expect(await screen.findByTestId('slot-type-fastestPayout')).toBeTruthy();
   }, 10_000);
 
   it('sin los pasos anteriores pide volver al paso 1', async () => {

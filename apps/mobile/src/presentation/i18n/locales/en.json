@@ -34,7 +34,6 @@
     "profile": "Profile"
   },
   "home": {
-    "title": "Discover ways to save",
     "empty": {
       "title": "There are no open circles for you yet",
       "description": "Choose your amount and payout month: we'll open a new Game'ya for you.",
@@ -73,12 +72,13 @@
       "editA11y": "Edit the payout amount",
       "optionsLabel": "Available pay-ins",
       "option": "{{amount}} per month",
-      "optionMonths": "For {{months}} months",
+      "optionMonths": "for {{months}} months",
       "exceedsLimit": "Exceeds your monthly pay-in limit.",
       "info": "Your monthly pay-in may vary depending on your slot fees or discounts.",
       "empty": "There are no pay-ins available for this amount. Try another payout amount.",
       "missingPayout": "Choose the payout amount first.",
-      "choosePayout": "Choose the amount"
+      "choosePayout": "Choose the amount",
+      "perMonth": "/Monthly"
     },
     "slot": {
       "title": "Payout Slot",
@@ -114,11 +114,20 @@
         "trustRequired": "Available after you complete your first circle",
         "identityRequired": "Verify your identity to choose it",
         "incomeRequired": "Declare your income to choose it"
+      },
+      "typeTagShort": {
+        "fastestPayout": "fees apply",
+        "highestReturn": "pay-ins discount"
+      },
+      "typeSlots": {
+        "fastestPayout": "First slots (from {{from}} to {{to}})",
+        "lowestFees": "Middle slots (from {{from}} to {{to}})",
+        "highestReturn": "Last slots (from {{from}} to {{to}})"
       }
     },
     "payoutMethod": {
       "title": "Payout Method",
-      "question": "How do you want to receive your payout?",
+      "question": "Choose your preferred payout method for the next circles.",
       "optionsLabel": "Payout methods",
       "types": {
         "digitalWallet": "Digital Wallets",
@@ -133,7 +142,13 @@
       "changeNotAllowed": "You are in your payout month: you can no longer change the payout method.",
       "continue": "Continue",
       "missingSteps": "Choose the amount, the monthly pay-in and your slot first.",
-      "startOver": "Choose the amount"
+      "startOver": "Choose the amount",
+      "descriptions": {
+        "digitalWallet": "Receive your payout on any digital wallet.",
+        "prepaidCard": "Receive your payout on any Prepaid Card.",
+        "bankTransfer": "Direct your payout to your bank account.",
+        "fawry": "Receive your payout from any of Fawry Plus stores without bank account."
+      }
     },
     "confirm": {
       "title": "Confirm",
@@ -612,6 +627,10 @@
       "copyLabel": "Copy code {{code}}",
       "copied": "Code copied.",
       "copyFailed": "We couldn't copy the code. Try again."
+    },
+    "banner": {
+      "text": "Send an invitation to your friends and you'll both get a <amount>{{amount}}</amount> discount.",
+      "label": "Invite your friends: you'll both get a {{amount}} discount"
     }
   }
 }

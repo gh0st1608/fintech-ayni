@@ -98,11 +98,16 @@ describe('shell de navegación', () => {
     await fireEvent.press(await screen.findByRole('button', { name: 'Siguiente' }));
     await waitFor(() => expect(screen).toHavePathname('/join/monthly-pay-in'));
 
-    await fireEvent.press(await screen.findByRole('radio', { name: /6 meses/ }, { timeout: 5000 }));
-    await fireEvent.press(screen.getByRole('button', { name: 'Siguiente' }));
+    // Figma 55:9334: tocar la cuota pasa al turno.
+    await fireEvent.press(
+      await screen.findByRole('button', { name: /6 meses/ }, { timeout: 5000 }),
+    );
     await waitFor(() => expect(screen).toHavePathname('/join/slot'));
 
-    await fireEvent.press(await screen.findByTestId('slot-1', {}, { timeout: 5000 }));
+    await fireEvent.press(
+      await screen.findByTestId('slot-type-fastestPayout', {}, { timeout: 5000 }),
+    );
+    await fireEvent.press(await screen.findByTestId('slot-1'));
     await fireEvent.press(screen.getByRole('button', { name: /^Continuar con / }));
     await waitFor(() => expect(screen).toHavePathname('/join/payout-method'));
 

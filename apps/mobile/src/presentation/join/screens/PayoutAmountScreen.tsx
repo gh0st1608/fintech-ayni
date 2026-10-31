@@ -2,6 +2,8 @@ import { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, ScrollView, StyleSheet, View } from 'react-native';
 
+import ROCKET from '@assets/images/shared/rocket.png';
+
 import { availablePayoutRange } from '@/domain/circles/JoinConfig';
 import type { PayoutRange } from '@/domain/circles/value-objects/PayoutRange';
 import { Money } from '@/domain/shared/value-objects/Money';
@@ -94,18 +96,14 @@ function PayoutPicker({
   return (
     <>
       <ScrollView contentContainerStyle={styles.content}>
-        <AppText variant="highlight" weight="semibold" accessibilityRole="header">
-          {t('join.payout.question')}
-        </AppText>
-        <AppText
-          variant="display"
-          weight="semibold"
-          color={colors.primary}
-          style={styles.centerText}
-          testID="payout-amount"
-        >
-          {format(amount.amount)}
-        </AppText>
+        <View style={styles.amount}>
+          <AppText variant="caption" color={colors.neutral500} accessibilityRole="header">
+            {t('join.payout.title')}
+          </AppText>
+          <AppText variant="display" weight="semibold" testID="payout-amount">
+            {format(amount.amount)}
+          </AppText>
+        </View>
         <View>
           <Slider
             value={amount.amount}
@@ -131,7 +129,7 @@ function PayoutPicker({
             {t('join.payout.userLimit', { amount: format(range.max.amount) })}
           </AppText>
         )}
-        <InfoBanner message={t('join.payout.info')} />
+        <InfoBanner message={t('join.payout.info')} illustration={ROCKET} />
       </ScrollView>
       <Button
         label={t('join.next')}
@@ -149,4 +147,5 @@ const styles = StyleSheet.create({
   centerText: { textAlign: 'center' },
   content: { gap: spacing.l, paddingVertical: spacing.l },
   limits: { flexDirection: 'row', justifyContent: 'space-between' },
+  amount: { gap: spacing.xs },
 });

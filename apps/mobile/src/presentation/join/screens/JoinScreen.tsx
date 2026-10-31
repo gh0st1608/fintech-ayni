@@ -1,11 +1,15 @@
 import { useTranslation } from 'react-i18next';
-import { StyleSheet, View } from 'react-native';
+import { Image, type ImageSourcePropType, StyleSheet, View } from 'react-native';
+
+import GAMEYA from '@assets/images/join/gameya.png';
+import SAVING from '@assets/images/join/saving.png';
 
 import { useFormatMoney } from '@/presentation/formatters/formatMoney';
 import { AppText } from '@/presentation/shared/components/AppText';
-import { ListItem } from '@/presentation/shared/components/ListItem';
+import { Card } from '@/presentation/shared/components/Card';
+import { Chevron } from '@/presentation/shared/components/Chevron';
 import { Screen } from '@/presentation/shared/components/Screen';
-import { spacing } from '@/presentation/theme/tokens';
+import { colors, spacing } from '@/presentation/theme/tokens';
 
 import { useJoinConfig } from '../hooks/useJoinConfig';
 import { useJoinFlow } from '../JoinFlowProvider';
@@ -17,7 +21,8 @@ interface JoinScreenProps {
 }
 
 /**
- * "Choose a Service" (Figma 55:9069): unirse a un Game'ya o a un programa de ahorro.
+ * "Choose a Service" (Figma 55:9069): unirse a un Game'ya o a un programa de ahorro, cada uno
+ * con su ilustración.
  * Los montos máximos llegan del backend; mientras no cargan, la descripción va sin monto.
  */
 export function JoinScreen({ onJoinGameya, onJoinSavingProgram }: JoinScreenProps) {
@@ -43,8 +48,8 @@ export function JoinScreen({ onJoinGameya, onJoinSavingProgram }: JoinScreenProp
         {t('join.question')}
       </AppText>
       <View style={styles.options}>
-        <ListItem
-          icon="people-outline"
+        <ServiceCard
+          image={GAMEYA}
           title={t('join.gameya.title')}
           description={gameyaDescription}
           onPress={() => {
@@ -53,8 +58,8 @@ export function JoinScreen({ onJoinGameya, onJoinSavingProgram }: JoinScreenProp
           }}
           testID="join-gameya"
         />
-        <ListItem
-          icon="wallet-outline"
+        <ServiceCard
+          image={SAVING}
           title={t('join.saving.title')}
           description={savingDescription}
           onPress={onJoinSavingProgram}
@@ -65,6 +70,43 @@ export function JoinScreen({ onJoinGameya, onJoinSavingProgram }: JoinScreenProp
   );
 }
 
+interface ServiceCardProps {
+  image: ImageSourcePropType;
+  title: string;
+  description: string;
+  onPress: () => void;
+  testID: string;
+}
+
+function ServiceCard({ image, title, description, onPress, testID }: ServiceCardProps) {
+  return (
+    <Card
+      onPress={onPress}
+      accessibilityLabel={`${title}. ${description}`}
+      style={styles.card}
+      testID={testID}
+    >
+      <View style={styles.cardText}>
+        <Image
+          source={image}
+          style={styles.image}
+          resizeMode="contain"
+          accessibilityElementsHidden
+          importantForAccessibility="no"
+        />
+        <AppText variant="highlight">{title}</AppText>
+        <AppText variant="caption" color={colors.neutral500}>
+          {description}
+        </AppText>
+      </View>
+      <Chevron />
+    </Card>
+  );
+}
+
 const styles = StyleSheet.create({
-  options: { gap: spacing.sm, marginTop: spacing.l },
+  options: { gap: spacing.m, marginTop: spacing.l },
+  card: { flexDirection: 'row', alignItems: 'center', gap: spacing.m },
+  cardText: { flex: 1, gap: spacing.xs },
+  image: { width: 44, height: 39, marginBottom: spacing.xxs },
 });

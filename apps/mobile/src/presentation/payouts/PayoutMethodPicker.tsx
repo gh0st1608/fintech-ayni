@@ -1,3 +1,4 @@
+import type Ionicons from '@expo/vector-icons/Ionicons';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ScrollView, StyleSheet } from 'react-native';
@@ -25,6 +26,13 @@ interface PayoutMethodPickerProps {
   onSaved: (type: PayoutMethodType) => void;
 }
 
+const ICONS = {
+  digitalWallet: 'wallet-outline',
+  prepaidCard: 'card-outline',
+  bankTransfer: 'business-outline',
+  fawry: 'globe-outline',
+} as const satisfies Record<PayoutMethodType, React.ComponentProps<typeof Ionicons>['name']>;
+
 /**
  * Selector de método de cobro (COPAYNI-37): lo usan el paso 4 de la unión y Payment Settings.
  * Los métodos los define el backend; el actual aparece preseleccionado.
@@ -45,19 +53,25 @@ export function PayoutMethodPicker({
   const fallback = [preferred, catalog.selected].find(isSelectable) ?? null;
   const selected = picked ?? fallback;
 
-  const description = (method: PayoutMethod): string | undefined =>
-    method.limit
-      ? t('join.payoutMethod.limit', {
-          amount: formatMoney(method.limit, { trimZeroDecimals: true }),
-        })
-      : undefined;
+  // Figma 55:9520: qué hace cada método y, si lo tiene, su límite.
+  const description = (method: PayoutMethod): string =>
+    [
+      t(`join.payoutMethod.descriptions.${method.type}`),
+      method.limit
+        ? t('join.payoutMethod.limit', {
+            amount: formatMoney(method.limit, { trimZeroDecimals: true }),
+          })
+        : null,
+    ]
+      .filter(Boolean)
+      .join('\n');
 
   const locked = select.error instanceof PayoutMethodChangeNotAllowedError;
 
   return (
     <>
       <ScrollView contentContainerStyle={styles.content}>
-        <AppText variant="highlight" weight="semibold" accessibilityRole="header">
+        <AppText variant="highlight" color={colors.neutral500} accessibilityRole="header">
           {t('join.payoutMethod.question')}
         </AppText>
         <RadioGroup label={t('join.payoutMethod.optionsLabel')}>
@@ -66,6 +80,7 @@ export function PayoutMethodPicker({
               key={method.type}
               title={t(`join.payoutMethod.types.${method.type}`)}
               description={description(method)}
+              icon={ICONS[method.type]}
               badge={method.isFree ? t('join.payoutMethod.noCharge') : undefined}
               selected={selected === method.type}
               onSelect={() => {

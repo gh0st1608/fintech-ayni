@@ -1,7 +1,9 @@
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ActivityIndicator, ScrollView, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
+import ROCKET from '@assets/images/shared/rocket.png';
 import type { InstallmentOption } from '@/domain/circles/value-objects/InstallmentOption';
 import {
   SlotNoLongerAvailableError,
@@ -16,11 +18,13 @@ import { errorMessage } from '@/presentation/i18n/errorMessageKey';
 import { AppText } from '@/presentation/shared/components/AppText';
 import { Button } from '@/presentation/shared/components/Button';
 import { InfoBanner } from '@/presentation/shared/components/InfoBanner';
-import { RadioCard, RadioGroup } from '@/presentation/shared/components/RadioCard';
+import { Badge } from '@/presentation/shared/components/Badge';
+import { Card } from '@/presentation/shared/components/Card';
+import { Chevron } from '@/presentation/shared/components/Chevron';
 import { Screen } from '@/presentation/shared/components/Screen';
 import { SegmentedTabs } from '@/presentation/shared/components/SegmentedTabs';
 import { Stepper } from '@/presentation/shared/components/Stepper';
-import { colors, spacing } from '@/presentation/theme/tokens';
+import { colors, radius, spacing } from '@/presentation/theme/tokens';
 
 import { JoinSummary } from '../components/JoinSummary';
 import { useAvailableSlots, useConfirmSlot } from '../hooks/useSlots';
@@ -108,6 +112,12 @@ export function SlotScreen({ onEditPayout, onEditInstallment, onNext }: SlotScre
   );
 }
 
+const TYPE_ICON = {
+  fastestPayout: 'flash-outline',
+  lowestFees: 'happy-outline',
+  highestReturn: 'trending-up-outline',
+} as const satisfies Record<SlotType, React.ComponentProps<typeof Ionicons>['name']>;
+
 function SlotPicker({
   payout,
   installment,
@@ -120,7 +130,6 @@ function SlotPicker({
   onNext: () => void;
 }) {
   const { t } = useTranslation();
-  const formatMoney = useFormatMoney();
   const formatDate = useFormatDate();
   const { draft, setSlot } = useJoinFlow();
   const confirm = useConfirmSlot(payout, installment, draft.slotsCircleId());
@@ -133,29 +142,11 @@ function SlotPicker({
     all.find((slot) => slot.selectable && slot.position === pickedPosition) ??
     (pickedPosition === null ? previous : undefined) ??
     null;
-  const [type, setType] = useState<SlotType>(
-    previous?.type ?? groups.find((group) => group.slots.length > 0)?.type ?? 'fastestPayout',
-  );
+  // Figma 55:9377: primero se elige el tipo de turno; 55:9444: luego el mes, con pestañas.
+  const [type, setType] = useState<SlotType | null>(previous?.type ?? null);
   const group = groups.find((entry) => entry.type === type);
 
-  const money = (amount: Money) => formatMoney(amount, { trimZeroDecimals: true });
   const monthYear = (slot: Slot) => formatDate(slot.payoutDate, 'monthYear');
-  const describe = (slot: Slot) => {
-    const parts = [t('join.slot.position', { position: slot.position })];
-    if (slot.fee.amount > 0) parts.push(t('join.slot.fee', { amount: money(slot.fee) }));
-    else parts.push(t('join.slot.zeroFees'));
-    if (slot.discount.amount > 0) {
-      parts.push(t('join.slot.discount', { amount: money(slot.discount) }));
-    }
-    if (slot.retention.amount > 0) {
-      parts.push(t('join.slot.retention', { amount: money(slot.retention) }));
-    }
-    if (slot.catchUp.amount > 0) {
-      parts.push(t('join.slot.catchUp', { amount: money(slot.catchUp) }));
-    }
-    return parts.join(' · ');
-  };
-
   const conflict = confirm.error instanceof SlotNoLongerAvailableError;
   const proceed = () => {
     if (!selected) return;
@@ -169,6 +160,63 @@ function SlotPicker({
       },
     });
   };
+
+  if (type === null) {
+    return (
+      <ScrollView contentContainerStyle={styles.content}>
+        <AppText variant="highlight" weight="semibold" accessibilityRole="header">
+          {t('join.slot.question')}
+        </AppText>
+        {groups.map((entry) => {
+          const first = entry.slots[0];
+          const last = entry.slots[entry.slots.length - 1];
+          const range =
+            first && last
+              ? t(`join.slot.typeSlots.${entry.type}`, {
+                  from: formatDate(first.payoutDate, 'month'),
+                  to: formatDate(last.payoutDate, 'month'),
+                })
+              : t('join.slot.typeEmpty');
+          const tag =
+            entry.type === 'lowestFees' ? null : t(`join.slot.typeTagShort.${entry.type}`);
+          return (
+            <Card
+              key={entry.type}
+              onPress={() => setType(entry.type)}
+              disabled={entry.slots.length === 0}
+              accessibilityLabel={[t(`join.slot.types.${entry.type}`), tag, range]
+                .filter(Boolean)
+                .join('. ')}
+              style={styles.typeCard}
+              testID={`slot-type-${entry.type}`}
+            >
+              <View style={styles.typeText}>
+                <View style={styles.typeTitle}>
+                  <Ionicons name={TYPE_ICON[entry.type]} size={18} color={colors.primary} />
+                  <AppText weight="semibold" style={styles.flex}>
+                    {t(`join.slot.types.${entry.type}`)}
+                  </AppText>
+                  {tag && (
+                    <AppText
+                      variant="caption"
+                      color={entry.type === 'highestReturn' ? colors.success : colors.black}
+                    >
+                      {tag}
+                    </AppText>
+                  )}
+                </View>
+                <AppText variant="caption" color={colors.neutral500}>
+                  {range}
+                </AppText>
+              </View>
+              <Chevron />
+            </Card>
+          );
+        })}
+        <InfoBanner message={t('join.monthlyPayIn.info')} illustration={ROCKET} />
+      </ScrollView>
+    );
+  }
 
   return (
     <>
@@ -193,27 +241,23 @@ function SlotPicker({
                 to: monthYear(group.slots[group.slots.length - 1]!),
               })} ${t(`join.slot.typeTag.${type}`)}`}
             </AppText>
-            <RadioGroup label={t('join.slot.slotsLabel')}>
+            <View
+              accessibilityRole="radiogroup"
+              accessibilityLabel={t('join.slot.slotsLabel')}
+              style={styles.grid}
+            >
               {group.slots.map((slot) => (
-                <RadioCard
+                <SlotCard
                   key={slot.position}
-                  title={monthYear(slot)}
-                  description={describe(slot)}
+                  slot={slot}
                   selected={selected?.position === slot.position}
                   onSelect={() => {
                     confirm.reset();
                     setPickedPosition(slot.position);
                   }}
-                  disabled={!slot.selectable}
-                  disabledReason={
-                    slot.notAllowedReason
-                      ? t(`join.slot.notAllowed.${slot.notAllowedReason}`)
-                      : t('join.slot.taken')
-                  }
-                  testID={`slot-${slot.position}`}
                 />
               ))}
-            </RadioGroup>
+            </View>
           </>
         ) : (
           <AppText>{t('join.slot.typeEmpty')}</AppText>
@@ -223,7 +267,7 @@ function SlotPicker({
             {conflict ? t('join.slot.noLongerAvailable') : errorMessage(t, confirm.error)}
           </AppText>
         )}
-        <InfoBanner message={t('join.slot.adminFeesInfo')} />
+        <InfoBanner message={t('join.slot.adminFeesInfo')} illustration={ROCKET} />
       </ScrollView>
       <Button
         label={
@@ -239,8 +283,117 @@ function SlotPicker({
   );
 }
 
+/** Tarjeta de mes del Figma: mes y turno arriba; fees o "Sin fees", descuento y ajustes abajo. */
+function SlotCard({
+  slot,
+  selected,
+  onSelect,
+}: {
+  slot: Slot;
+  selected: boolean;
+  onSelect: () => void;
+}) {
+  const { t } = useTranslation();
+  const formatMoney = useFormatMoney();
+  const formatDate = useFormatDate();
+  const money = (amount: Money) => formatMoney(amount, { trimZeroDecimals: true });
+  const details: { text: string; color: string }[] = [];
+  if (slot.fee.amount > 0) {
+    details.push({ text: t('join.slot.fee', { amount: money(slot.fee) }), color: colors.black });
+  }
+  if (slot.discount.amount > 0) {
+    details.push({
+      text: t('join.slot.discount', { amount: money(slot.discount) }),
+      color: colors.success,
+    });
+  }
+  if (slot.retention.amount > 0) {
+    details.push({
+      text: t('join.slot.retention', { amount: money(slot.retention) }),
+      color: colors.neutral600,
+    });
+  }
+  if (slot.catchUp.amount > 0) {
+    details.push({
+      text: t('join.slot.catchUp', { amount: money(slot.catchUp) }),
+      color: colors.neutral600,
+    });
+  }
+  const reason = slot.notAllowedReason
+    ? t(`join.slot.notAllowed.${slot.notAllowedReason}`)
+    : t('join.slot.taken');
+  const month = formatDate(slot.payoutDate, 'monthYear');
+  const position = t('join.slot.position', { position: slot.position });
+  const label = [
+    month,
+    position,
+    slot.fee.amount > 0 ? null : t('join.slot.zeroFees'),
+    ...details.map(({ text }) => text),
+    slot.selectable ? null : reason,
+  ]
+    .filter(Boolean)
+    .join('. ');
+
+  return (
+    <Pressable
+      accessibilityRole="radio"
+      accessibilityLabel={label}
+      accessibilityState={{ checked: selected, disabled: !slot.selectable }}
+      disabled={!slot.selectable}
+      onPress={onSelect}
+      style={({ pressed }) => [
+        styles.slot,
+        selected && styles.slotSelected,
+        !slot.selectable && styles.slotDisabled,
+        pressed && styles.pressed,
+      ]}
+      testID={`slot-${slot.position}`}
+    >
+      <View style={styles.slotHeader} importantForAccessibility="no-hide-descendants">
+        <AppText weight="semibold" color={selected ? colors.primary : colors.black}>
+          {month}
+        </AppText>
+        <AppText variant="caption">{position}</AppText>
+      </View>
+      <View style={styles.slotDetails} importantForAccessibility="no-hide-descendants">
+        {slot.fee.amount === 0 && <Badge label={t('join.slot.zeroFees')} />}
+        {details.map(({ text, color }) => (
+          <AppText key={text} variant="caption" weight="semibold" color={color}>
+            {text}
+          </AppText>
+        ))}
+        {!slot.selectable && (
+          <AppText variant="footnote" color={colors.neutral600}>
+            {reason}
+          </AppText>
+        )}
+      </View>
+    </Pressable>
+  );
+}
+
 const styles = StyleSheet.create({
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: spacing.lg },
   centerText: { textAlign: 'center' },
   content: { gap: spacing.l, paddingVertical: spacing.l },
+  flex: { flex: 1 },
+  typeCard: { flexDirection: 'row', alignItems: 'center', gap: spacing.m },
+  typeText: { flex: 1, gap: spacing.xs },
+  typeTitle: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
+  slot: {
+    flexBasis: '48%',
+    flexGrow: 1,
+    gap: spacing.sm,
+    padding: spacing.m,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.secondary300,
+    backgroundColor: colors.background,
+  },
+  slotSelected: { borderWidth: 2, borderColor: colors.primary },
+  slotDisabled: { opacity: 0.5 },
+  slotHeader: { flexDirection: 'row', justifyContent: 'space-between', gap: spacing.xs },
+  slotDetails: { gap: spacing.xs, alignItems: 'flex-start' },
+  pressed: { opacity: 0.85 },
 });

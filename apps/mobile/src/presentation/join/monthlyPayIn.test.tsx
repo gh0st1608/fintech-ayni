@@ -46,13 +46,13 @@ async function renderPayIn({
   return { ...view, onEdit, onNext };
 }
 
-const option = (name: RegExp) => screen.findByRole('radio', { name });
+const option = (name: RegExp) => screen.findByRole('button', { name });
 
 describe('MonthlyPayInScreen', () => {
   it('muestra el paso 2 de 4 con el resumen del monto y las combinaciones del backend', async () => {
     await renderPayIn();
     expect(screen.getByLabelText('Paso 2 de 4')).toBeTruthy();
-    expect(screen.getByTestId('join-summary')).toHaveTextContent(/Monto de payout.*30\.000/);
+    expect(screen.getByTestId('join-summary')).toHaveTextContent(/30\.000/);
     // Intl en español no agrupa los miles de 4 cifras: "5000", no "5.000".
     expect(await option(/5\.?000.*al mes.*6 meses/)).toBeTruthy();
     expect(await option(/3\.?000.*al mes.*10 meses/)).toBeTruthy();
@@ -62,13 +62,9 @@ describe('MonthlyPayInScreen', () => {
     ).toBeTruthy();
   });
 
-  it('Siguiente se habilita al elegir y guarda la cuota en el borrador', async () => {
+  it('tocar una cuota la guarda en el borrador y pasa al turno (Figma 55:9334)', async () => {
     const { onNext } = await renderPayIn();
-    const tenMonths = await option(/10 meses/);
-    expect(screen.getByRole('button', { name: 'Siguiente' })).toBeDisabled();
-
-    await fireEvent.press(tenMonths);
-    await fireEvent.press(screen.getByRole('button', { name: 'Siguiente' }));
+    await fireEvent.press(await option(/10 meses/));
 
     expect(screen.getByTestId('draft')).toHaveTextContent('10x3000');
     expect(onNext).toHaveBeenCalledTimes(1);
@@ -98,7 +94,6 @@ describe('MonthlyPayInScreen', () => {
     });
     await renderPayIn({ setup });
     expect(await screen.findByRole('alert')).toHaveTextContent(/No hay cuotas disponibles/);
-    expect(screen.getByRole('button', { name: 'Siguiente' })).toBeDisabled();
   });
 
   it('sin conexión muestra un error recuperable y conserva el monto', async () => {
@@ -136,13 +131,12 @@ describe('MonthlyPayInScreen', () => {
     }
     await renderWithProviders(<Host />);
     await fireEvent.press(await option(/12 meses/));
-    await fireEvent.press(screen.getByRole('button', { name: 'Siguiente' }));
 
     await fireEvent.press(screen.getByTestId('toggle'));
     await fireEvent.press(screen.getByTestId('toggle'));
 
-    expect(await option(/12 meses/)).toBeChecked();
-    expect(screen.getByRole('button', { name: 'Siguiente' })).toBeEnabled();
+    expect(await option(/12 meses/)).toBeSelected();
+    expect(await option(/10 meses/)).not.toBeSelected();
   });
 
   it('cambiar el monto en el paso 1 descarta la cuota elegida', async () => {
@@ -167,7 +161,6 @@ describe('MonthlyPayInScreen', () => {
       </JoinFlowProvider>,
     );
     await fireEvent.press(await option(/12 meses/));
-    await fireEvent.press(screen.getByRole('button', { name: 'Siguiente' }));
 
     await fireEvent.press(screen.getByTestId('same'));
     expect(screen.getByTestId('draft')).toHaveTextContent('12x2500');
