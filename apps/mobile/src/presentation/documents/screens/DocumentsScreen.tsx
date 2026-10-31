@@ -23,6 +23,13 @@ const STATUS_ICON = {
   notSubmitted: { name: 'add-circle-outline', color: colors.neutral500 },
 } as const satisfies Record<DocumentSummaryStatus, { name: string; color: string }>;
 
+const STATUS_COLOR = {
+  approved: colors.success,
+  inReview: colors.primary,
+  rejected: colors.error,
+  notSubmitted: colors.neutral500,
+} as const satisfies Record<DocumentSummaryStatus, string>;
+
 const ICONS = {
   nationalId: 'id-card-outline',
   proofOfIncome: 'cash-outline',
@@ -30,8 +37,9 @@ const ICONS = {
 } as const satisfies Record<DocumentType, string>;
 
 /**
- * My Documents (COPAYNI-46): el estado de verificación de cada documento y el acceso para
- * enviarlo o reenviarlo. Sin el contexto de diseño (límite de Figma).
+ * My Documents (Figma 55:10523, COPAYNI-46): cada documento con para qué sirve, su estado y el
+ * acceso para enviarlo o reenviarlo. Los documentos adicionales del Figma (recibo de servicios,
+ * licencia, carnés) se agrupan en una fila hasta tener su historia (COPAYNI-49).
  */
 export function DocumentsScreen({ onOpen }: DocumentsScreenProps) {
   const { t } = useTranslation();
@@ -77,11 +85,24 @@ export function DocumentsScreen({ onOpen }: DocumentsScreenProps) {
           // Un aprobado no se reenvía; un adicional no tiene pantalla todavía (COPAYNI-49).
           const open = status === 'approved' ? undefined : onOpen[type];
           const icon = STATUS_ICON[status];
+          // Figma 55:10523: lo pendiente dice para qué sirve el documento; si no, su estado.
+          const required = status === 'notSubmitted' && type !== 'additional';
+          const note = required ? t(`documents.required.${type}`) : t(`documents.status.${status}`);
           return (
             <ListItem
               key={type}
               title={t(`documents.types.${type}`)}
-              description={t(`documents.status.${status}`)}
+              description={t(`documents.descriptions.${type}`)}
+              extra={
+                <AppText
+                  variant="caption"
+                  weight="semibold"
+                  color={required ? colors.primary : STATUS_COLOR[status]}
+                >
+                  {note}
+                </AppText>
+              }
+              accessibilityHint={note}
               icon={ICONS[type]}
               onPress={open}
               trailing={

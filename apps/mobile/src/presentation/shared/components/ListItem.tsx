@@ -16,6 +16,8 @@ interface ListItemProps {
   iconColor?: string;
   /** Contenido a la derecha (badge, toggle, icono de estado). Por defecto, una flecha de avance. */
   trailing?: React.ReactNode;
+  /** Línea extra bajo la descripción (p. ej. "Necesario para verificar tu identidad"). */
+  extra?: React.ReactNode;
   onPress?: () => void;
   disabled?: boolean;
   accessibilityHint?: string;
@@ -29,6 +31,7 @@ export function ListItem({
   icon,
   iconColor = colors.primary,
   trailing,
+  extra,
   onPress,
   disabled = false,
   accessibilityHint,
@@ -61,6 +64,7 @@ export function ListItem({
             {description}
           </AppText>
         )}
+        {extra}
       </View>
       {trailing ?? (onPress ? <Chevron /> : null)}
     </Pressable>

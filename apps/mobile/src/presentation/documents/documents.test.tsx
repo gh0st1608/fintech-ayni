@@ -42,11 +42,29 @@ describe('DocumentsScreen (COPAYNI-46)', () => {
   });
 });
 
+/** El escaneo empieza en la guía del Figma (55:10598). */
+async function startScan() {
+  await fireEvent.press(await screen.findByRole('button', { name: 'Escanear documento' }));
+}
+
 describe('ScanNationalIdScreen (COPAYNI-47)', () => {
+  it('muestra la guía con los ejemplos de qué evitar antes de la cámara', async () => {
+    await renderWithProviders(<ScanNationalIdScreen onDone={jest.fn()} />);
+    expect(screen.getByText(/ambas caras se vean completas y nítidas/)).toBeTruthy();
+    expect(screen.getByLabelText('Evita: Foto borrosa')).toBeTruthy();
+    expect(screen.getByLabelText('Evita: Datos tapados')).toBeTruthy();
+    expect(screen.getByText(/antes de que te unas a un Game'ya/)).toBeTruthy();
+    expect(screen.queryByTestId('slot-front')).toBeNull();
+
+    await startScan();
+    expect(screen.getByTestId('slot-front')).toBeTruthy();
+  });
+
   it('toma ambas caras, las sube, borra las copias y muestra el resultado', async () => {
     const setup = createTestContainer();
     const onDone = jest.fn();
     await renderWithProviders(<ScanNationalIdScreen onDone={onDone} />, setup);
+    await startScan();
     const submit = screen.getByRole('button', { name: 'Enviar documento' });
     expect(submit).toBeDisabled();
 
@@ -74,6 +92,7 @@ describe('ScanNationalIdScreen (COPAYNI-47)', () => {
         filePicker: new FakeFilePicker([new PermissionDeniedError('camera')]),
       }),
     );
+    await startScan();
     await fireEvent.press(screen.getAllByRole('button', { name: 'Tomar foto' })[0]!);
     expect(await screen.findByText(/necesita acceso a la cámara/)).toBeTruthy();
   });
@@ -86,6 +105,7 @@ describe('ScanNationalIdScreen (COPAYNI-47)', () => {
       ]),
     });
     await renderWithProviders(<ScanNationalIdScreen onDone={jest.fn()} />, setup);
+    await startScan();
     await fireEvent.press(screen.getAllByRole('button', { name: 'Galería' })[0]!);
     await fireEvent.press(screen.getAllByRole('button', { name: 'Galería' })[1]!);
     await fireEvent.press(await screen.findByRole('button', { name: 'Enviar documento' }));
@@ -104,6 +124,7 @@ describe('ScanNationalIdScreen (COPAYNI-47)', () => {
       <ScanNationalIdScreen onDone={jest.fn()} />,
       createTestContainer({ documents }),
     );
+    await startScan();
     for (const button of screen.getAllByRole('button', { name: 'Tomar foto' })) {
       await fireEvent.press(button);
     }
@@ -115,21 +136,30 @@ describe('ScanNationalIdScreen (COPAYNI-47)', () => {
 });
 
 describe('ProofOfIncomeScreen (COPAYNI-48)', () => {
+  /** Pasos del Figma: tipo (55:10630) → ingreso (55:10662) → guía y páginas (55:10677). */
+  async function goToUpload(income: string) {
+    await fireEvent.press(screen.getByRole('button', { name: 'Siguiente' }));
+    const next = screen.getByRole('button', { name: 'Siguiente' });
+    expect(next).toBeDisabled();
+    await fireEvent.changeText(screen.getByTestId('monthly-income'), income);
+    await fireEvent.press(screen.getByRole('button', { name: 'Siguiente' }));
+  }
+
   it('envía el ingreso en unidades menores con las páginas del comprobante', async () => {
     const setup = createTestContainer();
     const submit = jest.spyOn(setup.adapters.documents, 'submitProofOfIncome');
     await renderWithProviders(<ProofOfIncomeScreen onDone={jest.fn()} />, setup);
 
     await fireEvent.press(screen.getByTestId('income-kind-bankStatement'));
+    expect(screen.getByText(/Más documentos, mayores payouts/)).toBeTruthy();
+    await goToUpload('3500,50');
+
+    // La guía cambia según el tipo elegido.
+    expect(screen.getByText(/estado de cuenta con los movimientos/)).toBeTruthy();
     await fireEvent.press(screen.getByRole('button', { name: 'Tomar foto' }));
     await fireEvent.press(await screen.findByRole('button', { name: 'Elegir PDF' }));
     expect(await screen.findByTestId('page-2')).toHaveTextContent(/PDF seleccionado/);
 
-    // Sin ingreso válido no se envía.
-    await fireEvent.press(screen.getByRole('button', { name: 'Enviar comprobante' }));
-    expect(screen.getByText(/Escribe tu ingreso mensual/)).toBeTruthy();
-
-    await fireEvent.changeText(screen.getByTestId('monthly-income'), '3500,50');
     await fireEvent.press(screen.getByRole('button', { name: 'Enviar comprobante' }));
     expect(await screen.findByText('¡Documento verificado!')).toBeTruthy();
     expect(submit).toHaveBeenCalledWith('bankStatement', Money.of(350050, 'PEN'), [
@@ -138,8 +168,18 @@ describe('ProofOfIncomeScreen (COPAYNI-48)', () => {
     ]);
   });
 
+  it('un ingreso inválido no deja avanzar', async () => {
+    await renderWithProviders(<ProofOfIncomeScreen onDone={jest.fn()} />);
+    await fireEvent.press(screen.getByRole('button', { name: 'Siguiente' }));
+    for (const value of ['0', '3500,505', 'abc']) {
+      await fireEvent.changeText(screen.getByTestId('monthly-income'), value);
+      expect(screen.getByRole('button', { name: 'Siguiente' })).toBeDisabled();
+    }
+  });
+
   it('una página se puede quitar', async () => {
     await renderWithProviders(<ProofOfIncomeScreen onDone={jest.fn()} />);
+    await goToUpload('3500');
     await fireEvent.press(screen.getByRole('button', { name: 'Tomar foto' }));
     expect(await screen.findByTestId('page-1')).toBeTruthy();
     await fireEvent.press(screen.getByRole('button', { name: 'Quitar' }));

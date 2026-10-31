@@ -468,7 +468,7 @@
   "documents": {
     "list": {
       "title": "My documents",
-      "intro": "We verify your identity and income so you can join circles and receive your payout."
+      "intro": "Upload your documents to complete your account information."
     },
     "types": {
       "nationalId": "National ID",
@@ -496,12 +496,17 @@
       "intro": "Take a photo of each side of your ID, in good light and without glare.",
       "front": "Front",
       "back": "Back",
-      "submit": "Submit document"
+      "submit": "Submit document",
+      "guide": "When scanning your ID, make sure that both sides of your National ID are complete and sharp:",
+      "dont": "Don't",
+      "dontBlurry": "Blurry photo",
+      "dontCovered": "Covered details",
+      "why": "We need your valid National ID before you join a Game'ya, to protect every member.",
+      "scan": "Scan National ID"
     },
     "income": {
       "title": "Proof of income",
       "amount": "Monthly income",
-      "invalidAmount": "Enter your monthly income, for example 3500.",
       "kindLabel": "Type of proof",
       "kinds": {
         "hrLetter": "HR letter",
@@ -509,7 +514,24 @@
       },
       "page": "Page {{number}}",
       "addPage": "Add page",
-      "submit": "Submit proof"
+      "submit": "Submit proof",
+      "next": "Next",
+      "kindDescriptions": {
+        "hrLetter": "Upload a recently signed & stamped HR letter.",
+        "bankStatement": "Upload a recent bank statement reflecting the last 3 months' transactions."
+      },
+      "moreDocuments": "Upload more Proof of Income documents and increase your limit. More documents, bigger payouts!",
+      "incomeTitle": "Your Monthly Income",
+      "incomeIntro": "Your monthly income will be used to calculate your monthly pay-in limit.",
+      "uploadGuide": "When scanning, make sure that the paper is:",
+      "uploadTips": {
+        "light": "Well-lit and clear to read.",
+        "frame": "Inside the frame (not clipped)."
+      },
+      "uploadHelp": {
+        "hrLetter": "Request a recent HR Letter from your employer that details your monthly income, stamped and signed within the last 3 months.",
+        "bankStatement": "Download from your bank a statement with the last 3 months' transactions."
+      }
     },
     "result": {
       "approved": "Document verified!",
@@ -532,6 +554,15 @@
         "pages": "Add 1 to 10 pages."
       },
       "uploadNotUsable": "One of the images didn't upload correctly. Take it again."
+    },
+    "descriptions": {
+      "nationalId": "Upload a photo of your National ID.",
+      "proofOfIncome": "Upload an HR letter or a bank statement.",
+      "additional": "Utility bill, driving license and other cards."
+    },
+    "required": {
+      "nationalId": "Required to verify your identity",
+      "proofOfIncome": "Required to increase your limit"
     }
   },
   "referrals": {

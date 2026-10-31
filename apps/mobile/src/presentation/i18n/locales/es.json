@@ -468,7 +468,7 @@
   "documents": {
     "list": {
       "title": "Mis documentos",
-      "intro": "Verificamos tu identidad y tus ingresos para que puedas unirte a círculos y cobrar tu payout."
+      "intro": "Sube tus documentos para completar la información de tu cuenta."
     },
     "types": {
       "nationalId": "Documento de identidad",
@@ -496,12 +496,17 @@
       "intro": "Toma una foto de cada cara de tu DNI, con buena luz y sin reflejos.",
       "front": "Anverso",
       "back": "Reverso",
-      "submit": "Enviar documento"
+      "submit": "Enviar documento",
+      "guide": "Al escanear tu documento, asegúrate de que ambas caras se vean completas y nítidas:",
+      "dont": "Evita",
+      "dontBlurry": "Foto borrosa",
+      "dontCovered": "Datos tapados",
+      "why": "Necesitamos tu documento de identidad vigente antes de que te unas a un Game'ya, para proteger a todos los miembros.",
+      "scan": "Escanear documento"
     },
     "income": {
       "title": "Comprobante de ingresos",
       "amount": "Ingreso mensual",
-      "invalidAmount": "Escribe tu ingreso mensual, por ejemplo 3500.",
       "kindLabel": "Tipo de comprobante",
       "kinds": {
         "hrLetter": "Carta de recursos humanos",
@@ -509,7 +514,24 @@
       },
       "page": "Página {{number}}",
       "addPage": "Agregar página",
-      "submit": "Enviar comprobante"
+      "submit": "Enviar comprobante",
+      "next": "Siguiente",
+      "kindDescriptions": {
+        "hrLetter": "Sube una carta reciente de recursos humanos, firmada y sellada.",
+        "bankStatement": "Sube un estado de cuenta de tu banco con los movimientos de los últimos 3 meses."
+      },
+      "moreDocuments": "Sube más comprobantes de ingresos y aumenta tu límite. Más documentos, mayores payouts.",
+      "incomeTitle": "Tu ingreso mensual",
+      "incomeIntro": "Usaremos tu ingreso mensual para calcular tu límite mensual de pago.",
+      "uploadGuide": "Al escanear, asegúrate de que el documento:",
+      "uploadTips": {
+        "light": "Esté bien iluminado y se lea con claridad.",
+        "frame": "Esté completo dentro del encuadre."
+      },
+      "uploadHelp": {
+        "hrLetter": "Pide a tu empleador una carta reciente que detalle tu ingreso mensual, sellada y firmada en los últimos 3 meses.",
+        "bankStatement": "Descarga de tu banco un estado de cuenta con los movimientos de los últimos 3 meses."
+      }
     },
     "result": {
       "approved": "¡Documento verificado!",
@@ -532,6 +554,15 @@
         "pages": "Agrega de 1 a 10 páginas."
       },
       "uploadNotUsable": "Una de las imágenes no se subió bien. Vuelve a tomarla."
+    },
+    "descriptions": {
+      "nationalId": "Sube una foto de tu documento de identidad.",
+      "proofOfIncome": "Sube una carta de recursos humanos o un estado de cuenta bancario.",
+      "additional": "Recibo de servicios, licencia de conducir y otros carnés."
+    },
+    "required": {
+      "nationalId": "Necesario para verificar tu identidad",
+      "proofOfIncome": "Necesario para aumentar tu límite"
     }
   },
   "referrals": {
