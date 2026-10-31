@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useTranslation } from 'react-i18next';
+import { Trans, useTranslation } from 'react-i18next';
 import { ActivityIndicator, FlatList, RefreshControl, StyleSheet, View } from 'react-native';
 
 import type { SavingPlan } from '@/domain/savings/SavingPlan';
@@ -62,7 +62,7 @@ export function SavingCirclesScreen() {
             {catalog.isError && (
               <InfoBanner message={t('saving.offline')} testID="saving-offline" />
             )}
-            <AppText color={colors.neutral500}>{t('saving.chooseCircle.intro')}</AppText>
+            <AppText weight="semibold">{t('saving.chooseCircle.intro')}</AppText>
           </View>
         }
         ListEmptyComponent={
@@ -85,21 +85,29 @@ function PlanCard({ plan, onPress }: { plan: SavingPlan; onPress: () => void }) 
   const formatMoney = useFormatMoney();
   const name = savingPlanName(t, plan.id);
   const target = formatMoney(plan.target, { trimZeroDecimals: true });
-  const extra = t('saving.chooseCircle.upTo', {
-    amount: formatMoney(plan.maxCashback, { trimZeroDecimals: true }),
-  });
+  const amount = formatMoney(plan.maxCashback, { trimZeroDecimals: true });
+  const extra = t('saving.chooseCircle.upTo', { amount }).replace(/<\/?amount>/g, '');
   return (
     <Card
       onPress={onPress}
       accessibilityLabel={`${name}. ${target}. ${extra}`}
       testID={`saving-plan-${plan.id}`}
     >
-      <AppText weight="semibold">{name}</AppText>
+      <AppText variant="caption" style={styles.planName}>
+        {name}
+      </AppText>
       <AppText variant="title" weight="semibold">
         {target}
       </AppText>
-      <AppText variant="caption" color={colors.success}>
-        {extra}
+      {/* Figma 55:9164: solo el monto del cashback va resaltado. */}
+      <AppText variant="caption">
+        <Trans
+          i18nKey="saving.chooseCircle.upTo"
+          values={{ amount }}
+          components={{
+            amount: <AppText variant="caption" weight="semibold" color={colors.success} />,
+          }}
+        />
       </AppText>
     </Card>
   );
@@ -109,4 +117,5 @@ const styles = StyleSheet.create({
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: spacing.lg },
   list: { gap: spacing.m, paddingVertical: spacing.l },
   header: { gap: spacing.m },
+  planName: { textTransform: 'uppercase' },
 });

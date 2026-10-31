@@ -202,17 +202,17 @@
   "saving": {
     "chooseCircle": {
       "title": "Choose a Saving Circle",
-      "intro": "Choose how much you want to save. You get the total at the end of the term, with cashback.",
-      "upTo": "Up to {{amount}} extra",
+      "intro": "Get cashback on monthly savings",
+      "upTo": "Up to <amount>{{amount}}</amount> extra",
       "empty": "There are no saving plans available right now."
     },
     "plans": {
-      "lite": "Lite",
-      "bronze": "Bronze",
-      "silver": "Silver",
-      "gold": "Gold",
-      "platinum": "Platinum",
-      "diamond": "Diamond"
+      "lite": "Lite Saver",
+      "bronze": "Bronze Saver",
+      "silver": "Silver Saver",
+      "gold": "Gold Saver",
+      "platinum": "Platinum Saver",
+      "diamond": "Diamond Saver"
     },
     "offline": "You're offline: showing the last saved information.",
     "duration": {

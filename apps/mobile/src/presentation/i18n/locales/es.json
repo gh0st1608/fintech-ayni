@@ -202,17 +202,17 @@
   "saving": {
     "chooseCircle": {
       "title": "Elige un círculo de ahorro",
-      "intro": "Elige cuánto quieres ahorrar. Recibes el total al final del plazo, con cashback.",
-      "upTo": "Hasta {{amount}} extra",
+      "intro": "Obtén cashback por tus ahorros mensuales",
+      "upTo": "Hasta <amount>{{amount}}</amount> extra",
       "empty": "No hay planes de ahorro disponibles por ahora."
     },
     "plans": {
-      "lite": "Lite",
-      "bronze": "Bronce",
-      "silver": "Plata",
-      "gold": "Oro",
-      "platinum": "Platino",
-      "diamond": "Diamante"
+      "lite": "Ahorro Lite",
+      "bronze": "Ahorro Bronce",
+      "silver": "Ahorro Plata",
+      "gold": "Ahorro Oro",
+      "platinum": "Ahorro Platino",
+      "diamond": "Ahorro Diamante"
     },
     "offline": "Sin conexión: mostramos la última información guardada.",
     "duration": {
