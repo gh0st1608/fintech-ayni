@@ -134,7 +134,7 @@ Pasarela: **Mercado Pago** ([architecture.md](../architecture.md#10-pasarela-de-
 `POST /v1/me/cards` (COPAYNI-40), con `Idempotency-Key` (16 a 255 caracteres `[A-Za-z0-9_-]`, una por formulario):
 
 ```json
-{ "token": "ff8080814c11e237014c1ff593b57b4d" }
+{ "token": "<token de un solo uso de Mercado Pago>" }
 ```
 
 **201** (o **200** si es un reintento con la misma clave: no vuelve a la pasarela, porque el token ya se usó):

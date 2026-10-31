@@ -1,0 +1,6 @@
+# Falsos positivos revisados (gitleaks revisa todo el historial, así que no basta con editar el archivo).
+# Formato: <commit>:<archivo>:<regla>:<línea>
+#
+# Token de ejemplo de la documentación de Mercado Pago (token de tarjeta de un solo uso, no una
+# credencial). En HEAD ya se reemplazó por un marcador.
+7f0646854648dc739c76bb84b5f7358edafe0395:docs/api/payments.md:generic-api-key:136
