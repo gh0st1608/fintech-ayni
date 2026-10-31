@@ -24,6 +24,23 @@ const withRecommended = (...ids: string[]) =>
   });
 
 describe('HomeScreen', () => {
+  it('el banner de invitación muestra el beneficio y abre "Invita a un amigo"', async () => {
+    const onOpenReferral = jest.fn();
+    await renderWithProviders(
+      <HomeScreen onJoinCircle={jest.fn()} onJoin={jest.fn()} onOpenReferral={onOpenReferral} />,
+    );
+    const banner = await screen.findByTestId('home-referral-banner');
+    expect(banner).toHaveTextContent(/ambos tendrán .*150.* de descuento/);
+    await fireEvent.press(banner);
+    expect(onOpenReferral).toHaveBeenCalled();
+  });
+
+  it('sin acceso a referidos no muestra el banner', async () => {
+    await renderHome(withRecommended('r-1'));
+    await screen.findByTestId('recommended-r-1');
+    expect(screen.queryByTestId('home-referral-banner')).toBeNull();
+  });
+
   it('muestra los recomendados con monto, cuota base, fechas, duración y Admin Fees', async () => {
     await renderHome(withRecommended('r-1', 'r-2'));
     expect(screen.getByRole('header', { name: 'Recomendados para ti' })).toBeTruthy();

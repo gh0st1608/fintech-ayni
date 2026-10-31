@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, FlatList, StyleSheet, View } from 'react-native';
 
-import INVITEES_EMPTY from '@assets/images/referrals/invitees-empty.png';
+import INVITEES_EMPTY from '@assets/images/shared/empty-sign.png';
 import ROCKET from '@assets/images/shared/rocket.png';
 import type { Invitee, ReferralSummary } from '@/domain/referrals/Referral';
 import type { Money } from '@/domain/shared/value-objects/Money';

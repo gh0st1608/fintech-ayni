@@ -10,6 +10,7 @@ import { errorMessage } from '@/presentation/i18n/errorMessageKey';
 import { AppText } from '@/presentation/shared/components/AppText';
 import { Button } from '@/presentation/shared/components/Button';
 import { CircleCard } from '@/presentation/shared/components/CircleCard';
+import EMPTY_SIGN from '@assets/images/shared/empty-sign.png';
 import { EmptyState } from '@/presentation/shared/components/EmptyState';
 import { InfoBanner } from '@/presentation/shared/components/InfoBanner';
 import { Screen } from '@/presentation/shared/components/Screen';
@@ -118,6 +119,8 @@ function MyCirclesList({
             <EmptyState
               title={t('circles.empty.active')}
               description={t('circles.empty.activeDescription')}
+              illustration={EMPTY_SIGN}
+              illustrationSize={128}
               action={{ label: t('circles.empty.join'), onPress: onJoin }}
               testID="circles-empty"
             />

@@ -13,6 +13,7 @@ export default function HomeRoute() {
         router.push('/join/payout-amount');
       }}
       onJoin={() => router.push('/join')}
+      onOpenReferral={() => router.push('/profile/referral')}
     />
   );
 }
