@@ -2,6 +2,7 @@ import { Stack } from 'expo-router';
 
 import { useRetryPendingLanguageSync } from '@/presentation/i18n/useLanguage';
 import { JoinFlowProvider } from '@/presentation/join/JoinFlowProvider';
+import { useClaimPendingReferral } from '@/presentation/referrals/useReferrals';
 
 import {
   useCatalogScreenOptions,
@@ -19,6 +20,8 @@ export default function PrivateLayout() {
   const isDev = useIsDevEnvironment();
   // El perfil del backend exige sesión: el idioma pendiente se reintenta al entrar a la zona privada.
   useRetryPendingLanguageSync();
+  // Igual con el código de un enlace de invitación abierto antes de iniciar sesión.
+  useClaimPendingReferral();
 
   // El borrador de unión vive mientras dure la sesión privada; cada flujo lo reinicia al empezar.
   return (
@@ -47,6 +50,7 @@ export default function PrivateLayout() {
           name="profile/documents/proof-of-income"
           options={profileOptions.proofOfIncome}
         />
+        <Stack.Screen name="profile/referral" options={profileOptions.referral} />
         <Stack.Protected guard={isDev}>
           <Stack.Screen name="catalog" options={catalogOptions} />
         </Stack.Protected>

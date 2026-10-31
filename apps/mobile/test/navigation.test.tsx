@@ -1,3 +1,4 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as SecureStore from 'expo-secure-store';
 import { act, fireEvent, renderRouter, screen, waitFor } from 'expo-router/testing-library';
 
@@ -171,6 +172,29 @@ describe('shell de navegación', () => {
   it('verify-otp sin datos del desafío vuelve al ingreso', async () => {
     await renderRouter(APP_DIR, { initialUrl: '/verify-otp' });
     await waitFor(() => expect(screen).toHavePathname('/sign-in'));
+  });
+
+  it('un enlace de invitación guarda el código válido y sigue a la bienvenida', async () => {
+    await AsyncStorage.removeItem('referral.pendingCode');
+    await renderRouter(APP_DIR, { initialUrl: '/invite?code=k7m2q9xb' });
+    expect(await screen.findByText('Bienvenido a Ayni')).toBeTruthy();
+    await waitFor(async () =>
+      expect(await AsyncStorage.getItem('referral.pendingCode')).toBe('K7M2Q9XB'),
+    );
+  });
+
+  it('un enlace de invitación mal formado se ignora sin romper la navegación', async () => {
+    await AsyncStorage.removeItem('referral.pendingCode');
+    await renderRouter(APP_DIR, { initialUrl: '/invite?code=<script>' });
+    expect(await screen.findByText('Bienvenido a Ayni')).toBeTruthy();
+    expect(await AsyncStorage.getItem('referral.pendingCode')).toBeNull();
+  });
+
+  it('el perfil abre "Invita a un amigo"', async () => {
+    await storeSession();
+    await renderRouter(APP_DIR, { initialUrl: '/profile' });
+    await fireEvent.press(await screen.findByTestId('profile-referral'));
+    await waitFor(() => expect(screen).toHavePathname('/profile/referral'));
   });
 
   it('en dev, el perfil abre el catálogo de componentes', async () => {

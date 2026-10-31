@@ -43,6 +43,14 @@ import {
   SubmitNationalIdUseCase,
   SubmitProofOfIncomeUseCase,
 } from '@/application/documents/usecases/documentUseCases';
+import {
+  CapturePendingReferralUseCase,
+  ClaimPendingReferralUseCase,
+  CopyReferralCodeUseCase,
+  GetMyReferralUseCase,
+  ListReferralsUseCase,
+  ShareInviteUseCase,
+} from '@/application/referrals/usecases/referralUseCases';
 import { ChangeLanguageUseCase } from '@/application/i18n/usecases/ChangeLanguageUseCase';
 import { ResolveLanguageUseCase } from '@/application/i18n/usecases/ResolveLanguageUseCase';
 import { SyncLanguagePreferenceUseCase } from '@/application/i18n/usecases/SyncLanguagePreferenceUseCase';
@@ -65,6 +73,12 @@ import type { CardRepositoryPort } from '@/domain/payments/ports/CardRepositoryP
 import type { PaymentTokenizerPort } from '@/domain/payments/ports/CardTokenizerPort';
 import type { PaymentRepositoryPort } from '@/domain/payments/ports/PaymentRepositoryPort';
 import type { PayoutMethodRepositoryPort } from '@/domain/payouts/ports/PayoutMethodRepositoryPort';
+import type {
+  ClipboardPort,
+  PendingReferralPort,
+  SharePort,
+} from '@/domain/referrals/ports/DevicePorts';
+import type { ReferralRepositoryPort } from '@/domain/referrals/ports/ReferralRepositoryPort';
 import type { UserProfileRepositoryPort } from '@/domain/profile/ports/UserProfileRepositoryPort';
 import type { IdGeneratorPort } from '@/domain/shared/ports/IdGeneratorPort';
 import { AuthApiRepository } from '@/infrastructure/auth/AuthApiRepository';
@@ -101,6 +115,13 @@ import { InMemoryPayoutMethodRepository } from '@/infrastructure/payouts/InMemor
 import { PayoutMethodApiRepository } from '@/infrastructure/payouts/PayoutMethodApiRepository';
 import { InMemoryUserProfileRepository } from '@/infrastructure/profile/InMemoryUserProfileRepository';
 import { UserProfileApiRepository } from '@/infrastructure/profile/UserProfileApiRepository';
+import {
+  AsyncStoragePendingReferral,
+  ExpoClipboard,
+  ReactNativeShare,
+} from '@/infrastructure/referrals/DeviceReferralAdapters';
+import { InMemoryReferralRepository } from '@/infrastructure/referrals/InMemoryReferralRepository';
+import { ReferralApiRepository } from '@/infrastructure/referrals/ReferralApiRepository';
 import { AsyncStorageLanguagePreference } from '@/infrastructure/storage/AsyncStorageLanguagePreference';
 import { AsyncStorageLanguageSyncState } from '@/infrastructure/storage/AsyncStorageLanguageSyncState';
 import { SecureStoreTokenStorage } from '@/infrastructure/storage/SecureStoreTokenStorage';
@@ -127,6 +148,10 @@ export interface ContainerAdapters {
   filePicker: FilePickerPort;
   fileUploader: FileUploaderPort;
   fileCleaner: LocalFileCleanerPort;
+  referrals: ReferralRepositoryPort;
+  sharer: SharePort;
+  clipboard: ClipboardPort;
+  pendingReferral: PendingReferralPort;
   ids: IdGeneratorPort;
 }
 
@@ -191,6 +216,13 @@ export function createContainer(
     // Con documentos falsos no hay URL real a la que subir.
     fileUploader: env.documentsApi === 'fake' ? new FakeFileUploader() : new FetchFileUploader(),
     fileCleaner: new ExpoLocalFileCleaner(),
+    referrals:
+      env.referralsApi === 'fake'
+        ? new InMemoryReferralRepository({ currency: env.defaultCurrency })
+        : new ReferralApiRepository(http),
+    sharer: new ReactNativeShare(),
+    clipboard: new ExpoClipboard(),
+    pendingReferral: new AsyncStoragePendingReferral(),
     ids: new ExpoCryptoIdGenerator(),
     ...overrides,
   };
@@ -257,6 +289,14 @@ export function createContainer(
       submitNationalId: new SubmitNationalIdUseCase(adapters.documents, documentUploader),
       submitProofOfIncome: new SubmitProofOfIncomeUseCase(adapters.documents, documentUploader),
       picker: adapters.filePicker,
+    },
+    referrals: {
+      getMine: new GetMyReferralUseCase(adapters.referrals),
+      list: new ListReferralsUseCase(adapters.referrals),
+      copyCode: new CopyReferralCodeUseCase(adapters.clipboard),
+      shareInvite: new ShareInviteUseCase(adapters.sharer),
+      capturePending: new CapturePendingReferralUseCase(adapters.pendingReferral),
+      claimPending: new ClaimPendingReferralUseCase(adapters.referrals, adapters.pendingReferral),
     },
     payouts: {
       listPayoutMethods: new ListPayoutMethodsUseCase(adapters.payoutMethods),

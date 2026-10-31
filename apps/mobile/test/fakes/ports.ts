@@ -5,6 +5,11 @@ import type { DeviceLocalePort } from '@/domain/i18n/ports/DeviceLocalePort';
 import type { LanguagePreferencePort } from '@/domain/i18n/ports/LanguagePreferencePort';
 import type { LanguageSyncStatePort } from '@/domain/i18n/ports/LanguageSyncStatePort';
 import type { LayoutDirectionPort } from '@/domain/i18n/ports/LayoutDirectionPort';
+import type {
+  ClipboardPort,
+  PendingReferralPort,
+  SharePort,
+} from '@/domain/referrals/ports/DevicePorts';
 import type { IdGeneratorPort } from '@/domain/shared/ports/IdGeneratorPort';
 
 export class InMemoryTokenStorage implements TokenStoragePort {
@@ -88,5 +93,39 @@ export class FakeIdGenerator implements IdGeneratorPort {
     const id = `key-${this.issued.length + 1}`;
     this.issued.push(id);
     return id;
+  }
+}
+
+export class FakeShare implements SharePort {
+  readonly messages: string[] = [];
+  constructor(private readonly completes = true) {}
+
+  async share(message: string) {
+    this.messages.push(message);
+    return this.completes;
+  }
+}
+
+export class FakeClipboard implements ClipboardPort {
+  text: string | null = null;
+
+  async copy(text: string) {
+    this.text = text;
+  }
+}
+
+export class InMemoryPendingReferral implements PendingReferralPort {
+  constructor(public stored: string | null = null) {}
+
+  async get() {
+    return this.stored;
+  }
+
+  async save(code: string) {
+    this.stored = code;
+  }
+
+  async clear() {
+    this.stored = null;
   }
 }

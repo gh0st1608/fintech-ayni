@@ -33,6 +33,8 @@ const envSchema = z
     paymentTokenizer: z.enum(['fake', 'unconfigured']).default('unconfigured'),
     /** Igual que authApi, para los documentos KYC (/me/documents). */
     documentsApi: z.enum(['http', 'fake']).default('http'),
+    /** Igual que authApi, para los referidos (/me/referral, /me/referrals). */
+    referralsApi: z.enum(['http', 'fake']).default('http'),
     termsUrl: optionalHttpsUrl,
     privacyUrl: optionalHttpsUrl,
   })
@@ -62,6 +64,10 @@ const envSchema = z
   })
   .refine((env) => env.documentsApi === 'http' || env.appEnv === 'dev', {
     path: ['documentsApi'],
+    message: 'fake is only allowed in dev',
+  })
+  .refine((env) => env.referralsApi === 'http' || env.appEnv === 'dev', {
+    path: ['referralsApi'],
     message: 'fake is only allowed in dev',
   });
 
@@ -94,6 +100,7 @@ export function loadEnv(): Env {
     paymentsApi: process.env.EXPO_PUBLIC_PAYMENTS_API,
     paymentTokenizer: process.env.EXPO_PUBLIC_PAYMENT_TOKENIZER,
     documentsApi: process.env.EXPO_PUBLIC_DOCUMENTS_API,
+    referralsApi: process.env.EXPO_PUBLIC_REFERRALS_API,
     termsUrl: process.env.EXPO_PUBLIC_TERMS_URL,
     privacyUrl: process.env.EXPO_PUBLIC_PRIVACY_URL,
   });

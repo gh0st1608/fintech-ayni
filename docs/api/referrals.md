@@ -1,6 +1,6 @@
 # Contrato de API: referidos
 
-**Estado:** implementado en el backend (`apps/backend/src/modules/referrals`). Las pantallas de mobile están pendientes del diseño (Figma bloqueado hasta noviembre).
+**Estado:** implementado en el backend (`apps/backend/src/modules/referrals`) y en mobile (`apps/mobile/src/presentation/referrals`: Refer a friend y My Referrals, sin validar contra el Figma). La app guarda el código de `ayni://invite?code=…` (validado; uno mal formado se ignora) y lo envía con `POST /v1/me/referral/claim` al entrar con sesión. Un rechazo del backend descarta el código; un fallo transitorio lo reintenta en el siguiente arranque.
 
 Usa el contrato común de respuestas descrito en [auth.md](auth.md) y el modelo [Money](circles.md#modelo-money). Requiere `Authorization: Bearer <accessToken>`.
 

@@ -32,6 +32,14 @@ import type {
 } from '@/application/payouts/usecases/payoutMethodUseCases';
 import type { ChangeLanguageUseCase } from '@/application/i18n/usecases/ChangeLanguageUseCase';
 import type { ResolveLanguageUseCase } from '@/application/i18n/usecases/ResolveLanguageUseCase';
+import type {
+  CapturePendingReferralUseCase,
+  ClaimPendingReferralUseCase,
+  CopyReferralCodeUseCase,
+  GetMyReferralUseCase,
+  ListReferralsUseCase,
+  ShareInviteUseCase,
+} from '@/application/referrals/usecases/referralUseCases';
 import type { IdGeneratorPort } from '@/domain/shared/ports/IdGeneratorPort';
 import type {
   GetMyProfileUseCase,
@@ -104,6 +112,16 @@ export interface AppContainer {
     submitProofOfIncome: SubmitProofOfIncomeUseCase;
     /** Cámara, galería y archivos del dispositivo. */
     picker: FilePickerPort;
+  };
+  referrals: {
+    getMine: GetMyReferralUseCase;
+    list: ListReferralsUseCase;
+    copyCode: CopyReferralCodeUseCase;
+    shareInvite: ShareInviteUseCase;
+    /** Código de un enlace de invitación, antes o después de iniciar sesión. */
+    capturePending: CapturePendingReferralUseCase;
+    /** Envía el código pendiente al entrar con sesión, sin bloquear la UI. */
+    claimPending: ClaimPendingReferralUseCase;
   };
   payouts: {
     listPayoutMethods: ListPayoutMethodsUseCase;

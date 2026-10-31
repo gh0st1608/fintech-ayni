@@ -21,6 +21,7 @@ import { useProfile } from '../useProfile';
 interface ProfileScreenProps {
   onOpenPersonalInfo?: () => void;
   onOpenDocuments?: () => void;
+  onOpenReferral?: () => void;
   /** Abre el catálogo del design system; solo se muestra en el ambiente dev. */
   onOpenCatalog?: () => void;
 }
@@ -35,6 +36,7 @@ const AVATAR_SIZE = 56;
 export function ProfileScreen({
   onOpenPersonalInfo,
   onOpenDocuments,
+  onOpenReferral,
   onOpenCatalog,
 }: ProfileScreenProps) {
   const { t } = useTranslation();
@@ -65,6 +67,14 @@ export function ProfileScreen({
             icon="document-text-outline"
             onPress={onOpenDocuments}
             testID="profile-documents"
+          />
+        )}
+        {onOpenReferral && (
+          <ListItem
+            title={t('referrals.title')}
+            icon="gift-outline"
+            onPress={onOpenReferral}
+            testID="profile-referral"
           />
         )}
         <ListItem

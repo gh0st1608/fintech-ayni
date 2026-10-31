@@ -478,5 +478,51 @@
       },
       "uploadNotUsable": "One of the images didn't upload correctly. Take it again."
     }
+  },
+  "referrals": {
+    "title": "Refer a friend",
+    "headline": "Give a friend {{amount}} and get {{amount}}",
+    "steps": {
+      "invite": {
+        "title": "Invite",
+        "description": "Share your code or your link with your friends."
+      },
+      "gift": {
+        "title": "Give them a discount",
+        "description": "When they sign up with your code they get {{amount}} off their first pay-in."
+      },
+      "enjoy": {
+        "title": "Enjoy your discount",
+        "description": "You earn {{amount}} when your friend pays their first pay-in."
+      }
+    },
+    "code": {
+      "label": "Your code",
+      "copy": "Copy code",
+      "copied": "Code copied.",
+      "copyFailed": "We couldn't copy the code. Try again."
+    },
+    "share": {
+      "action": "Share your invite",
+      "message": "Join Ayni with my code {{code}} and get {{amount}} off your first pay-in.",
+      "failed": "We couldn't open the share menu."
+    },
+    "track": "Track your invitations",
+    "offline": "You're offline: showing the last saved information.",
+    "mine": {
+      "title": "My Referrals",
+      "close": "Close My Referrals",
+      "earned": "Earned",
+      "redeemed": "Redeemed",
+      "balance": "Balance",
+      "autoApply": "The discount is applied automatically to your next pay-in.",
+      "invitees": "Your invitees",
+      "empty": "You haven't invited friends yet, or they haven't signed up.",
+      "status": {
+        "registered": "Registered",
+        "joinedCircle": "Joined a Game'ya",
+        "firstPayInPaid": "First pay-in paid"
+      }
+    }
   }
 }

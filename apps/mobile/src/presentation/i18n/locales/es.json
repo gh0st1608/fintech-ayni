@@ -478,5 +478,51 @@
       },
       "uploadNotUsable": "Una de las imágenes no se subió bien. Vuelve a tomarla."
     }
+  },
+  "referrals": {
+    "title": "Invita a un amigo",
+    "headline": "Regálale {{amount}} a un amigo y gana {{amount}}",
+    "steps": {
+      "invite": {
+        "title": "Invita",
+        "description": "Comparte tu código o tu enlace con tus amigos."
+      },
+      "gift": {
+        "title": "Regálales un descuento",
+        "description": "Al registrarse con tu código reciben {{amount}} de descuento en su primera cuota."
+      },
+      "enjoy": {
+        "title": "Disfruta tu descuento",
+        "description": "Ganas {{amount}} cuando tu amigo paga su primera cuota."
+      }
+    },
+    "code": {
+      "label": "Tu código",
+      "copy": "Copiar código",
+      "copied": "Código copiado.",
+      "copyFailed": "No pudimos copiar el código. Inténtalo de nuevo."
+    },
+    "share": {
+      "action": "Compartir invitación",
+      "message": "Únete a Ayni con mi código {{code}} y recibe {{amount}} de descuento en tu primera cuota.",
+      "failed": "No pudimos abrir el menú para compartir."
+    },
+    "track": "Ver mis invitaciones",
+    "offline": "Sin conexión: mostramos la última información guardada.",
+    "mine": {
+      "title": "Mis referidos",
+      "close": "Cerrar mis referidos",
+      "earned": "Ganado",
+      "redeemed": "Canjeado",
+      "balance": "Saldo",
+      "autoApply": "El descuento se aplica automáticamente en tu próximo pago.",
+      "invitees": "Tus invitados",
+      "empty": "Aún no has invitado amigos o no se han registrado.",
+      "status": {
+        "registered": "Registrado",
+        "joinedCircle": "Se unió a un Game'ya",
+        "firstPayInPaid": "Pagó su primera cuota"
+      }
+    }
   }
 }

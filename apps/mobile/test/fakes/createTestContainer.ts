@@ -17,13 +17,17 @@ import {
 import { FakeFilePicker } from './FakeFilePicker';
 import { InMemoryPayoutMethodRepository } from '@/infrastructure/payouts/InMemoryPayoutMethodRepository';
 import { InMemoryUserProfileRepository } from '@/infrastructure/profile/InMemoryUserProfileRepository';
+import { InMemoryReferralRepository } from '@/infrastructure/referrals/InMemoryReferralRepository';
 
 import {
+  FakeClipboard,
   FakeDeviceLocale,
   FakeIdGenerator,
   FakeLayoutDirection,
+  FakeShare,
   InMemoryLanguagePreference,
   InMemoryLanguageSyncState,
+  InMemoryPendingReferral,
   InMemoryTokenStorage,
 } from './ports';
 
@@ -46,6 +50,10 @@ interface TestAdapters {
   filePicker: FakeFilePicker;
   fileUploader: FakeFileUploader;
   fileCleaner: FakeLocalFileCleaner;
+  referrals: InMemoryReferralRepository;
+  sharer: FakeShare;
+  clipboard: FakeClipboard;
+  pendingReferral: InMemoryPendingReferral;
   ids: FakeIdGenerator;
 }
 
@@ -70,6 +78,10 @@ export function createTestContainer(overrides: Partial<TestAdapters> = {}) {
     filePicker: new FakeFilePicker(),
     fileUploader: new FakeFileUploader(),
     fileCleaner: new FakeLocalFileCleaner(),
+    referrals: new InMemoryReferralRepository({ latencyMs: 0, currency: 'PEN' }),
+    sharer: new FakeShare(),
+    clipboard: new FakeClipboard(),
+    pendingReferral: new InMemoryPendingReferral(),
     ids: new FakeIdGenerator(),
     ...overrides,
   };
