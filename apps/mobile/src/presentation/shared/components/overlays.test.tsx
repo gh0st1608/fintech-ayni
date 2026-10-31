@@ -1,5 +1,5 @@
 import { act, fireEvent, render, renderHook, screen, waitFor } from '@testing-library/react-native';
-import { AccessibilityInfo, Text } from 'react-native';
+import { AccessibilityInfo, KeyboardAvoidingView, Modal, Text } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { useReducedMotion } from '@/presentation/shared/hooks/useReducedMotion';
@@ -50,6 +50,14 @@ describe('useReducedMotion', () => {
 });
 
 describe('BottomSheet', () => {
+  // React Native expone Modal y KeyboardAvoidingView con getters perezosos: el primer render los
+  // carga y transforma. Con la caché fría del CI eso superaba el límite de la primera prueba, así
+  // que se cargan antes, con su propio margen.
+  beforeAll(() => {
+    expect(Modal).toBeDefined();
+    expect(KeyboardAvoidingView).toBeDefined();
+  }, 120_000);
+
   async function renderSheet(visible = true) {
     const onClose = jest.fn();
     await render(
