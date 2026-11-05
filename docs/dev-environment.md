@@ -114,10 +114,34 @@ npx expo start                     # escanear el QR con Expo Go
 | Documentos                            | Se aprueban al enviarlos (`KYC_SIMULATED_RESULT=approved`; `rejected` o `in_review` para los otros estados) |
 | Ciclo mensual (cobros, payouts, mora) | No corre solo: `cd apps/backend && node dist/jobs/circle-cycle.js`                                          |
 
+## Development build
+
+Instala en el teléfono una app propia que carga el código desde Metro, como Expo Go, pero con el esquema `ayni://` y los módulos nativos del proyecto. Se compila en EAS, con el perfil `development` de `apps/mobile/eas.json`. Se recompila solo si cambian las dependencias nativas o `app.json`.
+
+La primera vez hace falta una cuenta de [Expo](https://expo.dev):
+
+```bash
+cd apps/mobile
+npx eas-cli@latest login
+npx eas-cli@latest init            # vincula el proyecto y escribe su id en app.json
+npx eas-cli@latest build --profile development --platform android
+```
+
+- **Identificadores:** el primer build pide el `package` de Android y el `bundleIdentifier` de iOS. Son definitivos una vez publicada la app en las tiendas: elegirlos con el nombre final de la marca (D15).
+- **iOS:** necesita una cuenta de Apple Developer y registrar el dispositivo (`npx eas-cli@latest device:create`).
+
+Con la app instalada:
+
+```bash
+npx expo start --dev-client        # escanear el QR con la app instalada
+```
+
+Usa el mismo `.env.local` que Expo Go: las variables `EXPO_PUBLIC_*` las inyecta Metro.
+
 ## Limitaciones conocidas
 
 - **Datos:** no hay datos semilla. Los círculos se crean al unirse desde la app; para ver turnos ocupados hay que unir a varios usuarios.
 - **Rate limit:** con el gateway, todas las peticiones llegan con la IP del gateway, así que el límite de peticiones es compartido. En dev no afecta, salvo en pruebas de carga.
 - **Navegador:** las peticiones desde un navegador (Expo web) pasan por el aviso de ngrok del plan gratuito. Las de la app nativa no.
-- **Development build:** los enlaces `ayni://invite?code=…` y el cambio LTR↔RTL necesitan un development build. En Expo Go el esquema es `exp://`. El proyecto todavía no tiene `eas.json`.
+- **Development build:** los enlaces `ayni://invite?code=…` y el cambio LTR↔RTL no funcionan en Expo Go, donde el esquema es `exp://`. Ver "Development build".
 - **Producción:** el gateway y ngrok son solo para dev. En prd la app llega a la API por el ALB con dominio propio, y los documentos van a S3 real.
