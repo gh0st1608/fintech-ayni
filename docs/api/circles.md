@@ -441,3 +441,35 @@ El adaptador falso usa los valores del Figma como provisionales:
 - Ahorro de hasta 1.000.000.
 - Sin límite del usuario (se puede simular con la opción `userPayoutLimit`).
 - Slots con los mismos parámetros provisionales que el backend (R1, variables `SLOT_*` y `ADMIN_FEE_*`): 25 % Fastest con fee de hasta el 10 % del payout, 25 % Highest con descuento de hasta el 5 %, y el círculo empieza el mes siguiente. Las opciones `takenPositions` y `take(position)` simulan slots ocupados.
+
+## Inicio de un círculo incompleto (COPAYNI-62)
+
+Si llega el mes de inicio y faltan miembros, el círculo pasa a `approving` y la tarea diaria propone reducirlo. El fondo de garantía no cubre turnos que nunca se llenaron (R2).
+
+**Decidido por el PO:** se avisa de la reducción y se pide aprobar el inicio.
+
+**Supuestos pendientes de confirmar (pending-scope R2):**
+
+- Se mantiene la cuota base y baja el pozo: miembros × cuota base.
+- Los turnos conservan su orden relativo, sin huecos. El miembro no elige otro.
+- El círculo no se reabre a miembros nuevos antes de reducirlo.
+- Hay `CIRCLE_START_APPROVAL_DAYS` días (7) para responder. Quien no responde se cuenta como retirado.
+- Si alguien sale, se abre una **ronda nueva** con los que quedan y sus condiciones nuevas: nadie empieza con condiciones que no aceptó.
+- Con menos de 2 miembros, el círculo se cancela: `cancelled`, sin cuotas ni pagos.
+- Si al empezar ya pasó el vencimiento del mes, el calendario se corre un mes.
+- Los precios se recalculan con las reglas vigentes y se congelan al empezar.
+
+Los descuentos de referidos ya aplicados a una membresía no se trasladan al precio nuevo: pendiente de definir. El aviso es la propuesta en la app, porque todavía no hay notificaciones (D6).
+
+| Método y ruta                                           | Respuesta   | Errores                                                                                    |
+| ------------------------------------------------------- | ----------- | ------------------------------------------------------------------------------------------ |
+| `GET /v1/me/circles/start-proposals`                    | `{ items }` | `UNAUTHORIZED` (401)                                                                       |
+| `POST /v1/me/circles/:circleId/start-proposal/accept`   | 204         | `START_PROPOSAL_NOT_FOUND` (404), `START_PROPOSAL_EXPIRED` (422), `SLOT_NOT_ALLOWED` (422) |
+| `POST /v1/me/circles/:circleId/start-proposal/withdraw` | 204         | `START_PROPOSAL_NOT_FOUND` (404), `START_PROPOSAL_EXPIRED` (422)                           |
+
+Cada ítem trae `circleId`, `current` y `proposed` (`payout`, `baseInstallment`, `months`), `position`, `slotType`, `netPayout`, `firstInstallment`, `totalPaid`, `respondBy` y `decision` (`accepted`, `withdrawn` o `null`).
+
+- Se puede cambiar de opinión hasta el plazo.
+- Aceptar vuelve a validar la regla de confianza con el turno nuevo (COPAYNI-60). Quien no puede tomarlo solo puede retirarse.
+- Retirarse no tiene penalidad: nada se cobró todavía.
+- Eventos de auditoría en el log: `circles.cycle.start_proposed`, `circles.cycle.start_response`, `circles.cycle.started` y `circles.cycle.cancelled`.

@@ -16,6 +16,7 @@ import { CreateReferrals1762862400000 } from './1762862400000-create-referrals';
 import { AddReferralDiscount1762948800000 } from './1762948800000-add-referral-discount';
 import { CreateKycDocuments1763035200000 } from './1763035200000-create-kyc-documents';
 import { CreateUserPasscodes1763121600000 } from './1763121600000-create-user-passcodes';
+import { AddCircleStartApproval1763208000000 } from './1763208000000-add-circle-start-approval';
 
 /** Migraciones en orden. Se listan explícitamente: el build no depende de globs. */
 export const MIGRATIONS = [
@@ -37,4 +38,5 @@ export const MIGRATIONS = [
   AddReferralDiscount1762948800000,
   CreateKycDocuments1763035200000,
   CreateUserPasscodes1763121600000,
+  AddCircleStartApproval1763208000000,
 ];

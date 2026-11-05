@@ -7,6 +7,12 @@ import { LocalDate } from '../../../../shared/domain/value-objects/local-date';
 import { CircleCycle, type PeriodClose } from '../../domain/entities/circle-cycle';
 import { type SlotPricing } from '../../domain/services/slot-pricing';
 import {
+  newPositions,
+  reducedTerms,
+  resolveStart,
+  type StartApproval,
+} from '../../domain/services/start-approval';
+import {
   CIRCLE_CYCLE_REPOSITORY,
   type CircleCycleRepositoryPort,
   type StoredCycle,
@@ -17,6 +23,7 @@ import {
   DISBURSEMENTS,
   type DisbursementsPort,
 } from '../ports/cycle-payments.port';
+import { CircleTerms } from '../../domain/value-objects/circle-terms';
 import { CIRCLE_CYCLE, type CircleCycleSettings } from './cycle-settings';
 import { SLOT_PRICING } from './get-available-slots.use-case';
 
@@ -33,7 +40,8 @@ export interface AdvanceCyclesResult {
  * Tarea diaria del ciclo mensual (COPAYNI-56). Para cada círculo pendiente, con el círculo
  * bloqueado:
  * - Lo empieza cuando llega su mes de inicio, abriendo las cuotas del primer mes. Si faltan
- *   miembros no empieza: se registra que necesita la aprobación de sus miembros (R2).
+ *   miembros no empieza: propone reducirlo y espera la aprobación de sus miembros (COPAYNI-62).
+ * - Resuelve las propuestas: empieza reducido, propone de nuevo sin los que salieron o cancela.
  * - Abre la cuota del mes de quien tomó una vacante después de abrirse el mes (COPAYNI-59).
  * - Expulsa a quien no pagó al terminar la gracia (COPAYNI-57), antes de reintentar el cobro: un
  *   pago que llega después de la gracia no evita la expulsión.
@@ -80,6 +88,70 @@ export class AdvanceCircleCyclesUseCase {
     return result;
   }
 
+  private propose(
+    cycle: CircleCycle,
+    members: number,
+    today: LocalDate,
+    leaving: readonly string[] = [],
+  ): void {
+    const terms = reducedTerms(cycle.terms, members);
+    if (!terms) {
+      cycle.cancel();
+      this.logger.warn({ event: 'circles.cycle.cancelled', circleId: cycle.circleId });
+      return;
+    }
+    const respondBy = today.addDays(this.settings.startApprovalDays);
+    cycle.proposeStart(terms, respondBy, leaving);
+    // Sin notificaciones todavía (pending-scope D6): el aviso es la propuesta en la app.
+    this.logger.log({
+      event: 'circles.cycle.start_proposed',
+      circleId: cycle.circleId,
+      months: terms.months,
+      payout: terms.payout.amount,
+      respondBy: respondBy.toString(),
+    });
+  }
+
+  /** Devuelve si el círculo empezó. */
+  private resolveApproval(cycle: CircleCycle, approval: StartApproval, today: LocalDate): boolean {
+    const { circleId } = cycle;
+    const memberIds = cycle.members.map(({ userId }) => userId);
+    const outcome = resolveStart(approval, memberIds, today);
+    if (outcome.status === 'wait') return false;
+    if (outcome.status === 'cancel') {
+      cycle.cancel();
+      this.logger.warn({ event: 'circles.cycle.cancelled', circleId });
+      return false;
+    }
+    if (outcome.status === 'reopen') {
+      const leaving = memberIds.filter((userId) => !outcome.staying.includes(userId));
+      this.propose(cycle, outcome.staying.length, today, leaving);
+      return false;
+    }
+    this.startReduced(cycle, approval, today);
+    this.logger.log({ event: 'circles.cycle.started', circleId, members: memberIds.length });
+    return true;
+  }
+
+  /** Si el primer vencimiento del mes ya pasó, empieza el mes siguiente: nadie paga atrasado. */
+  private startReduced(cycle: CircleCycle, approval: StartApproval, today: LocalDate): void {
+    const startsOn = approval.terms.startsOn.isAfter(today.period)
+      ? approval.terms.startsOn
+      : today.period;
+    const late = LocalDate.of(startsOn, this.settings.dueDay).isBefore(today);
+    const terms = CircleTerms.create({
+      payout: approval.terms.payout,
+      months: approval.terms.months,
+      startsOn: late ? startsOn.addMonths(1) : startsOn,
+    });
+    const positions = newPositions(cycle.members);
+    const members = cycle.members.map((member) => {
+      const position = positions.get(member.userId)!;
+      return { ...member, position, quote: this.pricing.quote(terms, position) };
+    });
+    cycle.startReduced(terms, members, randomUUID);
+  }
+
   private async advance(stored: StoredCycle, today: LocalDate): Promise<CircleCycle> {
     const { circleId, terms } = stored;
     const cycle = CircleCycle.restore({
@@ -94,6 +166,9 @@ export class AdvanceCircleCyclesUseCase {
         deductPayInFromPayout: deductPayIn ?? false,
       })),
     });
+    if (cycle.state === 'approving') {
+      if (!this.resolveApproval(cycle, stored.approval!, today)) return cycle;
+    }
     if (cycle.isStartDue(today)) {
       const missing = cycle.missingMembers();
       if (missing > 0) {
@@ -104,6 +179,7 @@ export class AdvanceCircleCyclesUseCase {
           members: cycle.members.length,
           missing,
         });
+        this.propose(cycle, cycle.members.length, today);
         return cycle;
       }
       cycle.start(randomUUID);

@@ -10,4 +10,6 @@ export interface CircleCycleSettings {
   delinquency: DelinquencyPolicy;
   /** Parte de las Admin Fees que va al fondo de garantía (COPAYNI-58, R16). */
   fundFeeShareBps: number;
+  /** Días para responder a la propuesta de un círculo incompleto (COPAYNI-62, supuesto). */
+  startApprovalDays: number;
 }

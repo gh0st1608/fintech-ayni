@@ -9,9 +9,18 @@ import { LedgerTransaction } from '../value-objects/ledger-transaction';
 
 /**
  * Estados que se guardan. Los pasos Checking, Setting Receiver, Distributing y Distributed del
- * workflow ROSCA (pending-scope §3.1) ocurren juntos al cerrar un mes (`closePeriod`).
+ * workflow ROSCA (pending-scope §3.1) ocurren juntos al cerrar un mes (`closePeriod`). `approving`:
+ * no se llenó y sus miembros deciden si empieza reducido (COPAYNI-62). `cancelled`: no empezó y
+ * nadie pagó nada.
  */
-export const CYCLE_STATES = ['collecting', 'contributing', 'finished', 'paused'] as const;
+export const CYCLE_STATES = [
+  'collecting',
+  'approving',
+  'contributing',
+  'finished',
+  'paused',
+  'cancelled',
+] as const;
 export type CycleState = (typeof CYCLE_STATES)[number];
 
 /**
@@ -154,12 +163,15 @@ export class InvalidCycleTransitionError extends DomainError {
  *
  * Un círculo solo empieza con todos sus turnos ocupados: el fondo no cubre turnos que nunca se
  * llenaron. Si llega el mes de inicio y faltan miembros, el PO decidió reducir el pozo y los
- * integrantes con la aprobación de los miembros (pending-scope R2); mientras ese flujo no exista,
- * el círculo espera en `collecting`.
+ * integrantes con la aprobación de los miembros (pending-scope R2, COPAYNI-62): el círculo pasa a
+ * `approving` y empieza reducido, se vuelve a proponer sin los que salieron o se cancela.
  */
 export class CircleCycle {
   private shift = 0;
   private readonly adminLog: CycleAdminEvent[] = [];
+  private openedProposal: { terms: CircleTerms; respondBy: LocalDate } | null = null;
+  private readonly leaving: string[] = [];
+  private reduced = false;
 
   private constructor(
     readonly circleId: string,
@@ -196,6 +208,21 @@ export class CircleCycle {
     return this.shift;
   }
 
+  /** Propuesta abierta desde `restore`, para guardarla (COPAYNI-62). */
+  get startProposal(): { terms: CircleTerms; respondBy: LocalDate } | null {
+    return this.openedProposal;
+  }
+
+  /** Miembros que salieron antes de empezar, desde `restore`. */
+  get withdrawnMembers(): readonly string[] {
+    return [...this.leaving];
+  }
+
+  /** Si empezó con condiciones reducidas: hay que guardar sus turnos y precios nuevos. */
+  get startedReduced(): boolean {
+    return this.reduced;
+  }
+
   /** Pausas y reanudaciones desde `restore`. */
   get adminEvents(): readonly CycleAdminEvent[] {
     return [...this.adminLog];
@@ -223,7 +250,7 @@ export class CircleCycle {
     if (!props.fund.balance.hasSameCurrency(terms.payout)) {
       throw new InvalidCycleTransitionError('El fondo debe estar en la moneda del círculo');
     }
-    const notRunning = state === 'collecting' || state === 'finished';
+    const notRunning = ['collecting', 'approving', 'finished', 'cancelled'].includes(state);
     const running = state === 'contributing' || state === 'paused';
     if ((running && currentPeriod === null) || (notRunning && currentPeriod)) {
       throw new InvalidCycleTransitionError('Solo un círculo en curso tiene un mes en curso');
@@ -392,6 +419,48 @@ export class CircleCycle {
     }
     this.currentState = 'contributing';
     this.openPeriod(this.terms.startsOn, newId);
+  }
+
+  /** Collecting → Approving, o una ronda nueva sin los que salieron (COPAYNI-62). */
+  proposeStart(terms: CircleTerms, respondBy: LocalDate, leaving: readonly string[] = []): void {
+    if (this.currentState !== 'collecting' && this.currentState !== 'approving') {
+      throw new InvalidCycleTransitionError('Solo se propone un círculo que todavía no empezó');
+    }
+    this.removeBeforeStart(leaving);
+    this.currentState = 'approving';
+    this.openedProposal = { terms, respondBy };
+  }
+
+  /**
+   * Approving → Contributing con las condiciones aprobadas: los miembros con sus turnos nuevos y
+   * los precios nuevos, congelados al empezar.
+   */
+  startReduced(terms: CircleTerms, members: readonly CycleMember[], newId: () => string): void {
+    if (this.currentState !== 'approving') {
+      throw new InvalidCycleTransitionError('Solo empieza reducido un círculo en aprobación');
+    }
+    this.currentTerms = terms;
+    this.active.splice(0, this.active.length, ...members);
+    this.reduced = true;
+    this.currentState = 'collecting';
+    this.start(newId);
+  }
+
+  /** Collecting o Approving → Cancelled: nunca abrió cuotas, así que nadie pagó. */
+  cancel(): void {
+    if (this.currentState !== 'collecting' && this.currentState !== 'approving') {
+      throw new InvalidCycleTransitionError('Solo se cancela un círculo que no empezó');
+    }
+    this.removeBeforeStart(this.active.map(({ userId }) => userId));
+    this.currentState = 'cancelled';
+  }
+
+  private removeBeforeStart(userIds: readonly string[]): void {
+    for (const userId of userIds) {
+      const index = this.active.findIndex((member) => member.userId === userId);
+      if (index >= 0) this.active.splice(index, 1);
+      this.leaving.push(userId);
+    }
   }
 
   /**
