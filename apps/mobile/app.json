@@ -39,6 +39,12 @@
         }
       ],
       "expo-secure-store",
+      [
+        "expo-local-authentication",
+        {
+          "faceIDPermission": "Ayni usa Face ID para desbloquear la app."
+        }
+      ],
       "expo-font",
       "expo-asset",
       [

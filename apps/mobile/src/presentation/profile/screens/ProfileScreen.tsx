@@ -6,6 +6,7 @@ import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'reac
 import { useFormatMoney } from '@/presentation/formatters/formatMoney';
 import { errorMessage } from '@/presentation/i18n/errorMessageKey';
 import { useLanguage } from '@/presentation/i18n/useLanguage';
+import { BiometricToggle } from '@/presentation/profile/components/BiometricToggle';
 import { LanguageSheet } from '@/presentation/profile/components/LanguageSheet';
 import { useContainer } from '@/presentation/providers/ContainerProvider';
 import { useSession } from '@/presentation/providers/SessionProvider';
@@ -75,7 +76,10 @@ export function ProfileScreen({
             />
           )}
         </Section>
-        {/* Security (passcode y biometría) y Support (Get Help) del Figma no tienen historia todavía. */}
+        <Section title={t('profile.sections.security')}>
+          <BiometricToggle />
+        </Section>
+        {/* Support (Get Help) del Figma no tiene historia todavía. */}
         <Section title={t('profile.sections.settings')}>
           <ListItem
             title={t('profile.language.item')}

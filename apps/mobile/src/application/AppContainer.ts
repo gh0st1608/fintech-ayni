@@ -1,4 +1,11 @@
 import type { SessionEvents } from '@/application/auth/SessionEvents';
+import type {
+  DisableBiometricUnlockUseCase,
+  EnableBiometricUnlockUseCase,
+  GetBiometricStatusUseCase,
+  ShouldRelockUseCase,
+  UnlockWithBiometricsUseCase,
+} from '@/application/auth/usecases/biometricUseCases';
 import type { RefreshSessionUseCase } from '@/application/auth/usecases/RefreshSessionUseCase';
 import type { ResendOtpUseCase } from '@/application/auth/usecases/ResendOtpUseCase';
 import type { RestoreSessionUseCase } from '@/application/auth/usecases/RestoreSessionUseCase';
@@ -82,6 +89,11 @@ export interface AppContainer {
     startAuthentication: StartAuthenticationUseCase;
     verifyOtp: VerifyOtpUseCase;
     resendOtp: ResendOtpUseCase;
+    getBiometricStatus: GetBiometricStatusUseCase;
+    enableBiometricUnlock: EnableBiometricUnlockUseCase;
+    disableBiometricUnlock: DisableBiometricUnlockUseCase;
+    unlockWithBiometrics: UnlockWithBiometricsUseCase;
+    shouldRelock: ShouldRelockUseCase;
   };
   circles: {
     getJoinConfig: GetJoinConfigUseCase;

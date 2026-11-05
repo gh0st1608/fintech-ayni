@@ -5,7 +5,8 @@
     "retry": "Try again",
     "loading": "Loading…",
     "comingSoon": "Coming soon",
-    "comingSoonDescription": "We are building this section."
+    "comingSoonDescription": "We are building this section.",
+    "cancel": "Cancel"
   },
   "errors": {
     "network": "You are offline. Check your connection and try again.",
@@ -302,9 +303,17 @@
     },
     "sections": {
       "account": "Account",
-      "settings": "Settings"
+      "settings": "Settings",
+      "security": "Security"
     },
-    "inviteFriends": "Invite Friends"
+    "inviteFriends": "Invite Friends",
+    "biometrics": {
+      "label": "Enable Biometrics",
+      "noHardware": "This device has no biometric sensor.",
+      "notEnrolled": "Add your fingerprint or face in the device settings.",
+      "prompt": "Confirm your identity",
+      "failed": "We could not verify you. Try again."
+    }
   },
   "catalog": {
     "title": "Component catalog"
@@ -331,6 +340,15 @@
       "expired": "The code expired. Request a new one.",
       "attemptsExceeded": "Too many attempts. Request a new code.",
       "retry": "Retry verification"
+    },
+    "locked": {
+      "title": "Ayni is locked",
+      "subtitle": "Use your fingerprint or face to continue.",
+      "unlock": "Unlock",
+      "prompt": "Unlock Ayni",
+      "failed": "We did not recognize you. Try again.",
+      "fallback": "Sign in with a code to continue.",
+      "useCode": "Sign in with a code"
     }
   },
   "payment": {

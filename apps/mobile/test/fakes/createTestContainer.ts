@@ -21,11 +21,13 @@ import { InMemoryReferralRepository } from '@/infrastructure/referrals/InMemoryR
 import { InMemorySavingPlanRepository } from '@/infrastructure/savings/InMemorySavingPlanRepository';
 
 import {
+  FakeBiometricAuth,
   FakeClipboard,
   FakeDeviceLocale,
   FakeIdGenerator,
   FakeLayoutDirection,
   FakeShare,
+  InMemoryBiometricPreference,
   InMemoryLanguagePreference,
   InMemoryLanguageSyncState,
   InMemoryPendingReferral,
@@ -34,6 +36,8 @@ import {
 
 interface TestAdapters {
   tokenStorage: InMemoryTokenStorage;
+  biometrics: FakeBiometricAuth;
+  biometricPreference: InMemoryBiometricPreference;
   languagePreference: InMemoryLanguagePreference;
   languageSyncState: InMemoryLanguageSyncState;
   deviceLocale: FakeDeviceLocale;
@@ -63,6 +67,8 @@ interface TestAdapters {
 export function createTestContainer(overrides: Partial<TestAdapters> = {}) {
   const adapters: TestAdapters = {
     tokenStorage: new InMemoryTokenStorage(),
+    biometrics: new FakeBiometricAuth(),
+    biometricPreference: new InMemoryBiometricPreference(),
     languagePreference: new InMemoryLanguagePreference(),
     languageSyncState: new InMemoryLanguageSyncState(),
     deviceLocale: new FakeDeviceLocale(),

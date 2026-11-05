@@ -5,7 +5,7 @@ import { InvalidLoginIdentifierError } from '@/domain/auth/value-objects/LoginId
 import { InvalidOtpCodeError } from '@/domain/auth/value-objects/OtpCode';
 import { AppError } from '@/domain/shared/errors/AppError';
 import { FAKE_OTP_CODE, InMemoryAuthApi } from '@/infrastructure/auth/InMemoryAuthApi';
-import { InMemoryTokenStorage } from '@test/fakes/ports';
+import { InMemoryBiometricPreference, InMemoryTokenStorage } from '@test/fakes/ports';
 
 import { RefreshSessionUseCase } from './RefreshSessionUseCase';
 import { ResendOtpUseCase } from './ResendOtpUseCase';
@@ -20,19 +20,26 @@ describe('RestoreSessionUseCase', () => {
   it('autentica si hay credenciales guardadas', async () => {
     const storage = new InMemoryTokenStorage();
     storage.tokens = tokens();
-    await expect(new RestoreSessionUseCase(storage).execute()).resolves.toBe('authenticated');
+    await expect(
+      new RestoreSessionUseCase(storage, new InMemoryBiometricPreference()).execute(),
+    ).resolves.toBe('authenticated');
   });
 
   it('no autentica sin credenciales', async () => {
-    await expect(new RestoreSessionUseCase(new InMemoryTokenStorage()).execute()).resolves.toBe(
-      'unauthenticated',
-    );
+    await expect(
+      new RestoreSessionUseCase(
+        new InMemoryTokenStorage(),
+        new InMemoryBiometricPreference(),
+      ).execute(),
+    ).resolves.toBe('unauthenticated');
   });
 
   it('trata un almacén ilegible como sesión ausente', async () => {
     const storage = new InMemoryTokenStorage();
     storage.failOnRead = true;
-    await expect(new RestoreSessionUseCase(storage).execute()).resolves.toBe('unauthenticated');
+    await expect(
+      new RestoreSessionUseCase(storage, new InMemoryBiometricPreference()).execute(),
+    ).resolves.toBe('unauthenticated');
   });
 });
 
@@ -44,7 +51,9 @@ describe('SignOutUseCase', () => {
     const logout = jest.spyOn(authApi, 'logout');
     const storage = new InMemoryTokenStorage();
     storage.tokens = tokens();
-    await expect(new SignOutUseCase(storage, authApi).execute()).resolves.toBe('unauthenticated');
+    await expect(
+      new SignOutUseCase(storage, authApi, new InMemoryBiometricPreference()).execute(),
+    ).resolves.toBe('unauthenticated');
     expect(logout).toHaveBeenCalledWith('r1');
     expect(storage.tokens).toBeNull();
   });
@@ -54,7 +63,9 @@ describe('SignOutUseCase', () => {
     jest.spyOn(authApi, 'logout').mockReturnValue(new Promise(() => {}));
     const storage = new InMemoryTokenStorage();
     storage.tokens = tokens();
-    await expect(new SignOutUseCase(storage, authApi).execute()).resolves.toBe('unauthenticated');
+    await expect(
+      new SignOutUseCase(storage, authApi, new InMemoryBiometricPreference()).execute(),
+    ).resolves.toBe('unauthenticated');
     expect(storage.tokens).toBeNull();
   });
 
@@ -63,7 +74,9 @@ describe('SignOutUseCase', () => {
     const logout = jest.spyOn(authApi, 'logout');
     const storage = new InMemoryTokenStorage();
     storage.failOnRead = true;
-    await expect(new SignOutUseCase(storage, authApi).execute()).resolves.toBe('unauthenticated');
+    await expect(
+      new SignOutUseCase(storage, authApi, new InMemoryBiometricPreference()).execute(),
+    ).resolves.toBe('unauthenticated');
     expect(logout).not.toHaveBeenCalled();
   });
 
@@ -72,7 +85,7 @@ describe('SignOutUseCase', () => {
     jest.spyOn(authApi, 'logout').mockRejectedValue(new AppError('network', 'offline'));
     const storage = new InMemoryTokenStorage();
     storage.tokens = tokens();
-    await new SignOutUseCase(storage, authApi).execute();
+    await new SignOutUseCase(storage, authApi, new InMemoryBiometricPreference()).execute();
     expect(storage.tokens).toBeNull();
   });
 
@@ -81,16 +94,18 @@ describe('SignOutUseCase', () => {
     const logout = jest.spyOn(authApi, 'logout');
     const storage = new InMemoryTokenStorage();
     storage.tokens = tokens();
-    await expect(new SignOutUseCase(storage, authApi).execute('expired')).resolves.toBe(
-      'sessionExpired',
-    );
+    await expect(
+      new SignOutUseCase(storage, authApi, new InMemoryBiometricPreference()).execute('expired'),
+    ).resolves.toBe('sessionExpired');
     expect(logout).not.toHaveBeenCalled();
   });
 
   it('propaga el fallo si no puede borrar las credenciales', async () => {
     const storage = new InMemoryTokenStorage();
     storage.clear = jest.fn().mockRejectedValue(new Error('keychain'));
-    await expect(new SignOutUseCase(storage, api()).execute()).rejects.toThrow('keychain');
+    await expect(
+      new SignOutUseCase(storage, api(), new InMemoryBiometricPreference()).execute(),
+    ).rejects.toThrow('keychain');
   });
 });
 
@@ -104,7 +119,7 @@ describe('RefreshSessionUseCase', () => {
     const refresh = new RefreshSessionUseCase(
       authApi,
       storage,
-      new SignOutUseCase(storage, authApi),
+      new SignOutUseCase(storage, authApi, new InMemoryBiometricPreference()),
       events,
     );
     // Sesión real emitida por la API falsa: OTP correcto con Remember Me desmarcado.

@@ -5,5 +5,6 @@ import { useSession } from '@/presentation/providers/SessionProvider';
 /** Ruta ancla: envía al área privada o pública según el estado de sesión. */
 export default function Index() {
   const { status } = useSession();
+  if (status === 'locked') return <Redirect href="/locked" />;
   return <Redirect href={status === 'authenticated' ? '/home' : '/welcome'} />;
 }

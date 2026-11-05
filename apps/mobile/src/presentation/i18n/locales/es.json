@@ -5,7 +5,8 @@
     "retry": "Reintentar",
     "loading": "Cargando…",
     "comingSoon": "Próximamente",
-    "comingSoonDescription": "Estamos construyendo esta sección."
+    "comingSoonDescription": "Estamos construyendo esta sección.",
+    "cancel": "Cancelar"
   },
   "errors": {
     "network": "No hay conexión. Revisa tu internet e inténtalo de nuevo.",
@@ -302,9 +303,17 @@
     },
     "sections": {
       "account": "Cuenta",
-      "settings": "Configuración"
+      "settings": "Configuración",
+      "security": "Seguridad"
     },
-    "inviteFriends": "Invitar amigos"
+    "inviteFriends": "Invitar amigos",
+    "biometrics": {
+      "label": "Activar biometría",
+      "noHardware": "Este dispositivo no tiene sensor biométrico.",
+      "notEnrolled": "Registra tu huella o tu rostro en los ajustes del dispositivo.",
+      "prompt": "Confirma tu identidad",
+      "failed": "No pudimos verificarte. Inténtalo de nuevo."
+    }
   },
   "catalog": {
     "title": "Catálogo de componentes"
@@ -331,6 +340,15 @@
       "expired": "El código venció. Pide uno nuevo.",
       "attemptsExceeded": "Superaste el número de intentos. Pide un código nuevo.",
       "retry": "Reintentar verificación"
+    },
+    "locked": {
+      "title": "Ayni está bloqueada",
+      "subtitle": "Usa tu huella o tu rostro para continuar.",
+      "unlock": "Desbloquear",
+      "prompt": "Desbloquea Ayni",
+      "failed": "No te reconocimos. Inténtalo de nuevo.",
+      "fallback": "Ingresa con un código para continuar.",
+      "useCode": "Ingresar con código"
     }
   },
   "payment": {

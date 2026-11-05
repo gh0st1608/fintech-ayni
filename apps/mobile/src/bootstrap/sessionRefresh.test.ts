@@ -4,7 +4,7 @@ import { SignOutUseCase } from '@/application/auth/usecases/SignOutUseCase';
 import { AuthTokens } from '@/domain/auth/value-objects/AuthTokens';
 import { AuthApiRepository } from '@/infrastructure/auth/AuthApiRepository';
 import { FetchHttpClient } from '@/infrastructure/http/FetchHttpClient';
-import { InMemoryTokenStorage } from '@test/fakes/ports';
+import { InMemoryBiometricPreference, InMemoryTokenStorage } from '@test/fakes/ports';
 
 /**
  * Integración de la renovación tal como se compone en container.ts: FetchHttpClient real,
@@ -32,7 +32,7 @@ function setup(backend: (path: string, init: RequestInit) => Response) {
   const refresh: RefreshSessionUseCase = new RefreshSessionUseCase(
     authApi,
     storage,
-    new SignOutUseCase(storage, authApi),
+    new SignOutUseCase(storage, authApi, new InMemoryBiometricPreference()),
     events,
   );
   const calls = (path: string) => fetchImpl.mock.calls.filter(([url]) => url.endsWith(path)).length;
