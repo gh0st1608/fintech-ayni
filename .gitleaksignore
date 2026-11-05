@@ -4,3 +4,8 @@
 # Token de ejemplo de la documentación de Mercado Pago (token de tarjeta de un solo uso, no una
 # credencial). En HEAD ya se reemplazó por un marcador.
 7f0646854648dc739c76bb84b5f7358edafe0395:docs/api/payments.md:generic-api-key:136
+
+# JWT sin firma de la prueba TC-SEC de `alg: none`: es falso a propósito (sub en ceros, sin firma) y
+# la API debe rechazarlo. No da acceso a nada.
+ef079a6382201e9537dc199ee30ee62f3af17ca6:qa/api/scripts/build-collection.mjs:jwt:435
+ef079a6382201e9537dc199ee30ee62f3af17ca6:qa/api/collections/ayni-api.postman_collection.json:jwt:1783
