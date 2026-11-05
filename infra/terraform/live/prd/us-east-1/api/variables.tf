@@ -104,3 +104,9 @@ variable "new_relic_api_key" {
   sensitive   = true
   ephemeral   = true
 }
+
+variable "circle_cycle_enabled" {
+  description = "Habilita la tarea diaria del ciclo de los círculos. Requiere CIRCLE_PAYMENTS_ADAPTER real en app_config."
+  type        = bool
+  default     = false
+}

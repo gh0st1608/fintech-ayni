@@ -236,6 +236,7 @@ docker run --rm -v "$PWD:/tf" -w /tf bridgecrew/checkov:3.3.28 --config-file /tf
 - **Nombres de las métricas de AWS en New Relic:** las condiciones de infraestructura usan la convención `aws.<servicio>.<Métrica>` de los metric streams. Confirmar con los primeros datos y ajustar si New Relic los nombra distinto.
 - **DNSSEC** de la zona delegada: requiere publicar el registro DS en GoDaddy.
 - **Indicador de base de datos en `/health/ready` y migraciones como tarea ECS:** llegan con la persistencia de COPAYNI-24.
-- **Tareas programadas** (EventBridge Scheduler, ADR §6): módulo `scheduled-task` cuando exista el primer job.
+- **Ciclo de los círculos en prd:** el módulo `scheduled-task` ya lo crea, pero deshabilitado (`circle_cycle_enabled`). Se habilita cuando exista el adaptador real de cobros (`CIRCLE_PAYMENTS_ADAPTER`, COPAYNI-34). La hora (06:00 de Lima) es provisional.
+- **Base de datos en las tareas ECS:** los stacks todavía no pasan `DB_*` ni `DB_PASSWORD`, que el backend exige para arrancar. Hay que crear un usuario de aplicación: la credencial maestra de RDS es solo para migraciones.
 - **Dashboards de mobile y negocio:** cuando la app y los pagos estén instrumentados.
 - **Access logs del ALB y replicación entre regiones:** ver las excepciones en `.checkov.yaml`.

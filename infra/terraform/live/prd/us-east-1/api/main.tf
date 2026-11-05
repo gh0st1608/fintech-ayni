@@ -80,6 +80,26 @@ data "aws_secretsmanager_secret" "newrelic_license_key" {
   name = "${local.name}/newrelic/license-key"
 }
 
+# La misma configuración para la API y sus tareas programadas.
+locals {
+  api_environment = merge(var.app_config, local.telemetry_environment, {
+    DEPLOYMENT_ENVIRONMENT = "prod"
+    NODE_ENV               = "production"
+    PORT                   = "3000"
+    TRUST_PROXY            = "true"
+    # Documentos KYC en el bucket de este stack (COPAYNI-43). Sin proveedor de verificación
+    # (COPAYNI-42), los documentos quedan en revisión manual.
+    AWS_REGION       = var.region
+    DOCUMENT_STORAGE = "s3"
+    DOCUMENTS_BUCKET = module.documents.bucket_name
+    KYC_PROVIDER     = "manual"
+    ENABLE_SWAGGER   = "false"
+  })
+  api_secrets = var.new_relic.enabled ? {
+    NEW_RELIC_LICENSE_KEY = "${data.aws_secretsmanager_secret.newrelic_license_key[0].arn}:api_key::"
+  } : {}
+}
+
 # Zona delegada: en GoDaddy, el nombre backend-ayni apunta por NS a estos servidores (README).
 # El resto de solutionserj.com sigue en GoDaddy.
 resource "aws_route53_zone" "api" {
@@ -122,28 +142,40 @@ module "api" {
   }
   task_policies = { documents = module.documents.read_write_policy_json }
 
-  environment = merge(var.app_config, local.telemetry_environment, {
-    DEPLOYMENT_ENVIRONMENT = "prod"
-    NODE_ENV               = "production"
-    PORT                   = "3000"
-    TRUST_PROXY            = "true"
-    # Documentos KYC en el bucket de este stack (COPAYNI-43). Sin proveedor de verificación
-    # (COPAYNI-42), los documentos quedan en revisión manual.
-    AWS_REGION       = var.region
-    DOCUMENT_STORAGE = "s3"
-    DOCUMENTS_BUCKET = module.documents.bucket_name
-    KYC_PROVIDER     = "manual"
-    ENABLE_SWAGGER   = "false"
-  })
-  secrets = var.new_relic.enabled ? {
-    NEW_RELIC_LICENSE_KEY = "${data.aws_secretsmanager_secret.newrelic_license_key[0].arn}:api_key::"
-  } : {}
+  environment = local.api_environment
+  secrets     = local.api_secrets
 
   https                   = { certificate_arn = module.api_domain.certificate_arn }
   waf                     = { web_acl_arn = module.web_acl.web_acl_arn }
   alb_deletion_protection = true
   log_retention_days      = 90
   wait_for_steady_state   = true
+}
+
+# Ciclo mensual de los círculos (COPAYNI-56). Deshabilitado hasta que exista el adaptador real de
+# cobros: CIRCLE_PAYMENTS_ADAPTER solo admite fake, que no corre en production.
+module "circle_cycle" {
+  source = "../../../../modules/scheduled-task"
+
+  name                = "${local.name}-circle-cycle"
+  enabled             = var.circle_cycle_enabled
+  schedule_expression = "cron(0 6 * * ? *)"
+  schedule_timezone   = "America/Lima" # BUSINESS_TIME_ZONE
+
+  cluster_arn        = module.api.cluster_arn
+  image              = "${module.ecr.repository_url}:${var.image_tag}"
+  command            = ["node", "dist/jobs/circle-cycle.js"]
+  cpu                = 512
+  memory             = 1024
+  environment        = local.api_environment
+  secrets            = local.api_secrets
+  execution_role_arn = module.api.execution_role_arn
+  task_role_arn      = module.api.task_role_arn
+  log_group_name     = module.api.log_group_name
+  subnet_ids         = module.network.private_subnet_ids
+  security_group_ids = [module.api.security_group_id]
+  alarm_enabled      = true
+  alarm_topic_arn    = module.observability.notification_topic_arn
 }
 
 # Respaldo en CloudWatch: avisa aunque New Relic no esté disponible. El resto de las alertas

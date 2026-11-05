@@ -133,7 +133,7 @@ infra/terraform/
     prd/us-east-1/{account,api}/   contra AWS, estado en S3; account se aplica primero
 ```
 
-El módulo `scheduled-task` (EventBridge Scheduler) se agrega con el primer job.
+El módulo `scheduled-task` crea cada tarea programada: EventBridge Scheduler, su task definition y una cola con alarma para las fallas.
 
 - **Estado remoto:** en S3, con una clave por ambiente y bloqueo nativo (`use_lockfile = true`, Terraform 1.10 o superior). No hace falta una tabla de DynamoDB.
 - **Versiones fijadas** de Terraform y del provider AWS, con `.terraform.lock.hcl` versionado.

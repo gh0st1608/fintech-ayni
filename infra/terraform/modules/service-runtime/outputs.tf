@@ -3,6 +3,11 @@ output "cluster_name" {
   value       = aws_ecs_cluster.this.name
 }
 
+output "cluster_arn" {
+  description = "ARN del cluster ECS (destino de las tareas programadas)."
+  value       = aws_ecs_cluster.this.arn
+}
+
 output "service_name" {
   description = "Servicio ECS."
   value       = aws_ecs_service.this.name
