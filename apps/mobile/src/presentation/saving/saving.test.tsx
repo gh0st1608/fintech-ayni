@@ -62,9 +62,15 @@ describe('DurationSheet (COPAYNI-33)', () => {
     await fireEvent.press(await screen.findByTestId('saving-plan-lite'));
 
     // Figma 55:9220: la primera duración viene elegida, con su detalle a la vista.
-    expect(await screen.findByTestId('duration-6')).toHaveTextContent(/6\s*Meses.*500.*al mes/);
-    expect(screen.getByTestId('duration-12')).toHaveTextContent(/12\s*Meses.*250.*al mes/);
-    expect(screen.getByTestId('duration-24')).toHaveTextContent(/24\s*Meses.*125.*al mes/);
+    // Cada duración carga su cuota por separado: mientras tanto muestra "Cargando…".
+    await waitFor(
+      () => {
+        expect(screen.getByTestId('duration-6')).toHaveTextContent(/6\s*Meses.*500.*al mes/);
+        expect(screen.getByTestId('duration-12')).toHaveTextContent(/12\s*Meses.*250.*al mes/);
+        expect(screen.getByTestId('duration-24')).toHaveTextContent(/24\s*Meses.*125.*al mes/);
+      },
+      { timeout: 10_000 },
+    );
     expect(screen.getByRole('radio', { name: /^6 Meses/ })).toBeChecked();
     expect(await screen.findByTestId('quote-startsOn')).toHaveTextContent(/Inicio.*nov.*2026/i);
     expect(screen.getByTestId('quote-payout')).toHaveTextContent(/may.*2027/i);

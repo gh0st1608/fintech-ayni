@@ -1,4 +1,9 @@
 /* eslint-disable @typescript-eslint/no-require-imports */
+// react-native carga sus componentes al primer uso. Con caché fría y pocos núcleos (CI) esa carga
+// supera el timeout de la primera prueba de cada archivo; aquí no cuenta para ninguna prueba.
+const { KeyboardAvoidingView, Modal, Pressable, ScrollView, TextInput } = require('react-native');
+void [KeyboardAvoidingView, Modal, Pressable, ScrollView, TextInput];
+
 // Configuración pública válida para los tests (equivalente a .env.local).
 process.env.EXPO_PUBLIC_APP_ENV = 'dev';
 process.env.EXPO_PUBLIC_API_URL = 'https://api.test.local/v1';

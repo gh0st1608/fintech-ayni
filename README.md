@@ -37,7 +37,7 @@ Corre en cada pull request y en cada push a `main`.
 | `commitlint` | Convención de todos los commits del PR. |
 | `secrets` | gitleaks sobre todo el historial (`--redact`: el log no muestra los valores). |
 | `backend` | lint (con límites entre capas), typecheck, formato, pruebas unitarias, de integración y e2e con cobertura ≥ 90%, build y vulnerabilidades. |
-| `mobile` | `npm run validate`, `expo-doctor`, `expo install --check`, `expo export` (Android e iOS) y vulnerabilidades. |
+| `mobile` | `npm run validate`, `expo-doctor` y `expo install --check` (solo avisan), `expo export` (Android e iOS) y vulnerabilidades. |
 | `infra` | Terraform: formato, `validate`, `terraform test`, tflint, checkov y build de la imagen de la API. |
 
 - Los reportes de cobertura quedan como artefactos del pipeline durante 14 días.

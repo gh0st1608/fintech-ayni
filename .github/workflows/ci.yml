@@ -179,7 +179,10 @@ jobs:
       - run: npm ci
       # lint (con límites entre capas), typecheck, format:check y pruebas con cobertura.
       - run: npm run validate
+      # Solo avisa: comparan contra la última versión publicada, y las dependencias se actualizan
+      # recién cuando cumplen dos semanas. Un parche nuevo de Expo no debe romper el build.
       - name: Configuración de Expo
+        continue-on-error: true
         run: |
           npx expo-doctor
           npx expo install --check
