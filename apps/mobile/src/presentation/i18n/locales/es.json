@@ -313,6 +313,19 @@
       "notEnrolled": "Registra tu huella o tu rostro en los ajustes del dispositivo.",
       "prompt": "Confirma tu identidad",
       "failed": "No pudimos verificarte. Inténtalo de nuevo."
+    },
+    "passcode": {
+      "item": "Cambiar passcode",
+      "title": "Passcode",
+      "hint": "Tu passcode de 6 dígitos sirve para desbloquear la app si la biometría falla.",
+      "current": "Passcode actual",
+      "new": "Passcode nuevo",
+      "confirm": "Confirma el passcode nuevo",
+      "save": "Guardar",
+      "invalidFormat": "El passcode debe tener 6 dígitos.",
+      "mismatch": "Los passcodes no coinciden.",
+      "wrong_one": "Passcode incorrecto. Te queda {{count}} intento.",
+      "wrong_other": "Passcode incorrecto. Te quedan {{count}} intentos."
     }
   },
   "catalog": {
@@ -348,7 +361,9 @@
       "prompt": "Desbloquea Ayni",
       "failed": "No te reconocimos. Inténtalo de nuevo.",
       "fallback": "Ingresa con un código para continuar.",
-      "useCode": "Ingresar con código"
+      "useCode": "Ingresar con código",
+      "passcode": "Passcode",
+      "usePasscode": "Desbloquear con passcode"
     }
   },
   "payment": {

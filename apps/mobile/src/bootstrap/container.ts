@@ -7,6 +7,11 @@ import {
   ShouldRelockUseCase,
   UnlockWithBiometricsUseCase,
 } from '@/application/auth/usecases/biometricUseCases';
+import {
+  ChangePasscodeUseCase,
+  GetPasscodeStatusUseCase,
+  UnlockWithPasscodeUseCase,
+} from '@/application/auth/usecases/passcodeUseCases';
 import { RefreshSessionUseCase } from '@/application/auth/usecases/RefreshSessionUseCase';
 import { ResendOtpUseCase } from '@/application/auth/usecases/ResendOtpUseCase';
 import { RestoreSessionUseCase } from '@/application/auth/usecases/RestoreSessionUseCase';
@@ -70,6 +75,7 @@ import type {
   BiometricAuthPort,
   BiometricPreferencePort,
 } from '@/domain/auth/ports/BiometricPorts';
+import type { PasscodeRepositoryPort } from '@/domain/auth/ports/PasscodeRepositoryPort';
 import type { TokenStoragePort } from '@/domain/auth/ports/TokenStoragePort';
 import type { CircleMembershipRepositoryPort } from '@/domain/circles/ports/CircleMembershipRepositoryPort';
 import type { CircleQuoteRepositoryPort } from '@/domain/circles/ports/CircleQuoteRepositoryPort';
@@ -99,6 +105,8 @@ import type { UserProfileRepositoryPort } from '@/domain/profile/ports/UserProfi
 import type { IdGeneratorPort } from '@/domain/shared/ports/IdGeneratorPort';
 import { AuthApiRepository } from '@/infrastructure/auth/AuthApiRepository';
 import { InMemoryAuthApi } from '@/infrastructure/auth/InMemoryAuthApi';
+import { InMemoryPasscodeRepository } from '@/infrastructure/auth/InMemoryPasscodeRepository';
+import { PasscodeApiRepository } from '@/infrastructure/auth/PasscodeApiRepository';
 import { CircleMembershipApiRepository } from '@/infrastructure/circles/CircleMembershipApiRepository';
 import { CircleQuoteApiRepository } from '@/infrastructure/circles/CircleQuoteApiRepository';
 import { InMemoryCircleMembershipRepository } from '@/infrastructure/circles/InMemoryCircleMembershipRepository';
@@ -158,6 +166,7 @@ export interface ContainerAdapters {
   deviceLocale: DeviceLocalePort;
   layoutDirection: LayoutDirectionPort;
   authApi: AuthApiPort;
+  passcodes: PasscodeRepositoryPort;
   joinConfig: JoinConfigRepositoryPort;
   circleQuote: CircleQuoteRepositoryPort;
   circleMembership: CircleMembershipRepositoryPort;
@@ -203,6 +212,8 @@ export function createContainer(
     deviceLocale: new ExpoDeviceLocale(),
     layoutDirection: new ReactNativeLayoutDirection(),
     authApi: env.authApi === 'fake' ? new InMemoryAuthApi() : new AuthApiRepository(http),
+    passcodes:
+      env.authApi === 'fake' ? new InMemoryPasscodeRepository() : new PasscodeApiRepository(http),
     joinConfig:
       env.circlesApi === 'fake'
         ? new InMemoryJoinConfigRepository(env.defaultCurrency)
@@ -302,6 +313,9 @@ export function createContainer(
       disableBiometricUnlock: new DisableBiometricUnlockUseCase(adapters.biometricPreference),
       unlockWithBiometrics: new UnlockWithBiometricsUseCase(adapters.biometrics),
       shouldRelock: new ShouldRelockUseCase(adapters.biometricPreference),
+      getPasscodeStatus: new GetPasscodeStatusUseCase(adapters.passcodes),
+      changePasscode: new ChangePasscodeUseCase(adapters.passcodes),
+      unlockWithPasscode: new UnlockWithPasscodeUseCase(adapters.passcodes),
     },
     ids: adapters.ids,
     circles: {

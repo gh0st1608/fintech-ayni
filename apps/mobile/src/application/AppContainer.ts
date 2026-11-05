@@ -6,6 +6,11 @@ import type {
   ShouldRelockUseCase,
   UnlockWithBiometricsUseCase,
 } from '@/application/auth/usecases/biometricUseCases';
+import type {
+  ChangePasscodeUseCase,
+  GetPasscodeStatusUseCase,
+  UnlockWithPasscodeUseCase,
+} from '@/application/auth/usecases/passcodeUseCases';
 import type { RefreshSessionUseCase } from '@/application/auth/usecases/RefreshSessionUseCase';
 import type { ResendOtpUseCase } from '@/application/auth/usecases/ResendOtpUseCase';
 import type { RestoreSessionUseCase } from '@/application/auth/usecases/RestoreSessionUseCase';
@@ -94,6 +99,9 @@ export interface AppContainer {
     disableBiometricUnlock: DisableBiometricUnlockUseCase;
     unlockWithBiometrics: UnlockWithBiometricsUseCase;
     shouldRelock: ShouldRelockUseCase;
+    getPasscodeStatus: GetPasscodeStatusUseCase;
+    changePasscode: ChangePasscodeUseCase;
+    unlockWithPasscode: UnlockWithPasscodeUseCase;
   };
   circles: {
     getJoinConfig: GetJoinConfigUseCase;

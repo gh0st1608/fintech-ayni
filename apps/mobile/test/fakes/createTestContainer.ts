@@ -2,6 +2,7 @@ import { createContainer } from '@/bootstrap/container';
 import { parseEnv } from '@/bootstrap/env';
 
 import { InMemoryAuthApi } from '@/infrastructure/auth/InMemoryAuthApi';
+import { InMemoryPasscodeRepository } from '@/infrastructure/auth/InMemoryPasscodeRepository';
 import { InMemoryCircleMembershipRepository } from '@/infrastructure/circles/InMemoryCircleMembershipRepository';
 import { InMemoryCircleQuoteRepository } from '@/infrastructure/circles/InMemoryCircleQuoteRepository';
 import { InMemoryJoinConfigRepository } from '@/infrastructure/circles/InMemoryJoinConfigRepository';
@@ -43,6 +44,7 @@ interface TestAdapters {
   deviceLocale: FakeDeviceLocale;
   layoutDirection: FakeLayoutDirection;
   authApi: InMemoryAuthApi;
+  passcodes: InMemoryPasscodeRepository;
   joinConfig: InMemoryJoinConfigRepository;
   circleQuote: InMemoryCircleQuoteRepository;
   circleMembership: InMemoryCircleMembershipRepository;
@@ -74,6 +76,7 @@ export function createTestContainer(overrides: Partial<TestAdapters> = {}) {
     deviceLocale: new FakeDeviceLocale(),
     layoutDirection: new FakeLayoutDirection(),
     authApi: new InMemoryAuthApi({ latencyMs: 0 }),
+    passcodes: new InMemoryPasscodeRepository({ latencyMs: 0 }),
     joinConfig: new InMemoryJoinConfigRepository('PEN', { latencyMs: 0 }),
     circleQuote: new InMemoryCircleQuoteRepository({ latencyMs: 0 }),
     circleMembership: new InMemoryCircleMembershipRepository({ latencyMs: 0 }),

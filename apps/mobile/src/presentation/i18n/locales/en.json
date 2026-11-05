@@ -313,6 +313,19 @@
       "notEnrolled": "Add your fingerprint or face in the device settings.",
       "prompt": "Confirm your identity",
       "failed": "We could not verify you. Try again."
+    },
+    "passcode": {
+      "item": "Change Passcode",
+      "title": "Passcode",
+      "hint": "Your 6-digit passcode unlocks the app if biometrics fail.",
+      "current": "Current passcode",
+      "new": "New passcode",
+      "confirm": "Confirm the new passcode",
+      "save": "Save",
+      "invalidFormat": "The passcode must have 6 digits.",
+      "mismatch": "The passcodes do not match.",
+      "wrong_one": "Wrong passcode. {{count}} attempt left.",
+      "wrong_other": "Wrong passcode. {{count}} attempts left."
     }
   },
   "catalog": {
@@ -348,7 +361,9 @@
       "prompt": "Unlock Ayni",
       "failed": "We did not recognize you. Try again.",
       "fallback": "Sign in with a code to continue.",
-      "useCode": "Sign in with a code"
+      "useCode": "Sign in with a code",
+      "passcode": "Passcode",
+      "usePasscode": "Unlock with passcode"
     }
   },
   "payment": {

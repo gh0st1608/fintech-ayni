@@ -20,6 +20,7 @@ import { useProfile } from '../useProfile';
 
 interface ProfileScreenProps {
   onOpenPersonalInfo?: () => void;
+  onOpenPasscode?: () => void;
   onOpenDocuments?: () => void;
   onOpenReferral?: () => void;
   /** Abre el catálogo del design system; solo se muestra en el ambiente dev. */
@@ -35,6 +36,7 @@ const AVATAR_SIZE = 56;
  */
 export function ProfileScreen({
   onOpenPersonalInfo,
+  onOpenPasscode,
   onOpenDocuments,
   onOpenReferral,
   onOpenCatalog,
@@ -78,6 +80,14 @@ export function ProfileScreen({
         </Section>
         <Section title={t('profile.sections.security')}>
           <BiometricToggle />
+          {onOpenPasscode && (
+            <ListItem
+              title={t('profile.passcode.item')}
+              icon="keypad-outline"
+              onPress={onOpenPasscode}
+              testID="profile-passcode"
+            />
+          )}
         </Section>
         {/* Support (Get Help) del Figma no tiene historia todavía. */}
         <Section title={t('profile.sections.settings')}>
