@@ -26,6 +26,10 @@ import { ListInstallmentOptionsUseCase } from '@/application/circles/usecases/Li
 import { ListMyCirclesUseCase } from '@/application/circles/usecases/ListMyCirclesUseCase';
 import { ListRecommendedCirclesUseCase } from '@/application/circles/usecases/ListRecommendedCirclesUseCase';
 import {
+  ListStartProposalsUseCase,
+  RespondStartProposalUseCase,
+} from '@/application/circles/usecases/startProposalUseCases';
+import {
   AddCardUseCase,
   ListCardsUseCase,
   PayInstallmentUseCase,
@@ -326,6 +330,8 @@ export function createContainer(
       joinCircle: new JoinCircleUseCase(adapters.circleMembership, adapters.ids),
       listMyCircles: new ListMyCirclesUseCase(adapters.circleMembership),
       listRecommended: new ListRecommendedCirclesUseCase(adapters.circleQuote),
+      listStartProposals: new ListStartProposalsUseCase(adapters.circleMembership),
+      respondStartProposal: new RespondStartProposalUseCase(adapters.circleMembership),
     },
     payments: {
       getSummary: new GetPaymentSummaryUseCase(adapters.payments),

@@ -1,5 +1,6 @@
 import type { JoinCircleRequest, JoinedCircle } from '../JoinedCircle';
 import type { MyCirclesPage, MyCircleStatus } from '../MyCircle';
+import type { StartDecision, StartProposal } from '../StartProposal';
 
 /** Membresías del usuario: unirse (POST /v1/circles/join) y mis círculos (GET /v1/me/circles). */
 export interface CircleMembershipRepositoryPort {
@@ -14,4 +15,7 @@ export interface CircleMembershipRepositoryPort {
     cursor: string | null,
     signal?: AbortSignal,
   ): Promise<MyCirclesPage>;
+  /** Círculos incompletos que esperan la respuesta del usuario (COPAYNI-62). */
+  listStartProposals(signal?: AbortSignal): Promise<StartProposal[]>;
+  respondStartProposal(circleId: string, decision: StartDecision): Promise<void>;
 }

@@ -3,6 +3,7 @@ import { z } from 'zod';
 import type { JoinCircleRequest, JoinedCircle } from '@/domain/circles/JoinedCircle';
 import type { MyCirclesPage, MyCircleStatus } from '@/domain/circles/MyCircle';
 import type { CircleMembershipRepositoryPort } from '@/domain/circles/ports/CircleMembershipRepositoryPort';
+import type { StartDecision, StartProposal } from '@/domain/circles/StartProposal';
 import type { HttpClientPort } from '@/domain/shared/ports/HttpClientPort';
 
 import { SLOT_TYPE_BY_DTO } from './CircleQuoteApiRepository';
@@ -29,6 +30,35 @@ const joinedCircleDto = z.object({
   /** COPAYNI-60; un backend anterior no lo envía. */
   retention: moneyDto.optional(),
   created: z.boolean(),
+});
+
+const startTermsDto = z.object({
+  payout: moneyDto,
+  baseInstallment: moneyDto,
+  months: z.number().int().positive(),
+});
+
+/** DTO de GET /me/circles/start-proposals (docs/api/circles.md). */
+const startProposalsDto = z.object({
+  items: z.array(
+    z.object({
+      circleId: z.string().min(1),
+      current: startTermsDto,
+      proposed: startTermsDto,
+      position: z.number().int().positive(),
+      netPayout: moneyDto,
+      firstInstallment: moneyDto,
+      totalPaid: moneyDto,
+      respondBy: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+      decision: z.enum(['accepted', 'withdrawn']).nullable(),
+    }),
+  ),
+});
+
+const toStartTerms = (dto: z.infer<typeof startTermsDto>) => ({
+  payout: toMoney(dto.payout),
+  baseInstallment: toMoney(dto.baseInstallment),
+  months: dto.months,
 });
 
 /** DTO de GET /me/circles (docs/api/circles.md). */
@@ -102,5 +132,25 @@ export class CircleMembershipApiRepository implements CircleMembershipRepository
       })),
       nextCursor: dto.nextCursor,
     };
+  }
+
+  async listStartProposals(signal?: AbortSignal): Promise<StartProposal[]> {
+    const { items } = await this.http.get('/me/circles/start-proposals', {
+      signal,
+      parse: (data) => startProposalsDto.parse(data),
+    });
+    return items.map((item) => ({
+      ...item,
+      current: toStartTerms(item.current),
+      proposed: toStartTerms(item.proposed),
+      netPayout: toMoney(item.netPayout),
+      firstInstallment: toMoney(item.firstInstallment),
+      totalPaid: toMoney(item.totalPaid),
+    }));
+  }
+
+  async respondStartProposal(circleId: string, decision: StartDecision): Promise<void> {
+    const action = decision === 'accepted' ? 'accept' : 'withdraw';
+    await this.http.post(`/me/circles/${circleId}/start-proposal/${action}`);
   }
 }

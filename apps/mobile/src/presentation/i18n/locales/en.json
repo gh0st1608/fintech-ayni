@@ -213,6 +213,23 @@
       "joinNow": "Join now",
       "stale": "We couldn't update the recommendations: {{reason}}",
       "vacancyTurn": "Open slot · payout in {{month}}"
+    },
+    "startProposal": {
+      "title": "Your circle will start smaller",
+      "description_one": "The {{count}} slots of the {{pot}} pot were not filled. These are the new terms.",
+      "description_other": "The {{count}} slots of the {{pot}} pot were not filled. These are the new terms.",
+      "pot": "Pot",
+      "members": "Members",
+      "turn": "Your turn",
+      "installment": "Your installment",
+      "receive": "You receive",
+      "respondBy": "Respond by {{date}}. If you do not respond, you will leave the circle with no penalty.",
+      "accept": "Accept",
+      "withdraw": "Withdraw",
+      "decision": {
+        "accepted": "You accepted.",
+        "withdrawn": "You withdrew."
+      }
     }
   },
   "saving": {

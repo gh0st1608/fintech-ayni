@@ -18,6 +18,7 @@ import { SegmentedTabs } from '@/presentation/shared/components/SegmentedTabs';
 import { colors, spacing } from '@/presentation/theme/tokens';
 
 import { RecommendedCircles } from '../components/RecommendedCircles';
+import { StartProposals } from '../components/StartProposals';
 import { useMyCircles } from '../useMyCircles';
 import type { JoinTarget } from '@/domain/circles/RecommendedCircle';
 
@@ -58,6 +59,7 @@ export function CirclesScreen({ onJoin, onJoinCircle }: CirclesScreenProps) {
       >
         {t('tabs.circles')}
       </AppText>
+      <StartProposals />
       <SegmentedTabs
         options={[
           { key: 'active', label: t('circles.tabs.active') },

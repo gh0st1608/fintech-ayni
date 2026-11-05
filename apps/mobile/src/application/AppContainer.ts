@@ -25,6 +25,10 @@ import type { ListInstallmentOptionsUseCase } from '@/application/circles/usecas
 import type { ListMyCirclesUseCase } from '@/application/circles/usecases/ListMyCirclesUseCase';
 import type { ListRecommendedCirclesUseCase } from '@/application/circles/usecases/ListRecommendedCirclesUseCase';
 import type {
+  ListStartProposalsUseCase,
+  RespondStartProposalUseCase,
+} from '@/application/circles/usecases/startProposalUseCases';
+import type {
   AddCardUseCase,
   ListCardsUseCase,
   PayInstallmentUseCase,
@@ -111,6 +115,8 @@ export interface AppContainer {
     joinCircle: JoinCircleUseCase;
     listMyCircles: ListMyCirclesUseCase;
     listRecommended: ListRecommendedCirclesUseCase;
+    listStartProposals: ListStartProposalsUseCase;
+    respondStartProposal: RespondStartProposalUseCase;
   };
   payments: {
     getSummary: GetPaymentSummaryUseCase;

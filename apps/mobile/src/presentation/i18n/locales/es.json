@@ -213,6 +213,23 @@
       "joinNow": "Únete ahora",
       "stale": "No pudimos actualizar los recomendados: {{reason}}",
       "vacancyTurn": "Turno vacante · cobras en {{month}}"
+    },
+    "startProposal": {
+      "title": "Tu círculo empezará reducido",
+      "description_one": "No se completaron los {{count}} turnos del pozo de {{pot}}. Estas son las condiciones nuevas.",
+      "description_other": "No se completaron los {{count}} turnos del pozo de {{pot}}. Estas son las condiciones nuevas.",
+      "pot": "Pozo",
+      "members": "Integrantes",
+      "turn": "Tu turno",
+      "installment": "Tu cuota",
+      "receive": "Recibes",
+      "respondBy": "Responde hasta el {{date}}. Si no respondes, saldrás del círculo sin penalidad.",
+      "accept": "Aceptar",
+      "withdraw": "Retirarme",
+      "decision": {
+        "accepted": "Aceptaste.",
+        "withdrawn": "Te retiraste."
+      }
     }
   },
   "saving": {
