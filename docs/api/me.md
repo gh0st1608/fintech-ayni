@@ -62,3 +62,20 @@ Todos los campos son opcionales, pero el cuerpo no puede venir vacío. Un campo 
 - Desbloquea guardar tarjetas para quien entró solo con teléfono: Mercado Pago necesita un email (`EMAIL_REQUIRED`, [payments.md](payments.md)).
 
 **Pendiente:** la foto de perfil (¿se puede subir una?, pregunta abierta de COPAYNI-44).
+
+## Passcode de acceso (COPAYNI-23)
+
+Número de 6 dígitos, opcional, que sirve como método alternativo para desbloquear la app (COPAYNI-22). Solo se guarda su hash (scrypt) en el backend, nunca en el dispositivo.
+
+**Supuestos (pending-scope D9):** el formato, que el primero se cree desde el Perfil sin más verificación que la sesión, y el límite de intentos. **Pendiente:** recuperar un passcode olvidado; hoy, quien lo olvida sigue pudiendo ingresar con OTP, pero no puede cambiarlo.
+
+| Método y ruta                 | Cuerpo                              | Respuesta                | Errores                                                                                       |
+| ----------------------------- | ----------------------------------- | ------------------------ | --------------------------------------------------------------------------------------------- |
+| `GET /v1/me/passcode`         | —                                   | `{ "configured": true }` | `UNAUTHORIZED` (401)                                                                          |
+| `PUT /v1/me/passcode`         | `{ currentPasscode?, newPasscode }` | 204                      | `VALIDATION_ERROR` (400), `PASSCODE_INVALID` (422), `RATE_LIMITED` (429)                      |
+| `POST /v1/me/passcode/verify` | `{ passcode }`                      | 204                      | `VALIDATION_ERROR` (400), `PASSCODE_INVALID` y `PASSCODE_NOT_SET` (422), `RATE_LIMITED` (429) |
+
+- `currentPasscode` es obligatorio si ya existe uno. Si falta, responde `PASSCODE_INVALID` y cuenta como fallo.
+- `PASSCODE_INVALID` incluye `details.attemptsRemaining`.
+- Tras `PASSCODE_MAX_ATTEMPTS` fallos seguidos (5), el passcode se bloquea `PASSCODE_LOCK_SECONDS` (15 minutos) y responde `RATE_LIMITED` con `Retry-After`. Un acierto reinicia la cuenta.
+- El cambio queda auditado en el log (`auth.passcode.changed`), sin el valor.

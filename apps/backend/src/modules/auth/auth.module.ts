@@ -20,12 +20,24 @@ import {
   REFRESH_TOKEN_SECRETS,
   type AuthPolicy,
 } from './application/ports/auth.ports';
+import {
+  PASSCODE_HASHER,
+  PASSCODE_POLICY,
+  PASSCODE_REPOSITORY,
+  type PasscodePolicy,
+} from './application/ports/passcode.ports';
 import { SessionIssuer } from './application/services/session-issuer';
 import {
   ResendOtpUseCase,
   StartAuthenticationUseCase,
   VerifyOtpUseCase,
 } from './application/use-cases/otp.use-cases';
+import {
+  GetPasscodeStatusUseCase,
+  PasscodeChecker,
+  SetPasscodeUseCase,
+  VerifyPasscodeUseCase,
+} from './application/use-cases/passcode.use-cases';
 import { LogoutUseCase, RefreshSessionUseCase } from './application/use-cases/session.use-cases';
 import {
   Es256JwtIssuer,
@@ -41,14 +53,17 @@ import {
   RandomOtpGenerator,
   UnavailableOtpSender,
 } from './infrastructure/crypto/otp.adapters';
+import { ScryptPasscodeHasher } from './infrastructure/crypto/scrypt-passcode-hasher';
 import {
   AuthChallengeEntity,
   RefreshTokenEntity,
 } from './infrastructure/persistence/typeorm/auth.entities';
+import { SqlPasscodeRepository } from './infrastructure/persistence/typeorm/sql-passcode.repository';
 import { TypeOrmAuthChallengeRepository } from './infrastructure/persistence/typeorm/typeorm-auth-challenge.repository';
 import { TypeOrmRefreshTokenRepository } from './infrastructure/persistence/typeorm/typeorm-refresh-token.repository';
 import { AuthController } from './presentation/http/controllers/auth.controller';
 import { ContactChangeController } from './presentation/http/controllers/contact-change.controller';
+import { PasscodeController } from './presentation/http/controllers/passcode.controller';
 import {
   StartContactChangeUseCase,
   VerifyContactChangeUseCase,
@@ -57,6 +72,13 @@ import { SqlContactChangeRepository } from './infrastructure/persistence/typeorm
 
 const JWT_SETTINGS = Symbol('JWT_SETTINGS');
 const logger = new Logger('Auth');
+
+function passcodePolicy(config: AppConfigService): PasscodePolicy {
+  return {
+    maxAttempts: config.get('PASSCODE_MAX_ATTEMPTS', { infer: true }),
+    lockSeconds: config.get('PASSCODE_LOCK_SECONDS', { infer: true }),
+  };
+}
 
 /**
  * Fuera de production, una clave o un secreto ausente se genera al arrancar (la validación de
@@ -96,8 +118,16 @@ function authPolicy(config: AppConfigService): AuthPolicy {
  */
 @Module({
   imports: [UsersModule, TypeOrmModule.forFeature([AuthChallengeEntity, RefreshTokenEntity])],
-  controllers: [AuthController, ContactChangeController],
+  controllers: [AuthController, ContactChangeController, PasscodeController],
   providers: [
+    PasscodeChecker,
+    GetPasscodeStatusUseCase,
+    SetPasscodeUseCase,
+    VerifyPasscodeUseCase,
+    SqlPasscodeRepository,
+    { provide: PASSCODE_REPOSITORY, useExisting: SqlPasscodeRepository },
+    { provide: PASSCODE_HASHER, useClass: ScryptPasscodeHasher },
+    { provide: PASSCODE_POLICY, inject: [ConfigService], useFactory: passcodePolicy },
     StartContactChangeUseCase,
     VerifyContactChangeUseCase,
     SqlContactChangeRepository,
