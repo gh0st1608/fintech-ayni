@@ -5,6 +5,12 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { type AppConfigService } from '../../config/configuration';
 import { CIRCLE_CYCLE_REPOSITORY } from './application/ports/circle-cycle-repository.port';
 import { CIRCLE_REPOSITORY } from './application/ports/circle-repository.port';
+import { CIRCLE_START_PROPOSALS } from './application/ports/start-proposals.port';
+import {
+  ListStartProposalsUseCase,
+  RespondStartProposalUseCase,
+} from './application/use-cases/start-proposal.use-cases';
+import { SqlStartProposalsRepository } from './infrastructure/persistence/typeorm/sql-start-proposals.repository';
 import { CONTRIBUTIONS, DISBURSEMENTS } from './application/ports/cycle-payments.port';
 import { PayoutsModule } from '../payouts/payouts.module';
 import { JOIN_CONFIG_REPOSITORY } from './application/ports/join-config-repository.port';
@@ -122,12 +128,17 @@ import { MyCirclesController } from './presentation/http/controllers/my-circles.
     AdvanceCircleCyclesUseCase,
     TypeOrmCircleCycleRepository,
     { provide: CIRCLE_CYCLE_REPOSITORY, useExisting: TypeOrmCircleCycleRepository },
+    ListStartProposalsUseCase,
+    RespondStartProposalUseCase,
+    SqlStartProposalsRepository,
+    { provide: CIRCLE_START_PROPOSALS, useExisting: SqlStartProposalsRepository },
     {
       provide: CIRCLE_CYCLE,
       inject: [ConfigService],
       useFactory: (config: AppConfigService): CircleCycleSettings => ({
         dueDay: config.get('CIRCLE_INSTALLMENT_DUE_DAY', { infer: true }),
         timeZone: config.get('BUSINESS_TIME_ZONE', { infer: true }),
+        startApprovalDays: config.get('CIRCLE_START_APPROVAL_DAYS', { infer: true }),
         // Reglas de impago del PO con valores de R18 (pending-scope §3.1), parametrizables.
         delinquency: {
           graceDays: config.get('DELINQUENCY_GRACE_DAYS', { infer: true }),

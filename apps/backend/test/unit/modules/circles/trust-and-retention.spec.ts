@@ -187,6 +187,7 @@ describe('Retención del payout (COPAYNI-60)', () => {
         timeZone: 'America/Lima',
         delinquency: TEST_DELINQUENCY,
         fundFeeShareBps: TEST_FUND_SHARE_BPS,
+        startApprovalDays: 7,
       },
       payments,
       payments,

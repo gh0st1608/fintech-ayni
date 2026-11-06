@@ -1,5 +1,17 @@
 import type { AppContainer } from '@/application/AppContainer';
 import { SessionEvents } from '@/application/auth/SessionEvents';
+import {
+  DisableBiometricUnlockUseCase,
+  EnableBiometricUnlockUseCase,
+  GetBiometricStatusUseCase,
+  ShouldRelockUseCase,
+  UnlockWithBiometricsUseCase,
+} from '@/application/auth/usecases/biometricUseCases';
+import {
+  ChangePasscodeUseCase,
+  GetPasscodeStatusUseCase,
+  UnlockWithPasscodeUseCase,
+} from '@/application/auth/usecases/passcodeUseCases';
 import { RefreshSessionUseCase } from '@/application/auth/usecases/RefreshSessionUseCase';
 import { ResendOtpUseCase } from '@/application/auth/usecases/ResendOtpUseCase';
 import { RestoreSessionUseCase } from '@/application/auth/usecases/RestoreSessionUseCase';
@@ -13,6 +25,10 @@ import { JoinCircleUseCase } from '@/application/circles/usecases/JoinCircleUseC
 import { ListInstallmentOptionsUseCase } from '@/application/circles/usecases/ListInstallmentOptionsUseCase';
 import { ListMyCirclesUseCase } from '@/application/circles/usecases/ListMyCirclesUseCase';
 import { ListRecommendedCirclesUseCase } from '@/application/circles/usecases/ListRecommendedCirclesUseCase';
+import {
+  ListStartProposalsUseCase,
+  RespondStartProposalUseCase,
+} from '@/application/circles/usecases/startProposalUseCases';
 import {
   AddCardUseCase,
   ListCardsUseCase,
@@ -59,6 +75,11 @@ import { ChangeLanguageUseCase } from '@/application/i18n/usecases/ChangeLanguag
 import { ResolveLanguageUseCase } from '@/application/i18n/usecases/ResolveLanguageUseCase';
 import { SyncLanguagePreferenceUseCase } from '@/application/i18n/usecases/SyncLanguagePreferenceUseCase';
 import type { AuthApiPort } from '@/domain/auth/ports/AuthApiPort';
+import type {
+  BiometricAuthPort,
+  BiometricPreferencePort,
+} from '@/domain/auth/ports/BiometricPorts';
+import type { PasscodeRepositoryPort } from '@/domain/auth/ports/PasscodeRepositoryPort';
 import type { TokenStoragePort } from '@/domain/auth/ports/TokenStoragePort';
 import type { CircleMembershipRepositoryPort } from '@/domain/circles/ports/CircleMembershipRepositoryPort';
 import type { CircleQuoteRepositoryPort } from '@/domain/circles/ports/CircleQuoteRepositoryPort';
@@ -88,6 +109,8 @@ import type { UserProfileRepositoryPort } from '@/domain/profile/ports/UserProfi
 import type { IdGeneratorPort } from '@/domain/shared/ports/IdGeneratorPort';
 import { AuthApiRepository } from '@/infrastructure/auth/AuthApiRepository';
 import { InMemoryAuthApi } from '@/infrastructure/auth/InMemoryAuthApi';
+import { InMemoryPasscodeRepository } from '@/infrastructure/auth/InMemoryPasscodeRepository';
+import { PasscodeApiRepository } from '@/infrastructure/auth/PasscodeApiRepository';
 import { CircleMembershipApiRepository } from '@/infrastructure/circles/CircleMembershipApiRepository';
 import { CircleQuoteApiRepository } from '@/infrastructure/circles/CircleQuoteApiRepository';
 import { InMemoryCircleMembershipRepository } from '@/infrastructure/circles/InMemoryCircleMembershipRepository';
@@ -104,6 +127,7 @@ import {
   FakeFileUploader,
   InMemoryDocumentRepository,
 } from '@/infrastructure/documents/InMemoryDocumentRepository';
+import { ExpoBiometricAuth } from '@/infrastructure/device/ExpoBiometricAuth';
 import { ExpoCryptoIdGenerator } from '@/infrastructure/device/ExpoCryptoIdGenerator';
 import { ExpoDeviceLocale } from '@/infrastructure/device/ExpoDeviceLocale';
 import { ReactNativeLayoutDirection } from '@/infrastructure/device/ReactNativeLayoutDirection';
@@ -129,6 +153,7 @@ import { InMemoryReferralRepository } from '@/infrastructure/referrals/InMemoryR
 import { ReferralApiRepository } from '@/infrastructure/referrals/ReferralApiRepository';
 import { InMemorySavingPlanRepository } from '@/infrastructure/savings/InMemorySavingPlanRepository';
 import { SavingPlanApiRepository } from '@/infrastructure/savings/SavingPlanApiRepository';
+import { AsyncStorageBiometricPreference } from '@/infrastructure/storage/AsyncStorageBiometricPreference';
 import { AsyncStorageLanguagePreference } from '@/infrastructure/storage/AsyncStorageLanguagePreference';
 import { AsyncStorageLanguageSyncState } from '@/infrastructure/storage/AsyncStorageLanguageSyncState';
 import { SecureStoreTokenStorage } from '@/infrastructure/storage/SecureStoreTokenStorage';
@@ -138,11 +163,14 @@ import type { Env } from './env';
 
 export interface ContainerAdapters {
   tokenStorage: TokenStoragePort;
+  biometrics: BiometricAuthPort;
+  biometricPreference: BiometricPreferencePort;
   languagePreference: LanguagePreferencePort;
   languageSyncState: LanguageSyncStatePort;
   deviceLocale: DeviceLocalePort;
   layoutDirection: LayoutDirectionPort;
   authApi: AuthApiPort;
+  passcodes: PasscodeRepositoryPort;
   joinConfig: JoinConfigRepositoryPort;
   circleQuote: CircleQuoteRepositoryPort;
   circleMembership: CircleMembershipRepositoryPort;
@@ -181,11 +209,15 @@ export function createContainer(
 
   const adapters: ContainerAdapters = {
     tokenStorage,
+    biometrics: new ExpoBiometricAuth(),
+    biometricPreference: new AsyncStorageBiometricPreference(),
     languagePreference: new AsyncStorageLanguagePreference(),
     languageSyncState: new AsyncStorageLanguageSyncState(),
     deviceLocale: new ExpoDeviceLocale(),
     layoutDirection: new ReactNativeLayoutDirection(),
     authApi: env.authApi === 'fake' ? new InMemoryAuthApi() : new AuthApiRepository(http),
+    passcodes:
+      env.authApi === 'fake' ? new InMemoryPasscodeRepository() : new PasscodeApiRepository(http),
     joinConfig:
       env.circlesApi === 'fake'
         ? new InMemoryJoinConfigRepository(env.defaultCurrency)
@@ -245,7 +277,11 @@ export function createContainer(
     adapters.fileCleaner,
   );
   const sessionEvents = new SessionEvents();
-  const signOut = new SignOutUseCase(adapters.tokenStorage, adapters.authApi);
+  const signOut = new SignOutUseCase(
+    adapters.tokenStorage,
+    adapters.authApi,
+    adapters.biometricPreference,
+  );
   const refreshSession = new RefreshSessionUseCase(
     adapters.authApi,
     adapters.tokenStorage,
@@ -260,13 +296,30 @@ export function createContainer(
       legal: { termsUrl: env.termsUrl, privacyUrl: env.privacyUrl },
     },
     auth: {
-      restoreSession: new RestoreSessionUseCase(adapters.tokenStorage),
+      restoreSession: new RestoreSessionUseCase(
+        adapters.tokenStorage,
+        adapters.biometricPreference,
+      ),
       signOut,
       refreshSession,
       sessionEvents,
       startAuthentication: new StartAuthenticationUseCase(adapters.authApi),
       verifyOtp: new VerifyOtpUseCase(adapters.authApi, adapters.tokenStorage),
       resendOtp: new ResendOtpUseCase(adapters.authApi),
+      getBiometricStatus: new GetBiometricStatusUseCase(
+        adapters.biometrics,
+        adapters.biometricPreference,
+      ),
+      enableBiometricUnlock: new EnableBiometricUnlockUseCase(
+        adapters.biometrics,
+        adapters.biometricPreference,
+      ),
+      disableBiometricUnlock: new DisableBiometricUnlockUseCase(adapters.biometricPreference),
+      unlockWithBiometrics: new UnlockWithBiometricsUseCase(adapters.biometrics),
+      shouldRelock: new ShouldRelockUseCase(adapters.biometricPreference),
+      getPasscodeStatus: new GetPasscodeStatusUseCase(adapters.passcodes),
+      changePasscode: new ChangePasscodeUseCase(adapters.passcodes),
+      unlockWithPasscode: new UnlockWithPasscodeUseCase(adapters.passcodes),
     },
     ids: adapters.ids,
     circles: {
@@ -277,6 +330,8 @@ export function createContainer(
       joinCircle: new JoinCircleUseCase(adapters.circleMembership, adapters.ids),
       listMyCircles: new ListMyCirclesUseCase(adapters.circleMembership),
       listRecommended: new ListRecommendedCirclesUseCase(adapters.circleQuote),
+      listStartProposals: new ListStartProposalsUseCase(adapters.circleMembership),
+      respondStartProposal: new RespondStartProposalUseCase(adapters.circleMembership),
     },
     payments: {
       getSummary: new GetPaymentSummaryUseCase(adapters.payments),

@@ -52,6 +52,16 @@ run "plan_de_prd" {
   }
 }
 
+# El adaptador real de cobros todavía no existe: el ciclo no puede quedar corriendo por defecto.
+run "ciclo_de_circulos_deshabilitado" {
+  command = plan
+
+  assert {
+    condition     = module.circle_cycle.schedule_state == "DISABLED"
+    error_message = "El ciclo nace deshabilitado hasta que exista el adaptador real de cobros."
+  }
+}
+
 # Controles que dependen de variables (checkov los marca porque también evalúa dev).
 run "controles_de_prd" {
   command = plan

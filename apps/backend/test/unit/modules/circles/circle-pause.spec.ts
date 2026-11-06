@@ -170,6 +170,7 @@ describe('SetCirclePauseUseCase', () => {
     timeZone: 'America/Lima',
     delinquency: TEST_DELINQUENCY,
     fundFeeShareBps: TEST_FUND_SHARE_BPS,
+    startApprovalDays: 7,
   };
 
   function setup() {

@@ -2,6 +2,7 @@ import { createContainer } from '@/bootstrap/container';
 import { parseEnv } from '@/bootstrap/env';
 
 import { InMemoryAuthApi } from '@/infrastructure/auth/InMemoryAuthApi';
+import { InMemoryPasscodeRepository } from '@/infrastructure/auth/InMemoryPasscodeRepository';
 import { InMemoryCircleMembershipRepository } from '@/infrastructure/circles/InMemoryCircleMembershipRepository';
 import { InMemoryCircleQuoteRepository } from '@/infrastructure/circles/InMemoryCircleQuoteRepository';
 import { InMemoryJoinConfigRepository } from '@/infrastructure/circles/InMemoryJoinConfigRepository';
@@ -21,11 +22,13 @@ import { InMemoryReferralRepository } from '@/infrastructure/referrals/InMemoryR
 import { InMemorySavingPlanRepository } from '@/infrastructure/savings/InMemorySavingPlanRepository';
 
 import {
+  FakeBiometricAuth,
   FakeClipboard,
   FakeDeviceLocale,
   FakeIdGenerator,
   FakeLayoutDirection,
   FakeShare,
+  InMemoryBiometricPreference,
   InMemoryLanguagePreference,
   InMemoryLanguageSyncState,
   InMemoryPendingReferral,
@@ -34,11 +37,14 @@ import {
 
 interface TestAdapters {
   tokenStorage: InMemoryTokenStorage;
+  biometrics: FakeBiometricAuth;
+  biometricPreference: InMemoryBiometricPreference;
   languagePreference: InMemoryLanguagePreference;
   languageSyncState: InMemoryLanguageSyncState;
   deviceLocale: FakeDeviceLocale;
   layoutDirection: FakeLayoutDirection;
   authApi: InMemoryAuthApi;
+  passcodes: InMemoryPasscodeRepository;
   joinConfig: InMemoryJoinConfigRepository;
   circleQuote: InMemoryCircleQuoteRepository;
   circleMembership: InMemoryCircleMembershipRepository;
@@ -63,11 +69,14 @@ interface TestAdapters {
 export function createTestContainer(overrides: Partial<TestAdapters> = {}) {
   const adapters: TestAdapters = {
     tokenStorage: new InMemoryTokenStorage(),
+    biometrics: new FakeBiometricAuth(),
+    biometricPreference: new InMemoryBiometricPreference(),
     languagePreference: new InMemoryLanguagePreference(),
     languageSyncState: new InMemoryLanguageSyncState(),
     deviceLocale: new FakeDeviceLocale(),
     layoutDirection: new FakeLayoutDirection(),
     authApi: new InMemoryAuthApi({ latencyMs: 0 }),
+    passcodes: new InMemoryPasscodeRepository({ latencyMs: 0 }),
     joinConfig: new InMemoryJoinConfigRepository('PEN', { latencyMs: 0 }),
     circleQuote: new InMemoryCircleQuoteRepository({ latencyMs: 0 }),
     circleMembership: new InMemoryCircleMembershipRepository({ latencyMs: 0 }),

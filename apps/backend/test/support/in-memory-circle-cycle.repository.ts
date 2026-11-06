@@ -9,6 +9,8 @@ import {
   type Expulsion,
   type Installment,
 } from '@src/modules/circles/domain/entities/circle-cycle';
+import { priceOf } from '@src/modules/circles/domain/services/slot-pricing';
+import { type StartDecision } from '@src/modules/circles/domain/services/start-approval';
 import { type LedgerTransaction } from '@src/modules/circles/domain/value-objects/ledger-transaction';
 import { Money } from '@src/shared/domain/value-objects/money';
 import { type Period } from '@src/shared/domain/value-objects/period';
@@ -67,6 +69,14 @@ export class InMemoryCircleCycleRepository implements CircleCycleRepositoryPort 
     this.cycles.set(circleId, { ...stored, members: [...stored.members, member] });
   }
 
+  /** Un miembro responde a la propuesta (COPAYNI-62). */
+  respond(circleId: string, userId: string, decision: StartDecision): void {
+    const stored = this.cycles.get(circleId)!;
+    const approval = stored.approval!;
+    const decisions = new Map(approval.decisions).set(userId, decision);
+    this.cycles.set(circleId, { ...stored, approval: { ...approval, decisions } });
+  }
+
   get(circleId: string): StoredCycle | undefined {
     return this.cycles.get(circleId);
   }
@@ -81,7 +91,9 @@ export class InMemoryCircleCycleRepository implements CircleCycleRepositoryPort 
       [...this.cycles.values()]
         .filter(
           ({ state, terms }) =>
-            state === 'contributing' || (state === 'collecting' && !terms.startsOn.isAfter(today)),
+            state === 'contributing' ||
+            state === 'approving' ||
+            (state === 'collecting' && !terms.startsOn.isAfter(today)),
         )
         .map(({ circleId }) => circleId),
     );
@@ -128,10 +140,19 @@ export class InMemoryCircleCycleRepository implements CircleCycleRepositoryPort 
               paid && refund ? [{ userId, paid, refund }] : [],
             ),
           ],
+      approval: cycle.startProposal
+        ? { ...cycle.startProposal, decisions: new Map() }
+        : cycle.state === 'approving'
+          ? stored.approval
+          : null,
       // Los expulsados ya no se cargan, como `expelled_at` en PostgreSQL.
-      members: stored.members.filter(({ userId }) =>
-        cycle.members.some((member) => member.userId === userId),
-      ),
+      members: stored.members.flatMap((member) => {
+        const current = cycle.members.find(({ userId }) => userId === member.userId);
+        if (!current) return [];
+        return cycle.startedReduced
+          ? [{ ...member, position: current.position, price: priceOf(current.quote) }]
+          : [member];
+      }),
       installments: current
         ? cycle.installments.filter(({ period }) => period.equals(current))
         : [],

@@ -1,4 +1,16 @@
 import type { SessionEvents } from '@/application/auth/SessionEvents';
+import type {
+  DisableBiometricUnlockUseCase,
+  EnableBiometricUnlockUseCase,
+  GetBiometricStatusUseCase,
+  ShouldRelockUseCase,
+  UnlockWithBiometricsUseCase,
+} from '@/application/auth/usecases/biometricUseCases';
+import type {
+  ChangePasscodeUseCase,
+  GetPasscodeStatusUseCase,
+  UnlockWithPasscodeUseCase,
+} from '@/application/auth/usecases/passcodeUseCases';
 import type { RefreshSessionUseCase } from '@/application/auth/usecases/RefreshSessionUseCase';
 import type { ResendOtpUseCase } from '@/application/auth/usecases/ResendOtpUseCase';
 import type { RestoreSessionUseCase } from '@/application/auth/usecases/RestoreSessionUseCase';
@@ -12,6 +24,10 @@ import type { JoinCircleUseCase } from '@/application/circles/usecases/JoinCircl
 import type { ListInstallmentOptionsUseCase } from '@/application/circles/usecases/ListInstallmentOptionsUseCase';
 import type { ListMyCirclesUseCase } from '@/application/circles/usecases/ListMyCirclesUseCase';
 import type { ListRecommendedCirclesUseCase } from '@/application/circles/usecases/ListRecommendedCirclesUseCase';
+import type {
+  ListStartProposalsUseCase,
+  RespondStartProposalUseCase,
+} from '@/application/circles/usecases/startProposalUseCases';
 import type {
   AddCardUseCase,
   ListCardsUseCase,
@@ -82,6 +98,14 @@ export interface AppContainer {
     startAuthentication: StartAuthenticationUseCase;
     verifyOtp: VerifyOtpUseCase;
     resendOtp: ResendOtpUseCase;
+    getBiometricStatus: GetBiometricStatusUseCase;
+    enableBiometricUnlock: EnableBiometricUnlockUseCase;
+    disableBiometricUnlock: DisableBiometricUnlockUseCase;
+    unlockWithBiometrics: UnlockWithBiometricsUseCase;
+    shouldRelock: ShouldRelockUseCase;
+    getPasscodeStatus: GetPasscodeStatusUseCase;
+    changePasscode: ChangePasscodeUseCase;
+    unlockWithPasscode: UnlockWithPasscodeUseCase;
   };
   circles: {
     getJoinConfig: GetJoinConfigUseCase;
@@ -91,6 +115,8 @@ export interface AppContainer {
     joinCircle: JoinCircleUseCase;
     listMyCircles: ListMyCirclesUseCase;
     listRecommended: ListRecommendedCirclesUseCase;
+    listStartProposals: ListStartProposalsUseCase;
+    respondStartProposal: RespondStartProposalUseCase;
   };
   payments: {
     getSummary: GetPaymentSummaryUseCase;

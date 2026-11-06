@@ -8,6 +8,7 @@ import {
   type PendingRefund,
 } from '../../domain/entities/circle-cycle';
 import { type SlotPrice } from '../../domain/services/slot-pricing';
+import { type StartApproval } from '../../domain/services/start-approval';
 import { type CircleTerms } from '../../domain/value-objects/circle-terms';
 
 export const CIRCLE_CYCLE_REPOSITORY = Symbol('CIRCLE_CYCLE_REPOSITORY');
@@ -31,10 +32,15 @@ export interface StoredCycle {
   pendingRefunds: PendingRefund[];
   /** Desde cuándo está pausado (COPAYNI-61); `null` si no lo está. */
   pausedOn: LocalDate | null;
+  /** La propuesta vigente de un círculo en aprobación (COPAYNI-62). */
+  approval?: StartApproval | null;
 }
 
 export interface CircleCycleRepositoryPort {
-  /** Círculos que hay que revisar: en curso, o reuniendo miembros con el mes de inicio ya llegado. */
+  /**
+   * Círculos que hay que revisar: en curso, en aprobación, o reuniendo miembros con el mes de inicio
+   * ya llegado.
+   */
   listToAdvance(today: Period): Promise<string[]>;
   /**
    * Ejecuta `work` con el círculo bloqueado y guarda en la misma transacción el ciclo que
@@ -46,6 +52,10 @@ export interface CircleCycleRepositoryPort {
    * Con `wait` espera el bloqueo en vez de devolver `false` (la pausa del admin general,
    * COPAYNI-61). Guarda también el calendario corrido (`calendarShift`), la fecha de pausa y los
    * eventos de auditoría (`adminEvents`).
+   *
+   * También guarda la aprobación del inicio (COPAYNI-62): la propuesta abierta, que borra las
+   * respuestas anteriores, los miembros que salieron y, al empezar reducido, las condiciones y los
+   * turnos y precios nuevos.
    */
   withLock(
     circleId: string,

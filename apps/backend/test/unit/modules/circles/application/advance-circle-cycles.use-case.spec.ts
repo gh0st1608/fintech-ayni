@@ -91,6 +91,7 @@ function setup(
       timeZone: 'America/Lima',
       delinquency: TEST_DELINQUENCY,
       fundFeeShareBps: TEST_FUND_SHARE_BPS,
+      startApprovalDays: 7,
     },
     payments,
     payments,
@@ -252,7 +253,7 @@ describe('AdvanceCircleCyclesUseCase', () => {
     const { cycles, payments, runOn } = setup(MEMBERS.slice(1));
     await expect(runOn('2026-11-05')).resolves.toEqual({ advanced: 1, locked: 0, failed: 0 });
 
-    expect(cycles.get('c-1')?.state).toBe('collecting');
+    expect(cycles.get('c-1')?.state).toBe('approving');
     expect(payments.collected).toEqual([]);
     expect(cycles.ledger.size).toBe(0);
     expect(warn).toHaveBeenCalledWith({
@@ -303,6 +304,7 @@ describe('AdvanceCircleCyclesUseCase', () => {
         timeZone: 'America/Lima',
         delinquency: TEST_DELINQUENCY,
         fundFeeShareBps: TEST_FUND_SHARE_BPS,
+        startApprovalDays: 7,
       },
       {
         collect: (installment) => (installment.circleId === 'roto' ? broken : fake).collect(),
@@ -388,6 +390,7 @@ describe('AdvanceCircleCyclesUseCase', () => {
           timeZone: 'America/Lima',
           delinquency: TEST_DELINQUENCY,
           fundFeeShareBps: TEST_FUND_SHARE_BPS,
+          startApprovalDays: 7,
         },
         payments,
         payments,

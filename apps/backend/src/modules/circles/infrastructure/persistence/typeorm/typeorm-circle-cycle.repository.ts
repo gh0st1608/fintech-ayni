@@ -15,10 +15,12 @@ import {
   type CycleState,
   type InstallmentStatus,
 } from '../../../domain/entities/circle-cycle';
+import { priceOf } from '../../../domain/services/slot-pricing';
+import { type StartApproval, type StartDecision } from '../../../domain/services/start-approval';
 import { CircleTerms } from '../../../domain/value-objects/circle-terms';
 import { CircleEntity } from './circle.entity';
 import { fundBalance, insertLedgerTransaction, lockFund } from './ledger.sql';
-import { fromStoredPrice, type StoredSlotPrice } from './slot-price.mapper';
+import { fromStoredPrice, type StoredSlotPrice, toStoredPrice } from './slot-price.mapper';
 
 const toDate = (period: Period): string => `${period.toString()}-01`;
 
@@ -43,6 +45,74 @@ interface InstallmentRow {
   status: InstallmentStatus;
 }
 
+async function loadApproval(
+  manager: EntityManager,
+  terms: CircleTerms,
+  circleId: string,
+): Promise<StartApproval> {
+  const [proposal] = await manager.query<
+    { payout_amount: string; months: number; respond_by: string }[]
+  >(
+    `SELECT payout_amount::text AS payout_amount, months,
+            to_char(respond_by, 'YYYY-MM-DD') AS respond_by
+       FROM circle_start_proposals WHERE circle_id = $1`,
+    [circleId],
+  );
+  const responses = await manager.query<{ user_id: string; decision: StartDecision }[]>(
+    'SELECT user_id, decision FROM circle_start_responses WHERE circle_id = $1',
+    [circleId],
+  );
+  return {
+    terms: CircleTerms.create({
+      payout: Money.of(Number(proposal!.payout_amount), terms.currency),
+      months: proposal!.months,
+      startsOn: terms.startsOn,
+    }),
+    respondBy: LocalDate.parse(proposal!.respond_by),
+    decisions: new Map(responses.map(({ user_id, decision }) => [user_id, decision])),
+  };
+}
+
+/** La aprobación del inicio (COPAYNI-62): propuesta, salidas y turnos y precios definitivos. */
+async function saveStartApproval(manager: EntityManager, cycle: CircleCycle): Promise<void> {
+  const { circleId, startProposal } = cycle;
+  if (cycle.withdrawnMembers.length > 0) {
+    await manager.query(
+      'DELETE FROM circle_memberships WHERE circle_id = $1 AND user_id = ANY($2::uuid[])',
+      [circleId, cycle.withdrawnMembers],
+    );
+  }
+  if (startProposal) {
+    await manager.query('DELETE FROM circle_start_responses WHERE circle_id = $1', [circleId]);
+    await manager.query(
+      `INSERT INTO circle_start_proposals (circle_id, payout_amount, months, respond_by)
+       VALUES ($1, $2, $3, $4)
+       ON CONFLICT (circle_id) DO UPDATE SET payout_amount = EXCLUDED.payout_amount,
+         months = EXCLUDED.months, respond_by = EXCLUDED.respond_by, created_at = now()`,
+      [
+        circleId,
+        startProposal.terms.payout.amount,
+        startProposal.terms.months,
+        startProposal.respondBy.toString(),
+      ],
+    );
+  }
+  if (cycle.startedReduced) {
+    // Primero fuera de rango: el índice único de turnos se valida fila por fila.
+    await manager.query(
+      'UPDATE circle_memberships SET position = position + 1000 WHERE circle_id = $1',
+      [circleId],
+    );
+    for (const { userId, position, quote } of cycle.members) {
+      await manager.query(
+        `UPDATE circle_memberships SET position = $3, price = $4
+          WHERE circle_id = $1 AND user_id = $2`,
+        [circleId, userId, position, JSON.stringify(toStoredPrice(priceOf(quote)))],
+      );
+    }
+  }
+}
+
 /**
  * CircleCycleRepositoryPort sobre PostgreSQL. El bloqueo es un advisory lock de transacción por
  * círculo: una segunda ejecución no espera, sigue con otro círculo. Con el círculo bloqueado
@@ -55,7 +125,8 @@ export class TypeOrmCircleCycleRepository implements CircleCycleRepositoryPort {
   async listToAdvance(today: Period): Promise<string[]> {
     const rows = await this.circles.query<{ id: string }[]>(
       `SELECT id FROM circles
-        WHERE cycle_state = 'contributing' OR (cycle_state = 'collecting' AND starts_on <= $1::date)
+        WHERE cycle_state IN ('contributing', 'approving')
+              OR (cycle_state = 'collecting' AND starts_on <= $1::date)
         ORDER BY starts_on, id`,
       [toDate(today)],
     );
@@ -123,19 +194,22 @@ export class TypeOrmCircleCycleRepository implements CircleCycleRepositoryPort {
       [circleId],
     );
 
+    const terms = CircleTerms.create({
+      payout: Money.of(Number(circle.payout_amount), circle.currency),
+      months: circle.months,
+      startsOn: Period.parse(circle.starts_on),
+    });
     return {
       circleId,
+      approval:
+        circle.cycle_state === 'approving' ? await loadApproval(manager, terms, circleId) : null,
       fundBalance: await fundBalance(manager, circle.currency),
       pendingRefunds: pendingRefunds.map((row) => ({
         userId: row.user_id,
         paid: Money.of(Number(row.paid_amount), row.currency),
         refund: Money.of(Number(row.refund_amount), row.currency),
       })),
-      terms: CircleTerms.create({
-        payout: Money.of(Number(circle.payout_amount), circle.currency),
-        months: circle.months,
-        startsOn: Period.parse(circle.starts_on),
-      }),
+      terms,
       state: circle.cycle_state,
       currentPeriod: circle.current_period ? Period.parse(circle.current_period) : null,
       pausedOn: circle.paused_on ? LocalDate.parse(circle.paused_on) : null,
@@ -159,7 +233,8 @@ export class TypeOrmCircleCycleRepository implements CircleCycleRepositoryPort {
 
   private async save(manager: EntityManager, cycle: CircleCycle): Promise<void> {
     await manager.query(
-      `UPDATE circles SET cycle_state = $2, current_period = $3, paused_on = $4, starts_on = $5
+      `UPDATE circles SET cycle_state = $2, current_period = $3, paused_on = $4, starts_on = $5,
+              payout_amount = $6, months = $7
         WHERE id = $1`,
       [
         cycle.circleId,
@@ -167,8 +242,11 @@ export class TypeOrmCircleCycleRepository implements CircleCycleRepositoryPort {
         cycle.currentPeriod ? toDate(cycle.currentPeriod) : null,
         cycle.pausedOn?.toString() ?? null,
         toDate(cycle.terms.startsOn),
+        cycle.terms.payout.amount,
+        cycle.terms.months,
       ],
     );
+    await saveStartApproval(manager, cycle);
     if (cycle.calendarShift > 0 && cycle.currentPeriod) {
       // Al reanudar en otro mes, las cuotas del mes en curso pasan al mes nuevo (COPAYNI-61).
       await manager.query(

@@ -24,7 +24,10 @@ export default function RootLayout() {
   );
 }
 
-/** Única política de guardas: el área privada solo existe con sesión autenticada. */
+/**
+ * Única política de guardas: el área privada solo existe con sesión autenticada. Con la sesión
+ * bloqueada solo existe la pantalla de desbloqueo.
+ */
 function RootNavigator() {
   const { status } = useSession();
   const ready = status !== 'checking';
@@ -35,6 +38,7 @@ function RootNavigator() {
 
   if (!ready) return null;
   const isAuthenticated = status === 'authenticated';
+  const isLocked = status === 'locked';
 
   return (
     <>
@@ -43,7 +47,10 @@ function RootNavigator() {
         <Stack.Protected guard={isAuthenticated}>
           <Stack.Screen name="(private)" />
         </Stack.Protected>
-        <Stack.Protected guard={!isAuthenticated}>
+        <Stack.Protected guard={isLocked}>
+          <Stack.Screen name="locked" />
+        </Stack.Protected>
+        <Stack.Protected guard={!isAuthenticated && !isLocked}>
           <Stack.Screen name="(public)" />
         </Stack.Protected>
       </Stack>

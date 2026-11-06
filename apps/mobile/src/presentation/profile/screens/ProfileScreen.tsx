@@ -6,6 +6,7 @@ import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'reac
 import { useFormatMoney } from '@/presentation/formatters/formatMoney';
 import { errorMessage } from '@/presentation/i18n/errorMessageKey';
 import { useLanguage } from '@/presentation/i18n/useLanguage';
+import { BiometricToggle } from '@/presentation/profile/components/BiometricToggle';
 import { LanguageSheet } from '@/presentation/profile/components/LanguageSheet';
 import { useContainer } from '@/presentation/providers/ContainerProvider';
 import { useSession } from '@/presentation/providers/SessionProvider';
@@ -19,6 +20,7 @@ import { useProfile } from '../useProfile';
 
 interface ProfileScreenProps {
   onOpenPersonalInfo?: () => void;
+  onOpenPasscode?: () => void;
   onOpenDocuments?: () => void;
   onOpenReferral?: () => void;
   /** Abre el catálogo del design system; solo se muestra en el ambiente dev. */
@@ -34,6 +36,7 @@ const AVATAR_SIZE = 56;
  */
 export function ProfileScreen({
   onOpenPersonalInfo,
+  onOpenPasscode,
   onOpenDocuments,
   onOpenReferral,
   onOpenCatalog,
@@ -75,7 +78,18 @@ export function ProfileScreen({
             />
           )}
         </Section>
-        {/* Security (passcode y biometría) y Support (Get Help) del Figma no tienen historia todavía. */}
+        <Section title={t('profile.sections.security')}>
+          <BiometricToggle />
+          {onOpenPasscode && (
+            <ListItem
+              title={t('profile.passcode.item')}
+              icon="keypad-outline"
+              onPress={onOpenPasscode}
+              testID="profile-passcode"
+            />
+          )}
+        </Section>
+        {/* Support (Get Help) del Figma no tiene historia todavía. */}
         <Section title={t('profile.sections.settings')}>
           <ListItem
             title={t('profile.language.item')}

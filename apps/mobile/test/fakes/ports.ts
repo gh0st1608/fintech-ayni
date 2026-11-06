@@ -1,3 +1,9 @@
+import type {
+  BiometricAuthPort,
+  BiometricAvailability,
+  BiometricOutcome,
+  BiometricPreferencePort,
+} from '@/domain/auth/ports/BiometricPorts';
 import type { SaveTokensOptions, TokenStoragePort } from '@/domain/auth/ports/TokenStoragePort';
 import type { AuthTokens } from '@/domain/auth/value-objects/AuthTokens';
 import type { TextDirection } from '@/domain/i18n/Language';
@@ -31,6 +37,36 @@ export class InMemoryTokenStorage implements TokenStoragePort {
   async clear() {
     this.tokens = null;
     this.persisted = null;
+  }
+}
+
+export class FakeBiometricAuth implements BiometricAuthPort {
+  prompts = 0;
+
+  constructor(
+    public available: BiometricAvailability = 'available',
+    public outcomes: BiometricOutcome[] = ['success'],
+  ) {}
+
+  async availability() {
+    return this.available;
+  }
+
+  async authenticate() {
+    this.prompts += 1;
+    return this.outcomes.length > 1 ? this.outcomes.shift()! : this.outcomes[0]!;
+  }
+}
+
+export class InMemoryBiometricPreference implements BiometricPreferencePort {
+  constructor(public enabled = false) {}
+
+  async isEnabled() {
+    return this.enabled;
+  }
+
+  async setEnabled(enabled: boolean) {
+    this.enabled = enabled;
   }
 }
 

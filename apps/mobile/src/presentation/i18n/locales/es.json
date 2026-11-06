@@ -5,7 +5,8 @@
     "retry": "Reintentar",
     "loading": "Cargando…",
     "comingSoon": "Próximamente",
-    "comingSoonDescription": "Estamos construyendo esta sección."
+    "comingSoonDescription": "Estamos construyendo esta sección.",
+    "cancel": "Cancelar"
   },
   "errors": {
     "network": "No hay conexión. Revisa tu internet e inténtalo de nuevo.",
@@ -212,6 +213,23 @@
       "joinNow": "Únete ahora",
       "stale": "No pudimos actualizar los recomendados: {{reason}}",
       "vacancyTurn": "Turno vacante · cobras en {{month}}"
+    },
+    "startProposal": {
+      "title": "Tu círculo empezará reducido",
+      "description_one": "No se completaron los {{count}} turnos del pozo de {{pot}}. Estas son las condiciones nuevas.",
+      "description_other": "No se completaron los {{count}} turnos del pozo de {{pot}}. Estas son las condiciones nuevas.",
+      "pot": "Pozo",
+      "members": "Integrantes",
+      "turn": "Tu turno",
+      "installment": "Tu cuota",
+      "receive": "Recibes",
+      "respondBy": "Responde hasta el {{date}}. Si no respondes, saldrás del círculo sin penalidad.",
+      "accept": "Aceptar",
+      "withdraw": "Retirarme",
+      "decision": {
+        "accepted": "Aceptaste.",
+        "withdrawn": "Te retiraste."
+      }
     }
   },
   "saving": {
@@ -302,9 +320,30 @@
     },
     "sections": {
       "account": "Cuenta",
-      "settings": "Configuración"
+      "settings": "Configuración",
+      "security": "Seguridad"
     },
-    "inviteFriends": "Invitar amigos"
+    "inviteFriends": "Invitar amigos",
+    "biometrics": {
+      "label": "Activar biometría",
+      "noHardware": "Este dispositivo no tiene sensor biométrico.",
+      "notEnrolled": "Registra tu huella o tu rostro en los ajustes del dispositivo.",
+      "prompt": "Confirma tu identidad",
+      "failed": "No pudimos verificarte. Inténtalo de nuevo."
+    },
+    "passcode": {
+      "item": "Cambiar passcode",
+      "title": "Passcode",
+      "hint": "Tu passcode de 6 dígitos sirve para desbloquear la app si la biometría falla.",
+      "current": "Passcode actual",
+      "new": "Passcode nuevo",
+      "confirm": "Confirma el passcode nuevo",
+      "save": "Guardar",
+      "invalidFormat": "El passcode debe tener 6 dígitos.",
+      "mismatch": "Los passcodes no coinciden.",
+      "wrong_one": "Passcode incorrecto. Te queda {{count}} intento.",
+      "wrong_other": "Passcode incorrecto. Te quedan {{count}} intentos."
+    }
   },
   "catalog": {
     "title": "Catálogo de componentes"
@@ -331,6 +370,17 @@
       "expired": "El código venció. Pide uno nuevo.",
       "attemptsExceeded": "Superaste el número de intentos. Pide un código nuevo.",
       "retry": "Reintentar verificación"
+    },
+    "locked": {
+      "title": "Ayni está bloqueada",
+      "subtitle": "Usa tu huella o tu rostro para continuar.",
+      "unlock": "Desbloquear",
+      "prompt": "Desbloquea Ayni",
+      "failed": "No te reconocimos. Inténtalo de nuevo.",
+      "fallback": "Ingresa con un código para continuar.",
+      "useCode": "Ingresar con código",
+      "passcode": "Passcode",
+      "usePasscode": "Desbloquear con passcode"
     }
   },
   "payment": {

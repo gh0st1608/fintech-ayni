@@ -1,6 +1,7 @@
 import type { JoinCircleRequest, JoinedCircle } from '@/domain/circles/JoinedCircle';
 import type { MyCircle, MyCirclesPage, MyCircleStatus } from '@/domain/circles/MyCircle';
 import type { CircleMembershipRepositoryPort } from '@/domain/circles/ports/CircleMembershipRepositoryPort';
+import type { StartDecision, StartProposal } from '@/domain/circles/StartProposal';
 import { AppError, type AppErrorKind } from '@/domain/shared/errors/AppError';
 import { Money } from '@/domain/shared/value-objects/Money';
 import { simulateLatency } from '@/infrastructure/fake/simulateLatency';
@@ -30,6 +31,8 @@ export interface InMemoryCircleMembershipOptions {
   circles?: MyCircle[];
   /** Mes actual (YYYY-MM) para separar activos de finalizados; por defecto, el del dispositivo. */
   currentPeriod?: string;
+  /** Propuestas de círculos incompletos pendientes (COPAYNI-62). */
+  startProposals?: StartProposal[];
   /** Círculos por página de mis círculos; por defecto 20, como el backend. */
   pageSize?: number;
 }
@@ -59,11 +62,27 @@ export class InMemoryCircleMembershipRepository implements CircleMembershipRepos
   private readonly joins = new Map<string, JoinedCircle>();
   private rejection: JoinRejection | undefined;
   private readonly mine: MyCircle[];
+  readonly startProposals: StartProposal[];
 
   constructor(private readonly options: InMemoryCircleMembershipOptions = {}) {
     this.latencyMs = options.latencyMs ?? 400;
     this.rejection = options.rejectWith;
     this.mine = [...(options.circles ?? [])];
+    this.startProposals = [...(options.startProposals ?? [])];
+  }
+
+  async listStartProposals(signal?: AbortSignal): Promise<StartProposal[]> {
+    await simulateLatency(this.latencyMs, signal);
+    return this.startProposals.map((proposal) => ({ ...proposal }));
+  }
+
+  async respondStartProposal(circleId: string, decision: StartDecision): Promise<void> {
+    await simulateLatency(this.latencyMs);
+    const proposal = this.startProposals.find((item) => item.circleId === circleId);
+    if (!proposal) {
+      throw new AppError('not_found', 'No proposal', { code: 'START_PROPOSAL_NOT_FOUND' });
+    }
+    proposal.decision = decision;
   }
 
   async listMine(

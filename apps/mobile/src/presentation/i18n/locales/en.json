@@ -5,7 +5,8 @@
     "retry": "Try again",
     "loading": "Loading…",
     "comingSoon": "Coming soon",
-    "comingSoonDescription": "We are building this section."
+    "comingSoonDescription": "We are building this section.",
+    "cancel": "Cancel"
   },
   "errors": {
     "network": "You are offline. Check your connection and try again.",
@@ -212,6 +213,23 @@
       "joinNow": "Join now",
       "stale": "We couldn't update the recommendations: {{reason}}",
       "vacancyTurn": "Open slot · payout in {{month}}"
+    },
+    "startProposal": {
+      "title": "Your circle will start smaller",
+      "description_one": "The {{count}} slots of the {{pot}} pot were not filled. These are the new terms.",
+      "description_other": "The {{count}} slots of the {{pot}} pot were not filled. These are the new terms.",
+      "pot": "Pot",
+      "members": "Members",
+      "turn": "Your turn",
+      "installment": "Your installment",
+      "receive": "You receive",
+      "respondBy": "Respond by {{date}}. If you do not respond, you will leave the circle with no penalty.",
+      "accept": "Accept",
+      "withdraw": "Withdraw",
+      "decision": {
+        "accepted": "You accepted.",
+        "withdrawn": "You withdrew."
+      }
     }
   },
   "saving": {
@@ -302,9 +320,30 @@
     },
     "sections": {
       "account": "Account",
-      "settings": "Settings"
+      "settings": "Settings",
+      "security": "Security"
     },
-    "inviteFriends": "Invite Friends"
+    "inviteFriends": "Invite Friends",
+    "biometrics": {
+      "label": "Enable Biometrics",
+      "noHardware": "This device has no biometric sensor.",
+      "notEnrolled": "Add your fingerprint or face in the device settings.",
+      "prompt": "Confirm your identity",
+      "failed": "We could not verify you. Try again."
+    },
+    "passcode": {
+      "item": "Change Passcode",
+      "title": "Passcode",
+      "hint": "Your 6-digit passcode unlocks the app if biometrics fail.",
+      "current": "Current passcode",
+      "new": "New passcode",
+      "confirm": "Confirm the new passcode",
+      "save": "Save",
+      "invalidFormat": "The passcode must have 6 digits.",
+      "mismatch": "The passcodes do not match.",
+      "wrong_one": "Wrong passcode. {{count}} attempt left.",
+      "wrong_other": "Wrong passcode. {{count}} attempts left."
+    }
   },
   "catalog": {
     "title": "Component catalog"
@@ -331,6 +370,17 @@
       "expired": "The code expired. Request a new one.",
       "attemptsExceeded": "Too many attempts. Request a new code.",
       "retry": "Retry verification"
+    },
+    "locked": {
+      "title": "Ayni is locked",
+      "subtitle": "Use your fingerprint or face to continue.",
+      "unlock": "Unlock",
+      "prompt": "Unlock Ayni",
+      "failed": "We did not recognize you. Try again.",
+      "fallback": "Sign in with a code to continue.",
+      "useCode": "Sign in with a code",
+      "passcode": "Passcode",
+      "usePasscode": "Unlock with passcode"
     }
   },
   "payment": {

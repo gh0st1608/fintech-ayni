@@ -29,6 +29,7 @@ skip-check:
   - CKV_AWS_144 # Replicación entre regiones: pendiente de la estrategia de DR
   - CKV2_AWS_62 # Notificaciones de eventos de S3: sin consumidor
   - CKV_AWS_149 # Secreto de New Relic con clave propia: la clave administrada por AWS alcanza
+  - CKV_AWS_297 # EventBridge Scheduler con clave propia: solo guarda ARN de la tarea, sin datos ni secretos
   - CKV2_AWS_57 # Rotación automática: la license key de New Relic se rota en New Relic, a mano
   - CKV_AWS_252 # SNS por cada archivo entregado del trail: sin consumidor; las alarmas usan CloudWatch Logs
   - CKV_AWS_241 # Firehose con clave propia: datos en tránsito hacia New Relic; la clave de AWS alcanza

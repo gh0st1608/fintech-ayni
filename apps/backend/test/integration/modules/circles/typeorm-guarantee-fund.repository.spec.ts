@@ -164,6 +164,7 @@ describe('TypeOrmGuaranteeFund', () => {
         timeZone: 'America/Lima',
         delinquency: TEST_DELINQUENCY,
         fundFeeShareBps: TEST_FUND_SHARE_BPS,
+        startApprovalDays: 7,
       },
       {
         // El turno 5 paga los dos primeros meses y deja de pagar en el tercero.

@@ -98,6 +98,7 @@ describe('TypeOrmCircleCycleRepository', () => {
         timeZone: 'America/Lima',
         delinquency: TEST_DELINQUENCY,
         fundFeeShareBps: TEST_FUND_SHARE_BPS,
+        startApprovalDays: 7,
       },
       contributions,
       new FakeCyclePayments(),
@@ -396,6 +397,7 @@ describe('TypeOrmCircleCycleRepository', () => {
       timeZone: 'America/Lima',
       delinquency: TEST_DELINQUENCY,
       fundFeeShareBps: TEST_FUND_SHARE_BPS,
+      startApprovalDays: 7,
     };
     const pause = new SetCirclePauseUseCase(cycles, TEST_PRICING, settings, clock);
     const command = { circleId: id, actorId: 'staff-1', reason: 'Reclamo' };

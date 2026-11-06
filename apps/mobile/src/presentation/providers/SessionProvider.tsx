@@ -1,5 +1,6 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import { AppState } from 'react-native';
 
 import type { SessionStatus } from '@/domain/auth/SessionStatus';
 
@@ -39,6 +40,23 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
       }),
     [auth.sessionEvents, queryClient],
   );
+
+  // Al volver de segundo plano tras un rato, la sesión se bloquea si hay biometría (COPAYNI-22).
+  useEffect(() => {
+    let backgroundedAt: number | null = null;
+    const subscription = AppState.addEventListener('change', (state) => {
+      if (state === 'background') {
+        backgroundedAt = Date.now();
+      } else if (state === 'active' && backgroundedAt !== null) {
+        const backgroundMs = Date.now() - backgroundedAt;
+        backgroundedAt = null;
+        void auth.shouldRelock.execute(backgroundMs).then((lock) => {
+          if (lock) setStatus((current) => (current === 'authenticated' ? 'locked' : current));
+        });
+      }
+    });
+    return () => subscription.remove();
+  }, [auth.shouldRelock]);
 
   const completeSignIn = useCallback((next: SessionStatus) => setStatus(next), []);
 

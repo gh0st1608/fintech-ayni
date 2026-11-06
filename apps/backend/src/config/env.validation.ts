@@ -506,6 +506,20 @@ export class EnvironmentVariables {
   @Min(0)
   JOIN_MONTHLY_PAYIN_LIMIT: number = 0;
 
+  /** Días para responder a la propuesta de un círculo incompleto (COPAYNI-62, supuesto de R2). */
+  @IsInt()
+  @Min(1)
+  CIRCLE_START_APPROVAL_DAYS: number = 7;
+
+  /** Fallos seguidos con el passcode antes de bloquearlo (COPAYNI-23, supuesto de D9). */
+  @IsInt()
+  @Min(1)
+  PASSCODE_MAX_ATTEMPTS: number = 5;
+
+  @IsInt()
+  @Min(1)
+  PASSCODE_LOCK_SECONDS: number = 900;
+
   /** PostgreSQL (ADR 2, docs/architecture.md). */
   @IsString()
   @IsNotEmpty()
