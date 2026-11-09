@@ -16,6 +16,12 @@ import type {
 } from './kyc/Kyc';
 import type { StaffMember, StaffRole } from './staff/Staff';
 import type { UserDetail, UserSummary } from './users/User';
+import type {
+  GuaranteeFund,
+  InstallmentsPage,
+  InstallmentStatus,
+  PayoutsPage,
+} from './finance/Finance';
 
 /** Credenciales del inicio de sesión de desarrollo (`STAFF_AUTH_PROVIDER=dev` en el backend). */
 export interface DevCredentials {
@@ -65,4 +71,22 @@ export interface KycRepositoryPort {
 export interface UsersRepositoryPort {
   search(query: string, signal?: AbortSignal): Promise<UserSummary[]>;
   get(userId: string, signal?: AbortSignal): Promise<UserDetail>;
+}
+
+export interface PageFilter {
+  cursor?: string | null;
+  limit?: number;
+}
+
+export interface InstallmentsFilter extends PageFilter {
+  status?: InstallmentStatus;
+  /** `YYYY-MM`. */
+  period?: string;
+}
+
+/** Finanzas, solo lectura (docs/api/admin.md, "Finanzas"). */
+export interface FinanceRepositoryPort {
+  installments(filter: InstallmentsFilter, signal?: AbortSignal): Promise<InstallmentsPage>;
+  payouts(filter: PageFilter, signal?: AbortSignal): Promise<PayoutsPage>;
+  guaranteeFund(filter: PageFilter, signal?: AbortSignal): Promise<GuaranteeFund>;
 }

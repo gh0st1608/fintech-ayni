@@ -21,10 +21,18 @@ import type {
   KycRepositoryPort,
   StaffAuthPort,
   UsersRepositoryPort,
+  FinanceRepositoryPort,
+  InstallmentsFilter,
 } from '@/domain/ports';
 import { AppError } from '@/domain/shared/AppError';
 import type { StaffMember } from '@/domain/staff/Staff';
 import type { UserDetail, UserSummary } from '@/domain/users/User';
+import type {
+  GuaranteeFund,
+  Installment,
+  InstallmentsPage,
+  PayoutsPage,
+} from '@/domain/finance/Finance';
 
 export const NOW = new Date('2026-11-09T15:00:00Z');
 
@@ -257,5 +265,68 @@ export class InMemoryUsers implements UsersRepositoryPort {
     return found
       ? Promise.resolve(structuredClone(found))
       : Promise.reject(new AppError('not_found', 'No existe', 'USER_NOT_FOUND'));
+  }
+}
+
+export function installment(overrides: Partial<Installment> = {}): Installment {
+  sequence += 1;
+  return {
+    id: `00000000-0000-4000-b000-${String(sequence).padStart(12, '0')}`,
+    circleId: '00000000-0000-4000-8000-000000000042',
+    position: 2,
+    period: '2026-12',
+    dueOn: '2026-12-01',
+    amount: { amount: 100_000, currency: 'PEN' },
+    status: 'overdue',
+    paidAt: null,
+    member: { userId: '11111111-1111-4111-8111-111111111111', name: 'Lucía M.' },
+    ...overrides,
+  };
+}
+
+/** Finanzas en memoria: filtra cuotas como el backend y guarda los filtros pedidos. */
+export class InMemoryFinance implements FinanceRepositoryPort {
+  readonly requests: InstallmentsFilter[] = [];
+  pageSize = 25;
+
+  constructor(
+    public installmentItems: Installment[] = [],
+    public payoutPage: PayoutsPage = { items: [], nextCursor: null },
+    public fund: GuaranteeFund = { balances: [], items: [], nextCursor: null },
+  ) {}
+
+  installments(filter: InstallmentsFilter): Promise<InstallmentsPage> {
+    this.requests.push(filter);
+    const matching = this.installmentItems.filter(
+      (item) =>
+        (!filter.status || item.status === filter.status) &&
+        (!filter.period || item.period === filter.period),
+    );
+    const start = filter.cursor ? Number(filter.cursor) : 0;
+    const next = start + this.pageSize;
+    const totals = [...new Set(matching.map((item) => item.status))].map((status) => {
+      const ofStatus = matching.filter((item) => item.status === status);
+      return {
+        status,
+        count: ofStatus.length,
+        total: {
+          amount: ofStatus.reduce((sum, item) => sum + item.amount.amount, 0),
+          currency: 'PEN',
+        },
+      };
+    });
+    return Promise.resolve({
+      totals,
+      items: structuredClone(matching.slice(start, next)),
+      nextCursor: next < matching.length ? String(next) : null,
+    });
+  }
+
+  payouts(): Promise<PayoutsPage> {
+    return Promise.resolve(structuredClone(this.payoutPage));
+  }
+
+  guaranteeFund(): Promise<GuaranteeFund> {
+    return Promise.resolve(structuredClone(this.fund));
   }
 }

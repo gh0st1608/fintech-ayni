@@ -5,6 +5,9 @@ import {
   GetKycPageUrlUseCase,
   GetKycReviewUseCase,
   GetUserUseCase,
+  GetGuaranteeFundUseCase,
+  ListInstallmentsUseCase,
+  ListPayoutsUseCase,
   ListCirclesUseCase,
   ListKycReviewsUseCase,
   RejectKycUseCase,
@@ -18,12 +21,14 @@ import type {
   KycRepositoryPort,
   StaffAuthPort,
   UsersRepositoryPort,
+  FinanceRepositoryPort,
 } from '@/domain/ports';
 import {
   CirclesApiRepository,
   DevStaffAuth,
   KycApiRepository,
   UsersApiRepository,
+  FinanceApiRepository,
 } from '@/infrastructure/api/adapters';
 import { FetchHttpClient } from '@/infrastructure/http/FetchHttpClient';
 import { TokenStore } from '@/infrastructure/http/TokenStore';
@@ -52,6 +57,11 @@ export interface AppContainer {
     search: SearchUsersUseCase;
     get: GetUserUseCase;
   };
+  finance: {
+    installments: ListInstallmentsUseCase;
+    payouts: ListPayoutsUseCase;
+    guaranteeFund: GetGuaranteeFundUseCase;
+  };
 }
 
 export interface ContainerAdapters {
@@ -59,6 +69,7 @@ export interface ContainerAdapters {
   circles: CirclesRepositoryPort;
   kyc: KycRepositoryPort;
   users: UsersRepositoryPort;
+  finance: FinanceRepositoryPort;
 }
 
 /** Casos de uso sobre los adaptadores dados; las pruebas pasan dobles. */
@@ -85,6 +96,11 @@ export function createContainer(adapters: ContainerAdapters): AppContainer {
       search: new SearchUsersUseCase(adapters.users),
       get: new GetUserUseCase(adapters.users),
     },
+    finance: {
+      installments: new ListInstallmentsUseCase(adapters.finance),
+      payouts: new ListPayoutsUseCase(adapters.finance),
+      guaranteeFund: new GetGuaranteeFundUseCase(adapters.finance),
+    },
   };
 }
 
@@ -97,5 +113,6 @@ export function createAppContainer(config: AppConfig): AppContainer {
     circles: new CirclesApiRepository(http),
     kyc: new KycApiRepository(http),
     users: new UsersApiRepository(http),
+    finance: new FinanceApiRepository(http),
   });
 }

@@ -4,6 +4,7 @@ import { CYCLE_STATES } from '@/domain/circles/Circle';
 import { KYC_STATUSES, KYC_TYPES } from '@/domain/kyc/Kyc';
 import { STAFF_ROLES } from '@/domain/staff/Staff';
 import { KYC_DOCUMENT_STATES, USER_STATUSES } from '@/domain/users/User';
+import { INSTALLMENT_STATUSES } from '@/domain/finance/Finance';
 
 /** Contratos de docs/api/admin.md en fintech-ayni. Se validan en runtime: TypeScript no basta. */
 const money = z.object({ amount: z.number().int(), currency: z.string().length(3) });
@@ -137,4 +138,69 @@ export const userDetailSchema = userSummary.extend({
       expelledAt: isoDate.nullable(),
     }),
   ),
+});
+
+const financeMember = z.object({ userId: z.uuid(), name: z.string().nullable() });
+const period = z.string().regex(/^\d{4}-\d{2}$/);
+
+export const installmentsPageSchema = z.object({
+  totals: z.array(
+    z.object({
+      status: z.enum(INSTALLMENT_STATUSES),
+      count: z.number().int().nonnegative(),
+      total: money,
+    }),
+  ),
+  items: z.array(
+    z.object({
+      id: z.uuid(),
+      circleId: z.uuid(),
+      position: z.number().int().positive(),
+      period,
+      dueOn: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+      amount: money,
+      status: z.enum(INSTALLMENT_STATUSES),
+      paidAt: isoDate.nullable(),
+      member: financeMember,
+    }),
+  ),
+  nextCursor: z.string().nullable(),
+});
+
+export const payoutsPageSchema = z.object({
+  items: z.array(
+    z.object({
+      id: z.uuid(),
+      circleId: z.uuid(),
+      position: z.number().int().positive(),
+      period,
+      amount: money,
+      disbursedAt: isoDate,
+      member: financeMember,
+    }),
+  ),
+  nextCursor: z.string().nullable(),
+});
+
+export const guaranteeFundSchema = z.object({
+  balances: z.array(
+    z.object({
+      balance: money,
+      activeCircles: z.number().int().nonnegative(),
+      minimum: money,
+      belowMinimum: z.boolean(),
+    }),
+  ),
+  items: z.array(
+    z.object({
+      transactionKey: z.string(),
+      kind: z.string(),
+      circleId: z.uuid().nullable(),
+      period: period.nullable(),
+      reason: z.string().nullable(),
+      amount: money,
+      createdAt: isoDate,
+    }),
+  ),
+  nextCursor: z.string().nullable(),
 });

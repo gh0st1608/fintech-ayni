@@ -19,6 +19,7 @@ export const PERMISSIONS = {
   'circles.pause': ['super_admin'],
   'kyc.review': ['operations', 'super_admin'],
   'users.read': ['support', 'operations', 'finance', 'super_admin'],
+  'finance.read': ['finance', 'super_admin'],
 } as const satisfies Record<string, readonly StaffRole[]>;
 
 export type Permission = keyof typeof PERMISSIONS;

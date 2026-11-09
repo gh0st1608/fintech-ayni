@@ -15,11 +15,13 @@ Sigue la _Base técnica enterprise senior frontend web_: React 19, TypeScript es
 | Revisión         | `/kyc/:id`           | Los mismos                                        |
 | Personas         | `/users?q=`          | `support`, `operations`, `finance`, `super_admin` |
 | Perfil           | `/users/:userId`     | Los mismos                                        |
+| Finanzas         | `/finance?view=`     | `finance`, `super_admin`                          |
 
 - **Listado:** filtro por estado en la URL, paginación por cursor y turnos ocupados.
 - **Detalle:** condiciones, mes en curso, propuesta de inicio reducido (ronda, plazo y respuestas) y miembros con sus datos personales **enmascarados por el backend**.
 - **Revisión de documentos:** la cola va del más antiguo al más nuevo y marca los reemplazados por uno más reciente. Cada página se abre con una URL de 60 s que se pide al momento y queda en la auditoría. Aprobar admite corregir el ingreso del comprobante; rechazar exige un motivo del catálogo, cuyo texto ve la persona en la app. La nota interna solo queda en la auditoría. Si otra persona lo resolvió antes, se avisa y se recarga.
 - **Personas:** búsqueda exacta por email completo, teléfono con código de país o id (no busca por partes). El perfil muestra los datos enmascarados, el estado de cada documento y sus juntas. Cada búsqueda queda en la auditoría sin el dato buscado.
+- **Finanzas (solo lectura):** cuotas con totales por estado y filtros de estado y mes, pozos entregados, y saldo del fondo de garantía con su mínimo y sus movimientos. Registrar el capital semilla o una corrección espera la doble aprobación (BO6).
 - **Pausar y reanudar:** con motivo obligatorio, que queda en la auditoría del backend. Si la autenticación ya no es reciente (step-up), ofrece volver a iniciar sesión.
 - **Estados de cada vista:** carga, vacío, error con reintento y código de seguimiento (`traceId`), y éxito.
 

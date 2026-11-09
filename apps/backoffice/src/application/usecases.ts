@@ -15,10 +15,19 @@ import type {
   KycRepositoryPort,
   StaffAuthPort,
   UsersRepositoryPort,
+  FinanceRepositoryPort,
+  InstallmentsFilter,
+  PageFilter,
 } from '@/domain/ports';
 import { AppError } from '@/domain/shared/AppError';
 import { can, type StaffMember } from '@/domain/staff/Staff';
 import { isExactUserQuery, type UserDetail, type UserSummary } from '@/domain/users/User';
+import {
+  type GuaranteeFund,
+  type InstallmentsPage,
+  isPeriod,
+  type PayoutsPage,
+} from '@/domain/finance/Finance';
 
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 /** El backend acepta motivos de hasta 500 caracteres. */
@@ -196,5 +205,33 @@ export class GetUserUseCase {
 
   execute(userId: string, signal?: AbortSignal): Promise<UserDetail> {
     return this.users.get(userId, signal);
+  }
+}
+
+/** Cuotas por estado y mes. El mes, si viene, va como `AAAA-MM`. */
+export class ListInstallmentsUseCase {
+  constructor(private readonly finance: FinanceRepositoryPort) {}
+
+  execute(filter: InstallmentsFilter, signal?: AbortSignal): Promise<InstallmentsPage> {
+    if (filter.period !== undefined && !isPeriod(filter.period)) {
+      throw new AppError('validation', 'El mes debe tener la forma AAAA-MM');
+    }
+    return this.finance.installments(filter, signal);
+  }
+}
+
+export class ListPayoutsUseCase {
+  constructor(private readonly finance: FinanceRepositoryPort) {}
+
+  execute(filter: PageFilter, signal?: AbortSignal): Promise<PayoutsPage> {
+    return this.finance.payouts(filter, signal);
+  }
+}
+
+export class GetGuaranteeFundUseCase {
+  constructor(private readonly finance: FinanceRepositoryPort) {}
+
+  execute(filter: PageFilter, signal?: AbortSignal): Promise<GuaranteeFund> {
+    return this.finance.guaranteeFund(filter, signal);
   }
 }

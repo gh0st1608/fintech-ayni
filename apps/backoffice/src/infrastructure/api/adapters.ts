@@ -14,10 +14,14 @@ import type {
   KycRepositoryPort,
   StaffAuthPort,
   UsersRepositoryPort,
+  FinanceRepositoryPort,
+  InstallmentsFilter,
+  PageFilter,
 } from '@/domain/ports';
 import { AppError } from '@/domain/shared/AppError';
 import type { StaffMember } from '@/domain/staff/Staff';
 import type { UserDetail, UserSummary } from '@/domain/users/User';
+import type { GuaranteeFund, InstallmentsPage, PayoutsPage } from '@/domain/finance/Finance';
 
 import type { HttpClientPort } from '../http/FetchHttpClient';
 import type { TokenStore } from '../http/TokenStore';
@@ -32,6 +36,9 @@ import {
   staffMeSchema,
   userDetailSchema,
   usersSearchSchema,
+  guaranteeFundSchema,
+  installmentsPageSchema,
+  payoutsPageSchema,
 } from './schemas';
 
 /**
@@ -160,6 +167,40 @@ export class UsersApiRepository implements UsersRepositoryPort {
   get(userId: string, signal?: AbortSignal): Promise<UserDetail> {
     return this.http.get(`/admin/v1/users/${encodeURIComponent(userId)}`, {
       schema: userDetailSchema,
+      signal,
+    });
+  }
+}
+
+function pageQuery(filter: PageFilter, extra: Record<string, string | undefined> = {}): string {
+  const query = new URLSearchParams();
+  for (const [key, value] of Object.entries(extra)) if (value) query.set(key, value);
+  if (filter.cursor) query.set('cursor', filter.cursor);
+  if (filter.limit) query.set('limit', String(filter.limit));
+  return query.size > 0 ? `?${query.toString()}` : '';
+}
+
+export class FinanceApiRepository implements FinanceRepositoryPort {
+  constructor(private readonly http: HttpClientPort) {}
+
+  installments(filter: InstallmentsFilter, signal?: AbortSignal): Promise<InstallmentsPage> {
+    const query = pageQuery(filter, { status: filter.status, period: filter.period });
+    return this.http.get(`/admin/v1/finance/installments${query}`, {
+      schema: installmentsPageSchema,
+      signal,
+    });
+  }
+
+  payouts(filter: PageFilter, signal?: AbortSignal): Promise<PayoutsPage> {
+    return this.http.get(`/admin/v1/finance/payouts${pageQuery(filter)}`, {
+      schema: payoutsPageSchema,
+      signal,
+    });
+  }
+
+  guaranteeFund(filter: PageFilter, signal?: AbortSignal): Promise<GuaranteeFund> {
+    return this.http.get(`/admin/v1/finance/guarantee-fund${pageQuery(filter)}`, {
+      schema: guaranteeFundSchema,
       signal,
     });
   }

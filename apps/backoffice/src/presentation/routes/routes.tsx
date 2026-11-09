@@ -10,6 +10,7 @@ import { KycQueueScreen } from '../kyc/KycQueueScreen';
 import { KycReviewScreen } from '../kyc/KycReviewScreen';
 import { UserDetailScreen } from '../users/UserDetailScreen';
 import { UsersScreen } from '../users/UsersScreen';
+import { FinanceScreen } from '../finance/FinanceScreen';
 import { useSession, useStaff } from '../providers/AppProviders';
 
 /** Rutas privadas: sin sesión, al login, recordando a dónde se quería ir. */
@@ -52,6 +53,11 @@ function Layout() {
               {can(staff, 'users.read') && (
                 <NavLink to="/users" className={navClass}>
                   Personas
+                </NavLink>
+              )}
+              {can(staff, 'finance.read') && (
+                <NavLink to="/finance" className={navClass}>
+                  Finanzas
                 </NavLink>
               )}
               {can(staff, 'kyc.review') && (
@@ -126,6 +132,10 @@ export const routes: RouteObject[] = [
           { path: '/users', element: <UsersScreen /> },
           { path: '/users/:userId', element: <UserDetailScreen /> },
         ],
+      },
+      {
+        element: <RequirePermission permission="finance.read" />,
+        children: [{ path: '/finance', element: <FinanceScreen /> }],
       },
       { path: '*', element: <EmptyState title="No encontramos esta página" /> },
     ],
