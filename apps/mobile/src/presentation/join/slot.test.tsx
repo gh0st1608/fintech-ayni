@@ -60,29 +60,29 @@ describe('SlotScreen', () => {
   it('muestra el paso 3 de 4 con el resumen editable y los tres tipos de turno', async () => {
     const { onEditPayout, onEditInstallment } = await renderSlot();
     expect(await screen.findByTestId('slot-type-fastestPayout')).toHaveAccessibleName(
-      /Cobro más rápido\. aplican fees\. Primeros turnos \(de noviembre a diciembre\)/,
+      /Cobro más rápido\. costo adicional\. Primeros turnos \(de noviembre a diciembre\)/,
     );
-    expect(screen.getByTestId('slot-type-lowestFees')).toHaveAccessibleName(/^Menos fees\. /);
+    expect(screen.getByTestId('slot-type-lowestFees')).toHaveAccessibleName(/^Menor costo\. /);
     expect(screen.getByTestId('slot-type-highestReturn')).toHaveAccessibleName(
-      /Mayor retorno\. descuento en pay-ins/,
+      /Mayor retorno\. descuento en cuotas/,
     );
     await pickType();
     expect(await slot(1)).toBeTruthy();
     expect(screen.getByLabelText('Paso 3 de 4')).toBeTruthy();
     expect(screen.getByTestId('join-summary')).toHaveTextContent(/30\.000.*3\.?000.* al mes · 10/);
     expect(tab('Cobro más rápido')).toBeSelected();
-    expect(tab('Menos fees')).toBeTruthy();
+    expect(tab('Menor costo')).toBeTruthy();
     expect(tab('Mayor retorno')).toBeTruthy();
     expect(screen.getByTestId('slot-type-summary')).toHaveTextContent(
-      /Cobras entre nov.* 2026 y dic.* 2026\. Aplican fees\./,
+      /Cobras entre nov.* 2026 y dic.* 2026\. Tiene costo adicional\./,
     );
     expect(
       screen.getByText(
-        'Las Admin Fees se reparten en partes iguales sobre tus pay-ins hasta tu mes de payout.',
+        'Los gastos de administración se reparten en partes iguales entre tus cuotas hasta tu mes de cobro.',
       ),
     ).toBeTruthy();
 
-    await fireEvent.press(screen.getByRole('button', { name: 'Editar el monto de payout' }));
+    await fireEvent.press(screen.getByRole('button', { name: 'Editar el monto a recibir' }));
     await fireEvent.press(screen.getByRole('button', { name: 'Editar la cuota mensual' }));
     expect(onEditPayout).toHaveBeenCalledTimes(1);
     expect(onEditInstallment).toHaveBeenCalledTimes(1);
@@ -91,15 +91,17 @@ describe('SlotScreen', () => {
   it('cada tipo muestra sus meses con la posición y el fee o el descuento', async () => {
     await renderSlot();
     await pickType();
-    expect(await slot(1)).toHaveAccessibleName(/Turno 1\. .*3\.?000.* de fees/);
-    expect(await slot(2)).toHaveAccessibleName(/Turno 2\. .*1\.?500.* de fees/);
+    expect(await slot(1)).toHaveAccessibleName(/Turno 1\. .*3\.?000.* de costo por turno/);
+    expect(await slot(2)).toHaveAccessibleName(/Turno 2\. .*1\.?500.* de costo por turno/);
 
-    await fireEvent.press(tab('Menos fees'));
-    expect(await slot(5)).toHaveAccessibleName(/Turno 5\. Sin fees$/);
+    await fireEvent.press(tab('Menor costo'));
+    expect(await slot(5)).toHaveAccessibleName(/Turno 5\. Sin costo adicional$/);
 
     await fireEvent.press(tab('Mayor retorno'));
-    expect(await slot(10)).toHaveAccessibleName(/Turno 10\. Sin fees\. .*1\.?500.* de descuento/);
-    expect(screen.getByTestId('slot-type-summary')).toHaveTextContent(/Descuento en tus pay-ins\./);
+    expect(await slot(10)).toHaveAccessibleName(
+      /Turno 10\. Sin costo adicional\. .*1\.?500.* de descuento/,
+    );
+    expect(screen.getByTestId('slot-type-summary')).toHaveTextContent(/Descuento en tus cuotas\./);
   });
 
   it('un slot ocupado aparece deshabilitado', async () => {
@@ -120,7 +122,7 @@ describe('SlotScreen', () => {
     });
     await pickType();
     expect(await slot(1)).toBeDisabled();
-    expect(await slot(1)).toHaveAccessibleName(/Disponible al completar tu primer círculo/);
+    expect(await slot(1)).toHaveAccessibleName(/Disponible al completar tu primera junta/);
   });
 
   it('al elegir un mes lo resalta, el botón lo nombra y continuar lo guarda', async () => {

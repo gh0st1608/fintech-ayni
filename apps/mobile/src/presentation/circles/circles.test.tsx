@@ -46,7 +46,7 @@ describe('CirclesScreen', () => {
     expect(card).toHaveTextContent(/Unido/);
     expect(card).toHaveTextContent(/Tu turno · mar\.? 2090/i);
     expect(card).toHaveTextContent(/ene\.? 2090.*6 meses.*jun\.? 2090/i);
-    expect(card).toHaveTextContent(/Admin Fees: .*1\.?800/);
+    expect(card).toHaveTextContent(/Gastos de administración: .*1\.?800/);
     // La línea de meses es decorativa (oculta al lector de pantalla): el turno 3 es el tercer mes.
     expect(
       screen.getByTestId('my-circle-c-1-month-2', { includeHiddenElements: true }),
@@ -81,12 +81,12 @@ describe('CirclesScreen', () => {
 
   it('sin círculos muestra los estados vacíos; el de Active lleva a unirse', async () => {
     const { onJoin } = await renderCircles();
-    expect(await screen.findByText('¡Tus círculos activos aparecerán aquí!')).toBeTruthy();
-    await fireEvent.press(screen.getByRole('button', { name: 'Unirme a un círculo' }));
+    expect(await screen.findByText('¡Tus juntas activas aparecerán aquí!')).toBeTruthy();
+    await fireEvent.press(screen.getByRole('button', { name: 'Unirme a una junta' }));
     expect(onJoin).toHaveBeenCalled();
 
     await fireEvent.press(screen.getByRole('tab', { name: 'Finalizados' }));
-    expect(await screen.findByText('Todavía no tienes círculos finalizados.')).toBeTruthy();
+    expect(await screen.findByText('Todavía no tienes juntas finalizadas.')).toBeTruthy();
   });
 
   it('sin círculos activos recomienda círculos abiertos debajo del estado vacío', async () => {
@@ -94,7 +94,7 @@ describe('CirclesScreen', () => {
       undefined,
       new InMemoryCircleQuoteRepository({ latencyMs: 0, recommended: [recommendedCircle()] }),
     );
-    await screen.findByText('¡Tus círculos activos aparecerán aquí!');
+    await screen.findByText('¡Tus juntas activas aparecerán aquí!');
     await fireEvent.press(await screen.findByRole('button', { name: 'Únete ahora' }));
     expect(onJoinCircle).toHaveBeenCalledWith(recommendedCircle().payout);
   });

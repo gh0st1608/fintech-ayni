@@ -49,7 +49,7 @@ describe('HomeScreen', () => {
     expect(card).toHaveTextContent(/30\.?000/);
     expect(card).toHaveTextContent(/3\.?000.* \/mes/);
     expect(card).toHaveTextContent(/nov\.? 2026.*10 meses.*ago\.? 2027/i);
-    expect(card).toHaveTextContent(/Admin Fees: .*3\.?600/);
+    expect(card).toHaveTextContent(/Gastos de administración: .*3\.?600/);
     expect(screen.getByTestId('recommended-r-2')).toBeTruthy();
   });
 
@@ -72,7 +72,7 @@ describe('HomeScreen', () => {
     const { onJoin } = await renderHome();
     expect(await screen.findByTestId('home-empty')).toBeTruthy();
     expect(screen.queryByRole('header', { name: 'Recomendados para ti' })).toBeNull();
-    await fireEvent.press(screen.getByRole('button', { name: "Unirme a un Game'ya" }));
+    await fireEvent.press(screen.getByRole('button', { name: 'Unirme a una junta' }));
     expect(onJoin).toHaveBeenCalled();
   });
 

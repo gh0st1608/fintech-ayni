@@ -21,10 +21,10 @@ async function renderPayment(payments = new InMemoryPaymentRepository('PEN', { l
 }
 
 describe('PaymentScreen (COPAYNI-35)', () => {
-  it('sin pagos pendientes muestra el estado vacío y "Unirme a un círculo" abre el flujo', async () => {
+  it('sin pagos pendientes muestra el estado vacío y "Unirme a una junta" abre el flujo', async () => {
     const { onJoin } = await renderPayment();
     expect(await screen.findByText('Todavía no tienes pagos pendientes')).toBeTruthy();
-    await fireEvent.press(screen.getByRole('button', { name: 'Unirme a un círculo' }));
+    await fireEvent.press(screen.getByRole('button', { name: 'Unirme a una junta' }));
     expect(onJoin).toHaveBeenCalled();
   });
 
@@ -75,7 +75,7 @@ describe('PaymentScreen (COPAYNI-35)', () => {
     expect(await screen.findByTestId('payment-summary-error', {}, { timeout: 8000 })).toBeTruthy();
     await fireEvent.press(screen.getByRole('button', { name: 'Historial de pagos' }));
     expect(onOpenHistory).toHaveBeenCalled();
-    for (const label of ['Política de pagos', 'Ayuda', 'Elegibilidad del payout']) {
+    for (const label of ['Política de pagos', 'Ayuda', 'Requisitos para cobrar']) {
       expect(screen.getByRole('button', { name: `${label}, Próximamente` })).toBeDisabled();
     }
 
@@ -101,24 +101,24 @@ describe('PaymentHistoryScreen (COPAYNI-41)', () => {
     );
     const installment = await screen.findByTestId('transaction-t-2');
     expect(installment).toHaveTextContent(/5\.?600/);
-    expect(installment).toHaveTextContent(/Pagaste el círculo del mes de nov\.? 2026/i);
+    expect(installment).toHaveTextContent(/Pagaste la junta del mes de nov\.? 2026/i);
     expect(screen.getByTestId('transaction-t-1')).toHaveTextContent(
       /Saldaste la deuda|Deuda saldada/,
     );
 
     await fireEvent.press(screen.getByRole('tab', { name: 'Cobros' }));
     expect(await screen.findByTestId('transaction-t-3')).toHaveTextContent(
-      /Recibiste el payout|Payout recibido/,
+      /Recibiste el pozo|Pozo recibido/,
     );
     expect(screen.queryByTestId('transaction-t-2')).toBeNull();
   });
 
-  it('sin movimientos muestra el estado vacío con "Explorar círculos"', async () => {
+  it('sin movimientos muestra el estado vacío con "Explorar juntas"', async () => {
     const { onExploreCircles } = await renderHistory(
       new InMemoryPaymentRepository('PEN', { latencyMs: 0 }),
     );
     expect(await screen.findByText('Todavía no tienes pagos.')).toBeTruthy();
-    await fireEvent.press(screen.getByRole('button', { name: 'Explorar círculos' }));
+    await fireEvent.press(screen.getByRole('button', { name: 'Explorar juntas' }));
     expect(onExploreCircles).toHaveBeenCalled();
   });
 

@@ -82,7 +82,7 @@ describe('JoinConfirmScreen', () => {
     const summary = await screen.findByTestId('join-summary');
     expect(summary).toHaveTextContent(/30\.?000/);
     expect(summary).toHaveTextContent(/3\.?000.* al mes · 10 meses/);
-    expect(summary).toHaveTextContent(/ene\.? 2027 · Turno 3 · Menos fees/i);
+    expect(summary).toHaveTextContent(/ene\.? 2027 · Turno 3 · Menor costo/i);
     expect(summary).toHaveTextContent(/Transferencia bancaria/);
 
     await fireEvent.press(screen.getByRole('button', { name: 'Editar el turno de cobro' }));
@@ -96,12 +96,12 @@ describe('JoinConfirmScreen', () => {
     await fireEvent.press(await submit());
 
     const success = await screen.findByTestId('join-success');
-    expect(success).toHaveTextContent(/Ya eres parte del Game'ya/);
+    expect(success).toHaveTextContent(/Ya eres parte de la junta/);
     expect(success).toHaveTextContent(/30\.?000.* en ene\.? 2027 \(turno 3 de 10\)/i);
     expect(success).toHaveTextContent(/primera cuota es de .*3\.?000.* en nov\.? 2026/i);
     expect(circleMembership.joinCount).toBe(1);
 
-    await fireEvent.press(screen.getByRole('button', { name: 'Ver mis círculos' }));
+    await fireEvent.press(screen.getByRole('button', { name: 'Ver mis juntas' }));
     expect(onDone).toHaveBeenCalled();
   });
 
@@ -148,13 +148,13 @@ describe('JoinConfirmScreen', () => {
   it.each([
     [
       'PAYOUT_METHOD_REQUIRED',
-      'Elige cómo quieres recibir tu payout antes de unirte.',
+      'Elige cómo quieres recibir tu pozo antes de unirte.',
       'Elegir el método de cobro',
       'onEditPayoutMethod',
     ],
     [
       'PAYOUT_METHOD_LIMIT_EXCEEDED',
-      'El payout supera el límite de tu método de cobro. Elige otro método.',
+      'El pozo supera el límite de tu método de cobro. Elige otro método.',
       'Elegir el método de cobro',
       'onEditPayoutMethod',
     ],
@@ -268,7 +268,7 @@ describe('JoinConfirmScreen', () => {
 
     // Una cuota base de 3.000 más 3 % de mora; el pago llega con la pasarela, sin acción todavía.
     expect(await screen.findByRole('alert')).toHaveTextContent(
-      /expulsado de un círculo.*cargo por mora \(.*3\.?090.*\)/,
+      /expulsado de una junta.*cargo por mora \(.*3\.?090.*\)/,
     );
     expect(
       screen.getAllByRole('button').map((button) => button.props.accessibilityLabel),
@@ -284,7 +284,7 @@ describe('JoinConfirmScreen', () => {
     await fireEvent.press(await submit());
 
     expect(await screen.findByRole('alert')).toHaveTextContent(
-      'Fuiste expulsado de un círculo por no pagar una cuota. Paga lo vencido más el cargo por mora para unirte a otro.',
+      'Fuiste expulsado de una junta por no pagar una cuota. Paga lo vencido más el cargo por mora para unirte a otra.',
     );
   });
 

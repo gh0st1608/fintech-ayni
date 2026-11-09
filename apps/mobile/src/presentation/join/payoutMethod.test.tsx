@@ -66,11 +66,11 @@ describe('PayoutMethodScreen', () => {
     expect(await method('digitalWallet')).toHaveAccessibleName(/Billetera digital/);
     expect(screen.getByLabelText('Paso 4 de 4')).toBeTruthy();
     expect(await method('prepaidCard')).toHaveAccessibleName(
-      /Tarjeta prepago.*Sin costo.*Límite de .*100\.?000.* por payout/,
+      /Tarjeta prepago.*Sin costo.*Límite de .*100\.?000.* por cobro/,
     );
     expect(await method('bankTransfer')).toHaveAccessibleName(/Transferencia bancaria.*Sin costo/);
     expect(await method('digitalWallet')).not.toHaveAccessibleName(/Sin costo/);
-    expect(screen.getByText('Puedes cambiarlo hasta antes de tu mes de payout.')).toBeTruthy();
+    expect(screen.getByText('Puedes cambiarlo hasta antes de tu mes de cobro.')).toBeTruthy();
     expect(cta()).toBeDisabled();
   });
 
@@ -108,7 +108,7 @@ describe('PayoutMethodScreen', () => {
     await fireEvent.press(cta());
 
     expect(await screen.findByRole('alert')).toHaveTextContent(
-      'Estás en tu mes de payout: ya no puedes cambiar el método de cobro.',
+      'Estás en tu mes de cobro: ya no puedes cambiar el método de cobro.',
     );
     expect(onNext).not.toHaveBeenCalled();
     // Elegir otro método borra el aviso.

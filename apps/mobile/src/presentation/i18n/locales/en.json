@@ -37,8 +37,8 @@
   "home": {
     "empty": {
       "title": "There are no open circles for you yet",
-      "description": "Choose your amount and payout month: we'll open a new Game'ya for you.",
-      "join": "Join a Game'ya"
+      "description": "Choose your amount and payout month: we'll open a new circle for you.",
+      "join": "Join a circle"
     }
   },
   "join": {
@@ -48,9 +48,9 @@
     "next": "Next",
     "question": "What would you like to do?",
     "gameya": {
-      "title": "Join a Game'ya",
+      "title": "Join a circle",
       "description": "Select your preferred slot and choose any payout amount.",
-      "descriptionWithMax": "Select your preferred slot and choose any payout amount up to {{amount}} per Game'ya."
+      "descriptionWithMax": "Select your preferred slot and choose any payout amount up to {{amount}} per circle."
     },
     "saving": {
       "title": "Join Saving Program",
@@ -178,7 +178,7 @@
         "chooseSlot": "Choose another slot"
       },
       "success": {
-        "title": "You're part of the Game'ya!",
+        "title": "You're part of the circle!",
         "payout": "You'll receive {{amount}} in {{month}} (slot {{position}} of {{months}}).",
         "firstInstallment": "Your first installment is {{amount}} in {{month}}.",
         "viewCircles": "View my circles",
@@ -202,7 +202,7 @@
     },
     "empty": {
       "active": "Your active circles will appear here!",
-      "activeDescription": "Join a Game'ya to start saving and choose your payout month.",
+      "activeDescription": "Join a circle to start saving and choose your payout month.",
       "join": "Join a circle",
       "finished": "You don't have finished circles yet."
     },
@@ -568,7 +568,7 @@
       "dont": "Don't",
       "dontBlurry": "Blurry photo",
       "dontCovered": "Covered details",
-      "why": "We need your valid National ID before you join a Game'ya, to protect every member.",
+      "why": "We need your valid National ID before you join a circle, to protect every member.",
       "scan": "Scan National ID"
     },
     "income": {
@@ -642,7 +642,7 @@
       },
       "gift": {
         "title": "Gift them a discount",
-        "description": "Once they sign up with your code and join their first Game'ya through the invitation link, they will enjoy {{amount}} OFF their first pay-in."
+        "description": "Once they sign up with your code and join their first circle through the invitation link, they will enjoy {{amount}} OFF their first pay-in."
       },
       "enjoy": {
         "title": "Enjoy your own discount!",
@@ -668,7 +668,7 @@
       "empty": "You haven't invited any friends or your friends haven't signed up yet.",
       "status": {
         "registered": "Registered",
-        "joinedCircle": "Joined a Game'ya",
+        "joinedCircle": "Joined a circle",
         "firstPayInPaid": "First pay-in paid"
       },
       "description": "For every friend who joins through your invitation, you get {{amount}} OFF your next pay-in.",

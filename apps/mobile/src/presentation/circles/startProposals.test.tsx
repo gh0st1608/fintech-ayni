@@ -39,7 +39,7 @@ const render = (container: ReturnType<typeof setup>) =>
 describe('StartProposals (COPAYNI-62)', () => {
   it('muestra el pozo, la cuota y el turno nuevos', async () => {
     await render(setup());
-    expect(await screen.findByText('Tu círculo empezará reducido')).toBeOnTheScreen();
+    expect(await screen.findByText('Tu junta empezará reducida')).toBeOnTheScreen();
     const card = screen.getByTestId('start-proposal-c-1');
     expect(card).toHaveTextContent(/Pozo.*21.?000/);
     expect(card).toHaveTextContent(/Integrantes.*7/);
@@ -51,7 +51,7 @@ describe('StartProposals (COPAYNI-62)', () => {
   it('sin propuestas no muestra nada', async () => {
     await render(setup([]));
     await screen.findByTestId('circles-tabs');
-    expect(screen.queryByText('Tu círculo empezará reducido')).toBeNull();
+    expect(screen.queryByText('Tu junta empezará reducida')).toBeNull();
   });
 
   it('acepta y deja ver la respuesta', async () => {

@@ -64,14 +64,14 @@ describe('JoinScreen', () => {
     expect(screen.getByRole('header', { name: '¿Qué te gustaría hacer?' })).toBeTruthy();
     // Mientras carga, sin monto.
     expect(
-      screen.getByText('Elige tu turno preferido y el monto de payout que quieras.'),
+      screen.getByText('Elige tu turno preferido y el monto que quieras recibir.'),
     ).toBeTruthy();
     expect(
       screen.getByText('Ahorra en cuotas y recíbelo al final del plazo elegido, con cashback.'),
     ).toBeTruthy();
 
     expect(
-      await screen.findByText(text`monto de payout de hasta ${120_000} por Game'ya`),
+      await screen.findByText(text`monto a recibir de hasta ${120_000} por junta`),
     ).toBeTruthy();
     expect(screen.getByText(text`Ahorra en cuotas hasta ${1_000_000} y recíbelo`)).toBeTruthy();
   });
@@ -88,7 +88,7 @@ describe('JoinScreen', () => {
     await fireEvent.press(screen.getByTestId('preset'));
     expect(screen.getByTestId('draft')).toHaveTextContent('6000');
 
-    await fireEvent.press(screen.getByRole('button', { name: /Unirme a un Game'ya/ }));
+    await fireEvent.press(screen.getByRole('button', { name: /Unirme a una junta/ }));
     expect(onJoinGameya).toHaveBeenCalledTimes(1);
     expect(screen.getByTestId('draft')).toHaveTextContent('empty');
 
@@ -162,7 +162,7 @@ describe('PayoutAmountScreen', () => {
   it('limita el máximo al del usuario y explica cómo aumentarlo', async () => {
     await renderPayout({ userPayoutLimit: 20000 });
     expect(screen.getByTestId('payout-user-limit')).toHaveTextContent(
-      text`permite un payout de hasta ${20_000}`,
+      text`te permite recibir hasta ${20_000}`,
     );
     expect(slider().props.accessibilityValue).toMatchObject({ max: 2_000_000 });
   });
@@ -176,7 +176,9 @@ describe('PayoutAmountScreen', () => {
       withFlow(<PayoutAmountScreen onNext={jest.fn()} />),
       createTestContainer({ joinConfig }),
     );
-    expect(await screen.findByRole('alert')).toHaveTextContent(/no alcanza el payout mínimo/);
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      /no alcanza el monto mínimo a recibir/,
+    );
     expect(screen.queryByTestId('payout-slider')).toBeNull();
   });
 

@@ -29,28 +29,28 @@
   },
   "tabs": {
     "home": "Inicio",
-    "circles": "Círculos",
+    "circles": "Juntas",
     "join": "Unirse",
     "payment": "Pagos",
     "profile": "Perfil"
   },
   "home": {
     "empty": {
-      "title": "Todavía no hay círculos abiertos para ti",
-      "description": "Elige tu monto y tu mes de cobro: abriremos un Game'ya nuevo para ti.",
-      "join": "Unirme a un Game'ya"
+      "title": "Todavía no hay juntas abiertas para ti",
+      "description": "Elige tu monto y tu mes de cobro: armaremos una junta nueva para ti.",
+      "join": "Unirme a una junta"
     }
   },
   "join": {
     "title": "Elige un servicio",
-    "a11yButton": "Unirse a un círculo o a un programa de ahorro",
+    "a11yButton": "Unirse a una junta o a un programa de ahorro",
     "step": "Paso {{current}} de {{total}}",
     "next": "Siguiente",
     "question": "¿Qué te gustaría hacer?",
     "gameya": {
-      "title": "Unirme a un Game'ya",
-      "description": "Elige tu turno preferido y el monto de payout que quieras.",
-      "descriptionWithMax": "Elige tu turno preferido y cualquier monto de payout de hasta {{amount}} por Game'ya."
+      "title": "Unirme a una junta",
+      "description": "Elige tu turno preferido y el monto que quieras recibir.",
+      "descriptionWithMax": "Elige tu turno preferido y cualquier monto a recibir de hasta {{amount}} por junta."
     },
     "saving": {
       "title": "Unirme a un programa de ahorro",
@@ -58,67 +58,67 @@
       "descriptionWithMax": "Ahorra en cuotas hasta {{amount}} y recíbelo al final del plazo elegido, con cashback."
     },
     "payout": {
-      "title": "Monto de payout",
+      "title": "Monto a recibir",
       "question": "¿Cuánto quieres recibir en tu turno?",
-      "sliderLabel": "Monto de payout",
-      "userLimit": "Tu límite mensual permite un payout de hasta {{amount}}. Sube más documentos para aumentarlo.",
-      "belowMinimum": "Tu límite mensual todavía no alcanza el payout mínimo. Sube más documentos para aumentarlo.",
+      "sliderLabel": "Monto a recibir",
+      "userLimit": "Tu límite mensual te permite recibir hasta {{amount}}. Sube más documentos para aumentarlo.",
+      "belowMinimum": "Tu límite mensual todavía no alcanza el monto mínimo a recibir. Sube más documentos para aumentarlo.",
       "info": "Tu cuota mensual se descuenta automáticamente."
     },
     "monthlyPayIn": {
       "title": "Cuota mensual",
       "question": "¿Cuánto quieres pagar cada mes?",
-      "summaryLabel": "Monto de payout",
+      "summaryLabel": "Monto a recibir",
       "edit": "Editar",
-      "editA11y": "Editar el monto de payout",
+      "editA11y": "Editar el monto a recibir",
       "optionsLabel": "Cuotas disponibles",
       "option": "{{amount}} al mes",
       "optionMonths": "por {{months}} meses",
-      "exceedsLimit": "Supera tu límite mensual de pay-in.",
-      "info": "La cuota mensual puede variar según los fees o descuentos de tu slot.",
-      "empty": "No hay cuotas disponibles para este monto. Prueba con otro monto de payout.",
-      "missingPayout": "Primero elige el monto de payout.",
+      "exceedsLimit": "Supera tu límite mensual de cuotas.",
+      "info": "La cuota mensual puede variar según el costo o los descuentos de tu turno.",
+      "empty": "No hay cuotas disponibles para este monto. Prueba con otro monto a recibir.",
+      "missingPayout": "Primero elige el monto a recibir.",
       "choosePayout": "Elegir el monto",
       "perMonth": "/mes"
     },
     "slot": {
       "title": "Turno de cobro",
-      "question": "¿En qué mes quieres recibir tu payout?",
+      "question": "¿En qué mes quieres recibir tu pozo?",
       "installmentSummaryLabel": "Cuota mensual",
       "installmentSummary": "{{amount}} al mes · {{months}} meses",
       "editInstallmentA11y": "Editar la cuota mensual",
       "types": {
         "fastestPayout": "Cobro más rápido",
-        "lowestFees": "Menos fees",
+        "lowestFees": "Menor costo",
         "highestReturn": "Mayor retorno"
       },
       "typeRange": "Cobras entre {{from}} y {{to}}.",
       "typeTag": {
-        "fastestPayout": "Aplican fees.",
-        "lowestFees": "Sin fees.",
-        "highestReturn": "Descuento en tus pay-ins."
+        "fastestPayout": "Tiene costo adicional.",
+        "lowestFees": "Sin costo adicional.",
+        "highestReturn": "Descuento en tus cuotas."
       },
-      "typeEmpty": "No hay turnos de este tipo en este círculo.",
+      "typeEmpty": "No hay turnos de este tipo en esta junta.",
       "slotsLabel": "Meses disponibles",
       "position": "Turno {{position}}",
-      "fee": "{{amount}} de fees",
-      "zeroFees": "Sin fees",
+      "fee": "{{amount}} de costo por turno",
+      "zeroFees": "Sin costo adicional",
       "discount": "{{amount}} de descuento",
       "taken": "Ocupado",
-      "adminFeesInfo": "Las Admin Fees se reparten en partes iguales sobre tus pay-ins hasta tu mes de payout.",
+      "adminFeesInfo": "Los gastos de administración se reparten en partes iguales entre tus cuotas hasta tu mes de cobro.",
       "continueWith": "Continuar con {{month}}",
       "noLongerAvailable": "Ese turno acaba de ocuparse. Elige otro mes.",
       "missingSteps": "Primero elige el monto y la cuota mensual.",
       "catchUp": "Incluye {{amount}} de puesta al día",
-      "retention": "Se retienen {{amount}} del payout",
+      "retention": "Se retienen {{amount}} del pozo",
       "notAllowed": {
-        "trustRequired": "Disponible al completar tu primer círculo",
+        "trustRequired": "Disponible al completar tu primera junta",
         "identityRequired": "Verifica tu identidad para elegirlo",
         "incomeRequired": "Declara tu ingreso para elegirlo"
       },
       "typeTagShort": {
-        "fastestPayout": "aplican fees",
-        "highestReturn": "descuento en pay-ins"
+        "fastestPayout": "costo adicional",
+        "highestReturn": "descuento en cuotas"
       },
       "typeSlots": {
         "fastestPayout": "Primeros turnos (de {{from}} a {{to}})",
@@ -128,7 +128,7 @@
     },
     "payoutMethod": {
       "title": "Método de cobro",
-      "question": "Elige cómo quieres recibir tu payout en los próximos círculos.",
+      "question": "Elige cómo quieres recibir tu pozo en las próximas juntas.",
       "optionsLabel": "Métodos de cobro",
       "types": {
         "digitalWallet": "Billetera digital",
@@ -137,18 +137,18 @@
         "fawry": "Fawry"
       },
       "noCharge": "Sin costo",
-      "limit": "Límite de {{amount}} por payout",
+      "limit": "Límite de {{amount}} por cobro",
       "notAvailable": "No disponible",
-      "changeRule": "Puedes cambiarlo hasta antes de tu mes de payout.",
-      "changeNotAllowed": "Estás en tu mes de payout: ya no puedes cambiar el método de cobro.",
+      "changeRule": "Puedes cambiarlo hasta antes de tu mes de cobro.",
+      "changeNotAllowed": "Estás en tu mes de cobro: ya no puedes cambiar el método de cobro.",
       "continue": "Continuar",
       "missingSteps": "Primero elige el monto, la cuota y tu turno.",
       "startOver": "Elegir el monto",
       "descriptions": {
-        "digitalWallet": "Recibe tu payout en cualquier billetera digital.",
-        "prepaidCard": "Recibe tu payout en cualquier tarjeta prepago.",
-        "bankTransfer": "Recibe tu payout en tu cuenta bancaria.",
-        "fawry": "Recibe tu payout en cualquier tienda Fawry Plus, sin cuenta bancaria."
+        "digitalWallet": "Recibe tu pozo en cualquier billetera digital.",
+        "prepaidCard": "Recibe tu pozo en cualquier tarjeta prepago.",
+        "bankTransfer": "Recibe tu pozo en tu cuenta bancaria.",
+        "fawry": "Recibe tu pozo en cualquier tienda Fawry Plus, sin cuenta bancaria."
       }
     },
     "confirm": {
@@ -158,17 +158,17 @@
       "slotValue": "{{month}} · Turno {{position}} · {{type}}",
       "editSlotA11y": "Editar el turno de cobro",
       "editPayoutMethodA11y": "Editar el método de cobro",
-      "info": "Al confirmar reservas tu turno. Las cuotas finales incluyen los fees, descuentos y Admin Fees de tu slot.",
+      "info": "Al confirmar reservas tu turno. Las cuotas finales incluyen el costo por turno, los descuentos y los gastos de administración.",
       "submit": "Confirmar y unirme",
       "missingSteps": "Primero completa los cuatro pasos: monto, cuota, turno y método de cobro.",
       "errors": {
         "nationalIdRequired": "Para unirte necesitas verificar tu National ID. Lo pide el Banco Central.",
-        "monthlyLimitExceeded": "Las cuotas de este turno superan tu límite mensual de pay-in.",
-        "payoutMethodRequired": "Elige cómo quieres recibir tu payout antes de unirte.",
-        "payoutMethodLimitExceeded": "El payout supera el límite de tu método de cobro. Elige otro método.",
+        "monthlyLimitExceeded": "Las cuotas de este turno superan tu límite mensual.",
+        "payoutMethodRequired": "Elige cómo quieres recibir tu pozo antes de unirte.",
+        "payoutMethodLimitExceeded": "El pozo supera el límite de tu método de cobro. Elige otro método.",
         "slotNoLongerAvailable": "Ese turno ya no está disponible. Elige otro.",
-        "memberBlocked": "Fuiste expulsado de un círculo por no pagar una cuota. Paga lo vencido más el cargo por mora ({{amount}}) para unirte a otro.",
-        "memberBlockedNoAmount": "Fuiste expulsado de un círculo por no pagar una cuota. Paga lo vencido más el cargo por mora para unirte a otro.",
+        "memberBlocked": "Fuiste expulsado de una junta por no pagar una cuota. Paga lo vencido más el cargo por mora ({{amount}}) para unirte a otra.",
+        "memberBlockedNoAmount": "Fuiste expulsado de una junta por no pagar una cuota. Paga lo vencido más el cargo por mora para unirte a otra.",
         "slotNotAllowed": "Todavía no puedes tomar ese tipo de turno. Elige otro."
       },
       "actions": {
@@ -178,13 +178,13 @@
         "chooseSlot": "Elegir otro turno"
       },
       "success": {
-        "title": "¡Ya eres parte del Game'ya!",
+        "title": "¡Ya eres parte de la junta!",
         "payout": "Recibirás {{amount}} en {{month}} (turno {{position}} de {{months}}).",
         "firstInstallment": "Tu primera cuota es de {{amount}} en {{month}}.",
-        "viewCircles": "Ver mis círculos",
+        "viewCircles": "Ver mis juntas",
         "catchUp": "Tus cuotas incluyen {{amount}} de puesta al día de los meses ya transcurridos, hasta {{month}}."
       },
-      "retention": "Se retendrán {{amount}} de tu payout para pagar automáticamente tus últimas {{count}} cuotas."
+      "retention": "Se retendrán {{amount}} de tu pozo para pagar automáticamente tus últimas {{count}} cuotas."
     }
   },
   "circles": {
@@ -196,18 +196,18 @@
       "perMonth": " /mes",
       "yourTurn": "Tu turno · {{month}}",
       "duration": "{{months}} meses",
-      "adminFees": "Admin Fees:",
+      "adminFees": "Gastos de administración:",
       "joined": "Unido",
       "expelled": "Expulsado"
     },
     "empty": {
-      "active": "¡Tus círculos activos aparecerán aquí!",
-      "activeDescription": "Únete a un Game'ya para empezar a ahorrar y elegir tu mes de cobro.",
-      "join": "Unirme a un círculo",
-      "finished": "Todavía no tienes círculos finalizados."
+      "active": "¡Tus juntas activas aparecerán aquí!",
+      "activeDescription": "Únete a una junta para empezar a ahorrar y elegir tu mes de cobro.",
+      "join": "Unirme a una junta",
+      "finished": "Todavía no tienes juntas finalizadas."
     },
-    "stale": "No pudimos actualizar tus círculos: {{reason}} Te mostramos lo último que cargamos.",
-    "priceInfo": "La cuota es la de este mes. Varía según los fees, descuentos y Admin Fees de tu turno.",
+    "stale": "No pudimos actualizar tus juntas: {{reason}} Te mostramos lo último que cargamos.",
+    "priceInfo": "La cuota es la de este mes. Varía según el costo por turno, los descuentos y los gastos de administración.",
     "recommended": {
       "title": "Recomendados para ti",
       "joinNow": "Únete ahora",
@@ -215,7 +215,7 @@
       "vacancyTurn": "Turno vacante · cobras en {{month}}"
     },
     "startProposal": {
-      "title": "Tu círculo empezará reducido",
+      "title": "Tu junta empezará reducida",
       "description_one": "No se completaron los {{count}} turnos del pozo de {{pot}}. Estas son las condiciones nuevas.",
       "description_other": "No se completaron los {{count}} turnos del pozo de {{pot}}. Estas son las condiciones nuevas.",
       "pot": "Pozo",
@@ -223,7 +223,7 @@
       "turn": "Tu turno",
       "installment": "Tu cuota",
       "receive": "Recibes",
-      "respondBy": "Responde hasta el {{date}}. Si no respondes, saldrás del círculo sin penalidad.",
+      "respondBy": "Responde hasta el {{date}}. Si no respondes, saldrás de la junta sin penalidad.",
       "accept": "Aceptar",
       "withdraw": "Retirarme",
       "decision": {
@@ -236,7 +236,7 @@
   },
   "saving": {
     "chooseCircle": {
-      "title": "Elige un círculo de ahorro",
+      "title": "Elige un plan de ahorro",
       "intro": "Obtén cashback por tus ahorros mensuales",
       "upTo": "Hasta <amount>{{amount}}</amount> extra",
       "empty": "No hay planes de ahorro disponibles por ahora."
@@ -257,7 +257,7 @@
       "unavailable": "No disponible",
       "details": {
         "startsOn": "Inicio",
-        "payout": "Fecha de payout",
+        "payout": "Fecha de cobro",
         "total": "Total a recibir"
       },
       "invalidQuote": "No pudimos calcular este plan. Inténtalo más tarde.",
@@ -388,8 +388,8 @@
   "payment": {
     "empty": {
       "title": "Todavía no tienes pagos pendientes",
-      "description": "Tus pagos pendientes y tu saldo aparecerán aquí cuando te unas a un círculo.",
-      "join": "Unirme a un círculo"
+      "description": "Tus pagos pendientes y tu saldo aparecerán aquí cuando te unas a una junta.",
+      "join": "Unirme a una junta"
     },
     "due": {
       "total": "Total por pagar",
@@ -397,12 +397,12 @@
       "dueOn": "Vence el {{date}}",
       "overdue": "En gracia",
       "debt": "Deuda por impago: {{amount}}",
-      "debtDescription": "Mientras tengas deuda no puedes unirte a nuevos círculos.",
+      "debtDescription": "Mientras tengas deuda no puedes unirte a nuevas juntas.",
       "pay": "Pagar"
     },
     "others": {
       "title": "Otros",
-      "eligibility": "Elegibilidad del payout",
+      "eligibility": "Requisitos para cobrar",
       "settings": "Configuración de pagos",
       "history": "Historial de pagos",
       "policy": "Política de pagos",
@@ -414,26 +414,26 @@
       "payouts": "Cobros",
       "emptyPayments": "Todavía no tienes pagos.",
       "emptyPayouts": "Todavía no tienes cobros.",
-      "explore": "Explorar círculos",
-      "forMonth": "Círculo de {{month}}",
+      "explore": "Explorar juntas",
+      "forMonth": "Junta de {{month}}",
       "stale": "No se pudo actualizar: {{reason}}",
       "kind": {
         "installment": "Cuota mensual",
         "debtSettlement": "Deuda saldada",
-        "payout": "Payout recibido",
+        "payout": "Pozo recibido",
         "refund": "Devolución"
       },
-      "emptyDescription": "Las transacciones aparecerán aquí cuando pagues una cuota o recibas un payout.",
+      "emptyDescription": "Las transacciones aparecerán aquí cuando pagues una cuota o recibas tu pozo.",
       "description": {
-        "installment": "Pagaste el círculo del mes de <month>{{month}}</month>.",
-        "debtSettlement": "Saldaste la deuda del círculo del mes de <month>{{month}}</month>.",
-        "payout": "Recibiste el payout del círculo del mes de <month>{{month}}</month>.",
-        "refund": "Te devolvimos el pago del círculo del mes de <month>{{month}}</month>."
+        "installment": "Pagaste la junta del mes de <month>{{month}}</month>.",
+        "debtSettlement": "Saldaste la deuda de la junta del mes de <month>{{month}}</month>.",
+        "payout": "Recibiste el pozo de la junta del mes de <month>{{month}}</month>.",
+        "refund": "Te devolvimos el pago de la junta del mes de <month>{{month}}</month>."
       }
     },
     "eligibility": {
-      "title": "Elegibilidad del payout",
-      "eligible": "Cumples todos los requisitos para recibir tu payout.",
+      "title": "Requisitos para cobrar",
+      "eligible": "Cumples todos los requisitos para recibir tu pozo.",
       "notEligible": "Asegúrate de corregir lo siguiente:",
       "requirements": {
         "nationalId": "Documento de identidad",
@@ -457,13 +457,13 @@
     },
     "settings": {
       "title": "Configuración de pagos",
-      "deduct": "Descontar la cuota del payout",
-      "deductDescription": "En tu mes de cobro, la cuota de ese mes se descuenta de tu payout en vez de cobrarse.",
+      "deduct": "Pagar mi cuota con el pozo",
+      "deductDescription": "En tu mes de cobro, tu cuota se resta de lo que recibes y no se te cobra aparte.",
       "saveError": "No se pudo guardar el cambio: {{reason}}",
       "changePayoutMethod": "Cambiar método de cobro",
       "savedCards": "Tarjetas guardadas",
       "save": "Guardar",
-      "changePayoutMethodDescription": "Puedes cambiar el método de cobro antes de tu mes de payout.",
+      "changePayoutMethodDescription": "Puedes cambiar el método de cobro antes de tu mes de cobro.",
       "savedCardsDescription": "Administra las tarjetas con las que pagas tus cuotas."
     },
     "cards": {
@@ -568,7 +568,7 @@
       "dont": "Evita",
       "dontBlurry": "Foto borrosa",
       "dontCovered": "Datos tapados",
-      "why": "Necesitamos tu documento de identidad vigente antes de que te unas a un Game'ya, para proteger a todos los miembros.",
+      "why": "Necesitamos tu documento de identidad vigente antes de que te unas a una junta, para proteger a todos los miembros.",
       "scan": "Escanear documento"
     },
     "income": {
@@ -587,7 +587,7 @@
         "hrLetter": "Sube una carta reciente de recursos humanos, firmada y sellada.",
         "bankStatement": "Sube un estado de cuenta de tu banco con los movimientos de los últimos 3 meses."
       },
-      "moreDocuments": "Sube más comprobantes de ingresos y aumenta tu límite. Más documentos, mayores payouts.",
+      "moreDocuments": "Sube más comprobantes de ingresos y aumenta tu límite. Más documentos, pozos más grandes.",
       "incomeTitle": "Tu ingreso mensual",
       "incomeIntro": "Usaremos tu ingreso mensual para calcular tu límite mensual de pago.",
       "uploadGuide": "Al escanear, asegúrate de que el documento:",
@@ -642,7 +642,7 @@
       },
       "gift": {
         "title": "Regálales un descuento",
-        "description": "Cuando se registren con tu código y se unan a su primer Game'ya con el enlace de invitación, tendrán {{amount}} de descuento en su primera cuota."
+        "description": "Cuando se registren con tu código y se unan a su primera junta con el enlace de invitación, tendrán {{amount}} de descuento en su primera cuota."
       },
       "enjoy": {
         "title": "¡Disfruta tu propio descuento!",
@@ -668,7 +668,7 @@
       "empty": "Aún no has invitado amigos o tus amigos todavía no se registran.",
       "status": {
         "registered": "Registrado",
-        "joinedCircle": "Se unió a un Game'ya",
+        "joinedCircle": "Se unió a una junta",
         "firstPayInPaid": "Pagó su primera cuota"
       },
       "description": "Por cada amigo que se una con tu invitación, obtienes {{amount}} de descuento en tu próxima cuota.",
