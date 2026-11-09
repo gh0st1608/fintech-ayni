@@ -78,6 +78,22 @@ Con `KYC_PROVIDER=manual`, cada documento queda `in_review` hasta que el persona
 
 Errores: `KYC_REVIEW_NOT_FOUND` y `KYC_PAGE_NOT_FOUND` (404), además de los comunes.
 
+## Búsqueda de personas
+
+Para soporte (fase 2 de [backoffice-plan.md](../backoffice-plan.md)). Roles: `support`, `operations`, `finance` y `super_admin`.
+
+| Endpoint                      | Qué hace                                                                                                                                 |
+| ----------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| `GET /admin/v1/users?query=`  | Busca por **email completo**, **teléfono con código de país** (`+51…`, admite espacios y guiones) o **id**. **Auditada** (`user.search`) |
+| `GET /admin/v1/users/:userId` | Perfil, estado del último documento de cada tipo (`kyc`) y juntas (`circles`). **Auditada** (`user.view`)                                |
+
+- **Solo coincidencia exacta:** una búsqueda parcial (`rosa`, `987654321`) responde `VALIDATION_ERROR` con `details.query`. Así no se puede recorrer la base con datos personales.
+- **Enmascarado:** `name`, `email` y `phone` salen enmascarados, igual que en juntas.
+- **Auditoría sin el dato buscado:** la búsqueda queda registrada con el actor, pero sin el email ni el teléfono que se buscó.
+- `kyc` usa los mismos valores que `GET /v1/me/documents`: `not_submitted`, `in_review`, `approved` o `rejected`.
+
+Errores: `USER_NOT_FOUND` (404), además de los comunes.
+
 ## Auditoría
 
 Cada acción marcada con `@StaffAudited` queda en `staff_audit_log`, de solo inserción (un trigger rechaza `UPDATE`, `DELETE` y `TRUNCATE`):

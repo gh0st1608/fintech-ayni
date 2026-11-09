@@ -125,7 +125,7 @@ El código ya define 5 roles. Propuesta para el MVP, sin agregar roles hasta que
 
 **Endpoints de la fase 2 [I]** (nombres provisionales):
 
-- `GET /admin/v1/users?query=` y `GET /admin/v1/users/:id`
+- **[H] Implementado:** `GET /admin/v1/users?query=` (búsqueda exacta) y `GET /admin/v1/users/:id` ([admin.md](api/admin.md#búsqueda-de-personas))
 - `POST /admin/v1/users/:id/sessions/revoke`, `POST /admin/v1/users/:id/block` y `/unblock`
 - `POST /admin/v1/users/:id/pii/reveal` (motivo, step-up)
 - **[H] Implementado:** `GET /admin/v1/kyc/reviews`, `GET /admin/v1/kyc/reviews/:id` y `GET /admin/v1/kyc/reviews/:id/pages/:page/url`
