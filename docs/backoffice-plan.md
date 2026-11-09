@@ -56,7 +56,7 @@ Convención: **[H]** hecho observado (código, Figma o docs), **[I]** inferencia
 
 ```mermaid
 flowchart LR
-  staff[Personal interno] -->|SSO + MFA| bo[Back-office web<br/>repositorio propio]
+  staff[Personal interno] -->|SSO + MFA| bo[Back-office web<br/>apps/backoffice]
   bo -->|/admin/v1 · token de staff| api[Backend Ayni<br/>módulo admin]
   app[App mobile] -->|/v1 · token de usuario| api
   api --> db[(PostgreSQL)]
@@ -64,7 +64,7 @@ flowchart LR
 ```
 
 1. **API de administración dentro del backend actual [I].** Las reglas ya viven ahí; un servicio aparte las duplicaría. Los controladores `/admin/v1` reutilizan los casos de uso existentes, como ya hace la pausa.
-2. **Front en un repositorio aparte.** SPA en TypeScript con React, Vite y TanStack Query (igual que mobile), más una librería de componentes de administración. Se publica como estático. **[?]** Aprobación del TL.
+2. **Front en el monorepo, en `apps/backoffice`.** Decidido el 9 de noviembre de 2026: el front valida las respuestas de `/admin/v1`, así que un cambio de contrato toca backend y front en el mismo PR. SPA en TypeScript con React, Vite y TanStack Query, según la base técnica enterprise del front. Usa npm como el resto del monorepo (la base técnica propone pnpm; se revisará si el monorepo pasa a workspaces). Se publica como estático.
 3. **Identidad del personal: Amazon Cognito recomendado [?].** Encaja con AWS (T1) y con SES y SNS si se eligen para el OTP. Un user pool solo para el personal, MFA obligatorio y grupos como roles. Alternativas: Microsoft Entra ID o Google Workspace, si la organización ya los usa. Se implementa como `CognitoStaffAuthenticator` sobre el puerto existente.
 4. **Contrato tipado.** El backend publica OpenAPI y el back-office genera su cliente en CI: si el contrato cambia, el build falla.
 5. **Exposición separada [?].** Recomendado: `/admin/*` por un ALB o listener interno, con acceso por VPN. Alternativa: el mismo ALB con una regla de WAF.
@@ -113,15 +113,15 @@ El código ya define 5 roles. Propuesta para el MVP, sin agregar roles hasta que
 
 ## 7. Plan por fases
 
-| Fase | Entregable                                                                                                                                                                                     | Desbloquea                                       | Depende de                       |
-| ---- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------ | -------------------------------- |
-| 0    | Cerrar BO1–BO9                                                                                                                                                                                 | Todo                                             | PO, TL, UX                       |
-| 1    | **Fundaciones:** proveedor de identidad y `CognitoStaffAuthenticator`; repositorio del front con CI, lint, pruebas y cliente OpenAPI; login con MFA; `staff_audit_log`; exposición de `/admin` | Fases 2 a 6; la pausa deja de ser solo API       | BO2, BO8; pipeline de despliegue |
-| 2    | **Operación mínima:** usuarios y soporte, cola de KYC, círculos (incluida la pausa ya existente) y ejecuciones del ciclo mensual                                                               | Lanzar con `KYC_PROVIDER=manual`; soporte básico | Fase 1; L2, L5                   |
-| 3    | **Finanzas:** fondo de garantía con capital semilla y doble aprobación, cuotas y pozos, cobros fallidos, mora y devoluciones                                                                   | Encender el scheduler con control; R18, R21      | Fase 1; T3; riel de pozos (T5)   |
-| 4    | **Parámetros de negocio** versionados, con vista previa y doble aprobación                                                                                                                     | Cambiar reglas sin despliegue; R1, R4, R5        | Fase 1                           |
-| 5    | **Contenido:** ofertas y metas de Home, banners, carrusel, ayuda y legales; `GET /v1/home/content` y secciones en la app                                                                       | Resto de COPAYNI-25; D7, D16, L4                 | Fase 1; BO4, BO5                 |
-| 6    | **Notificaciones, referidos y reportes**                                                                                                                                                       | D6, E7                                           | T7, R7                           |
+| Fase | Entregable                                                                                                                                                                                            | Desbloquea                                       | Depende de                       |
+| ---- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------ | -------------------------------- |
+| 0    | Cerrar BO1–BO9                                                                                                                                                                                        | Todo                                             | PO, TL, UX                       |
+| 1    | **Fundaciones:** proveedor de identidad y `CognitoStaffAuthenticator`; front en `apps/backoffice` con CI, lint, pruebas y contrato validado; login con MFA; `staff_audit_log`; exposición de `/admin` | Fases 2 a 6; la pausa deja de ser solo API       | BO2, BO8; pipeline de despliegue |
+| 2    | **Operación mínima:** usuarios y soporte, cola de KYC, círculos (incluida la pausa ya existente) y ejecuciones del ciclo mensual                                                                      | Lanzar con `KYC_PROVIDER=manual`; soporte básico | Fase 1; L2, L5                   |
+| 3    | **Finanzas:** fondo de garantía con capital semilla y doble aprobación, cuotas y pozos, cobros fallidos, mora y devoluciones                                                                          | Encender el scheduler con control; R18, R21      | Fase 1; T3; riel de pozos (T5)   |
+| 4    | **Parámetros de negocio** versionados, con vista previa y doble aprobación                                                                                                                            | Cambiar reglas sin despliegue; R1, R4, R5        | Fase 1                           |
+| 5    | **Contenido:** ofertas y metas de Home, banners, carrusel, ayuda y legales; `GET /v1/home/content` y secciones en la app                                                                              | Resto de COPAYNI-25; D7, D16, L4                 | Fase 1; BO4, BO5                 |
+| 6    | **Notificaciones, referidos y reportes**                                                                                                                                                              | D6, E7                                           | T7, R7                           |
 
 **Endpoints de la fase 2 [I]** (nombres provisionales):
 
