@@ -1,7 +1,10 @@
 import { z } from 'zod';
 
 import { CYCLE_STATES } from '@/domain/circles/Circle';
+import { KYC_STATUSES, KYC_TYPES } from '@/domain/kyc/Kyc';
 import { STAFF_ROLES } from '@/domain/staff/Staff';
+import { KYC_DOCUMENT_STATES, USER_STATUSES } from '@/domain/users/User';
+import { INSTALLMENT_STATUSES } from '@/domain/finance/Finance';
 
 /** Contratos de docs/api/admin.md en fintech-ayni. Se validan en runtime: TypeScript no basta. */
 const money = z.object({ amount: z.number().int(), currency: z.string().length(3) });
@@ -66,4 +69,138 @@ export const circleDetailSchema = summary.extend({
 export const pauseResultSchema = z.object({
   state: z.enum(CYCLE_STATES),
   changed: z.boolean(),
+});
+
+const kycSummary = z.object({
+  id: z.uuid(),
+  type: z.enum(KYC_TYPES),
+  kind: z.string(),
+  status: z.enum(KYC_STATUSES),
+  pages: z.number().int().nonnegative(),
+  monthlyIncome: money.nullable(),
+  submittedAt: isoDate,
+  superseded: z.boolean(),
+  subject: z.object({
+    userId: z.uuid(),
+    name: z.string().nullable(),
+    email: z.string().nullable(),
+    phone: z.string().nullable(),
+  }),
+});
+
+export const kycReviewsPageSchema = z.object({
+  items: z.array(kycSummary),
+  nextCursor: z.string().nullable(),
+});
+
+export const kycReviewDetailSchema = kycSummary.extend({
+  reason: z.string().nullable(),
+  reviewedAt: isoDate.nullable(),
+  reviewedBy: z.string().nullable(),
+  pageFiles: z.array(
+    z.object({
+      page: z.number().int().positive(),
+      purpose: z.string(),
+      sizeBytes: z.number().int().nonnegative(),
+    }),
+  ),
+});
+
+export const kycPageUrlSchema = z.object({
+  url: z.url({ protocol: /^https?$/ }),
+  expiresAt: isoDate,
+});
+
+const userSummary = z.object({
+  userId: z.uuid(),
+  status: z.enum(USER_STATUSES),
+  name: z.string().nullable(),
+  email: z.string().nullable(),
+  phone: z.string().nullable(),
+  preferredLanguage: z.string().nullable(),
+  createdAt: isoDate,
+});
+
+export const usersSearchSchema = z.object({ items: z.array(userSummary) });
+
+const kycState = z.enum(KYC_DOCUMENT_STATES);
+
+export const userDetailSchema = userSummary.extend({
+  kyc: z.object({ national_id: kycState, proof_of_income: kycState, additional: kycState }),
+  circles: z.array(
+    z.object({
+      circleId: z.uuid(),
+      state: z.enum(CYCLE_STATES),
+      payout: money,
+      months: z.number().int().positive(),
+      position: z.number().int().positive(),
+      joinedAt: isoDate,
+      expelledAt: isoDate.nullable(),
+    }),
+  ),
+});
+
+const financeMember = z.object({ userId: z.uuid(), name: z.string().nullable() });
+const period = z.string().regex(/^\d{4}-\d{2}$/);
+
+export const installmentsPageSchema = z.object({
+  totals: z.array(
+    z.object({
+      status: z.enum(INSTALLMENT_STATUSES),
+      count: z.number().int().nonnegative(),
+      total: money,
+    }),
+  ),
+  items: z.array(
+    z.object({
+      id: z.uuid(),
+      circleId: z.uuid(),
+      position: z.number().int().positive(),
+      period,
+      dueOn: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+      amount: money,
+      status: z.enum(INSTALLMENT_STATUSES),
+      paidAt: isoDate.nullable(),
+      member: financeMember,
+    }),
+  ),
+  nextCursor: z.string().nullable(),
+});
+
+export const payoutsPageSchema = z.object({
+  items: z.array(
+    z.object({
+      id: z.uuid(),
+      circleId: z.uuid(),
+      position: z.number().int().positive(),
+      period,
+      amount: money,
+      disbursedAt: isoDate,
+      member: financeMember,
+    }),
+  ),
+  nextCursor: z.string().nullable(),
+});
+
+export const guaranteeFundSchema = z.object({
+  balances: z.array(
+    z.object({
+      balance: money,
+      activeCircles: z.number().int().nonnegative(),
+      minimum: money,
+      belowMinimum: z.boolean(),
+    }),
+  ),
+  items: z.array(
+    z.object({
+      transactionKey: z.string(),
+      kind: z.string(),
+      circleId: z.uuid().nullable(),
+      period: period.nullable(),
+      reason: z.string().nullable(),
+      amount: money,
+      createdAt: isoDate,
+    }),
+  ),
+  nextCursor: z.string().nullable(),
 });

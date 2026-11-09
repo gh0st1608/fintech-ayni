@@ -52,6 +52,7 @@ function setup(provider = new SimulatedKycProvider('approved'), stored = true) {
   const storage: DocumentStoragePort = {
     presignUpload: (props) => simulated.presignUpload(props),
     exists: () => Promise.resolve(stored),
+    presignDownload: (props) => simulated.presignDownload(props),
   };
   const request = new RequestUploadUseCase(documents, storage, { uploadUrlTtlSeconds: 300 });
   const submit = new SubmitDocumentUseCase(documents, storage, provider, provider, clock);

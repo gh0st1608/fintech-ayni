@@ -6,16 +6,16 @@ Usa el contrato común de respuestas descrito en [auth.md](auth.md) y el modelo 
 
 ## Supuestos provisionales [?]
 
-| Tema              | Supuesto                                                                                                                    | Variable                               |
-| ----------------- | --------------------------------------------------------------------------------------------------------------------------- | -------------------------------------- |
-| Proveedor         | `simulated` responde siempre `KYC_SIMULATED_RESULT` (por defecto `approved`); prohibido en production                       | `KYC_PROVIDER`, `KYC_SIMULATED_RESULT` |
-| Sin proveedor     | `manual` deja todo documento `in_review` para el equipo de operaciones (la revisión no tiene API todavía)                   | `KYC_PROVIDER=manual`                  |
-| Archivos          | JPEG, PNG o PDF de hasta 10 MB; de 1 a 10 páginas por comprobante                                                           | —                                      |
-| URL de subida     | Vence a los 5 minutos; la subida se puede enviar hasta 24 h después                                                         | `DOCUMENT_UPLOAD_URL_TTL_SECONDS`      |
-| Límite mensual    | Con un comprobante de ingresos aprobado: 30 % del ingreso; sin él, el límite general (R5)                                   | `PAYIN_LIMIT_INCOME_SHARE_BPS`         |
-| Unirse a círculos | Exige National ID aprobado e ingreso aprobado, salvo `JOIN_IDENTITY_CHECK=assume_verified` (defecto, hasta tener proveedor) | `JOIN_IDENTITY_CHECK`                  |
-| Adicionales       | Quedan en revisión manual y todavía no suben el límite (R5, R11)                                                            | —                                      |
-| Retención         | Los archivos y registros se guardan sin borrado automático hasta que Legal defina la retención (L5)                         | —                                      |
+| Tema              | Supuesto                                                                                                                           | Variable                               |
+| ----------------- | ---------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------- |
+| Proveedor         | `simulated` responde siempre `KYC_SIMULATED_RESULT` (por defecto `approved`); prohibido en production                              | `KYC_PROVIDER`, `KYC_SIMULATED_RESULT` |
+| Sin proveedor     | `manual` deja todo documento `in_review`; operaciones lo resuelve en el back-office ([admin.md](admin.md#revisión-manual-del-kyc)) | `KYC_PROVIDER=manual`                  |
+| Archivos          | JPEG, PNG o PDF de hasta 10 MB; de 1 a 10 páginas por comprobante                                                                  | —                                      |
+| URL de subida     | Vence a los 5 minutos; la subida se puede enviar hasta 24 h después                                                                | `DOCUMENT_UPLOAD_URL_TTL_SECONDS`      |
+| Límite mensual    | Con un comprobante de ingresos aprobado: 30 % del ingreso; sin él, el límite general (R5)                                          | `PAYIN_LIMIT_INCOME_SHARE_BPS`         |
+| Unirse a círculos | Exige National ID aprobado e ingreso aprobado, salvo `JOIN_IDENTITY_CHECK=assume_verified` (defecto, hasta tener proveedor)        | `JOIN_IDENTITY_CHECK`                  |
+| Adicionales       | Quedan en revisión manual y todavía no suben el límite (R5, R11)                                                                   | —                                      |
+| Retención         | Los archivos y registros se guardan sin borrado automático hasta que Legal defina la retención (L5)                                | —                                      |
 
 ## Flujo
 

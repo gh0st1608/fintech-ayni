@@ -21,6 +21,14 @@ export interface DocumentStoragePort {
   }): Promise<{ url: string; expiresAt: Date }>;
   /** Si el archivo ya se subió con ese tamaño. */
   exists(key: string, sizeBytes: number): Promise<boolean>;
+  /**
+   * URL de lectura de vida corta para que el personal vea una página en el back-office (revisión
+   * manual del KYC). Se muestra en el navegador, no se descarga.
+   */
+  presignDownload(props: { key: string; expiresInSeconds: number }): Promise<{
+    url: string;
+    expiresAt: Date;
+  }>;
 }
 
 export interface VerificationResult {

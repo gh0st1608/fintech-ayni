@@ -20,7 +20,7 @@ Convención: **[H]** hecho observado (código, Figma o docs), **[I]** inferencia
 | Proveedor de identidad del personal | **En curso (fase 1):** `STAFF_AUTH_PROVIDER` admite `oidc` (Cognito u otro OIDC, validado con su JWKS) y `dev` (solo local). Falta crear el user pool (BO2) ([admin.md](api/admin.md)) |
 | API de administración               | Solo `POST /admin/v1/circles/:id/pause` y `/resume` (COPAYNI-61), con rol `super_admin`, step-up y motivo                                                                              |
 | Auditoría                           | `circle_admin_events`, de solo inserción, para pausas y reanudaciones                                                                                                                  |
-| KYC sin proveedor                   | `KYC_PROVIDER=manual` deja cada documento **en revisión**, pero no hay pantalla ni endpoint para aprobarlo o rechazarlo                                                                |
+| KYC sin proveedor                   | `KYC_PROVIDER=manual` deja cada documento **en revisión**; operaciones lo resuelve en la cola de KYC del back-office                                                                   |
 | Fondo de garantía                   | Registro contable de doble entrada (COPAYNI-58). `RecordFundMovementUseCase` existe para el capital semilla y las correcciones, **sin endpoint**                                       |
 | Ciclo mensual                       | La tarea diaria registra eventos (`circles.cycle.*`) solo en los logs. Los estados `approving` y `cancelled` (COPAYNI-62) no tienen vista para operaciones                             |
 | Mora e impago                       | Gracia, expulsión, deuda con cargo por mora y bloqueo (COPAYNI-57), sin vista para el personal                                                                                         |
@@ -125,17 +125,17 @@ El código ya define 5 roles. Propuesta para el MVP, sin agregar roles hasta que
 
 **Endpoints de la fase 2 [I]** (nombres provisionales):
 
-- `GET /admin/v1/users?query=` y `GET /admin/v1/users/:id`
+- **[H] Implementado:** `GET /admin/v1/users?query=` (búsqueda exacta) y `GET /admin/v1/users/:id` ([admin.md](api/admin.md#búsqueda-de-personas))
 - `POST /admin/v1/users/:id/sessions/revoke`, `POST /admin/v1/users/:id/block` y `/unblock`
 - `POST /admin/v1/users/:id/pii/reveal` (motivo, step-up)
-- `GET /admin/v1/kyc/reviews`, `GET /admin/v1/kyc/reviews/:id/file-url`
-- `POST /admin/v1/kyc/reviews/:id/approve` y `/reject` (motivo)
+- **[H] Implementado:** `GET /admin/v1/kyc/reviews`, `GET /admin/v1/kyc/reviews/:id` y `GET /admin/v1/kyc/reviews/:id/pages/:page/url`
+- **[H] Implementado:** `POST /admin/v1/kyc/reviews/:id/approve` y `/reject` (motivo de un catálogo; [admin.md](api/admin.md#revisión-manual-del-kyc))
 - `GET /admin/v1/circles?state=` y `GET /admin/v1/circles/:id`
 - `GET /admin/v1/cycle-runs` (requiere guardar las ejecuciones, hoy solo en logs)
 
 **Endpoints de la fase 3 [I]:**
 
-- `GET /admin/v1/guarantee-fund` y `/movements`
+- **[H] Implementado, solo lectura:** `GET /admin/v1/finance/installments`, `/payouts` y `/guarantee-fund` ([admin.md](api/admin.md#finanzas-solo-lectura)). Lo que mueve dinero sigue pendiente de BO6
 - `POST /admin/v1/guarantee-fund/movements` (propone) y `POST /admin/v1/approvals/:id/approve`
 - `GET /admin/v1/installments?status=`, `GET /admin/v1/payouts?status=`
 - `GET /admin/v1/delinquency` (en gracia, expulsados, deudas y devoluciones)

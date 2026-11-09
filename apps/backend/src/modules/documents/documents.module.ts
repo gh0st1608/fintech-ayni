@@ -4,6 +4,13 @@ import { ConfigService } from '@nestjs/config';
 import { type AppConfigService } from '../../config/configuration';
 import { CLOCK, type ClockPort } from '../../shared/application/ports/clock.port';
 import { KycPayInLimit } from './application/kyc-pay-in-limit';
+import { KYC_REVIEWS } from './application/kyc-review.ports';
+import {
+  DecideKycReviewUseCase,
+  GetKycPageUrlUseCase,
+  GetKycReviewUseCase,
+  ListKycReviewsUseCase,
+} from './application/kyc-review.use-cases';
 import {
   DOCUMENT_SETTINGS,
   type DocumentSettings,
@@ -26,6 +33,8 @@ import {
 } from './infrastructure/simulated-kyc';
 import { S3DocumentStorage } from './infrastructure/s3-document-storage';
 import { SqlDocumentsRepository } from './infrastructure/sql-documents.repository';
+import { SqlKycReviewsRepository } from './infrastructure/sql-kyc-reviews.repository';
+import { AdminKycController } from './presentation/admin-kyc.controller';
 import { DOCUMENT_CURRENCY, DocumentsController } from './presentation/documents.controller';
 
 /**
@@ -35,7 +44,7 @@ import { DOCUMENT_CURRENCY, DocumentsController } from './presentation/documents
  * Exporta el estado del KYC para la elegibilidad y el límite mensual.
  */
 @Module({
-  controllers: [DocumentsController],
+  controllers: [DocumentsController, AdminKycController],
   providers: [
     RequestUploadUseCase,
     SubmitDocumentUseCase,
@@ -44,6 +53,12 @@ import { DOCUMENT_CURRENCY, DocumentsController } from './presentation/documents
     SqlDocumentsRepository,
     { provide: DOCUMENTS, useExisting: SqlDocumentsRepository },
     { provide: KYC_STATUS, useExisting: SqlDocumentsRepository },
+    // Revisión manual desde el back-office (docs/backoffice-plan.md, fase 2).
+    ListKycReviewsUseCase,
+    GetKycReviewUseCase,
+    GetKycPageUrlUseCase,
+    DecideKycReviewUseCase,
+    { provide: KYC_REVIEWS, useClass: SqlKycReviewsRepository },
     {
       provide: DOCUMENT_STORAGE,
       inject: [ConfigService, CLOCK],

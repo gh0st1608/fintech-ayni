@@ -1,12 +1,33 @@
 import type { CircleDetail, CirclesPage, PauseAction, PauseResult } from '@/domain/circles/Circle';
+import {
+  type KycApproval,
+  type KycPageUrl,
+  type KycRejection,
+  type KycReviewDetail,
+  type KycReviewsPage,
+  REJECTION_REASON_CODES,
+} from '@/domain/kyc/Kyc';
 import type {
   CirclesFilter,
   CirclesRepositoryPort,
   DevCredentials,
+  KycFilter,
+  KycRepositoryPort,
   StaffAuthPort,
+  UsersRepositoryPort,
+  FinanceRepositoryPort,
+  InstallmentsFilter,
+  PageFilter,
 } from '@/domain/ports';
 import { AppError } from '@/domain/shared/AppError';
 import { can, type StaffMember } from '@/domain/staff/Staff';
+import { isExactUserQuery, type UserDetail, type UserSummary } from '@/domain/users/User';
+import {
+  type GuaranteeFund,
+  type InstallmentsPage,
+  isPeriod,
+  type PayoutsPage,
+} from '@/domain/finance/Finance';
 
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 /** El backend acepta motivos de hasta 500 caracteres. */
@@ -77,5 +98,140 @@ export class SetCirclePauseUseCase {
       throw new AppError('validation', `El motivo admite hasta ${MAX_REASON_LENGTH} caracteres`);
     }
     return this.circles.setPause(circleId, action, trimmed);
+  }
+}
+
+/** Nota interna opcional de la revisión: solo queda en la auditoría del backend. */
+function cleanNote(note: string | undefined): string | undefined {
+  const trimmed = note?.trim();
+  if (!trimmed) return undefined;
+  if (trimmed.length > MAX_REASON_LENGTH) {
+    throw new AppError('validation', `La nota admite hasta ${MAX_REASON_LENGTH} caracteres`);
+  }
+  return trimmed;
+}
+
+function assertReviewer(staff: StaffMember): void {
+  if (!can(staff, 'kyc.review')) {
+    throw new AppError('forbidden', 'Solo operaciones y el admin general revisan documentos');
+  }
+}
+
+export class ListKycReviewsUseCase {
+  constructor(private readonly kyc: KycRepositoryPort) {}
+
+  execute(filter: KycFilter, signal?: AbortSignal): Promise<KycReviewsPage> {
+    return this.kyc.list(filter, signal);
+  }
+}
+
+export class GetKycReviewUseCase {
+  constructor(private readonly kyc: KycRepositoryPort) {}
+
+  execute(id: string, signal?: AbortSignal): Promise<KycReviewDetail> {
+    return this.kyc.get(id, signal);
+  }
+}
+
+/** Pide la URL de 60 s de una página. Cada pedido queda en la auditoría del backend. */
+export class GetKycPageUrlUseCase {
+  constructor(private readonly kyc: KycRepositoryPort) {}
+
+  execute(staff: StaffMember, id: string, page: number): Promise<KycPageUrl> {
+    assertReviewer(staff);
+    return this.kyc.pageUrl(id, page);
+  }
+}
+
+/**
+ * Aprueba un documento en revisión. En un comprobante de ingresos se puede corregir el ingreso con
+ * el que figura en el documento; el límite mensual de la persona sale de ese valor.
+ */
+export class ApproveKycUseCase {
+  constructor(private readonly kyc: KycRepositoryPort) {}
+
+  execute(staff: StaffMember, id: string, approval: KycApproval): Promise<KycReviewDetail> {
+    assertReviewer(staff);
+    const { monthlyIncome } = approval;
+    if (
+      monthlyIncome !== undefined &&
+      (!Number.isSafeInteger(monthlyIncome) || monthlyIncome <= 0)
+    ) {
+      throw new AppError('validation', 'El ingreso debe ser mayor que 0');
+    }
+    const note = cleanNote(approval.note);
+    return this.kyc.approve(id, {
+      ...(monthlyIncome !== undefined && { monthlyIncome }),
+      ...(note && { note }),
+    });
+  }
+}
+
+/** Rechaza con un motivo del catálogo: es el texto que verá la persona para corregir. */
+export class RejectKycUseCase {
+  constructor(private readonly kyc: KycRepositoryPort) {}
+
+  execute(staff: StaffMember, id: string, rejection: KycRejection): Promise<KycReviewDetail> {
+    assertReviewer(staff);
+    if (!REJECTION_REASON_CODES.includes(rejection.reason)) {
+      throw new AppError('validation', 'Elige el motivo del rechazo');
+    }
+    const note = cleanNote(rejection.note);
+    return this.kyc.reject(id, { reason: rejection.reason, ...(note && { note }) });
+  }
+}
+
+/**
+ * Busca una persona por email completo, teléfono con código de país o id. El backend no busca por
+ * partes y audita cada búsqueda.
+ */
+export class SearchUsersUseCase {
+  constructor(private readonly users: UsersRepositoryPort) {}
+
+  execute(query: string, signal?: AbortSignal): Promise<UserSummary[]> {
+    const trimmed = query.trim();
+    if (!isExactUserQuery(trimmed)) {
+      throw new AppError(
+        'validation',
+        'Escribe el email completo, el teléfono con código de país (+51…) o el id',
+      );
+    }
+    return this.users.search(trimmed, signal);
+  }
+}
+
+export class GetUserUseCase {
+  constructor(private readonly users: UsersRepositoryPort) {}
+
+  execute(userId: string, signal?: AbortSignal): Promise<UserDetail> {
+    return this.users.get(userId, signal);
+  }
+}
+
+/** Cuotas por estado y mes. El mes, si viene, va como `AAAA-MM`. */
+export class ListInstallmentsUseCase {
+  constructor(private readonly finance: FinanceRepositoryPort) {}
+
+  execute(filter: InstallmentsFilter, signal?: AbortSignal): Promise<InstallmentsPage> {
+    if (filter.period !== undefined && !isPeriod(filter.period)) {
+      throw new AppError('validation', 'El mes debe tener la forma AAAA-MM');
+    }
+    return this.finance.installments(filter, signal);
+  }
+}
+
+export class ListPayoutsUseCase {
+  constructor(private readonly finance: FinanceRepositoryPort) {}
+
+  execute(filter: PageFilter, signal?: AbortSignal): Promise<PayoutsPage> {
+    return this.finance.payouts(filter, signal);
+  }
+}
+
+export class GetGuaranteeFundUseCase {
+  constructor(private readonly finance: FinanceRepositoryPort) {}
+
+  execute(filter: PageFilter, signal?: AbortSignal): Promise<GuaranteeFund> {
+    return this.finance.guaranteeFund(filter, signal);
   }
 }
