@@ -1,6 +1,6 @@
 # Ayni · Back-office
 
-Aplicación web interna para operar Ayni: el personal revisa juntas y su ciclo, y el admin general las pausa o reanuda. Implementa las fases 1 y 2 (primer tramo) de [docs/backoffice-plan.md](../../docs/backoffice-plan.md), sobre la API `/admin/v1` de `apps/backend` documentada en [docs/api/admin.md](../../docs/api/admin.md).
+Aplicación web interna para operar Ayni: operaciones revisa los documentos de KYC, el personal sigue las juntas y su ciclo, y el admin general las pausa o reanuda. Implementa las fases 1 y 2 (primer tramo) de [docs/backoffice-plan.md](../../docs/backoffice-plan.md), sobre la API `/admin/v1` de `apps/backend` documentada en [docs/api/admin.md](../../docs/api/admin.md).
 
 Sigue la _Base técnica enterprise senior frontend web_: React 19, TypeScript estricto, Vite, React Router, TanStack Query, Tailwind CSS v4, Zod, Jest y React Testing Library.
 
@@ -11,9 +11,12 @@ Sigue la _Base técnica enterprise senior frontend web_: React 19, TypeScript es
 | Inicio de sesión | `/login`             | —                                                 |
 | Juntas           | `/circles?state=`    | `support`, `operations`, `finance`, `super_admin` |
 | Detalle          | `/circles/:circleId` | Los mismos; pausar y reanudar solo `super_admin`  |
+| Documentos (KYC) | `/kyc?status=&type=` | `operations`, `super_admin`                       |
+| Revisión         | `/kyc/:id`           | Los mismos                                        |
 
 - **Listado:** filtro por estado en la URL, paginación por cursor y turnos ocupados.
 - **Detalle:** condiciones, mes en curso, propuesta de inicio reducido (ronda, plazo y respuestas) y miembros con sus datos personales **enmascarados por el backend**.
+- **Revisión de documentos:** la cola va del más antiguo al más nuevo y marca los reemplazados por uno más reciente. Cada página se abre con una URL de 60 s que se pide al momento y queda en la auditoría. Aprobar admite corregir el ingreso del comprobante; rechazar exige un motivo del catálogo, cuyo texto ve la persona en la app. La nota interna solo queda en la auditoría. Si otra persona lo resolvió antes, se avisa y se recarga.
 - **Pausar y reanudar:** con motivo obligatorio, que queda en la auditoría del backend. Si la autenticación ya no es reciente (step-up), ofrece volver a iniciar sesión.
 - **Estados de cada vista:** carga, vacío, error con reintento y código de seguimiento (`traceId`), y éxito.
 
@@ -108,4 +111,4 @@ El job `backoffice` de [.github/workflows/ci.yml](../../.github/workflows/ci.yml
 
 - **Sin proveedor de identidad real:** el acceso de desarrollo deja elegir roles y solo existe con `STAFF_AUTH_PROVIDER=dev`, que el backend prohíbe en producción. El modo `oidc` (Cognito con MFA, PKCE y token en memoria) depende de BO2.
 - **Sin despliegue:** el pipeline de despliegue del front y de la API todavía no existe.
-- **Alcance de la fase 2:** faltan la cola de KYC y la búsqueda de usuarios.
+- **Alcance de la fase 2:** falta la búsqueda de usuarios.

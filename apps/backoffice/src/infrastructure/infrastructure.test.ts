@@ -2,7 +2,7 @@ import { z } from 'zod';
 
 import { AppError } from '@/domain/shared/AppError';
 
-import { CirclesApiRepository, DevStaffAuth } from './api/adapters';
+import { CirclesApiRepository, DevStaffAuth, KycApiRepository } from './api/adapters';
 import { FetchHttpClient } from './http/FetchHttpClient';
 import { TokenStore } from './http/TokenStore';
 
@@ -197,5 +197,86 @@ describe('CirclesApiRepository', () => {
       url: `http://api.test/admin/v1/circles/${summary.circleId}/pause`,
       init: { method: 'POST', body: '{"reason":"Reclamo"}' },
     });
+  });
+});
+
+describe('KycApiRepository', () => {
+  const id = '00000000-0000-4000-9000-000000000001';
+  const summary = {
+    id,
+    type: 'proof_of_income',
+    kind: 'hr_letter',
+    status: 'in_review',
+    pages: 1,
+    monthlyIncome: { amount: 350000, currency: 'PEN' },
+    submittedAt: '2026-11-09T15:00:00.000Z',
+    superseded: false,
+    subject: {
+      userId: '00000000-0000-4000-8000-000000000002',
+      name: 'Ana R.',
+      email: 'a***@mail.com',
+      phone: null,
+    },
+  };
+  const detail = {
+    ...summary,
+    reason: null,
+    reviewedAt: null,
+    reviewedBy: null,
+    pageFiles: [{ page: 1, purpose: 'proof_of_income', sizeBytes: 10 }],
+  };
+
+  it('arma los filtros en la URL y valida el contrato', async () => {
+    const { calls, http } = setup([
+      ok({ items: [summary], nextCursor: 'c2' }),
+      ok({ items: [], nextCursor: null }),
+    ]);
+    const repository = new KycApiRepository(http);
+    const page = await repository.list({
+      status: 'in_review',
+      type: 'proof_of_income',
+      cursor: 'c1',
+      limit: 10,
+    });
+    expect(page.items[0]?.submittedAt).toEqual(new Date('2026-11-09T15:00:00.000Z'));
+    await repository.list({ status: 'approved' });
+    expect(calls.map((call) => call.url)).toEqual([
+      'http://api.test/admin/v1/kyc/reviews?status=in_review&type=proof_of_income&cursor=c1&limit=10',
+      'http://api.test/admin/v1/kyc/reviews?status=approved',
+    ]);
+  });
+
+  it('lee el detalle, pide la URL de una página y resuelve', async () => {
+    const decided = { ...detail, status: 'rejected', reason: 'El documento está vencido' };
+    const { calls, http } = setup([
+      ok(detail),
+      ok({ url: 'https://s3.test/kyc?X-Amz-Expires=60', expiresAt: '2026-11-09T15:01:00.000Z' }),
+      ok({ ...detail, status: 'approved', reviewedAt: '2026-11-09T15:00:00.000Z' }),
+      ok(decided),
+    ]);
+    const repository = new KycApiRepository(http);
+    await expect(repository.get(id)).resolves.toMatchObject({ pages: 1 });
+    await expect(repository.pageUrl(id, 1)).resolves.toMatchObject({
+      expiresAt: new Date('2026-11-09T15:01:00.000Z'),
+    });
+    await expect(repository.approve(id, { monthlyIncome: 320000 })).resolves.toMatchObject({
+      status: 'approved',
+    });
+    await expect(repository.reject(id, { reason: 'expired' })).resolves.toMatchObject({
+      status: 'rejected',
+    });
+    expect(calls.map((call) => [call.url, call.init.method ?? 'GET', call.init.body])).toEqual([
+      [`http://api.test/admin/v1/kyc/reviews/${id}`, 'GET', undefined],
+      [`http://api.test/admin/v1/kyc/reviews/${id}/pages/1/url`, 'GET', undefined],
+      [`http://api.test/admin/v1/kyc/reviews/${id}/approve`, 'POST', '{"monthlyIncome":320000}'],
+      [`http://api.test/admin/v1/kyc/reviews/${id}/reject`, 'POST', '{"reason":"expired"}'],
+    ]);
+  });
+
+  it('una URL de página que no es http(s) no pasa la validación', async () => {
+    const { http } = setup([
+      ok({ url: 'javascript:alert(1)', expiresAt: '2026-11-09T15:01:00.000Z' }),
+    ]);
+    await expect(new KycApiRepository(http).pageUrl(id, 1)).rejects.toBeInstanceOf(Error);
   });
 });

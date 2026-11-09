@@ -1,8 +1,18 @@
 import type { CircleDetail, CirclesPage, PauseAction, PauseResult } from '@/domain/circles/Circle';
+import {
+  type KycApproval,
+  type KycPageUrl,
+  type KycRejection,
+  type KycReviewDetail,
+  type KycReviewsPage,
+  REJECTION_REASON_CODES,
+} from '@/domain/kyc/Kyc';
 import type {
   CirclesFilter,
   CirclesRepositoryPort,
   DevCredentials,
+  KycFilter,
+  KycRepositoryPort,
   StaffAuthPort,
 } from '@/domain/ports';
 import { AppError } from '@/domain/shared/AppError';
@@ -77,5 +87,85 @@ export class SetCirclePauseUseCase {
       throw new AppError('validation', `El motivo admite hasta ${MAX_REASON_LENGTH} caracteres`);
     }
     return this.circles.setPause(circleId, action, trimmed);
+  }
+}
+
+/** Nota interna opcional de la revisión: solo queda en la auditoría del backend. */
+function cleanNote(note: string | undefined): string | undefined {
+  const trimmed = note?.trim();
+  if (!trimmed) return undefined;
+  if (trimmed.length > MAX_REASON_LENGTH) {
+    throw new AppError('validation', `La nota admite hasta ${MAX_REASON_LENGTH} caracteres`);
+  }
+  return trimmed;
+}
+
+function assertReviewer(staff: StaffMember): void {
+  if (!can(staff, 'kyc.review')) {
+    throw new AppError('forbidden', 'Solo operaciones y el admin general revisan documentos');
+  }
+}
+
+export class ListKycReviewsUseCase {
+  constructor(private readonly kyc: KycRepositoryPort) {}
+
+  execute(filter: KycFilter, signal?: AbortSignal): Promise<KycReviewsPage> {
+    return this.kyc.list(filter, signal);
+  }
+}
+
+export class GetKycReviewUseCase {
+  constructor(private readonly kyc: KycRepositoryPort) {}
+
+  execute(id: string, signal?: AbortSignal): Promise<KycReviewDetail> {
+    return this.kyc.get(id, signal);
+  }
+}
+
+/** Pide la URL de 60 s de una página. Cada pedido queda en la auditoría del backend. */
+export class GetKycPageUrlUseCase {
+  constructor(private readonly kyc: KycRepositoryPort) {}
+
+  execute(staff: StaffMember, id: string, page: number): Promise<KycPageUrl> {
+    assertReviewer(staff);
+    return this.kyc.pageUrl(id, page);
+  }
+}
+
+/**
+ * Aprueba un documento en revisión. En un comprobante de ingresos se puede corregir el ingreso con
+ * el que figura en el documento; el límite mensual de la persona sale de ese valor.
+ */
+export class ApproveKycUseCase {
+  constructor(private readonly kyc: KycRepositoryPort) {}
+
+  execute(staff: StaffMember, id: string, approval: KycApproval): Promise<KycReviewDetail> {
+    assertReviewer(staff);
+    const { monthlyIncome } = approval;
+    if (
+      monthlyIncome !== undefined &&
+      (!Number.isSafeInteger(monthlyIncome) || monthlyIncome <= 0)
+    ) {
+      throw new AppError('validation', 'El ingreso debe ser mayor que 0');
+    }
+    const note = cleanNote(approval.note);
+    return this.kyc.approve(id, {
+      ...(monthlyIncome !== undefined && { monthlyIncome }),
+      ...(note && { note }),
+    });
+  }
+}
+
+/** Rechaza con un motivo del catálogo: es el texto que verá la persona para corregir. */
+export class RejectKycUseCase {
+  constructor(private readonly kyc: KycRepositoryPort) {}
+
+  execute(staff: StaffMember, id: string, rejection: KycRejection): Promise<KycReviewDetail> {
+    assertReviewer(staff);
+    if (!REJECTION_REASON_CODES.includes(rejection.reason)) {
+      throw new AppError('validation', 'Elige el motivo del rechazo');
+    }
+    const note = cleanNote(rejection.note);
+    return this.kyc.reject(id, { reason: rejection.reason, ...(note && { note }) });
   }
 }

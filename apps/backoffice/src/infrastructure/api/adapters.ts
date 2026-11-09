@@ -1,8 +1,17 @@
 import type { CircleDetail, CirclesPage, PauseAction, PauseResult } from '@/domain/circles/Circle';
 import type {
+  KycApproval,
+  KycPageUrl,
+  KycRejection,
+  KycReviewDetail,
+  KycReviewsPage,
+} from '@/domain/kyc/Kyc';
+import type {
   CirclesFilter,
   CirclesRepositoryPort,
   DevCredentials,
+  KycFilter,
+  KycRepositoryPort,
   StaffAuthPort,
 } from '@/domain/ports';
 import { AppError } from '@/domain/shared/AppError';
@@ -14,6 +23,9 @@ import {
   circleDetailSchema,
   circlesPageSchema,
   devSessionSchema,
+  kycPageUrlSchema,
+  kycReviewDetailSchema,
+  kycReviewsPageSchema,
   pauseResultSchema,
   staffMeSchema,
 } from './schemas';
@@ -81,6 +93,50 @@ export class CirclesApiRepository implements CirclesRepositoryPort {
     return this.http.post(`/admin/v1/circles/${encodeURIComponent(circleId)}/${action}`, {
       schema: pauseResultSchema,
       body: { reason },
+    });
+  }
+}
+
+/** Revisión manual del KYC (docs/api/admin.md, "Revisión manual del KYC"). */
+export class KycApiRepository implements KycRepositoryPort {
+  constructor(private readonly http: HttpClientPort) {}
+
+  list(filter: KycFilter, signal?: AbortSignal): Promise<KycReviewsPage> {
+    const query = new URLSearchParams({ status: filter.status });
+    if (filter.type) query.set('type', filter.type);
+    if (filter.cursor) query.set('cursor', filter.cursor);
+    if (filter.limit) query.set('limit', String(filter.limit));
+    return this.http.get(`/admin/v1/kyc/reviews?${query.toString()}`, {
+      schema: kycReviewsPageSchema,
+      signal,
+    });
+  }
+
+  get(id: string, signal?: AbortSignal): Promise<KycReviewDetail> {
+    return this.http.get(`/admin/v1/kyc/reviews/${encodeURIComponent(id)}`, {
+      schema: kycReviewDetailSchema,
+      signal,
+    });
+  }
+
+  pageUrl(id: string, page: number): Promise<KycPageUrl> {
+    return this.http.get(
+      `/admin/v1/kyc/reviews/${encodeURIComponent(id)}/pages/${String(page)}/url`,
+      { schema: kycPageUrlSchema },
+    );
+  }
+
+  approve(id: string, approval: KycApproval): Promise<KycReviewDetail> {
+    return this.http.post(`/admin/v1/kyc/reviews/${encodeURIComponent(id)}/approve`, {
+      schema: kycReviewDetailSchema,
+      body: approval,
+    });
+  }
+
+  reject(id: string, rejection: KycRejection): Promise<KycReviewDetail> {
+    return this.http.post(`/admin/v1/kyc/reviews/${encodeURIComponent(id)}/reject`, {
+      schema: kycReviewDetailSchema,
+      body: rejection,
     });
   }
 }

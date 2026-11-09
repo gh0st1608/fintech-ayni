@@ -6,6 +6,8 @@ import { LoginScreen } from '../auth/LoginScreen';
 import { CircleDetailScreen } from '../circles/CircleDetailScreen';
 import { CirclesScreen } from '../circles/CirclesScreen';
 import { Button, EmptyState, Spinner } from '../components/ui';
+import { KycQueueScreen } from '../kyc/KycQueueScreen';
+import { KycReviewScreen } from '../kyc/KycReviewScreen';
 import { useSession, useStaff } from '../providers/AppProviders';
 
 /** Rutas privadas: sin sesión, al login, recordando a dónde se quería ir. */
@@ -45,6 +47,11 @@ function Layout() {
                   Juntas
                 </NavLink>
               )}
+              {can(staff, 'kyc.review') && (
+                <NavLink to="/kyc" className={navClass}>
+                  Documentos
+                </NavLink>
+              )}
             </nav>
           </div>
           <div className="flex items-center gap-3 text-sm">
@@ -76,6 +83,7 @@ function RequirePermission({ permission }: { permission: Parameters<typeof can>[
 
 function Home() {
   const staff = useStaff();
+  if (can(staff, 'kyc.review')) return <Navigate to="/kyc" replace />;
   if (can(staff, 'circles.read')) return <Navigate to="/circles" replace />;
   return (
     <EmptyState
@@ -96,6 +104,13 @@ export const routes: RouteObject[] = [
         children: [
           { path: '/circles', element: <CirclesScreen /> },
           { path: '/circles/:circleId', element: <CircleDetailScreen /> },
+        ],
+      },
+      {
+        element: <RequirePermission permission="kyc.review" />,
+        children: [
+          { path: '/kyc', element: <KycQueueScreen /> },
+          { path: '/kyc/:id', element: <KycReviewScreen /> },
         ],
       },
       { path: '*', element: <EmptyState title="No encontramos esta página" /> },

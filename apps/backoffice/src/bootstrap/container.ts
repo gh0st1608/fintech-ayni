@@ -1,13 +1,22 @@
 import {
+  ApproveKycUseCase,
   GetCircleUseCase,
   GetCurrentStaffUseCase,
+  GetKycPageUrlUseCase,
+  GetKycReviewUseCase,
   ListCirclesUseCase,
+  ListKycReviewsUseCase,
+  RejectKycUseCase,
   SetCirclePauseUseCase,
   SignInUseCase,
   SignOutUseCase,
 } from '@/application/usecases';
-import type { CirclesRepositoryPort, StaffAuthPort } from '@/domain/ports';
-import { CirclesApiRepository, DevStaffAuth } from '@/infrastructure/api/adapters';
+import type { CirclesRepositoryPort, KycRepositoryPort, StaffAuthPort } from '@/domain/ports';
+import {
+  CirclesApiRepository,
+  DevStaffAuth,
+  KycApiRepository,
+} from '@/infrastructure/api/adapters';
 import { FetchHttpClient } from '@/infrastructure/http/FetchHttpClient';
 import { TokenStore } from '@/infrastructure/http/TokenStore';
 
@@ -24,11 +33,19 @@ export interface AppContainer {
     get: GetCircleUseCase;
     setPause: SetCirclePauseUseCase;
   };
+  kyc: {
+    list: ListKycReviewsUseCase;
+    get: GetKycReviewUseCase;
+    pageUrl: GetKycPageUrlUseCase;
+    approve: ApproveKycUseCase;
+    reject: RejectKycUseCase;
+  };
 }
 
 export interface ContainerAdapters {
   auth: StaffAuthPort;
   circles: CirclesRepositoryPort;
+  kyc: KycRepositoryPort;
 }
 
 /** Casos de uso sobre los adaptadores dados; las pruebas pasan dobles. */
@@ -44,6 +61,13 @@ export function createContainer(adapters: ContainerAdapters): AppContainer {
       get: new GetCircleUseCase(adapters.circles),
       setPause: new SetCirclePauseUseCase(adapters.circles),
     },
+    kyc: {
+      list: new ListKycReviewsUseCase(adapters.kyc),
+      get: new GetKycReviewUseCase(adapters.kyc),
+      pageUrl: new GetKycPageUrlUseCase(adapters.kyc),
+      approve: new ApproveKycUseCase(adapters.kyc),
+      reject: new RejectKycUseCase(adapters.kyc),
+    },
   };
 }
 
@@ -54,5 +78,6 @@ export function createAppContainer(config: AppConfig): AppContainer {
   return createContainer({
     auth: new DevStaffAuth(http, tokens),
     circles: new CirclesApiRepository(http),
+    kyc: new KycApiRepository(http),
   });
 }

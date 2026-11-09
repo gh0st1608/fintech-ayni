@@ -4,16 +4,17 @@ import userEvent from '@testing-library/user-event';
 import { createMemoryRouter, RouterProvider } from 'react-router';
 
 import { createContainer } from '@/bootstrap/container';
-import type { CirclesRepositoryPort, StaffAuthPort } from '@/domain/ports';
+import type { CirclesRepositoryPort, KycRepositoryPort, StaffAuthPort } from '@/domain/ports';
 import { AppProviders } from '@/presentation/providers/AppProviders';
 import { routes } from '@/presentation/routes/routes';
 
-import { InMemoryCircles, InMemoryStaffAuth } from './fakes';
+import { InMemoryCircles, InMemoryKyc, InMemoryStaffAuth } from './fakes';
 
 interface Options {
   path?: string;
   auth?: StaffAuthPort;
   circles?: CirclesRepositoryPort;
+  kyc?: KycRepositoryPort;
 }
 
 /** La app completa con dobles de los puertos y un router en memoria. */
@@ -21,6 +22,7 @@ export function renderApp({
   path = '/',
   auth = new InMemoryStaffAuth(),
   circles = new InMemoryCircles(),
+  kyc = new InMemoryKyc(),
 }: Options = {}) {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
@@ -28,9 +30,9 @@ export function renderApp({
   const router = createMemoryRouter(routes, { initialEntries: [path] });
   const user = userEvent.setup();
   render(
-    <AppProviders container={createContainer({ auth, circles })} queryClient={queryClient}>
+    <AppProviders container={createContainer({ auth, circles, kyc })} queryClient={queryClient}>
       <RouterProvider router={router} />
     </AppProviders>,
   );
-  return { router, user, auth, circles };
+  return { router, user, auth, circles, kyc };
 }

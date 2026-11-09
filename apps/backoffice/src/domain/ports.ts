@@ -5,6 +5,15 @@ import type {
   PauseAction,
   PauseResult,
 } from './circles/Circle';
+import type {
+  KycApproval,
+  KycPageUrl,
+  KycRejection,
+  KycReviewDetail,
+  KycReviewsPage,
+  KycStatus,
+  KycType,
+} from './kyc/Kyc';
 import type { StaffMember, StaffRole } from './staff/Staff';
 
 /** Credenciales del inicio de sesión de desarrollo (`STAFF_AUTH_PROVIDER=dev` en el backend). */
@@ -33,4 +42,20 @@ export interface CirclesRepositoryPort {
   list(filter: CirclesFilter, signal?: AbortSignal): Promise<CirclesPage>;
   get(circleId: string, signal?: AbortSignal): Promise<CircleDetail>;
   setPause(circleId: string, action: PauseAction, reason: string): Promise<PauseResult>;
+}
+
+export interface KycFilter {
+  status: KycStatus;
+  type?: KycType;
+  cursor?: string | null;
+  limit?: number;
+}
+
+export interface KycRepositoryPort {
+  list(filter: KycFilter, signal?: AbortSignal): Promise<KycReviewsPage>;
+  get(id: string, signal?: AbortSignal): Promise<KycReviewDetail>;
+  /** URL de 60 s para ver una página; el backend lo audita. */
+  pageUrl(id: string, page: number): Promise<KycPageUrl>;
+  approve(id: string, approval: KycApproval): Promise<KycReviewDetail>;
+  reject(id: string, rejection: KycRejection): Promise<KycReviewDetail>;
 }

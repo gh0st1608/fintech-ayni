@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
 import { CYCLE_STATES } from '@/domain/circles/Circle';
+import { KYC_STATUSES, KYC_TYPES } from '@/domain/kyc/Kyc';
 import { STAFF_ROLES } from '@/domain/staff/Staff';
 
 /** Contratos de docs/api/admin.md en fintech-ayni. Se validan en runtime: TypeScript no basta. */
@@ -66,4 +67,44 @@ export const circleDetailSchema = summary.extend({
 export const pauseResultSchema = z.object({
   state: z.enum(CYCLE_STATES),
   changed: z.boolean(),
+});
+
+const kycSummary = z.object({
+  id: z.uuid(),
+  type: z.enum(KYC_TYPES),
+  kind: z.string(),
+  status: z.enum(KYC_STATUSES),
+  pages: z.number().int().nonnegative(),
+  monthlyIncome: money.nullable(),
+  submittedAt: isoDate,
+  superseded: z.boolean(),
+  subject: z.object({
+    userId: z.uuid(),
+    name: z.string().nullable(),
+    email: z.string().nullable(),
+    phone: z.string().nullable(),
+  }),
+});
+
+export const kycReviewsPageSchema = z.object({
+  items: z.array(kycSummary),
+  nextCursor: z.string().nullable(),
+});
+
+export const kycReviewDetailSchema = kycSummary.extend({
+  reason: z.string().nullable(),
+  reviewedAt: isoDate.nullable(),
+  reviewedBy: z.string().nullable(),
+  pageFiles: z.array(
+    z.object({
+      page: z.number().int().positive(),
+      purpose: z.string(),
+      sizeBytes: z.number().int().nonnegative(),
+    }),
+  ),
+});
+
+export const kycPageUrlSchema = z.object({
+  url: z.url({ protocol: /^https?$/ }),
+  expiresAt: isoDate,
 });
