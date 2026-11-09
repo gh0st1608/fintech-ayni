@@ -144,7 +144,12 @@ describe('Adaptadores de OTP y refresh tokens', () => {
 
   it('el envío de desarrollo no falla y el de producción sin proveedor responde 503', async () => {
     await expect(
-      new DevOtpSender().send({ channel: 'email', destination: 'a@b.co', code: '1234' }),
+      new DevOtpSender().send({
+        channel: 'email',
+        destination: 'a@b.co',
+        code: '1234',
+        language: 'es',
+      }),
     ).resolves.toBeUndefined();
     await expect(new UnavailableOtpSender().send()).rejects.toMatchObject({
       kind: 'infrastructure',

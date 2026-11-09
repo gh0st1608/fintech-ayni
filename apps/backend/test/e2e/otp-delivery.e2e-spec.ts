@@ -59,6 +59,35 @@ describe('Envío del OTP por email (floci)', () => {
     expect(verified.body.data.accessToken).toEqual(expect.any(String));
   });
 
+  it('el email sale en el idioma de la app, salvo que la persona haya elegido otro', async () => {
+    const identifier = `otp-${randomUUID().slice(0, 8)}@correo.pe`;
+    const started = await http()
+      .post('/v1/auth/start')
+      .set('Accept-Language', 'en-US,en;q=0.9')
+      .send({ identifier, type: 'email' })
+      .expect(200);
+    const english = await lastEmailTo(identifier);
+    expect(english?.text).toContain('Your Ayni verification code is');
+
+    const code = /\b(\d{4})\b/.exec(english?.text ?? '')?.[1];
+    const session = await http()
+      .post('/v1/auth/verify')
+      .send({ challengeId: started.body.data.challengeId, code })
+      .expect(200);
+    await http()
+      .patch('/v1/me')
+      .set('Authorization', `Bearer ${session.body.data.accessToken as string}`)
+      .send({ preferredLanguage: 'es' })
+      .expect(200);
+
+    await http()
+      .post('/v1/auth/start')
+      .set('Accept-Language', 'en')
+      .send({ identifier, type: 'email' })
+      .expect(200);
+    expect((await lastEmailTo(identifier))?.text).toContain('Tu código de verificación de Ayni es');
+  });
+
   it('sin identidad de SMS, pedir el código por teléfono responde 503', async () => {
     const response = await http()
       .post('/v1/auth/start')

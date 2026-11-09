@@ -20,6 +20,7 @@ import {
   SesEmailOtpSender,
   SmsOtpSender,
 } from '@src/modules/auth/infrastructure/messaging/aws-otp-senders';
+import { resolveOtpLanguage } from '@src/modules/auth/application/ports/auth.ports';
 import {
   otpEmail,
   otpSmsText,
@@ -53,15 +54,26 @@ describe('Textos del OTP', () => {
   });
 
   it('el SMS cabe en un segmento GSM-7: sin tildes y hasta 160 caracteres', () => {
-    const text = otpSmsText({ code: CODE, ttlSeconds: 300 });
+    const text = otpSmsText({ code: CODE, ttlSeconds: 300, language: 'es' });
     expect(text).toContain(CODE);
     expect(text).toContain('5 min');
     expect(text.length).toBeLessThanOrEqual(160);
     expect(text).toMatch(/^[\x20-\x7E]+$/);
   });
 
+  it('en inglés, el SMS también cabe en un segmento y el email cambia de idioma', () => {
+    const sms = otpSmsText({ code: CODE, ttlSeconds: 300, language: 'en' });
+    expect(sms).toContain(`code is ${CODE}`);
+    expect(sms.length).toBeLessThanOrEqual(160);
+    expect(sms).toMatch(/^[ -~]+$/);
+    const email = otpEmail({ code: CODE, ttlSeconds: 300, language: 'en' });
+    expect(email.subject).toBe('Your Ayni verification code');
+    expect(email.html).toContain('<html lang="en">');
+    expect(email.text).toContain('5 minutes');
+  });
+
   it('el email trae el código en texto y HTML, y no lo pone en el asunto', () => {
-    const email = otpEmail({ code: CODE, ttlSeconds: 600 });
+    const email = otpEmail({ code: CODE, ttlSeconds: 600, language: 'es' });
     expect(email.subject).not.toContain(CODE);
     expect(email.text).toContain(CODE);
     expect(email.text).toContain('10 minutos');
@@ -101,7 +113,7 @@ describe('SesEmailOtpSender', () => {
     );
     const sender = new SesEmailOtpSender({ ...options, configurationSet: 'ayni-otp' }, { send });
 
-    await sender.send({ channel: 'email', destination: EMAIL, code: CODE });
+    await sender.send({ channel: 'email', destination: EMAIL, code: CODE, language: 'es' });
 
     const input = send.mock.calls[0]?.[0].input;
     expect(input).toMatchObject({
@@ -122,6 +134,7 @@ describe('SesEmailOtpSender', () => {
       channel: 'email',
       destination: EMAIL,
       code: CODE,
+      language: 'es',
     });
     expect(send.mock.calls[0]).toBeDefined();
     expect((send.mock.calls[0] as unknown as [SendEmailCommand])[0].input).not.toHaveProperty(
@@ -140,6 +153,7 @@ describe('SesEmailOtpSender', () => {
       channel: 'email',
       destination: EMAIL,
       code: CODE,
+      language: 'es',
     });
 
     await expect(failure).rejects.toBeInstanceOf(InfrastructureError);
@@ -168,6 +182,7 @@ describe('SmsOtpSender', () => {
       channel: 'sms',
       destination: PHONE,
       code: CODE,
+      language: 'es',
     });
 
     expect(send.mock.calls[0]?.[0].input).toMatchObject({
@@ -175,7 +190,7 @@ describe('SmsOtpSender', () => {
       OriginationIdentity: 'pool-abc',
       MessageType: 'TRANSACTIONAL',
       ConfigurationSetName: 'ayni-sms',
-      MessageBody: otpSmsText({ code: CODE, ttlSeconds: 300 }),
+      MessageBody: otpSmsText({ code: CODE, ttlSeconds: 300, language: 'es' }),
     });
     expect(logs.text()).toContain('sms-1');
     expect(logs.text()).not.toContain(PHONE);
@@ -199,6 +214,7 @@ describe('SmsOtpSender', () => {
       channel: 'sms',
       destination: PHONE,
       code: CODE,
+      language: 'es',
     });
 
     await expect(failure).rejects.toThrow('El envío del código por SMS falló (ConflictException)');
@@ -217,11 +233,21 @@ describe('ChannelOtpSender', () => {
     const sms = { send: jest.fn(() => Promise.resolve()) };
     const sender = new ChannelOtpSender({ email, sms });
 
-    await sender.send({ channel: 'sms', destination: PHONE, code: CODE });
-    await sender.send({ channel: 'email', destination: EMAIL, code: CODE });
+    await sender.send({ channel: 'sms', destination: PHONE, code: CODE, language: 'es' });
+    await sender.send({ channel: 'email', destination: EMAIL, code: CODE, language: 'es' });
 
-    expect(sms.send).toHaveBeenCalledWith({ channel: 'sms', destination: PHONE, code: CODE });
-    expect(email.send).toHaveBeenCalledWith({ channel: 'email', destination: EMAIL, code: CODE });
+    expect(sms.send).toHaveBeenCalledWith({
+      channel: 'sms',
+      destination: PHONE,
+      code: CODE,
+      language: 'es',
+    });
+    expect(email.send).toHaveBeenCalledWith({
+      channel: 'email',
+      destination: EMAIL,
+      code: CODE,
+      language: 'es',
+    });
   });
 });
 
@@ -238,7 +264,7 @@ describe('selectOtpSender', () => {
     const selection = selectOtpSender({ ...base, delivery: 'none' });
     expect(selection.sender).toBeInstanceOf(UnavailableOtpSender);
     await expect(
-      selection.sender.send({ channel: 'email', destination: EMAIL, code: CODE }),
+      selection.sender.send({ channel: 'email', destination: EMAIL, code: CODE, language: 'es' }),
     ).rejects.toBeInstanceOf(InfrastructureError);
   });
 
@@ -252,7 +278,7 @@ describe('selectOtpSender', () => {
     });
     expect(onlyEmail.activeChannels).toEqual(['email']);
     await expect(
-      onlyEmail.sender.send({ channel: 'sms', destination: PHONE, code: CODE }),
+      onlyEmail.sender.send({ channel: 'sms', destination: PHONE, code: CODE, language: 'es' }),
     ).rejects.toThrow('No hay proveedor de envío de OTP configurado');
 
     const both = selectOtpSender({
@@ -264,5 +290,15 @@ describe('selectOtpSender', () => {
     });
     expect(both.activeChannels).toEqual(['email', 'sms']);
     expect(both.sender).toBeInstanceOf(ChannelOtpSender);
+  });
+});
+
+describe('resolveOtpLanguage', () => {
+  it('usa la preferencia guardada, luego el idioma de la petición y, si no, español', () => {
+    expect(resolveOtpLanguage('en', 'es')).toBe('en');
+    expect(resolveOtpLanguage(null, 'en-US,en;q=0.9')).toBe('en');
+    expect(resolveOtpLanguage('pt', 'EN_gb')).toBe('en');
+    expect(resolveOtpLanguage(undefined, 'fr')).toBe('es');
+    expect(resolveOtpLanguage()).toBe('es');
   });
 });

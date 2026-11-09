@@ -44,7 +44,7 @@ describe('SesEmailOtpSender con floci', () => {
   it('envía el código al destino, en texto y HTML, desde el remitente configurado', async () => {
     const destination = `otp-${randomUUID().slice(0, 8)}@correo.pe`;
 
-    await sender.send({ channel: 'email', destination, code: '4821' });
+    await sender.send({ channel: 'email', destination, code: '4821', language: 'es' });
 
     const [message, ...others] = await sentTo(destination);
     expect(others).toHaveLength(0);
@@ -64,7 +64,12 @@ describe('SesEmailOtpSender con floci', () => {
     );
 
     await expect(
-      unreachable.send({ channel: 'email', destination: 'x@correo.pe', code: '1111' }),
+      unreachable.send({
+        channel: 'email',
+        destination: 'x@correo.pe',
+        code: '1111',
+        language: 'es',
+      }),
     ).rejects.toBeInstanceOf(InfrastructureError);
     offline.destroy();
   });

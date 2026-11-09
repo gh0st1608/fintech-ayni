@@ -7,6 +7,7 @@
   - `InMemoryAuthApi` es el adaptador falso de dev.
 - **Envío del OTP (pending-scope T6):** email con Amazon SES y SMS con AWS End User Messaging SMS (`OTP_DELIVERY=aws`).
   - Cada canal se activa con su configuración. Un canal sin proveedor, o un envío que falla, responde **503** en `start` y `resend`: nunca se da por enviado un código que no salió.
+  - **Idioma del mensaje:** el que eligió la persona (`preferredLanguage`); si no eligió, el de `Accept-Language` de la petición (la app lo manda); si no, español. Hoy hay mensajes en `es` y `en`.
   - Todavía no está activo en prd: falta el dominio remitente y registrar la identidad de SMS ([modules/otp-messaging](../../infra/terraform/modules/otp-messaging/README.md)).
   - En desarrollo, `OTP_DEV_CODE` fija el código y no se envía nada. Está prohibido en production y junto con `OTP_DELIVERY=aws`.
 - El access token es un JWT **ES256** (claims `sub`, `iss`, `aud`, `iat`, `exp`; cabecera con `kid`).

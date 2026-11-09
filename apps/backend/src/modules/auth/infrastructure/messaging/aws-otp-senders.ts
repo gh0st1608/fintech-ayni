@@ -69,8 +69,8 @@ export class SesEmailOtpSender implements OtpSenderPort {
       });
   }
 
-  async send({ destination, code }: OtpMessage): Promise<void> {
-    const email = otpEmail({ code, ttlSeconds: this.options.ttlSeconds });
+  async send({ destination, code, language }: OtpMessage): Promise<void> {
+    const email = otpEmail({ code, ttlSeconds: this.options.ttlSeconds, language });
     try {
       const output = await this.client.send(
         new SendEmailCommand({
@@ -94,6 +94,7 @@ export class SesEmailOtpSender implements OtpSenderPort {
         event: 'auth.otp_sent',
         channel: 'email',
         provider: 'ses',
+        language,
         messageId: output.MessageId,
       });
     } catch (error) {
@@ -139,13 +140,13 @@ export class SmsOtpSender implements OtpSenderPort {
       client ?? new PinpointSMSVoiceV2Client({ region: options.region, ...CLIENT_DEFAULTS });
   }
 
-  async send({ destination, code }: OtpMessage): Promise<void> {
+  async send({ destination, code, language }: OtpMessage): Promise<void> {
     try {
       const output = await this.client.send(
         new SendTextMessageCommand({
           DestinationPhoneNumber: destination,
           OriginationIdentity: this.options.originationIdentity,
-          MessageBody: otpSmsText({ code, ttlSeconds: this.options.ttlSeconds }),
+          MessageBody: otpSmsText({ code, ttlSeconds: this.options.ttlSeconds, language }),
           MessageType: 'TRANSACTIONAL',
           ...(this.options.configurationSet && {
             ConfigurationSetName: this.options.configurationSet,
@@ -156,6 +157,7 @@ export class SmsOtpSender implements OtpSenderPort {
         event: 'auth.otp_sent',
         channel: 'sms',
         provider: 'end-user-messaging',
+        language,
         messageId: output.MessageId,
       });
     } catch (error) {
