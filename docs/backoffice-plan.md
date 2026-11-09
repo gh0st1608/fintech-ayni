@@ -13,18 +13,18 @@ Convención: **[H]** hecho observado (código, Figma o docs), **[I]** inferencia
 
 ## 2. Qué existe hoy
 
-| Pieza                               | Estado [H]                                                                                                                                                 |
-| ----------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Autorización del personal           | `StaffGuard` y `@RequireStaff(rol, { stepUp })` en el backend, con roles `support`, `operations`, `finance`, `admin` y `super_admin`                       |
-| Autenticación reforzada (step-up)   | Las acciones críticas exigen haberse autenticado hace menos de `STAFF_STEP_UP_MAX_AGE_SECONDS` (300 s)                                                     |
-| Proveedor de identidad del personal | **No existe.** `UnconfiguredStaffAuthenticator` rechaza todo; el puerto `StaffAuthenticatorPort` ya está listo para conectar uno                           |
-| API de administración               | Solo `POST /admin/v1/circles/:id/pause` y `/resume` (COPAYNI-61), con rol `super_admin`, step-up y motivo                                                  |
-| Auditoría                           | `circle_admin_events`, de solo inserción, para pausas y reanudaciones                                                                                      |
-| KYC sin proveedor                   | `KYC_PROVIDER=manual` deja cada documento **en revisión**, pero no hay pantalla ni endpoint para aprobarlo o rechazarlo                                    |
-| Fondo de garantía                   | Registro contable de doble entrada (COPAYNI-58). `RecordFundMovementUseCase` existe para el capital semilla y las correcciones, **sin endpoint**           |
-| Ciclo mensual                       | La tarea diaria registra eventos (`circles.cycle.*`) solo en los logs. Los estados `approving` y `cancelled` (COPAYNI-62) no tienen vista para operaciones |
-| Mora e impago                       | Gracia, expulsión, deuda con cargo por mora y bloqueo (COPAYNI-57), sin vista para el personal                                                             |
-| Reglas de negocio                   | Siguen en variables de entorno: cambiar una regla exige un despliegue                                                                                      |
+| Pieza                               | Estado [H]                                                                                                                                                                             |
+| ----------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Autorización del personal           | `StaffGuard` y `@RequireStaff(rol, { stepUp })` en el backend, con roles `support`, `operations`, `finance`, `admin` y `super_admin`                                                   |
+| Autenticación reforzada (step-up)   | Las acciones críticas exigen haberse autenticado hace menos de `STAFF_STEP_UP_MAX_AGE_SECONDS` (300 s)                                                                                 |
+| Proveedor de identidad del personal | **En curso (fase 1):** `STAFF_AUTH_PROVIDER` admite `oidc` (Cognito u otro OIDC, validado con su JWKS) y `dev` (solo local). Falta crear el user pool (BO2) ([admin.md](api/admin.md)) |
+| API de administración               | Solo `POST /admin/v1/circles/:id/pause` y `/resume` (COPAYNI-61), con rol `super_admin`, step-up y motivo                                                                              |
+| Auditoría                           | `circle_admin_events`, de solo inserción, para pausas y reanudaciones                                                                                                                  |
+| KYC sin proveedor                   | `KYC_PROVIDER=manual` deja cada documento **en revisión**, pero no hay pantalla ni endpoint para aprobarlo o rechazarlo                                                                |
+| Fondo de garantía                   | Registro contable de doble entrada (COPAYNI-58). `RecordFundMovementUseCase` existe para el capital semilla y las correcciones, **sin endpoint**                                       |
+| Ciclo mensual                       | La tarea diaria registra eventos (`circles.cycle.*`) solo en los logs. Los estados `approving` y `cancelled` (COPAYNI-62) no tienen vista para operaciones                             |
+| Mora e impago                       | Gracia, expulsión, deuda con cargo por mora y bloqueo (COPAYNI-57), sin vista para el personal                                                                                         |
+| Reglas de negocio                   | Siguen en variables de entorno: cambiar una regla exige un despliegue                                                                                                                  |
 
 ## 3. Alcance
 

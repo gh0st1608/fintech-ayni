@@ -18,6 +18,9 @@ import {
   validateSync,
 } from 'class-validator';
 
+/** Identidad del personal del back-office (docs/backoffice-plan.md, BO2). */
+export const STAFF_AUTH_PROVIDERS = ['unconfigured', 'oidc', 'dev'] as const;
+
 /** Resultados del proveedor de KYC simulado (COPAYNI-42). */
 export const KYC_SIMULATED_RESULTS = ['approved', 'rejected', 'in_review'] as const;
 /** Almacenamiento de documentos KYC (COPAYNI-43). */
@@ -287,6 +290,35 @@ export class EnvironmentVariables {
   @Min(60)
   @Max(3600)
   STAFF_STEP_UP_MAX_AGE_SECONDS: number = 300;
+
+  /**
+   * Identidad del personal: `unconfigured` rechaza toda la API de administración; `oidc` valida
+   * los tokens de un proveedor OIDC con MFA (recomendado: Cognito); `dev` emite tokens locales con
+   * `POST /admin/v1/dev/sessions` y está prohibido en production.
+   */
+  @IsIn(STAFF_AUTH_PROVIDERS)
+  STAFF_AUTH_PROVIDER: (typeof STAFF_AUTH_PROVIDERS)[number] = 'unconfigured';
+
+  /** Emisor del proveedor, p. ej. `https://cognito-idp.us-east-1.amazonaws.com/<pool>`. */
+  @ValidateIf((env: EnvironmentVariables) => env.STAFF_AUTH_PROVIDER === 'oidc')
+  @IsUrl({ require_tld: false, protocols: ['https', 'http'] })
+  STAFF_OIDC_ISSUER?: string;
+
+  /** `aud` del token o, si no lo trae (access token de Cognito), su `client_id`. */
+  @ValidateIf((env: EnvironmentVariables) => env.STAFF_AUTH_PROVIDER === 'oidc')
+  @IsString()
+  @IsNotEmpty()
+  STAFF_OIDC_AUDIENCE?: string;
+
+  /** Claves públicas. Por defecto `<STAFF_OIDC_ISSUER>/.well-known/jwks.json`, la ruta de Cognito. */
+  @IsOptional()
+  @IsUrl({ require_tld: false, protocols: ['https', 'http'] })
+  STAFF_OIDC_JWKS_URL?: string;
+
+  /** Claim con los roles del personal: en Cognito, sus grupos. */
+  @IsString()
+  @IsNotEmpty()
+  STAFF_OIDC_ROLES_CLAIM: string = 'cognito:groups';
 
   /**
    * Cobro de cuotas y pago de payouts del ciclo mensual. `fake` simula ambos (desarrollo y
@@ -661,6 +693,11 @@ export function validateEnvironment(config: Record<string, unknown>): Environmen
   const errors = validateSync(env, { skipMissingProperties: false, forbidUnknownValues: true });
   if (env.NODE_ENV === 'production' && env.OTP_DEV_CODE !== undefined) {
     throw new Error('Configuración inválida:\n- OTP_DEV_CODE: no se admite en production');
+  }
+  if (env.NODE_ENV === 'production' && env.STAFF_AUTH_PROVIDER === 'dev') {
+    throw new Error(
+      'Configuración inválida:\n- STAFF_AUTH_PROVIDER: dev no se admite en production',
+    );
   }
   if (env.NODE_ENV === 'production' && env.PAYMENT_GATEWAY === 'fake') {
     throw new Error('Configuración inválida:\n- PAYMENT_GATEWAY: fake no se admite en production');

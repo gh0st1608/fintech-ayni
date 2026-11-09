@@ -7,6 +7,8 @@ export type StaffRole = (typeof STAFF_ROLES)[number];
 /** Persona del personal autenticada en la petición. */
 export interface StaffPrincipal {
   readonly staffId: string;
+  /** Para mostrarlo y auditarlo; no todos los proveedores lo envían en el access token. */
+  readonly email?: string;
   readonly roles: readonly StaffRole[];
   /** Cuándo se autenticó por última vez; las acciones críticas piden que sea reciente (step-up). */
   readonly authenticatedAt: Date;
@@ -14,8 +16,9 @@ export interface StaffPrincipal {
 
 /**
  * Valida el token del personal, distinto del de la app (otra audiencia y otras claves). Lanza
- * `UnauthorizedError` si no es válido. La identidad del personal (SSO + MFA) llega con la fase 1
- * del back-office; hasta entonces, `UnconfiguredStaffAuthenticator` rechaza todo.
+ * `UnauthorizedError` si no es válido. Según `STAFF_AUTH_PROVIDER`: `UnconfiguredStaffAuthenticator`
+ * rechaza todo, `OidcStaffAuthenticator` valida al proveedor de identidad (SSO + MFA) y
+ * `DevStaffTokens` emite tokens locales solo en desarrollo.
  */
 export interface StaffAuthenticatorPort {
   authenticate(accessToken: string): Promise<StaffPrincipal>;

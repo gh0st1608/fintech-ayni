@@ -40,13 +40,12 @@ import {
 } from './presentation/http/controllers/mercadopago-webhook.controller';
 import { SetCirclePauseUseCase } from './application/use-cases/set-circle-pause.use-case';
 import { AdminCirclesController } from './presentation/http/controllers/admin-circles.controller';
-import { STAFF_AUTHENTICATOR } from '../../shared/application/ports/staff-authenticator.port';
-import { UnconfiguredStaffAuthenticator } from '../../shared/infrastructure/staff/unconfigured-staff-authenticator';
+import { ADMIN_CIRCLES_QUERY } from './application/ports/admin-circles-query.port';
 import {
-  STAFF_ACCESS_SETTINGS,
-  type StaffAccessSettings,
-  StaffGuard,
-} from '../../shared/presentation/guards/staff.guard';
+  GetAdminCircleUseCase,
+  ListAdminCirclesUseCase,
+} from './application/use-cases/admin-circles.use-cases';
+import { SqlAdminCirclesQuery } from './infrastructure/persistence/typeorm/sql-admin-circles.query';
 import { TRUST_SETTINGS, type TrustSettings } from './application/use-cases/trust';
 import { TypeOrmMemberHistory } from './infrastructure/persistence/typeorm/typeorm-member-history.repository';
 import { MEMBER_DEBTS } from './application/ports/member-debts.port';
@@ -213,18 +212,13 @@ import { MyCirclesController } from './presentation/http/controllers/my-circles.
     { provide: PAYMENT_SETTINGS, useExisting: TypeOrmPaymentSettings },
     TypeOrmPaymentsQuery,
     { provide: PAYMENTS_QUERY, useExisting: TypeOrmPaymentsQuery },
-    // Pausa del admin general (COPAYNI-61). La identidad del personal llega con la fase 1 del
-    // back-office: hasta entonces, la API de administración rechaza todo con 401.
+    // Pausa del admin general (COPAYNI-61). El acceso del personal lo da StaffAccessModule.
     SetCirclePauseUseCase,
-    StaffGuard,
-    { provide: STAFF_AUTHENTICATOR, useClass: UnconfiguredStaffAuthenticator },
-    {
-      provide: STAFF_ACCESS_SETTINGS,
-      inject: [ConfigService],
-      useFactory: (config: AppConfigService): StaffAccessSettings => ({
-        stepUpMaxAgeSeconds: config.get('STAFF_STEP_UP_MAX_AGE_SECONDS', { infer: true }),
-      }),
-    },
+    // Lecturas del back-office (docs/backoffice-plan.md, fase 2).
+    ListAdminCirclesUseCase,
+    GetAdminCircleUseCase,
+    SqlAdminCirclesQuery,
+    { provide: ADMIN_CIRCLES_QUERY, useExisting: SqlAdminCirclesQuery },
     // Regla de confianza por tipo de turno (COPAYNI-60, valores propuestos de R18).
     TypeOrmMemberHistory,
     { provide: MEMBER_HISTORY, useExisting: TypeOrmMemberHistory },

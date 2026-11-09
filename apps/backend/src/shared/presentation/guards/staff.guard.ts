@@ -27,19 +27,23 @@ export interface StaffAccessSettings {
 }
 
 interface StaffAccess {
-  role: StaffRole;
+  roles: readonly StaffRole[];
   stepUp: boolean;
 }
 
 /**
- * Exige un rol del personal; con `stepUp`, además una autenticación reciente. La ruta también
- * debe ser `@Public()`: no usa el token de la app.
+ * Exige alguno de los roles del personal (matriz de docs/backoffice-plan.md §5); con `stepUp`,
+ * además una autenticación reciente. La ruta también debe ser `@Public()`: no usa el token de la
+ * app.
  */
 export const RequireStaff = (
-  role: StaffRole,
+  roles: StaffRole | readonly StaffRole[],
   options: { stepUp?: boolean } = {},
 ): MethodDecorator & ClassDecorator =>
-  SetMetadata(STAFF_ACCESS, { role, stepUp: options.stepUp ?? false } satisfies StaffAccess);
+  SetMetadata(STAFF_ACCESS, {
+    roles: typeof roles === 'string' ? [roles] : roles,
+    stepUp: options.stepUp ?? false,
+  } satisfies StaffAccess);
 
 /** Autoriza al personal en la API de administración (docs/backoffice-plan.md). */
 @Injectable()
@@ -69,7 +73,7 @@ export class StaffGuard implements CanActivate {
         throw new UnauthorizedError('Vuelve a autenticarte para esta acción');
       }
     }
-    if (!staff.roles.includes(access.role)) throw new ForbiddenError();
+    if (!staff.roles.some((role) => access.roles.includes(role))) throw new ForbiddenError();
     request.staff = staff;
     return true;
   }
