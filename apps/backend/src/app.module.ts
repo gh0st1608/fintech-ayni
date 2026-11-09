@@ -14,6 +14,7 @@ import { ReferralsModule } from './modules/referrals/referrals.module';
 import { PayoutsModule } from './modules/payouts/payouts.module';
 import { ClockModule } from './shared/infrastructure/clock/clock.module';
 import { DatabaseModule } from './shared/infrastructure/persistence/database.module';
+import { StaffAccessModule } from './shared/staff-access.module';
 import { TelemetryShutdown } from './shared/infrastructure/observability/telemetry-shutdown';
 import { AllExceptionsFilter } from './shared/presentation/filters/all-exceptions.filter';
 import { BearerAuthGuard } from './shared/presentation/guards/bearer-auth.guard';
@@ -37,6 +38,7 @@ import { createValidationPipe } from './shared/presentation/pipes/validation.pip
     }),
     ClockModule,
     DatabaseModule,
+    StaffAccessModule,
     HealthModule,
     // Exporta ACCESS_TOKEN_VERIFIER, que usa BearerAuthGuard.
     AuthModule,

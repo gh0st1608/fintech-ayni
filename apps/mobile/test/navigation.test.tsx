@@ -44,14 +44,14 @@ describe('shell de navegación', () => {
     await storeSession();
     await renderRouter(APP_DIR, { initialUrl: '/' });
     await waitFor(() => expect(screen).toHavePathname('/home'));
-    for (const tab of ['Inicio', 'Círculos', 'Pagos', 'Perfil']) {
+    for (const tab of ['Inicio', 'Juntas', 'Pagos', 'Perfil']) {
       expect(screen.getAllByText(tab).length).toBeGreaterThan(0);
     }
   });
 
   it.each([
     // Mis círculos (COPAYNI-26): pestañas Activos y Finalizados.
-    ['Círculos', '/circles', 'Activos'],
+    ['Juntas', '/circles', 'Activos'],
     // Pagos (COPAYNI-35): sin pagos pendientes, el estado vacío y los accesos.
     ['Pagos', '/payment', 'Historial de pagos'],
   ])('la pestaña %s abre su pantalla', async (tab, pathname, content) => {
@@ -86,7 +86,7 @@ describe('shell de navegación', () => {
   it('Elige un servicio → Game’ya → monto (paso 1) → cuota (paso 2) → turno (paso 3) → paso 4', async () => {
     await storeSession();
     await renderRouter(APP_DIR, { initialUrl: '/join' });
-    await fireEvent.press(await screen.findByRole('button', { name: /Unirme a un Game'ya/ }));
+    await fireEvent.press(await screen.findByRole('button', { name: /Unirme a una junta/ }));
     await waitFor(() => expect(screen).toHavePathname('/join/payout-amount'));
 
     expect(await screen.findByTestId('payout-slider', {}, { timeout: 5000 })).toBeTruthy();
@@ -94,7 +94,7 @@ describe('shell de navegación', () => {
     await waitFor(() => expect(screen).toHavePathname('/join/monthly-pay-in'));
 
     // Editar vuelve al paso 1 con el monto conservado.
-    await fireEvent.press(await screen.findByRole('button', { name: 'Editar el monto de payout' }));
+    await fireEvent.press(await screen.findByRole('button', { name: 'Editar el monto a recibir' }));
     await waitFor(() => expect(screen).toHavePathname('/join/payout-amount'));
     await fireEvent.press(await screen.findByRole('button', { name: 'Siguiente' }));
     await waitFor(() => expect(screen).toHavePathname('/join/monthly-pay-in'));
@@ -121,7 +121,7 @@ describe('shell de navegación', () => {
     // Confirmar une al usuario y lleva a Mis círculos con el flujo reiniciado.
     await fireEvent.press(await screen.findByRole('button', { name: 'Confirmar y unirme' }));
     await fireEvent.press(
-      await screen.findByRole('button', { name: 'Ver mis círculos' }, { timeout: 5000 }),
+      await screen.findByRole('button', { name: 'Ver mis juntas' }, { timeout: 5000 }),
     );
     await waitFor(() => expect(screen).toHavePathname('/circles'));
     // La unión invalida Circles > Active: el círculo nuevo aparece con su badge.

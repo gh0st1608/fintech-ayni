@@ -53,7 +53,7 @@ describe('ScanNationalIdScreen (COPAYNI-47)', () => {
     expect(screen.getByText(/ambas caras se vean completas y nítidas/)).toBeTruthy();
     expect(screen.getByLabelText('Evita: Foto borrosa')).toBeTruthy();
     expect(screen.getByLabelText('Evita: Datos tapados')).toBeTruthy();
-    expect(screen.getByText(/antes de que te unas a un Game'ya/)).toBeTruthy();
+    expect(screen.getByText(/antes de que te unas a una junta/)).toBeTruthy();
     expect(screen.queryByTestId('slot-front')).toBeNull();
 
     await startScan();
@@ -151,7 +151,7 @@ describe('ProofOfIncomeScreen (COPAYNI-48)', () => {
     await renderWithProviders(<ProofOfIncomeScreen onDone={jest.fn()} />, setup);
 
     await fireEvent.press(screen.getByTestId('income-kind-bankStatement'));
-    expect(screen.getByText(/Más documentos, mayores payouts/)).toBeTruthy();
+    expect(screen.getByText(/Más documentos, pozos más grandes/)).toBeTruthy();
     await goToUpload('3500,50');
 
     // La guía cambia según el tipo elegido.

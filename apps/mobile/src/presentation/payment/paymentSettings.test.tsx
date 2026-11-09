@@ -99,12 +99,12 @@ describe('PaymentSettingsScreen (COPAYNI-38)', () => {
       <PaymentSettingsScreen onChangePayoutMethod={onChangePayoutMethod} />,
       createTestContainer({ payments }),
     );
-    const toggle = await screen.findByRole('switch', { name: /Descontar la cuota del payout/ });
+    const toggle = await screen.findByRole('switch', { name: /Pagar mi cuota con el pozo/ });
     expect(toggle).toHaveProp('value', false);
 
     await fireEvent(toggle, 'valueChange', true);
     await waitFor(() => expect(payments.settings.deductPayInFromPayout).toBe(true));
-    expect(screen.getByRole('switch', { name: /Descontar/ })).toHaveProp('value', true);
+    expect(screen.getByRole('switch', { name: /Pagar mi cuota/ })).toHaveProp('value', true);
 
     await fireEvent.press(screen.getByRole('button', { name: /Cambiar método de cobro/ }));
     expect(onChangePayoutMethod).toHaveBeenCalled();

@@ -1,0 +1,36 @@
+@import 'tailwindcss';
+
+/* Tokens de diseño del back-office (base técnica §13). Contraste AA sobre canvas y surface. */
+@theme {
+  --color-canvas: #f6f7f9;
+  --color-surface: #ffffff;
+  --color-muted: #eef0f3;
+  --color-line: #d5d9e0;
+  --color-ink: #1b2430;
+  --color-ink-soft: #55606e;
+  --color-brand: #0b6b5d;
+  --color-brand-strong: #08544a;
+  --color-danger: #b3261e;
+  --color-warning: #b26a00;
+  --color-success: #1e7d3a;
+  --font-sans: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-canvas: #12161c;
+    --color-surface: #1a2028;
+    --color-muted: #252c36;
+    --color-line: #343d49;
+    --color-ink: #e8ebef;
+    --color-ink-soft: #a4adb9;
+    --color-brand: #4fc3ad;
+    --color-brand-strong: #7fd6c5;
+  }
+}
+
+body {
+  background: var(--color-canvas);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+}

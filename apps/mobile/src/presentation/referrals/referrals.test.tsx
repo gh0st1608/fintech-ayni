@@ -67,7 +67,7 @@ describe('MyReferralsSheet (COPAYNI-52)', () => {
     const rows = screen.getAllByTestId('invitee');
     expect(rows).toHaveLength(3);
     expect(within(rows[0]!).getByText('Pagó su primera cuota')).toBeTruthy();
-    expect(within(rows[1]!).getByText("Se unió a un Game'ya")).toBeTruthy();
+    expect(within(rows[1]!).getByText('Se unió a una junta')).toBeTruthy();
     expect(within(rows[2]!).getByText('Registrado')).toBeTruthy();
   });
 

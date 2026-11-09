@@ -58,7 +58,9 @@ describe('MonthlyPayInScreen', () => {
     expect(await option(/3\.?000.*al mes.*10 meses/)).toBeTruthy();
     expect(await option(/2\.?500.*al mes.*12 meses/)).toBeTruthy();
     expect(
-      screen.getByText('La cuota mensual puede variar según los fees o descuentos de tu slot.'),
+      screen.getByText(
+        'La cuota mensual puede variar según el costo o los descuentos de tu turno.',
+      ),
     ).toBeTruthy();
   });
 
@@ -72,7 +74,7 @@ describe('MonthlyPayInScreen', () => {
 
   it('Editar vuelve al paso 1', async () => {
     const { onEdit } = await renderPayIn();
-    await fireEvent.press(screen.getByRole('button', { name: 'Editar el monto de payout' }));
+    await fireEvent.press(screen.getByRole('button', { name: 'Editar el monto a recibir' }));
     expect(onEdit).toHaveBeenCalledTimes(1);
   });
 
@@ -84,7 +86,7 @@ describe('MonthlyPayInScreen', () => {
 
     const exceeded = await option(/6 meses/);
     expect(exceeded).toBeDisabled();
-    expect(exceeded).toHaveAccessibleName(/Supera tu límite mensual de pay-in/);
+    expect(exceeded).toHaveAccessibleName(/Supera tu límite mensual de cuotas/);
     expect(await option(/10 meses/)).toBeEnabled();
   });
 
@@ -170,7 +172,7 @@ describe('MonthlyPayInScreen', () => {
 
   it('sin monto elegido pide volver al paso 1', async () => {
     const { onEdit } = await renderPayIn({ payout: null });
-    expect(screen.getByRole('alert')).toHaveTextContent('Primero elige el monto de payout.');
+    expect(screen.getByRole('alert')).toHaveTextContent('Primero elige el monto a recibir.');
     await fireEvent.press(screen.getByRole('button', { name: 'Elegir el monto' }));
     expect(onEdit).toHaveBeenCalled();
   });

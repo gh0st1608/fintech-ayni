@@ -6,6 +6,7 @@ Ayni: app de ahorro colaborativo (ROSCA / Game'ya). Monorepo con paquetes npm in
 | --- | --- | --- |
 | [apps/mobile](apps/mobile) | React Native + Expo, arquitectura hexagonal | [README](apps/mobile/README.md) |
 | [apps/backend](apps/backend) | NestJS + TypeScript, arquitectura hexagonal | [README](apps/backend/README.md) |
+| [apps/backoffice](apps/backoffice) | Web interna del personal: React + Vite, arquitectura hexagonal | [README](apps/backoffice/README.md) |
 | [infra/terraform](infra/terraform) | Terraform: dev con el emulador floci, prd en AWS | [README](infra/terraform/README.md) |
 
 Contratos de API: [docs/api](docs/api). Contexto de producto y backlog: [docs](docs).
@@ -18,6 +19,7 @@ Después de clonar, instala las herramientas del repositorio y las de cada app:
 npm install                  # activa los hooks de git (Husky)
 (cd apps/backend && npm install)
 (cd apps/mobile && npm install)
+(cd apps/backoffice && npm install)
 ```
 
 ### Hooks locales
@@ -25,7 +27,7 @@ npm install                  # activa los hooks de git (Husky)
 - **pre-commit** (lint-staged): ESLint y Prettier solo sobre los archivos en stage, con la configuración de cada app (`apps/*/.lintstagedrc.mjs`).
 - **commit-msg** (commitlint): exige [Conventional Commits](https://www.conventionalcommits.org/es/).
   - Formato: `tipo(ámbito): descripción`.
-  - Ámbitos: `mobile`, `backend`, `ci`, `deps`, `docs`, `infra`. El ámbito es opcional.
+  - Ámbitos: `mobile`, `backend`, `backoffice`, `ci`, `deps`, `docs`, `infra`. El ámbito es opcional.
   - Ejemplo: `feat(backend): crear el módulo de pagos (COPAYNI-40)`.
 
 ### Pipeline ([.github/workflows/ci.yml](.github/workflows/ci.yml))
@@ -38,6 +40,7 @@ Corre en cada pull request y en cada push a `main`.
 | `secrets` | gitleaks sobre todo el historial (`--redact`: el log no muestra los valores). |
 | `backend` | lint (con límites entre capas), typecheck, formato, pruebas unitarias, de integración y e2e con cobertura ≥ 90%, build y vulnerabilidades. |
 | `mobile` | `npm run validate`, `expo-doctor` y `expo install --check` (solo avisan), `expo export` (Android e iOS) y vulnerabilidades. |
+| `backoffice` | `npm run validate` (lint con límites entre capas, typecheck, formato, pruebas con cobertura y build) y vulnerabilidades. |
 | `infra` | Terraform: formato, `validate`, `terraform test`, tflint, checkov y build de la imagen de la API. |
 
 - Los reportes de cobertura quedan como artefactos del pipeline durante 14 días.
