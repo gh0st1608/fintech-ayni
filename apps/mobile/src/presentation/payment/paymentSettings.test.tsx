@@ -104,7 +104,11 @@ describe('PaymentSettingsScreen (COPAYNI-38)', () => {
 
     await fireEvent(toggle, 'valueChange', true);
     await waitFor(() => expect(payments.settings.deductPayInFromPayout).toBe(true));
-    expect(screen.getByRole('switch', { name: /Pagar mi cuota/ })).toHaveProp('value', true);
+    // Guardar y volver a renderizar son pasos distintos: en un runner lento el backend ya guardó
+    // y la pantalla todavía no muestra el cambio.
+    await waitFor(() =>
+      expect(screen.getByRole('switch', { name: /Pagar mi cuota/ })).toHaveProp('value', true),
+    );
 
     await fireEvent.press(screen.getByRole('button', { name: /Cambiar método de cobro/ }));
     expect(onChangePayoutMethod).toHaveBeenCalled();
@@ -121,7 +125,7 @@ describe('PaymentSettingsScreen (COPAYNI-38)', () => {
     await fireEvent(await screen.findByRole('switch'), 'valueChange', true);
 
     expect(await screen.findByText(/No se pudo guardar el cambio/)).toBeTruthy();
-    expect(screen.getByRole('switch')).toHaveProp('value', false);
+    await waitFor(() => expect(screen.getByRole('switch')).toHaveProp('value', false));
   });
 });
 
