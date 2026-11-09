@@ -20,9 +20,11 @@ import type {
   KycFilter,
   KycRepositoryPort,
   StaffAuthPort,
+  UsersRepositoryPort,
 } from '@/domain/ports';
 import { AppError } from '@/domain/shared/AppError';
 import type { StaffMember } from '@/domain/staff/Staff';
+import type { UserDetail, UserSummary } from '@/domain/users/User';
 
 export const NOW = new Date('2026-11-09T15:00:00Z');
 
@@ -201,5 +203,59 @@ export class InMemoryKyc implements KycRepositoryPort {
     found.reviewedAt = NOW;
     found.reviewedBy = 'dev:ops@ayni.local';
     return Promise.resolve(structuredClone(found));
+  }
+}
+
+export function person(overrides: Partial<UserDetail> = {}): UserDetail {
+  sequence += 1;
+  return {
+    userId: `00000000-0000-4000-a000-${String(sequence).padStart(12, '0')}`,
+    status: 'active',
+    name: 'Rosa Q.',
+    email: 'r***@mail.com',
+    phone: '+51******321',
+    preferredLanguage: 'es',
+    createdAt: NOW,
+    kyc: { national_id: 'approved', proof_of_income: 'in_review', additional: 'not_submitted' },
+    circles: [],
+    ...overrides,
+  };
+}
+
+/**
+ * Personas en memoria. `index` relaciona cada búsqueda exacta (email o teléfono completos, que el
+ * doble sí conoce) con la persona; el id también se busca.
+ */
+export class InMemoryUsers implements UsersRepositoryPort {
+  readonly searches: string[] = [];
+
+  constructor(
+    public people: UserDetail[] = [],
+    private readonly index: Record<string, string> = {},
+  ) {}
+
+  search(query: string): Promise<UserSummary[]> {
+    this.searches.push(query);
+    const userId = this.index[query.toLowerCase()] ?? query;
+    return Promise.resolve(
+      this.people
+        .filter((item) => item.userId === userId)
+        .map((item) => ({
+          userId: item.userId,
+          status: item.status,
+          name: item.name,
+          email: item.email,
+          phone: item.phone,
+          preferredLanguage: item.preferredLanguage,
+          createdAt: item.createdAt,
+        })),
+    );
+  }
+
+  get(userId: string): Promise<UserDetail> {
+    const found = this.people.find((item) => item.userId === userId);
+    return found
+      ? Promise.resolve(structuredClone(found))
+      : Promise.reject(new AppError('not_found', 'No existe', 'USER_NOT_FOUND'));
   }
 }

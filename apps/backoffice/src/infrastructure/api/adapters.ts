@@ -13,9 +13,11 @@ import type {
   KycFilter,
   KycRepositoryPort,
   StaffAuthPort,
+  UsersRepositoryPort,
 } from '@/domain/ports';
 import { AppError } from '@/domain/shared/AppError';
 import type { StaffMember } from '@/domain/staff/Staff';
+import type { UserDetail, UserSummary } from '@/domain/users/User';
 
 import type { HttpClientPort } from '../http/FetchHttpClient';
 import type { TokenStore } from '../http/TokenStore';
@@ -28,6 +30,8 @@ import {
   kycReviewsPageSchema,
   pauseResultSchema,
   staffMeSchema,
+  userDetailSchema,
+  usersSearchSchema,
 } from './schemas';
 
 /**
@@ -137,6 +141,26 @@ export class KycApiRepository implements KycRepositoryPort {
     return this.http.post(`/admin/v1/kyc/reviews/${encodeURIComponent(id)}/reject`, {
       schema: kycReviewDetailSchema,
       body: rejection,
+    });
+  }
+}
+
+export class UsersApiRepository implements UsersRepositoryPort {
+  constructor(private readonly http: HttpClientPort) {}
+
+  async search(query: string, signal?: AbortSignal): Promise<UserSummary[]> {
+    const params = new URLSearchParams({ query });
+    const page = await this.http.get(`/admin/v1/users?${params.toString()}`, {
+      schema: usersSearchSchema,
+      signal,
+    });
+    return page.items;
+  }
+
+  get(userId: string, signal?: AbortSignal): Promise<UserDetail> {
+    return this.http.get(`/admin/v1/users/${encodeURIComponent(userId)}`, {
+      schema: userDetailSchema,
+      signal,
     });
   }
 }

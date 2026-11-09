@@ -13,10 +13,13 @@ Sigue la _Base técnica enterprise senior frontend web_: React 19, TypeScript es
 | Detalle          | `/circles/:circleId` | Los mismos; pausar y reanudar solo `super_admin`  |
 | Documentos (KYC) | `/kyc?status=&type=` | `operations`, `super_admin`                       |
 | Revisión         | `/kyc/:id`           | Los mismos                                        |
+| Personas         | `/users?q=`          | `support`, `operations`, `finance`, `super_admin` |
+| Perfil           | `/users/:userId`     | Los mismos                                        |
 
 - **Listado:** filtro por estado en la URL, paginación por cursor y turnos ocupados.
 - **Detalle:** condiciones, mes en curso, propuesta de inicio reducido (ronda, plazo y respuestas) y miembros con sus datos personales **enmascarados por el backend**.
 - **Revisión de documentos:** la cola va del más antiguo al más nuevo y marca los reemplazados por uno más reciente. Cada página se abre con una URL de 60 s que se pide al momento y queda en la auditoría. Aprobar admite corregir el ingreso del comprobante; rechazar exige un motivo del catálogo, cuyo texto ve la persona en la app. La nota interna solo queda en la auditoría. Si otra persona lo resolvió antes, se avisa y se recarga.
+- **Personas:** búsqueda exacta por email completo, teléfono con código de país o id (no busca por partes). El perfil muestra los datos enmascarados, el estado de cada documento y sus juntas. Cada búsqueda queda en la auditoría sin el dato buscado.
 - **Pausar y reanudar:** con motivo obligatorio, que queda en la auditoría del backend. Si la autenticación ya no es reciente (step-up), ofrece volver a iniciar sesión.
 - **Estados de cada vista:** carga, vacío, error con reintento y código de seguimiento (`traceId`), y éxito.
 
@@ -94,7 +97,7 @@ Las variables `VITE_*` terminan en el bundle y son públicas: **nunca** secretos
 - **Dominio y casos de uso:** permisos, transiciones de pausa y validaciones.
 - **Infraestructura:** cliente HTTP (envelope, token, traducción de errores, red, cancelación y formato inválido) y adaptadores.
 - **Aplicación completa:** se monta con dobles de los puertos y un router en memoria, y se prueban los flujos de sesión, listado, detalle y pausa.
-- **Entorno:** jsdom no trae la API Fetch que usa React Router; `test/jsdom-environment.cjs` toma la de Node.
+- **Entorno:** jsdom no trae la API Fetch que usa React Router; `test/jsdom-environment.cjs` toma la de Node, salvo `FormData`, que sigue siendo el de jsdom.
 
 ## Seguridad
 
@@ -111,4 +114,3 @@ El job `backoffice` de [.github/workflows/ci.yml](../../.github/workflows/ci.yml
 
 - **Sin proveedor de identidad real:** el acceso de desarrollo deja elegir roles y solo existe con `STAFF_AUTH_PROVIDER=dev`, que el backend prohíbe en producción. El modo `oidc` (Cognito con MFA, PKCE y token en memoria) depende de BO2.
 - **Sin despliegue:** el pipeline de despliegue del front y de la API todavía no existe.
-- **Alcance de la fase 2:** falta la búsqueda de usuarios.

@@ -14,9 +14,11 @@ import type {
   KycFilter,
   KycRepositoryPort,
   StaffAuthPort,
+  UsersRepositoryPort,
 } from '@/domain/ports';
 import { AppError } from '@/domain/shared/AppError';
 import { can, type StaffMember } from '@/domain/staff/Staff';
+import { isExactUserQuery, type UserDetail, type UserSummary } from '@/domain/users/User';
 
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 /** El backend acepta motivos de hasta 500 caracteres. */
@@ -167,5 +169,32 @@ export class RejectKycUseCase {
     }
     const note = cleanNote(rejection.note);
     return this.kyc.reject(id, { reason: rejection.reason, ...(note && { note }) });
+  }
+}
+
+/**
+ * Busca una persona por email completo, teléfono con código de país o id. El backend no busca por
+ * partes y audita cada búsqueda.
+ */
+export class SearchUsersUseCase {
+  constructor(private readonly users: UsersRepositoryPort) {}
+
+  execute(query: string, signal?: AbortSignal): Promise<UserSummary[]> {
+    const trimmed = query.trim();
+    if (!isExactUserQuery(trimmed)) {
+      throw new AppError(
+        'validation',
+        'Escribe el email completo, el teléfono con código de país (+51…) o el id',
+      );
+    }
+    return this.users.search(trimmed, signal);
+  }
+}
+
+export class GetUserUseCase {
+  constructor(private readonly users: UsersRepositoryPort) {}
+
+  execute(userId: string, signal?: AbortSignal): Promise<UserDetail> {
+    return this.users.get(userId, signal);
   }
 }

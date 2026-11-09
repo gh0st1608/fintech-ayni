@@ -15,6 +15,7 @@ import type {
   KycType,
 } from './kyc/Kyc';
 import type { StaffMember, StaffRole } from './staff/Staff';
+import type { UserDetail, UserSummary } from './users/User';
 
 /** Credenciales del inicio de sesión de desarrollo (`STAFF_AUTH_PROVIDER=dev` en el backend). */
 export interface DevCredentials {
@@ -58,4 +59,10 @@ export interface KycRepositoryPort {
   pageUrl(id: string, page: number): Promise<KycPageUrl>;
   approve(id: string, approval: KycApproval): Promise<KycReviewDetail>;
   reject(id: string, rejection: KycRejection): Promise<KycReviewDetail>;
+}
+
+/** Búsqueda exacta de personas para soporte (docs/api/admin.md, "Búsqueda de personas"). */
+export interface UsersRepositoryPort {
+  search(query: string, signal?: AbortSignal): Promise<UserSummary[]>;
+  get(userId: string, signal?: AbortSignal): Promise<UserDetail>;
 }

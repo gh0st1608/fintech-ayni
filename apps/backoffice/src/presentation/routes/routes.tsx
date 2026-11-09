@@ -8,6 +8,8 @@ import { CirclesScreen } from '../circles/CirclesScreen';
 import { Button, EmptyState, Spinner } from '../components/ui';
 import { KycQueueScreen } from '../kyc/KycQueueScreen';
 import { KycReviewScreen } from '../kyc/KycReviewScreen';
+import { UserDetailScreen } from '../users/UserDetailScreen';
+import { UsersScreen } from '../users/UsersScreen';
 import { useSession, useStaff } from '../providers/AppProviders';
 
 /** Rutas privadas: sin sesión, al login, recordando a dónde se quería ir. */
@@ -45,6 +47,11 @@ function Layout() {
               {can(staff, 'circles.read') && (
                 <NavLink to="/circles" className={navClass}>
                   Juntas
+                </NavLink>
+              )}
+              {can(staff, 'users.read') && (
+                <NavLink to="/users" className={navClass}>
+                  Personas
                 </NavLink>
               )}
               {can(staff, 'kyc.review') && (
@@ -111,6 +118,13 @@ export const routes: RouteObject[] = [
         children: [
           { path: '/kyc', element: <KycQueueScreen /> },
           { path: '/kyc/:id', element: <KycReviewScreen /> },
+        ],
+      },
+      {
+        element: <RequirePermission permission="users.read" />,
+        children: [
+          { path: '/users', element: <UsersScreen /> },
+          { path: '/users/:userId', element: <UserDetailScreen /> },
         ],
       },
       { path: '*', element: <EmptyState title="No encontramos esta página" /> },

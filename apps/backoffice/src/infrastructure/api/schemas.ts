@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { CYCLE_STATES } from '@/domain/circles/Circle';
 import { KYC_STATUSES, KYC_TYPES } from '@/domain/kyc/Kyc';
 import { STAFF_ROLES } from '@/domain/staff/Staff';
+import { KYC_DOCUMENT_STATES, USER_STATUSES } from '@/domain/users/User';
 
 /** Contratos de docs/api/admin.md en fintech-ayni. Se validan en runtime: TypeScript no basta. */
 const money = z.object({ amount: z.number().int(), currency: z.string().length(3) });
@@ -107,4 +108,33 @@ export const kycReviewDetailSchema = kycSummary.extend({
 export const kycPageUrlSchema = z.object({
   url: z.url({ protocol: /^https?$/ }),
   expiresAt: isoDate,
+});
+
+const userSummary = z.object({
+  userId: z.uuid(),
+  status: z.enum(USER_STATUSES),
+  name: z.string().nullable(),
+  email: z.string().nullable(),
+  phone: z.string().nullable(),
+  preferredLanguage: z.string().nullable(),
+  createdAt: isoDate,
+});
+
+export const usersSearchSchema = z.object({ items: z.array(userSummary) });
+
+const kycState = z.enum(KYC_DOCUMENT_STATES);
+
+export const userDetailSchema = userSummary.extend({
+  kyc: z.object({ national_id: kycState, proof_of_income: kycState, additional: kycState }),
+  circles: z.array(
+    z.object({
+      circleId: z.uuid(),
+      state: z.enum(CYCLE_STATES),
+      payout: money,
+      months: z.number().int().positive(),
+      position: z.number().int().positive(),
+      joinedAt: isoDate,
+      expelledAt: isoDate.nullable(),
+    }),
+  ),
 });
