@@ -27,6 +27,7 @@ import {
   OTP_HASHER,
   OTP_SENDER,
   type OtpGeneratorPort,
+  resolveOtpLanguage,
   type OtpHasherPort,
   type OtpSenderPort,
 } from '../ports/auth.ports';
@@ -71,7 +72,12 @@ export class StartAuthenticationUseCase {
     @Inject(CLOCK) private readonly clock: ClockPort,
   ) {}
 
-  async execute(input: { identifier: string; type: LoginIdentifierType }): Promise<ChallengeView> {
+  async execute(input: {
+    identifier: string;
+    type: LoginIdentifierType;
+    /** Idioma con el que la app hizo la petición (`Accept-Language`). */
+    language?: string | null;
+  }): Promise<ChallengeView> {
     const identifier = LoginIdentifier.parse(input.identifier, input.type);
     const now = this.clock.now();
     const user = await this.users.findOrRegister(identifier);
@@ -97,7 +103,12 @@ export class StartAuthenticationUseCase {
       policy: this.policy.otp,
     });
     await this.challenges.create(challenge);
-    await this.sender.send({ channel: identifier.channel, destination: identifier.value, code });
+    await this.sender.send({
+      channel: identifier.channel,
+      destination: identifier.value,
+      code,
+      language: resolveOtpLanguage(user.preferredLanguage, input.language),
+    });
     this.logger.log({
       event: 'auth.challenge_issued',
       userId: user.id,
@@ -156,7 +167,7 @@ export class ResendOtpUseCase {
     @Inject(CLOCK) private readonly clock: ClockPort,
   ) {}
 
-  async execute(input: { challengeId: string }): Promise<ChallengeView> {
+  async execute(input: { challengeId: string; language?: string | null }): Promise<ChallengeView> {
     const now = this.clock.now();
     const code = this.generator.generate();
     const challenge = await this.challenges.update(input.challengeId, (current) => {
@@ -170,9 +181,15 @@ export class ResendOtpUseCase {
     if (!challenge) throw new NotFoundError('No se encontró el desafío');
 
     const { userId, channel } = challenge.snapshot;
-    const destination = (await this.users.findById(userId))?.loginIdentifier(channel);
-    if (!destination) throw new NotFoundError('No se encontró el desafío');
-    await this.sender.send({ channel, destination: destination.value, code });
+    const user = await this.users.findById(userId);
+    const destination = user?.loginIdentifier(channel);
+    if (!user || !destination) throw new NotFoundError('No se encontró el desafío');
+    await this.sender.send({
+      channel,
+      destination: destination.value,
+      code,
+      language: resolveOtpLanguage(user.preferredLanguage, input.language),
+    });
     this.logger.log({ event: 'auth.challenge_resent', userId, channel });
     return toView(challenge, destination);
   }

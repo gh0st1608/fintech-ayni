@@ -28,6 +28,9 @@ export const DOCUMENT_STORAGES = ['simulated', 's3'] as const;
 /** Verificación de documentos (COPAYNI-42): simulada o revisión manual de operaciones. */
 export const KYC_PROVIDERS = ['simulated', 'manual'] as const;
 
+/** Envío del OTP (pending-scope T6): ninguno o AWS (SES y End User Messaging SMS). */
+export const OTP_DELIVERIES = ['none', 'aws'] as const;
+
 /** Pasarelas de pago admitidas (COPAYNI-34). */
 export const PAYMENT_GATEWAYS = ['fake', 'mercadopago'] as const;
 
@@ -672,6 +675,41 @@ export class EnvironmentVariables {
   @IsOptional()
   @Matches(/^\d{4}$/, { message: 'OTP_DEV_CODE debe tener 4 dígitos' })
   OTP_DEV_CODE?: string;
+
+  /**
+   * Envío real del OTP (pending-scope T6): `none` (sin proveedor: 503, salvo OTP_DEV_CODE) o
+   * `aws` (email con SES y SMS con End User Messaging SMS). Con `aws`, cada canal se activa con
+   * su variable; el que no tenga la suya sigue respondiendo 503.
+   */
+  @IsIn(OTP_DELIVERIES)
+  OTP_DELIVERY: (typeof OTP_DELIVERIES)[number] = 'none';
+
+  /** Remitente verificado en SES: `no-reply@dominio` o `Ayni <no-reply@dominio>`. */
+  @IsOptional()
+  @Matches(/^(?:[^<>@\r\n]+ <[^\s<>@]+@[^\s<>@]+\.[^\s<>@]+>|[^\s<>@]+@[^\s<>@]+\.[^\s<>@]+)$/, {
+    message: 'OTP_EMAIL_FROM debe ser un email o "Nombre <email>"',
+  })
+  OTP_EMAIL_FROM?: string;
+
+  /** Configuration set de SES (rebotes, quejas y métricas; infra/terraform/modules/otp-messaging). */
+  @IsOptional()
+  @Matches(/^[A-Za-z0-9_-]{1,64}$/, { message: 'OTP_SES_CONFIGURATION_SET no es válido' })
+  OTP_SES_CONFIGURATION_SET?: string;
+
+  /** Endpoint de SES para el emulador (floci: `http://localhost:4566`). Sin valor, el de AWS. */
+  @IsOptional()
+  @IsUrl({ require_tld: false, require_protocol: true, protocols: ['http', 'https'] })
+  OTP_SES_ENDPOINT?: string;
+
+  /** Número, pool o sender ID de End User Messaging SMS (ID o ARN), ya registrado. */
+  @IsOptional()
+  @Matches(/^[A-Za-z0-9+:/_.-]{1,256}$/, { message: 'OTP_SMS_ORIGINATION_IDENTITY no es válido' })
+  OTP_SMS_ORIGINATION_IDENTITY?: string;
+
+  /** Configuration set de End User Messaging SMS (eventos de entrega). Opcional. */
+  @IsOptional()
+  @Matches(/^[A-Za-z0-9_-]{1,64}$/, { message: 'OTP_SMS_CONFIGURATION_SET no es válido' })
+  OTP_SMS_CONFIGURATION_SET?: string;
 }
 
 /** Si se exporta alguna señal de telemetría (y por tanto se necesita el endpoint OTLP). */
@@ -693,6 +731,19 @@ export function validateEnvironment(config: Record<string, unknown>): Environmen
   const errors = validateSync(env, { skipMissingProperties: false, forbidUnknownValues: true });
   if (env.NODE_ENV === 'production' && env.OTP_DEV_CODE !== undefined) {
     throw new Error('Configuración inválida:\n- OTP_DEV_CODE: no se admite en production');
+  }
+  // Con el código fijo, el envío real mandaría a personas reales un código que todos conocen.
+  if (env.OTP_DELIVERY === 'aws' && env.OTP_DEV_CODE !== undefined) {
+    throw new Error('Configuración inválida:\n- OTP_DEV_CODE: no se admite con OTP_DELIVERY=aws');
+  }
+  if (
+    env.OTP_DELIVERY === 'aws' &&
+    env.OTP_EMAIL_FROM === undefined &&
+    env.OTP_SMS_ORIGINATION_IDENTITY === undefined
+  ) {
+    throw new Error(
+      'Configuración inválida:\n- OTP_DELIVERY: aws requiere OTP_EMAIL_FROM, OTP_SMS_ORIGINATION_IDENTITY o ambos',
+    );
   }
   if (env.NODE_ENV === 'production' && env.STAFF_AUTH_PROVIDER === 'dev') {
     throw new Error(

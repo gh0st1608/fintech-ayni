@@ -1,4 +1,4 @@
-import { Body, Controller, HttpCode, HttpStatus, Inject, Post } from '@nestjs/common';
+import { Body, Controller, Headers, HttpCode, HttpStatus, Inject, Post } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
   ApiBearerAuth,
@@ -43,8 +43,11 @@ export class ContactChangeController {
   async start(
     @CurrentPrincipal() principal: Principal,
     @Body() body: StartAuthRequest,
+    @Headers('accept-language') language?: string,
   ): Promise<AuthChallengeResponse> {
-    return AuthChallengeResponse.from(await this.startChange.execute(principal, body));
+    return AuthChallengeResponse.from(
+      await this.startChange.execute(principal, { ...body, language }),
+    );
   }
 
   @Post('verify')

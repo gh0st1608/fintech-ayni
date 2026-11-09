@@ -38,6 +38,27 @@ module "documents" {
   noncurrent_version_expiration_days = null
 }
 
+# Envío real del OTP (pending-scope T6). Sin var.otp_messaging no crea nada y la API responde 503
+# al pedir un código. La identidad de SMS se registra fuera de Terraform (README del módulo).
+locals {
+  otp_enabled = var.otp_messaging.email != null || var.otp_messaging.sms != null
+
+  # Permisos de la aplicación (rol de la tarea de la API y de sus tareas programadas).
+  api_task_policies = merge(
+    { documents = module.documents.read_write_policy_json },
+    local.otp_enabled ? { otp = module.otp_messaging.send_policy_json } : {},
+  )
+}
+
+module "otp_messaging" {
+  source = "../../../../modules/otp-messaging"
+
+  name  = local.name
+  email = var.otp_messaging.email
+  sms   = var.otp_messaging.sms
+  tags  = local.tags
+}
+
 module "database" {
   source = "../../../../modules/database"
 
@@ -94,7 +115,7 @@ locals {
     DOCUMENTS_BUCKET = module.documents.bucket_name
     KYC_PROVIDER     = "manual"
     ENABLE_SWAGGER   = "false"
-  })
+  }, module.otp_messaging.app_environment)
   api_secrets = var.new_relic.enabled ? {
     NEW_RELIC_LICENSE_KEY = "${data.aws_secretsmanager_secret.newrelic_license_key[0].arn}:api_key::"
   } : {}
@@ -140,7 +161,7 @@ module "api" {
     max_capacity       = 4
     cpu_target_percent = 60
   }
-  task_policies = { documents = module.documents.read_write_policy_json }
+  task_policies = local.api_task_policies
 
   environment = local.api_environment
   secrets     = local.api_secrets
