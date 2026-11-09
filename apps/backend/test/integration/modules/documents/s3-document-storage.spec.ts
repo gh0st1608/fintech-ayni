@@ -70,6 +70,20 @@ describe('S3DocumentStorage con floci', () => {
     await expect(storage.exists(key, 4096)).resolves.toBe(false);
   });
 
+  it('el back-office lee la página con una URL corta, para mostrarla y sin caché', async () => {
+    const file = Buffer.from('%PDF-1.4 página de prueba');
+    const { key, status } = await upload('application/pdf', file);
+    expect(status).toBe(200);
+
+    const { url, expiresAt } = await storage.presignDownload({ key, expiresInSeconds: 60 });
+    expect(url).toContain('X-Amz-Expires=60');
+    expect(expiresAt.getTime()).toBeGreaterThan(Date.now());
+    const response = await fetch(url);
+    expect(response.status).toBe(200);
+    expect(response.headers.get('content-type')).toBe('application/pdf');
+    expect(Buffer.from(await response.arrayBuffer())).toEqual(file);
+  });
+
   it('sin archivo subido, no existe', async () => {
     await expect(storage.exists(`kyc/u-1/additional/${randomUUID()}`, 10)).resolves.toBe(false);
   });

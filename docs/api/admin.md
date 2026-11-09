@@ -43,6 +43,41 @@ Con `oidc`:
 
 Errores: `UNAUTHORIZED` (401) sin token, con token inválido o sin autenticación reciente; `FORBIDDEN` (403) si el rol no alcanza; `VALIDATION_ERROR` (400); `CIRCLE_NOT_FOUND` (404).
 
+## Revisión manual del KYC
+
+Con `KYC_PROVIDER=manual`, cada documento queda `in_review` hasta que el personal lo resuelve (fase 2 de [backoffice-plan.md](../backoffice-plan.md)). Roles: `operations` y `super_admin`; soporte y finanzas no ven documentos.
+
+| Endpoint                                                 | Qué hace                                                                                                                                 |
+| -------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| `GET /admin/v1/kyc/reviews?status=&type=&limit=&cursor=` | La cola. `status` es `in_review` por defecto (del más antiguo al más nuevo); `approved` y `rejected` van del más reciente al más antiguo |
+| `GET /admin/v1/kyc/reviews/:id`                          | El documento, sus páginas (`pageFiles`) y la persona enmascarada                                                                         |
+| `GET /admin/v1/kyc/reviews/:id/pages/:page/url`          | URL de lectura de **60 s** para ver una página en el navegador. **Auditada** (`kyc.document.view`)                                       |
+| `POST /admin/v1/kyc/reviews/:id/approve`                 | `{ monthlyIncome?, note? }`. **Auditada** (`kyc.approve`)                                                                                |
+| `POST /admin/v1/kyc/reviews/:id/reject`                  | `{ reason, note? }`. **Auditada** (`kyc.reject`)                                                                                         |
+
+- **Motivo del rechazo:** `reason` es un código de un catálogo fijo; la persona ve su texto en la app para corregir y reenviar. El personal no escribe texto que llegue al usuario.
+
+  | Código            | Texto que ve la persona                                          |
+  | ----------------- | ---------------------------------------------------------------- |
+  | `illegible`       | El documento no se pudo leer: vuelve a escanearlo                |
+  | `incomplete`      | Faltan páginas o partes del documento: vuelve a subirlo completo |
+  | `expired`         | El documento está vencido: sube uno vigente                      |
+  | `data_mismatch`   | Los datos del documento no coinciden con los de tu perfil        |
+  | `not_recent`      | El comprobante no es reciente: sube uno de los últimos 3 meses   |
+  | `income_mismatch` | El ingreso declarado no coincide con el comprobante              |
+  | `wrong_document`  | El archivo no corresponde al documento pedido                    |
+
+  Los textos son provisionales hasta que UX y Legal los revisen.
+
+- **Nota interna (`note`):** solo queda en la auditoría.
+- **Ingreso corregido:** al aprobar un comprobante de ingresos, `monthlyIncome` (unidades menores) reemplaza al declarado si el documento dice otro. Es el que usa el límite mensual. En otro tipo de documento responde `INCOME_ADJUSTMENT_NOT_ALLOWED` (422).
+- **Una sola decisión:** si dos personas resuelven el mismo documento a la vez, solo una lo logra; la otra recibe `KYC_ALREADY_REVIEWED` (409) con el estado que quedó.
+- **`superseded`:** la persona envió después otro documento del mismo tipo; conviene revisar el más nuevo.
+- **Sin step-up (supuesto):** aprobar o rechazar no exige autenticación reciente, para no frenar la cola. Se puede exigir si Seguridad lo pide.
+- **Quién lo resolvió:** queda en `reviewedBy` (el id del personal) y en la auditoría.
+
+Errores: `KYC_REVIEW_NOT_FOUND` y `KYC_PAGE_NOT_FOUND` (404), además de los comunes.
+
 ## Auditoría
 
 Cada acción marcada con `@StaffAudited` queda en `staff_audit_log`, de solo inserción (un trigger rechaza `UPDATE`, `DELETE` y `TRUNCATE`):

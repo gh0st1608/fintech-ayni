@@ -28,6 +28,17 @@ export class SimulatedDocumentStorage implements DocumentStoragePort {
   exists(): Promise<boolean> {
     return Promise.resolve(true);
   }
+
+  presignDownload(props: {
+    key: string;
+    expiresInSeconds: number;
+  }): Promise<{ url: string; expiresAt: Date }> {
+    const expiresAt = new Date(this.now().getTime() + props.expiresInSeconds * 1000);
+    return Promise.resolve({
+      url: `https://documents.simulated.ayni/${props.key}?download=1&expires=${expiresAt.getTime()}`,
+      expiresAt,
+    });
+  }
 }
 
 /**

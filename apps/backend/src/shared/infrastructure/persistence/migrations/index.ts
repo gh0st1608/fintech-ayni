@@ -19,6 +19,7 @@ import { CreateUserPasscodes1763121600000 } from './1763121600000-create-user-pa
 import { AddCircleStartApproval1763208000000 } from './1763208000000-add-circle-start-approval';
 import { AddStartProposalRound1763294400000 } from './1763294400000-add-start-proposal-round';
 import { CreateStaffAuditLog1763380800000 } from './1763380800000-create-staff-audit-log';
+import { AddKycReview1763467200000 } from './1763467200000-add-kyc-review';
 
 /** Migraciones en orden. Se listan explícitamente: el build no depende de globs. */
 export const MIGRATIONS = [
@@ -43,4 +44,5 @@ export const MIGRATIONS = [
   AddCircleStartApproval1763208000000,
   AddStartProposalRound1763294400000,
   CreateStaffAuditLog1763380800000,
+  AddKycReview1763467200000,
 ];

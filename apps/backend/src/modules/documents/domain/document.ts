@@ -1,4 +1,4 @@
-import { DomainError, ValidationError } from '../../../shared/errors/app-error';
+import { ConflictError, DomainError, ValidationError } from '../../../shared/errors/app-error';
 
 /** Para qué se sube un archivo (COPAYNI-43). */
 export const UPLOAD_PURPOSES = [
@@ -48,5 +48,36 @@ export function assertUploadable(contentType: string, sizeBytes: number): void {
   }
   if (!Number.isInteger(sizeBytes) || sizeBytes < 1 || sizeBytes > MAX_UPLOAD_BYTES) {
     throw new InvalidUploadError('sizeBytes');
+  }
+}
+
+/**
+ * Motivos de rechazo de la revisión manual (docs/backoffice-plan.md, fase 2). El personal elige un
+ * código y la app muestra este texto para que la persona corrija y reenvíe: nadie escribe texto
+ * libre que llegue al usuario. Provisional hasta que UX y Legal revisen los textos.
+ */
+export const REJECTION_REASONS = {
+  illegible: 'El documento no se pudo leer: vuelve a escanearlo',
+  incomplete: 'Faltan páginas o partes del documento: vuelve a subirlo completo',
+  expired: 'El documento está vencido: sube uno vigente',
+  data_mismatch: 'Los datos del documento no coinciden con los de tu perfil',
+  not_recent: 'El comprobante no es reciente: sube uno de los últimos 3 meses',
+  income_mismatch: 'El ingreso declarado no coincide con el comprobante',
+  wrong_document: 'El archivo no corresponde al documento pedido',
+} as const;
+export type RejectionReason = keyof typeof REJECTION_REASONS;
+export const REJECTION_REASON_CODES = Object.keys(REJECTION_REASONS) as RejectionReason[];
+
+/** La revisión ya la resolvió otra persona: no se pisa su decisión. */
+export class KycAlreadyReviewedError extends ConflictError {
+  constructor(status: DocumentStatus) {
+    super('KYC_ALREADY_REVIEWED', 'Este documento ya fue revisado', { status });
+  }
+}
+
+/** El ajuste del ingreso solo aplica al comprobante de ingresos. */
+export class IncomeAdjustmentNotAllowedError extends DomainError {
+  constructor() {
+    super('INCOME_ADJUSTMENT_NOT_ALLOWED', 'Solo el comprobante de ingresos tiene un ingreso');
   }
 }
