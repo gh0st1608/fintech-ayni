@@ -94,6 +94,22 @@ Para soporte (fase 2 de [backoffice-plan.md](../backoffice-plan.md)). Roles: `su
 
 Errores: `USER_NOT_FOUND` (404), además de los comunes.
 
+## Finanzas (solo lectura)
+
+Fase 3 de [backoffice-plan.md](../backoffice-plan.md). Roles: `finance` y `super_admin`. **Ninguno mueve dinero:** registrar el capital semilla o una corrección espera la doble aprobación (BO6).
+
+| Endpoint                                                            | Qué hace                                                                                                                      |
+| ------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| `GET /admin/v1/finance/installments?status=&period=&limit=&cursor=` | Cuotas del vencimiento más reciente al más antiguo, con `totals` (cantidad y suma por estado y moneda). `period` es `AAAA-MM` |
+| `GET /admin/v1/finance/payouts?limit=&cursor=`                      | Pozos entregados, del más reciente al más antiguo                                                                             |
+| `GET /admin/v1/finance/guarantee-fund?limit=&cursor=`               | `balances` por moneda (saldo, círculos en curso, `minimum` y `belowMinimum`) y los movimientos del fondo                      |
+
+- **Estados de cuota:** `pending`, `paid`, `overdue`, `defaulted`, `retained` y `deducted`, como en el ciclo mensual.
+- **Persona:** solo `userId` y el nombre enmascarado; finanzas no necesita email ni teléfono.
+- **Mínimo del fondo:** `GUARANTEE_FUND_MIN_INSTALLMENTS_PER_CIRCLE` cuotas base por círculo en curso (R18), la misma regla que la alerta del backend.
+- **Movimientos:** importe positivo entra al fondo y negativo sale. `reason` solo viene en los movimientos manuales (`seed_capital`, `adjustment`).
+- **Datos simulados:** mientras el ciclo use `CIRCLE_PAYMENTS_ADAPTER=fake` y la tarea diaria siga apagada en prd, estas vistas muestran lo que haya en la base, sin conciliar contra la pasarela.
+
 ## Auditoría
 
 Cada acción marcada con `@StaffAudited` queda en `staff_audit_log`, de solo inserción (un trigger rechaza `UPDATE`, `DELETE` y `TRUNCATE`):

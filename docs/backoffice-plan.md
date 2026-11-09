@@ -135,7 +135,7 @@ El código ya define 5 roles. Propuesta para el MVP, sin agregar roles hasta que
 
 **Endpoints de la fase 3 [I]:**
 
-- `GET /admin/v1/guarantee-fund` y `/movements`
+- **[H] Implementado, solo lectura:** `GET /admin/v1/finance/installments`, `/payouts` y `/guarantee-fund` ([admin.md](api/admin.md#finanzas-solo-lectura)). Lo que mueve dinero sigue pendiente de BO6
 - `POST /admin/v1/guarantee-fund/movements` (propone) y `POST /admin/v1/approvals/:id/approve`
 - `GET /admin/v1/installments?status=`, `GET /admin/v1/payouts?status=`
 - `GET /admin/v1/delinquency` (en gracia, expulsados, deudas y devoluciones)
