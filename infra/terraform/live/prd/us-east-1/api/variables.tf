@@ -110,3 +110,18 @@ variable "circle_cycle_enabled" {
   type        = bool
   default     = false
 }
+
+variable "otp_messaging" {
+  description = "Envío real del OTP (modules/otp-messaging): email con SES, SMS con End User Messaging SMS, o ambos. Vacío: sin envío."
+  type = object({
+    email = optional(object({
+      domain          = string
+      from_address    = string
+      route53_zone_id = optional(string)
+    }))
+    sms = optional(object({
+      origination_identity_arn = string
+    }))
+  })
+  default = {}
+}
