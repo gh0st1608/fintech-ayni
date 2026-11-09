@@ -14,7 +14,8 @@ const MAX_EMAIL_LENGTH = 254;
 
 /**
  * Email o teléfono con el que el usuario se identifica para recibir el OTP.
- * El teléfono se exige en formato internacional hasta que exista selector de país (pending-scope D14).
+ * El teléfono llega en formato internacional: la pantalla completa el número local con el país
+ * elegido (`toInternational`, pending-scope D14).
  */
 export class LoginIdentifier {
   private constructor(

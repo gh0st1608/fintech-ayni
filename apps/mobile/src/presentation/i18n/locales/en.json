@@ -302,12 +302,12 @@
         "email": "New email",
         "phone": "New phone number"
       },
-      "phonePlaceholder": "+51 987 654 321",
+      "phonePlaceholder": "987 654 321",
       "explain": "We'll send a code to the new contact to confirm it's yours.",
       "sendCode": "Send code",
       "invalid": {
         "email": "Check the email.",
-        "phone": "Enter the phone with the country code (+51…)."
+        "phone": "Check the phone number."
       },
       "same": "This is the same contact you already have.",
       "codeSent": "Enter the code we sent to {{destination}}.",
@@ -356,8 +356,10 @@
       "subtitle": "Please enter your email or phone to continue.",
       "identifierLabel": "Email/Phone",
       "identifierPlaceholder": "Enter your Email or Phone",
-      "invalidIdentifier": "Enter a valid email or a phone number with country code (e.g. +51 987 654 321).",
-      "legal": "By clicking Continue, you agree to {{appName}} <terms>Terms of Use</terms> and <privacy>Privacy Policy</privacy>."
+      "invalidIdentifier": "Enter a valid email or your phone number.",
+      "legal": "By clicking Continue, you agree to {{appName}} <terms>Terms of Use</terms> and <privacy>Privacy Policy</privacy>.",
+      "phoneCountry": "Phone from {{flag}} {{country}} ({{code}})",
+      "changeCountry": "Change country"
     },
     "verifyOtp": {
       "title": "Verify OTP",
@@ -684,5 +686,25 @@
       "text": "Send an invitation to your friends and you'll both get a <amount>{{amount}}</amount> discount.",
       "label": "Invite your friends: you'll both get a {{amount}} discount"
     }
+  },
+  "countries": {
+    "PE": "Peru",
+    "AR": "Argentina",
+    "BO": "Bolivia",
+    "BR": "Brazil",
+    "CL": "Chile",
+    "CO": "Colombia",
+    "EC": "Ecuador",
+    "MX": "Mexico",
+    "PY": "Paraguay",
+    "UY": "Uruguay",
+    "VE": "Venezuela",
+    "US": "United States",
+    "ES": "Spain"
+  },
+  "countryPicker": {
+    "title": "Choose the country",
+    "button": "Phone country: {{country}} ({{code}}). Tap to change it",
+    "close": "Close"
   }
 }

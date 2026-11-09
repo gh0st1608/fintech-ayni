@@ -8,4 +8,10 @@ export class ExpoDeviceLocale implements DeviceLocalePort {
       .map((locale) => locale.languageCode)
       .filter((code): code is string => !!code);
   }
+
+  preferredRegionCodes(): string[] {
+    return getLocales()
+      .map((locale) => locale.regionCode)
+      .filter((code): code is string => !!code);
+  }
 }

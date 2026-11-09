@@ -72,6 +72,7 @@ import {
   ListSavingPlansUseCase,
 } from '@/application/savings/usecases/savingUseCases';
 import { ChangeLanguageUseCase } from '@/application/i18n/usecases/ChangeLanguageUseCase';
+import { ResolveDefaultCountryUseCase } from '@/application/auth/usecases/ResolveDefaultCountryUseCase';
 import { ResolveLanguageUseCase } from '@/application/i18n/usecases/ResolveLanguageUseCase';
 import { SyncLanguagePreferenceUseCase } from '@/application/i18n/usecases/SyncLanguagePreferenceUseCase';
 import type { AuthApiPort } from '@/domain/auth/ports/AuthApiPort';
@@ -374,6 +375,7 @@ export function createContainer(
       selectPayoutMethod: new SelectPayoutMethodUseCase(adapters.payoutMethods),
     },
     i18n: {
+      resolveCountry: new ResolveDefaultCountryUseCase(adapters.deviceLocale),
       resolveLanguage: new ResolveLanguageUseCase(
         adapters.languagePreference,
         adapters.deviceLocale,

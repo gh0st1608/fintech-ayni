@@ -15,6 +15,17 @@ describe('ExpoDeviceLocale', () => {
       ] as unknown as ReturnType<typeof getLocales>);
     expect(new ExpoDeviceLocale().preferredLanguageCodes()).toEqual(['en', 'es']);
   });
+
+  it('devuelve las regiones en orden y omite las nulas', () => {
+    jest
+      .mocked(getLocales)
+      .mockReturnValueOnce([
+        { regionCode: 'CL' },
+        { regionCode: null },
+        { regionCode: 'PE' },
+      ] as unknown as ReturnType<typeof getLocales>);
+    expect(new ExpoDeviceLocale().preferredRegionCodes()).toEqual(['CL', 'PE']);
+  });
 });
 
 describe('ReactNativeLayoutDirection', () => {

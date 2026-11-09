@@ -1,14 +1,17 @@
 import { useState } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
-import { Linking, StyleSheet, View } from 'react-native';
+import { Linking, Pressable, StyleSheet, View } from 'react-native';
 
 import type { AuthChallenge } from '@/domain/auth/AuthChallenge';
+import { looksLikeLocalPhone, toInternational } from '@/domain/auth/countries';
 import { LoginIdentifier } from '@/domain/auth/value-objects/LoginIdentifier';
 import { errorMessage } from '@/presentation/i18n/errorMessageKey';
 import { useContainer } from '@/presentation/providers/ContainerProvider';
 import { AppText } from '@/presentation/shared/components/AppText';
 import { Button } from '@/presentation/shared/components/Button';
+import { CountrySheet, useCountry } from '@/presentation/shared/components/CountrySheet';
 import { FieldError } from '@/presentation/shared/components/FieldError';
+import { flagEmoji } from '@/presentation/shared/components/PhoneInput';
 import { TextField } from '@/presentation/shared/components/TextField';
 import { colors, spacing } from '@/presentation/theme/tokens';
 
@@ -50,10 +53,17 @@ export function SignInScreen({ onChallengeStarted }: SignInScreenProps) {
   const startAuthentication = useStartAuthentication();
   const [identifier, setIdentifier] = useState('');
   const [submitted, setSubmitted] = useState(false);
+  const [country, setCountry] = useCountry();
+  const [pickingCountry, setPickingCountry] = useState(false);
+
+  // Un número local (sin "+") se completa con el código del país elegido (D14).
+  const localPhone = looksLikeLocalPhone(identifier);
+  const resolved = localPhone ? toInternational(country, identifier) : identifier;
+  const countryLabel = t(`countries.${country.regionCode}`);
 
   // Tras el primer intento, el error del campo se recalcula en vivo con la regla del dominio.
   const fieldError =
-    submitted && !LoginIdentifier.isValid(identifier)
+    submitted && !LoginIdentifier.isValid(resolved)
       ? t('auth.signIn.invalidIdentifier')
       : undefined;
   const requestError = startAuthentication.error
@@ -63,8 +73,8 @@ export function SignInScreen({ onChallengeStarted }: SignInScreenProps) {
   const submit = () => {
     if (startAuthentication.isPending) return;
     setSubmitted(true);
-    if (!LoginIdentifier.isValid(identifier)) return;
-    startAuthentication.mutate(identifier, { onSuccess: onChallengeStarted });
+    if (!LoginIdentifier.isValid(resolved)) return;
+    startAuthentication.mutate(resolved, { onSuccess: onChallengeStarted });
   };
 
   return (
@@ -105,6 +115,32 @@ export function SignInScreen({ onChallengeStarted }: SignInScreenProps) {
             onSubmitEditing={submit}
             editable={!startAuthentication.isPending}
           />
+          {localPhone && (
+            <View style={styles.countryRow}>
+              <AppText variant="caption" color={colors.neutral700}>
+                {t('auth.signIn.phoneCountry', {
+                  flag: flagEmoji(country.regionCode),
+                  country: countryLabel,
+                  code: country.callingCode,
+                })}
+              </AppText>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={t('countryPicker.button', {
+                  country: countryLabel,
+                  code: country.callingCode,
+                })}
+                onPress={() => setPickingCountry(true)}
+                disabled={startAuthentication.isPending}
+                hitSlop={8}
+                testID="sign-in-country"
+              >
+                <AppText variant="caption" weight="semibold" color={colors.primary}>
+                  {t('auth.signIn.changeCountry')}
+                </AppText>
+              </Pressable>
+            </View>
+          )}
           <Button
             label={t('common.continue')}
             onPress={submit}
@@ -124,6 +160,12 @@ export function SignInScreen({ onChallengeStarted }: SignInScreenProps) {
           }}
         />
       </AppText>
+      <CountrySheet
+        visible={pickingCountry}
+        selected={country}
+        onSelect={setCountry}
+        onClose={() => setPickingCountry(false)}
+      />
     </AuthSheet>
   );
 }
@@ -135,4 +177,12 @@ const styles = StyleSheet.create({
   fields: { gap: spacing.l },
   legal: { lineHeight: 20 },
   link: { textDecorationLine: 'underline' },
+  countryRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.sm,
+    marginTop: -spacing.sm,
+  },
 });
