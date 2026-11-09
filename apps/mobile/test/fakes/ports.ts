@@ -83,10 +83,17 @@ export class InMemoryLanguagePreference implements LanguagePreferencePort {
 }
 
 export class FakeDeviceLocale implements DeviceLocalePort {
-  constructor(public codes: string[] = ['es']) {}
+  constructor(
+    public codes: string[] = ['es'],
+    public regions: string[] = ['PE'],
+  ) {}
 
   preferredLanguageCodes() {
     return this.codes;
+  }
+
+  preferredRegionCodes() {
+    return this.regions;
   }
 }
 
