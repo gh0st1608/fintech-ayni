@@ -119,12 +119,12 @@ describe('aprobación del inicio de un círculo incompleto', () => {
 
     expect((await circleRow(id)).cycle_state).toBe('approving');
     const [proposal] = await proposals.listFor(members[1]!.userId);
-    expect(proposal).toMatchObject({ circleId: id, position: 2, decision: null });
+    expect(proposal).toMatchObject({ circleId: id, round: 1, position: 2, decision: null });
     expect(proposal?.proposed.months).toBe(4);
     expect(proposal?.proposed.payout.amount).toBe(400_000);
     expect(proposal?.respondBy.toString()).toBe('2026-11-09');
 
-    for (const { userId } of members) await proposals.respond(id, userId, 'accepted');
+    for (const { userId } of members) await proposals.respond(id, userId, 'accepted', 1);
     await runOn('2026-11-03');
 
     expect(await circleRow(id)).toEqual({
@@ -144,9 +144,9 @@ describe('aprobación del inicio de un círculo incompleto', () => {
     const { id, members } = await partialCircle([1, 2, 4]);
     const runOn = job(id);
     await runOn('2026-11-02');
-    await proposals.respond(id, members[0]!.userId, 'accepted');
-    await proposals.respond(id, members[1]!.userId, 'accepted');
-    await proposals.respond(id, members[2]!.userId, 'withdrawn');
+    await proposals.respond(id, members[0]!.userId, 'accepted', 1);
+    await proposals.respond(id, members[1]!.userId, 'accepted', 1);
+    await proposals.respond(id, members[2]!.userId, 'withdrawn', 1);
     await runOn('2026-11-03');
 
     expect((await circleRow(id)).cycle_state).toBe('approving');
@@ -156,6 +156,10 @@ describe('aprobación del inicio de un círculo incompleto', () => {
     const [proposal] = await proposals.listFor(members[0]!.userId);
     expect(proposal?.proposed.months).toBe(2);
     expect(proposal?.decision).toBeNull();
+    expect(proposal?.round).toBe(2);
+    await expect(proposals.respond(id, members[0]!.userId, 'accepted', 1)).rejects.toMatchObject({
+      code: 'START_PROPOSAL_CHANGED',
+    });
     await expect(proposals.listFor(members[2]!.userId)).resolves.toEqual([]);
   });
 
@@ -163,8 +167,8 @@ describe('aprobación del inicio de un círculo incompleto', () => {
     const { id, members } = await partialCircle([1, 2]);
     const runOn = job(id);
     await runOn('2026-11-02');
-    await proposals.respond(id, members[0]!.userId, 'withdrawn');
-    await proposals.respond(id, members[1]!.userId, 'withdrawn');
+    await proposals.respond(id, members[0]!.userId, 'withdrawn', 1);
+    await proposals.respond(id, members[1]!.userId, 'withdrawn', 1);
     await runOn('2026-11-03');
 
     expect((await circleRow(id)).cycle_state).toBe('cancelled');
@@ -180,7 +184,7 @@ describe('aprobación del inicio de un círculo incompleto', () => {
     const { id } = await partialCircle([1, 2]);
     await job(id)('2026-11-02');
     const stranger = await insertTestUser(dataSource);
-    await expect(proposals.respond(id, stranger, 'accepted')).rejects.toMatchObject({
+    await expect(proposals.respond(id, stranger, 'accepted', 1)).rejects.toMatchObject({
       code: 'START_PROPOSAL_NOT_FOUND',
     });
   });

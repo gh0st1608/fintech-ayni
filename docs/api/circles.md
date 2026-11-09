@@ -461,14 +461,15 @@ Si llega el mes de inicio y faltan miembros, el círculo pasa a `approving` y la
 
 Los descuentos de referidos ya aplicados a una membresía no se trasladan al precio nuevo: pendiente de definir. El aviso es la propuesta en la app, porque todavía no hay notificaciones (D6).
 
-| Método y ruta                                           | Respuesta   | Errores                                                                                    |
-| ------------------------------------------------------- | ----------- | ------------------------------------------------------------------------------------------ |
-| `GET /v1/me/circles/start-proposals`                    | `{ items }` | `UNAUTHORIZED` (401)                                                                       |
-| `POST /v1/me/circles/:circleId/start-proposal/accept`   | 204         | `START_PROPOSAL_NOT_FOUND` (404), `START_PROPOSAL_EXPIRED` (422), `SLOT_NOT_ALLOWED` (422) |
-| `POST /v1/me/circles/:circleId/start-proposal/withdraw` | 204         | `START_PROPOSAL_NOT_FOUND` (404), `START_PROPOSAL_EXPIRED` (422)                           |
+| Método y ruta                                           | Cuerpo      | Respuesta   | Errores                                                                                                                                         |
+| ------------------------------------------------------- | ----------- | ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| `GET /v1/me/circles/start-proposals`                    | —           | `{ items }` | `UNAUTHORIZED` (401)                                                                                                                            |
+| `POST /v1/me/circles/:circleId/start-proposal/accept`   | `{ round }` | 204         | `VALIDATION_ERROR` (400), `START_PROPOSAL_NOT_FOUND` (404), `START_PROPOSAL_CHANGED` (409), `START_PROPOSAL_EXPIRED` y `SLOT_NOT_ALLOWED` (422) |
+| `POST /v1/me/circles/:circleId/start-proposal/withdraw` | `{ round }` | 204         | `VALIDATION_ERROR` (400), `START_PROPOSAL_NOT_FOUND` (404), `START_PROPOSAL_CHANGED` (409), `START_PROPOSAL_EXPIRED` (422)                      |
 
-Cada ítem trae `circleId`, `current` y `proposed` (`payout`, `baseInstallment`, `months`), `position`, `slotType`, `netPayout`, `firstInstallment`, `totalPaid`, `respondBy` y `decision` (`accepted`, `withdrawn` o `null`).
+Cada ítem trae `circleId`, `round`, `current` y `proposed` (`payout`, `baseInstallment`, `months`), `position`, `slotType`, `netPayout`, `firstInstallment`, `totalPaid`, `respondBy` y `decision` (`accepted`, `withdrawn` o `null`).
 
+- **Ronda:** cada ronda nueva (cuando alguien sale) incrementa `round`. La respuesta trae la ronda que vio el miembro; si ya cambió, responde `START_PROPOSAL_CHANGED` (409) y la app carga las condiciones nuevas. Así nadie acepta un pozo o un turno que no vio.
 - Se puede cambiar de opinión hasta el plazo.
 - Aceptar vuelve a validar la regla de confianza con el turno nuevo (COPAYNI-60). Quien no puede tomarlo solo puede retirarse.
 - Retirarse no tiene penalidad: nada se cobró todavía.

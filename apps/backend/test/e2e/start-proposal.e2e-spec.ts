@@ -67,10 +67,11 @@ describe('/v1/me/circles/.../start-proposal', () => {
       request(app.getHttpServer())
         .get('/v1/me/circles/start-proposals')
         .set('Authorization', `Bearer ${token}`),
-    respond: (circleId: string, action: 'accept' | 'withdraw') =>
+    respond: (circleId: string, action: 'accept' | 'withdraw', round = 1) =>
       request(app.getHttpServer())
         .post(`/v1/me/circles/${circleId}/start-proposal/${action}`)
-        .set('Authorization', `Bearer ${token}`),
+        .set('Authorization', `Bearer ${token}`)
+        .send({ round }),
   });
 
   it('muestra las condiciones actuales, las nuevas y su turno', async () => {
@@ -89,6 +90,7 @@ describe('/v1/me/circles/.../start-proposal', () => {
           baseInstallment: { amount: 100000, currency: 'PEN' },
           months: 2,
         },
+        round: 1,
         position: 1,
         respondBy: '2026-11-09',
         decision: null,
@@ -110,6 +112,28 @@ describe('/v1/me/circles/.../start-proposal', () => {
     const circleId = await approvingCircle(userId, '2026-11-09', 4);
     const response = await api(token).respond(circleId, 'accept').expect(422);
     expect(response.body.error.code).toBe('SLOT_NOT_ALLOWED');
+  });
+
+  it('rechaza una respuesta a una ronda que ya cambió', async () => {
+    const { token, userId } = await signIn();
+    const circleId = await approvingCircle(userId);
+    await app
+      .get(DataSource)
+      .query('UPDATE circle_start_proposals SET round = 2 WHERE circle_id = $1', [circleId]);
+    const response = await api(token).respond(circleId, 'withdraw', 1).expect(409);
+    expect(response.body.error.code).toBe('START_PROPOSAL_CHANGED');
+    await api(token).respond(circleId, 'withdraw', 2).expect(204);
+  });
+
+  it('exige la ronda en la respuesta', async () => {
+    const { token, userId } = await signIn();
+    const circleId = await approvingCircle(userId);
+    const response = await request(app.getHttpServer())
+      .post(`/v1/me/circles/${circleId}/start-proposal/accept`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({})
+      .expect(400);
+    expect(response.body.error.code).toBe('VALIDATION_ERROR');
   });
 
   it('rechaza una respuesta fuera de plazo', async () => {

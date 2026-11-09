@@ -88,7 +88,8 @@ async function saveStartApproval(manager: EntityManager, cycle: CircleCycle): Pr
       `INSERT INTO circle_start_proposals (circle_id, payout_amount, months, respond_by)
        VALUES ($1, $2, $3, $4)
        ON CONFLICT (circle_id) DO UPDATE SET payout_amount = EXCLUDED.payout_amount,
-         months = EXCLUDED.months, respond_by = EXCLUDED.respond_by, created_at = now()`,
+         months = EXCLUDED.months, respond_by = EXCLUDED.respond_by, created_at = now(),
+         round = circle_start_proposals.round + 1`,
       [
         circleId,
         startProposal.terms.payout.amount,

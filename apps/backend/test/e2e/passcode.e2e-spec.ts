@@ -86,6 +86,27 @@ describe('/v1/me/passcode', () => {
     await api.verify('123456').expect(204);
   });
 
+  it('intentos simultáneos no comparan más candidatos que el límite', async () => {
+    const api = authed(await signIn());
+    await api.set({ newPasscode: '123456' }).expect(204);
+
+    const responses = await Promise.all(Array.from({ length: 8 }, () => api.verify('000000')));
+    const statuses = responses.map(({ status }) => status);
+    expect(statuses.filter((status) => status === 422)).toHaveLength(5);
+    expect(statuses.filter((status) => status === 429)).toHaveLength(3);
+    await api.verify('123456').expect(429);
+  });
+
+  it('dos creaciones simultáneas no se sobrescriben', async () => {
+    const api = authed(await signIn());
+    const [first, second] = await Promise.all([
+      api.set({ newPasscode: '111111' }),
+      api.set({ newPasscode: '222222' }),
+    ]);
+    expect([first.status, second.status].sort()).toEqual([204, 422]);
+    await api.verify(first.status === 204 ? '111111' : '222222').expect(204);
+  });
+
   it('un acierto reinicia los fallos', async () => {
     const api = authed(await signIn());
     await api.set({ newPasscode: '123456' }).expect(204);

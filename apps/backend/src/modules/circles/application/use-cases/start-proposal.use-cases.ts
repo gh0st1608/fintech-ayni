@@ -16,12 +16,14 @@ import {
   type MemberStartProposal,
 } from '../ports/start-proposals.port';
 import { CIRCLE_CYCLE, type CircleCycleSettings } from './cycle-settings';
+import { startProposalChanged } from './start-proposal-errors';
 import { SLOT_PRICING } from './get-available-slots.use-case';
 import { TRUST_SETTINGS, trustProfileOf, type TrustSettings } from './trust';
 
 /** Lo que ve un miembro para decidir (COPAYNI-62). */
 export interface StartProposalView {
   circleId: string;
+  round: number;
   current: CircleTerms;
   proposed: CircleTerms;
   quote: SlotQuote;
@@ -41,6 +43,7 @@ export class ListStartProposalsUseCase {
     const proposals = await this.proposals.listFor(userId);
     return proposals.map((proposal) => ({
       circleId: proposal.circleId,
+      round: proposal.round,
       current: proposal.current,
       proposed: proposal.proposed,
       quote: this.pricing.quote(proposal.proposed, proposal.position),
@@ -53,7 +56,8 @@ export class ListStartProposalsUseCase {
 /**
  * `POST /v1/me/circles/:circleId/start-proposal/accept` y `/withdraw`. Se puede cambiar de opinión
  * hasta el plazo. Para aceptar, se vuelve a validar la regla de confianza con el turno nuevo
- * (COPAYNI-60): quien no puede tomarlo solo puede retirarse. Retirarse no tiene penalidad.
+ * (COPAYNI-60): quien no puede tomarlo solo puede retirarse. Retirarse no tiene penalidad. La
+ * respuesta trae la ronda que vio el miembro: si otra salida ya abrió una ronda nueva, se rechaza.
  */
 @Injectable()
 export class RespondStartProposalUseCase {
@@ -69,7 +73,12 @@ export class RespondStartProposalUseCase {
     @Inject(CLOCK) private readonly clock: ClockPort,
   ) {}
 
-  async execute({ userId }: Principal, circleId: string, decision: StartDecision): Promise<void> {
+  async execute(
+    { userId }: Principal,
+    circleId: string,
+    decision: StartDecision,
+    round: number,
+  ): Promise<void> {
     const proposal = (await this.proposals.listFor(userId)).find(
       (candidate) => candidate.circleId === circleId,
     );
@@ -83,9 +92,16 @@ export class RespondStartProposalUseCase {
     if (proposal.respondBy.isBefore(today)) {
       throw new DomainError('START_PROPOSAL_EXPIRED', 'El plazo para responder ya venció');
     }
+    if (proposal.round !== round) throw startProposalChanged();
     if (decision === 'accepted') await this.assertTrusted(userId, proposal);
-    await this.proposals.respond(circleId, userId, decision);
-    this.logger.log({ event: 'circles.cycle.start_response', circleId, userId, decision });
+    await this.proposals.respond(circleId, userId, decision, round);
+    this.logger.log({
+      event: 'circles.cycle.start_response',
+      circleId,
+      userId,
+      decision,
+      round,
+    });
   }
 
   private async assertTrusted(userId: string, proposal: MemberStartProposal): Promise<void> {

@@ -75,6 +75,8 @@ Número de 6 dígitos, opcional, que sirve como método alternativo para desbloq
 | `PUT /v1/me/passcode`         | `{ currentPasscode?, newPasscode }` | 204                      | `VALIDATION_ERROR` (400), `PASSCODE_INVALID` (422), `RATE_LIMITED` (429)                      |
 | `POST /v1/me/passcode/verify` | `{ passcode }`                      | 204                      | `VALIDATION_ERROR` (400), `PASSCODE_INVALID` y `PASSCODE_NOT_SET` (422), `RATE_LIMITED` (429) |
 
+- **Concurrencia:** las verificaciones y los cambios del passcode de un mismo usuario se procesan de a uno. Intentos simultáneos no comparan más candidatos que el límite, y dos creaciones simultáneas no se pisan: la segunda debe presentar el passcode actual.
+
 - `currentPasscode` es obligatorio si ya existe uno. Si falta, responde `PASSCODE_INVALID` y cuenta como fallo.
 - `PASSCODE_INVALID` incluye `details.attemptsRemaining`.
 - Tras `PASSCODE_MAX_ATTEMPTS` fallos seguidos (5), el passcode se bloquea `PASSCODE_LOCK_SECONDS` (15 minutos) y responde `RATE_LIMITED` con `Retry-After`. Un acierto reinicia la cuenta.

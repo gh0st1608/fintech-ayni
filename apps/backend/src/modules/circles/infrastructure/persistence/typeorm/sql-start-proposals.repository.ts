@@ -6,6 +6,7 @@ import { LocalDate } from '../../../../../shared/domain/value-objects/local-date
 import { Money } from '../../../../../shared/domain/value-objects/money';
 import { Period } from '../../../../../shared/domain/value-objects/period';
 import { NotFoundError } from '../../../../../shared/errors/app-error';
+import { startProposalChanged } from '../../../application/use-cases/start-proposal-errors';
 import { isUuid } from '../../../../../shared/infrastructure/persistence/postgres-errors';
 import {
   type CircleStartProposalsPort,
@@ -16,6 +17,7 @@ import { CircleTerms } from '../../../domain/value-objects/circle-terms';
 
 interface ProposalRow {
   circle_id: string;
+  round: number;
   payout_amount: string;
   proposed_payout: string;
   currency: string;
@@ -34,7 +36,7 @@ export class SqlStartProposalsRepository implements CircleStartProposalsPort {
   async listFor(userId: string): Promise<MemberStartProposal[]> {
     if (!isUuid(userId)) return [];
     const rows = await this.dataSource.query<ProposalRow[]>(
-      `SELECT c.id AS circle_id, c.payout_amount::text AS payout_amount, c.currency, c.months,
+      `SELECT c.id AS circle_id, p.round, c.payout_amount::text AS payout_amount, c.currency, c.months,
               p.payout_amount::text AS proposed_payout, p.months AS proposed_months,
               to_char(c.starts_on, 'YYYY-MM') AS starts_on,
               to_char(p.respond_by, 'YYYY-MM-DD') AS respond_by, r.decision
@@ -60,6 +62,7 @@ export class SqlStartProposalsRepository implements CircleStartProposalsPort {
     const startsOn = Period.parse(row.starts_on);
     return {
       circleId: row.circle_id,
+      round: row.round,
       current: CircleTerms.create({
         payout: Money.of(Number(row.payout_amount), row.currency),
         months: row.months,
@@ -76,12 +79,13 @@ export class SqlStartProposalsRepository implements CircleStartProposalsPort {
     };
   }
 
-  respond(circleId: string, userId: string, decision: StartDecision): Promise<void> {
+  respond(circleId: string, userId: string, decision: StartDecision, round: number): Promise<void> {
     return this.dataSource.transaction(async (manager) => {
       await manager.query('SELECT pg_advisory_xact_lock(hashtextextended($1, 0))', [circleId]);
-      const [open] = await manager.query<{ id: string }[]>(
-        `SELECT c.id FROM circles c
+      const [open] = await manager.query<{ round: number }[]>(
+        `SELECT p.round FROM circles c
            JOIN circle_memberships m ON m.circle_id = c.id
+           JOIN circle_start_proposals p ON p.circle_id = c.id
           WHERE c.id = $1 AND c.cycle_state = 'approving' AND m.user_id = $2`,
         [circleId, userId],
       );
@@ -91,6 +95,8 @@ export class SqlStartProposalsRepository implements CircleStartProposalsPort {
           'START_PROPOSAL_NOT_FOUND',
         );
       }
+      // Bajo el bloqueo: la tarea diaria pudo abrir otra ronda después de que el miembro la vio.
+      if (open.round !== round) throw startProposalChanged();
       await manager.query(
         `INSERT INTO circle_start_responses (circle_id, user_id, decision) VALUES ($1, $2, $3)
          ON CONFLICT (circle_id, user_id)

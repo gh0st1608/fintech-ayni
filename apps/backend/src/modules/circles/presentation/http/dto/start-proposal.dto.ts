@@ -1,4 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { IsInt, Max, Min } from 'class-validator';
 
 import { type StartProposalView } from '../../../application/use-cases/start-proposal.use-cases';
 import { START_DECISIONS, type StartDecision } from '../../../domain/services/start-approval';
@@ -21,9 +22,21 @@ class StartTermsResponse {
   months!: number;
 }
 
+/** Cuerpo de accept y withdraw: la ronda que vio el miembro. */
+export class RespondStartProposalRequest {
+  @ApiProperty({ example: 1, description: 'Ronda de la propuesta que se responde' })
+  @IsInt()
+  @Min(1)
+  @Max(1000)
+  round!: number;
+}
+
 export class StartProposalResponse {
   @ApiProperty({ format: 'uuid' })
   circleId!: string;
+
+  @ApiProperty({ example: 1, description: 'Ronda vigente; cambia si alguien sale' })
+  round!: number;
 
   @ApiProperty({ type: StartTermsResponse, description: 'Las condiciones con las que se unió' })
   current!: StartTermsResponse;
@@ -60,6 +73,7 @@ export class StartProposalResponse {
     });
     return {
       circleId: view.circleId,
+      round: view.round,
       current: terms(view.current),
       proposed: terms(view.proposed),
       position: view.quote.position,

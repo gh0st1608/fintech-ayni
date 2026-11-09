@@ -1,4 +1,5 @@
 import {
+  Body,
   Controller,
   Get,
   HttpCode,
@@ -12,6 +13,7 @@ import {
 import {
   ApiBadRequestResponse,
   ApiBearerAuth,
+  ApiConflictResponse,
   ApiNoContentResponse,
   ApiNotFoundResponse,
   ApiOkResponse,
@@ -28,7 +30,11 @@ import {
   RespondStartProposalUseCase,
 } from '../../../application/use-cases/start-proposal.use-cases';
 import { MyCirclesQuery, MyCirclesResponse } from '../dto/my-circles.dto';
-import { StartProposalResponse, StartProposalsResponse } from '../dto/start-proposal.dto';
+import {
+  RespondStartProposalRequest,
+  StartProposalResponse,
+  StartProposalsResponse,
+} from '../dto/start-proposal.dto';
 
 @ApiTags('circles')
 @ApiBearerAuth()
@@ -56,26 +62,34 @@ export class MyCirclesController {
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiNoContentResponse({ description: 'Respuesta guardada' })
   @ApiNotFoundResponse({ description: 'Sin propuesta para el usuario (START_PROPOSAL_NOT_FOUND)' })
+  @ApiConflictResponse({
+    description: 'Otra ronda reemplazó la propuesta (START_PROPOSAL_CHANGED)',
+  })
   @ApiUnprocessableEntityResponse({ description: 'START_PROPOSAL_EXPIRED o SLOT_NOT_ALLOWED' })
   @ApiUnauthorizedResponse({ description: 'Sin token o token inválido (UNAUTHORIZED)' })
   async accept(
     @CurrentPrincipal() principal: Principal,
     @Param('circleId', ParseUUIDPipe) circleId: string,
+    @Body() body: RespondStartProposalRequest,
   ): Promise<void> {
-    await this.respondProposal.execute(principal, circleId, 'accepted');
+    await this.respondProposal.execute(principal, circleId, 'accepted', body.round);
   }
 
   @Post(':circleId/start-proposal/withdraw')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiNoContentResponse({ description: 'Respuesta guardada. Sale sin penalidad al resolverse' })
   @ApiNotFoundResponse({ description: 'Sin propuesta para el usuario (START_PROPOSAL_NOT_FOUND)' })
+  @ApiConflictResponse({
+    description: 'Otra ronda reemplazó la propuesta (START_PROPOSAL_CHANGED)',
+  })
   @ApiUnprocessableEntityResponse({ description: 'START_PROPOSAL_EXPIRED' })
   @ApiUnauthorizedResponse({ description: 'Sin token o token inválido (UNAUTHORIZED)' })
   async withdraw(
     @CurrentPrincipal() principal: Principal,
     @Param('circleId', ParseUUIDPipe) circleId: string,
+    @Body() body: RespondStartProposalRequest,
   ): Promise<void> {
-    await this.respondProposal.execute(principal, circleId, 'withdrawn');
+    await this.respondProposal.execute(principal, circleId, 'withdrawn', body.round);
   }
 
   @Get()
