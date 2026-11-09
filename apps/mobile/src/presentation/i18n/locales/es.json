@@ -684,5 +684,9 @@
       "text": "Envía una invitación a tus amigos y ambos tendrán <amount>{{amount}}</amount> de descuento.",
       "label": "Invita a tus amigos: ambos tendrán {{amount}} de descuento"
     }
+  },
+  "connectivity": {
+    "offline": "Sin conexión. Lo que ves puede no estar al día.",
+    "retry": "Reintentar"
   }
 }
