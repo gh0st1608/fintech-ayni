@@ -227,6 +227,51 @@ describe('validateEnvironment', () => {
       );
     });
 
+    it('el envío real del OTP es opcional y por canal (pending-scope T6)', () => {
+      expect(validateEnvironment(REQUIRED).OTP_DELIVERY).toBe('none');
+      expect(
+        validateEnvironment({
+          ...REQUIRED,
+          OTP_DELIVERY: 'aws',
+          OTP_EMAIL_FROM: 'Ayni <no-reply@ayni.pe>',
+          OTP_SES_CONFIGURATION_SET: 'ayni-prd-otp',
+        }),
+      ).toMatchObject({ OTP_DELIVERY: 'aws', OTP_EMAIL_FROM: 'Ayni <no-reply@ayni.pe>' });
+      expect(
+        validateEnvironment({
+          ...PRODUCTION,
+          OTP_DELIVERY: 'aws',
+          OTP_SMS_ORIGINATION_IDENTITY:
+            'arn:aws:sms-voice:us-east-1:111122223333:phone-number/phone-abc123',
+        }).OTP_SMS_ORIGINATION_IDENTITY,
+      ).toMatch(/^arn:aws:sms-voice/);
+    });
+
+    it('rechaza el envío real sin ningún canal, con el código fijo o con datos inválidos', () => {
+      expect(() => validateEnvironment({ ...REQUIRED, OTP_DELIVERY: 'aws' })).toThrow(
+        /OTP_DELIVERY: aws requiere OTP_EMAIL_FROM/,
+      );
+      expect(() =>
+        validateEnvironment({
+          ...REQUIRED,
+          OTP_DELIVERY: 'aws',
+          OTP_EMAIL_FROM: 'no-reply@ayni.pe',
+          OTP_DEV_CODE: '1234',
+        }),
+      ).toThrow(/OTP_DEV_CODE: no se admite con OTP_DELIVERY=aws/);
+      expect(() => validateEnvironment({ ...REQUIRED, OTP_DELIVERY: 'sns' })).toThrow(
+        /OTP_DELIVERY/,
+      );
+      for (const from of ['no-es-un-email', 'Ayni <no-reply@ayni.pe', 'a@b.pe\r\nBcc: x@y.pe']) {
+        expect(() => validateEnvironment({ ...REQUIRED, OTP_EMAIL_FROM: from })).toThrow(
+          /OTP_EMAIL_FROM/,
+        );
+      }
+      expect(() =>
+        validateEnvironment({ ...REQUIRED, OTP_SMS_ORIGINATION_IDENTITY: 'phone abc' }),
+      ).toThrow(/OTP_SMS_ORIGINATION_IDENTITY/);
+    });
+
     it('los pagos simulados del ciclo mensual nunca se admiten en production (COPAYNI-56)', () => {
       expect(validateEnvironment({ ...REQUIRED, CIRCLE_PAYMENTS_ADAPTER: 'fake' })).toMatchObject({
         CIRCLE_PAYMENTS_ADAPTER: 'fake',

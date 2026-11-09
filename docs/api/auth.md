@@ -5,9 +5,10 @@
 - La app mobile ya la consume:
   - `AuthApiRepository` usa el backend real.
   - `InMemoryAuthApi` es el adaptador falso de dev.
-- **Envío del OTP pendiente (pending-scope T6):** no hay proveedor de SMS ni email.
-  - Sin proveedor, `start` y `resend` responden **503**.
-  - En desarrollo, `OTP_DEV_CODE` fija el código y no se envía nada. Está prohibido en production.
+- **Envío del OTP (pending-scope T6):** email con Amazon SES y SMS con AWS End User Messaging SMS (`OTP_DELIVERY=aws`).
+  - Cada canal se activa con su configuración. Un canal sin proveedor, o un envío que falla, responde **503** en `start` y `resend`: nunca se da por enviado un código que no salió.
+  - Todavía no está activo en prd: falta el dominio remitente y registrar la identidad de SMS ([modules/otp-messaging](../../infra/terraform/modules/otp-messaging/README.md)).
+  - En desarrollo, `OTP_DEV_CODE` fija el código y no se envía nada. Está prohibido en production y junto con `OTP_DELIVERY=aws`.
 - El access token es un JWT **ES256** (claims `sub`, `iss`, `aud`, `iat`, `exp`; cabecera con `kid`).
 
 Todas las respuestas usan el contrato común del backend:
