@@ -22,7 +22,7 @@ import { colors, spacing } from '@/presentation/theme/tokens';
 export function LockScreen() {
   const { t } = useTranslation();
   const { unlockWithBiometrics, unlockWithPasscode, getPasscodeStatus } = useContainer().auth;
-  const { completeSignIn, signOut } = useSession();
+  const { unlock, signOut } = useSession();
   const failures = useRef(0);
   const [failed, setFailed] = useState(false);
   const [fallback, setFallback] = useState(false);
@@ -35,7 +35,7 @@ export function LockScreen() {
   });
   const verifyPasscode = useMutation({
     mutationFn: () => unlockWithPasscode.execute(passcode),
-    onSuccess: () => completeSignIn('authenticated'),
+    onSuccess: unlock,
   });
 
   const attempt = useCallback(
@@ -51,7 +51,7 @@ export function LockScreen() {
     (result: UnlockResult) => {
       setBusy(false);
       if (result.status === 'unlocked') {
-        completeSignIn('authenticated');
+        unlock();
       } else if (result.status === 'fallback') {
         setFallback(true);
       } else {
@@ -59,7 +59,7 @@ export function LockScreen() {
         failures.current = result.failures;
       }
     },
-    [completeSignIn],
+    [unlock],
   );
 
   useEffect(() => {
@@ -115,6 +115,8 @@ export function LockScreen() {
         <Button
           label={t('auth.locked.useCode')}
           variant={passcodeStatus.data ? 'secondary' : 'primary'}
+          // No se cierra la sesión con una verificación del passcode en curso.
+          disabled={verifyPasscode.isPending}
           onPress={() => void signOut()}
         />
       ) : (

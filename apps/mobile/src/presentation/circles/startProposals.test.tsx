@@ -1,4 +1,4 @@
-import { fireEvent, screen, waitFor } from '@testing-library/react-native';
+import { fireEvent, screen, waitFor, within } from '@testing-library/react-native';
 
 import type { StartProposal } from '@/domain/circles/StartProposal';
 import { AppError } from '@/domain/shared/errors/AppError';
@@ -13,6 +13,7 @@ const pen = (amount: number) => Money.of(amount, 'PEN');
 
 const PROPOSAL: StartProposal = {
   circleId: 'c-1',
+  round: 1,
   current: { payout: pen(3_000_000), baseInstallment: pen(300_000), months: 10 },
   proposed: { payout: pen(2_100_000), baseInstallment: pen(300_000), months: 7 },
   position: 3,
@@ -26,7 +27,8 @@ const PROPOSAL: StartProposal = {
 function setup(proposals: StartProposal[] = [PROPOSAL]) {
   const circleMembership = new InMemoryCircleMembershipRepository({
     latencyMs: 0,
-    startProposals: proposals,
+    // Copias: el repositorio en memoria modifica las propuestas al responder.
+    startProposals: proposals.map((proposal) => ({ ...proposal })),
   });
   return { circleMembership, ...createTestContainer({ circleMembership }) };
 }
@@ -69,6 +71,45 @@ describe('StartProposals (COPAYNI-62)', () => {
     await waitFor(() =>
       expect(container.circleMembership.startProposals[0]?.decision).toBe('withdrawn'),
     );
+  });
+
+  it('si otra salida cambió la ronda, lo explica y carga las condiciones nuevas', async () => {
+    const container = setup();
+    await render(container);
+    await screen.findByTestId('start-proposal-c-1');
+    // La tarea diaria abre la ronda 2 con un integrante menos mientras la tarjeta sigue abierta.
+    container.circleMembership.startProposals[0] = {
+      ...PROPOSAL,
+      decision: null,
+      round: 2,
+      proposed: { ...PROPOSAL.proposed, months: 6 },
+    };
+
+    await fireEvent.press(screen.getByRole('button', { name: 'Aceptar' }));
+    expect(await screen.findByText(/Las condiciones cambiaron/)).toBeOnTheScreen();
+    await waitFor(() =>
+      expect(screen.getByTestId('start-proposal-c-1')).toHaveTextContent(/Integrantes.*6/),
+    );
+    expect(container.circleMembership.startProposals[0]?.decision).toBeNull();
+  });
+
+  it('si no carga, lo avisa con un reintento', async () => {
+    const container = setup();
+    const list = jest
+      .spyOn(container.circleMembership, 'listStartProposals')
+      .mockRejectedValue(new AppError('business', 'down'));
+    await render(container);
+    expect(await screen.findByText(/No pudimos cargar las propuestas/)).toBeOnTheScreen();
+
+    list.mockRestore();
+    await fireEvent.press(screen.getByRole('button', { name: 'Reintentar' }));
+    expect(await screen.findByTestId('start-proposal-c-1')).toBeOnTheScreen();
+  });
+
+  it('las propuestas están dentro del contenido desplazable', async () => {
+    await render(setup());
+    const list = await screen.findByTestId('my-circles-list');
+    expect(within(list).getByTestId('start-proposal-c-1')).toBeOnTheScreen();
   });
 
   it('avisa si no pudo guardar la respuesta', async () => {

@@ -11,6 +11,8 @@ export interface StartTerms {
 /** Propuesta de empezar reducido un círculo que no se llenó (COPAYNI-62). */
 export interface StartProposal {
   circleId: string;
+  /** Ronda que vio el usuario: cambia si alguien sale y se proponen condiciones nuevas. */
+  round: number;
   current: StartTerms;
   proposed: StartTerms;
   /** Turno en el círculo reducido. */

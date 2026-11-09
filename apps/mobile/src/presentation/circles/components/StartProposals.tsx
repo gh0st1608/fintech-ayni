@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { StyleSheet, View } from 'react-native';
 
 import type { StartDecision, StartProposal } from '@/domain/circles/StartProposal';
+import { AppError } from '@/domain/shared/errors/AppError';
 import { useFormatDate } from '@/presentation/formatters/formatDate';
 import { useFormatMoney } from '@/presentation/formatters/formatMoney';
 import { errorMessage } from '@/presentation/i18n/errorMessageKey';
@@ -14,22 +15,47 @@ import { colors, spacing } from '@/presentation/theme/tokens';
 
 import { myCirclesQueryKey } from '../useMyCircles';
 
-const START_PROPOSALS_KEY = ['circles', 'start-proposals'] as const;
+export const START_PROPOSALS_KEY = ['circles', 'start-proposals'] as const;
+
+/** La propuesta es el único aviso y no responder es retirarse: se recarga al volver a la pantalla. */
+export function useRefreshStartProposals(): () => Promise<void> {
+  const queryClient = useQueryClient();
+  return () => queryClient.invalidateQueries({ queryKey: START_PROPOSALS_KEY });
+}
+
+const changed = (error: unknown) => error instanceof AppError && error.kind === 'conflict';
 
 /**
  * Círculos que no se llenaron y esperan la respuesta del usuario (COPAYNI-62). Sin diseño en el
- * Figma: se armó con los componentes existentes.
+ * Figma: se armó con los componentes existentes. Un error de carga se muestra con reintento, sin
+ * ocultar las propuestas que ya estaban en caché.
  */
 export function StartProposals() {
+  const { t } = useTranslation();
   const { circles } = useContainer();
   const proposals = useQuery({
     queryKey: START_PROPOSALS_KEY,
     queryFn: ({ signal }) => circles.listStartProposals.execute(signal),
   });
-  if (!proposals.data?.length) return null;
+  const items = proposals.data ?? [];
+  if (!proposals.isError && items.length === 0) return null;
   return (
-    <View style={styles.list}>
-      {proposals.data.map((proposal) => (
+    <View style={styles.list} testID="start-proposals">
+      {proposals.isError && (
+        <View style={styles.error}>
+          <AppText accessibilityRole="alert" color={colors.error}>
+            {t('circles.startProposal.loadError', { reason: errorMessage(t, proposals.error) })}
+          </AppText>
+          <Button
+            label={t('common.retry')}
+            variant="secondary"
+            loading={proposals.isFetching}
+            onPress={() => void proposals.refetch()}
+          />
+        </View>
+      )}
+      {items.map((proposal) => (
+        // Por círculo, no por ronda: al llegar una ronda nueva la tarjeta conserva el aviso del cambio.
         <StartProposalCard key={proposal.circleId} proposal={proposal} />
       ))}
     </View>
@@ -42,14 +68,17 @@ function StartProposalCard({ proposal }: { proposal: StartProposal }) {
   const queryClient = useQueryClient();
   const formatMoney = useFormatMoney();
   const formatDate = useFormatDate();
+  const refresh = () =>
+    Promise.all([
+      queryClient.invalidateQueries({ queryKey: START_PROPOSALS_KEY }),
+      queryClient.invalidateQueries({ queryKey: myCirclesQueryKey('active') }),
+    ]);
   const respond = useMutation({
     mutationFn: (decision: StartDecision) =>
-      circles.respondStartProposal.execute(proposal.circleId, decision),
-    onSuccess: () =>
-      Promise.all([
-        queryClient.invalidateQueries({ queryKey: START_PROPOSALS_KEY }),
-        queryClient.invalidateQueries({ queryKey: myCirclesQueryKey('active') }),
-      ]),
+      circles.respondStartProposal.execute(proposal, decision),
+    onSuccess: refresh,
+    // Otra salida abrió una ronda nueva: se cargan las condiciones nuevas para decidir otra vez.
+    onError: (error) => (changed(error) ? refresh() : undefined),
   });
   const { current, proposed, decision } = proposal;
 
@@ -91,7 +120,9 @@ function StartProposalCard({ proposal }: { proposal: StartProposal }) {
       )}
       {respond.isError && (
         <AppText accessibilityRole="alert" color={colors.error}>
-          {errorMessage(t, respond.error)}
+          {changed(respond.error)
+            ? t('circles.startProposal.changed')
+            : errorMessage(t, respond.error)}
         </AppText>
       )}
       <View style={styles.actions}>
@@ -114,7 +145,8 @@ function StartProposalCard({ proposal }: { proposal: StartProposal }) {
 }
 
 const styles = StyleSheet.create({
-  list: { gap: spacing.sm, marginBottom: spacing.m },
+  list: { gap: spacing.sm },
+  error: { gap: spacing.xs },
   card: { gap: spacing.xs },
   row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   actions: { gap: spacing.xs, marginTop: spacing.xs },

@@ -229,7 +229,9 @@
       "decision": {
         "accepted": "You accepted.",
         "withdrawn": "You withdrew."
-      }
+      },
+      "loadError": "We couldn't load the start proposals: {{reason}}",
+      "changed": "The terms changed because someone left the circle. Review the new proposal."
     }
   },
   "saving": {

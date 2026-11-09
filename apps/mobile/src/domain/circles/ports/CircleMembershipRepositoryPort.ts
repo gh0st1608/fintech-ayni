@@ -17,5 +17,6 @@ export interface CircleMembershipRepositoryPort {
   ): Promise<MyCirclesPage>;
   /** Círculos incompletos que esperan la respuesta del usuario (COPAYNI-62). */
   listStartProposals(signal?: AbortSignal): Promise<StartProposal[]>;
-  respondStartProposal(circleId: string, decision: StartDecision): Promise<void>;
+  /** Responde a la ronda que vio el usuario; si cambió, falla con `START_PROPOSAL_CHANGED`. */
+  respondStartProposal(circleId: string, decision: StartDecision, round: number): Promise<void>;
 }

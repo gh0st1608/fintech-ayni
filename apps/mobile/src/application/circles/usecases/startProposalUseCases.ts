@@ -12,7 +12,10 @@ export class ListStartProposalsUseCase {
 export class RespondStartProposalUseCase {
   constructor(private readonly repository: CircleMembershipRepositoryPort) {}
 
-  execute(circleId: string, decision: StartDecision): Promise<void> {
-    return this.repository.respondStartProposal(circleId, decision);
+  execute(
+    proposal: Pick<StartProposal, 'circleId' | 'round'>,
+    decision: StartDecision,
+  ): Promise<void> {
+    return this.repository.respondStartProposal(proposal.circleId, decision, proposal.round);
   }
 }

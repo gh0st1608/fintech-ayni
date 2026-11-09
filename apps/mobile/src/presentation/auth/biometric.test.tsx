@@ -1,5 +1,5 @@
 import { act, fireEvent, screen, waitFor } from '@testing-library/react-native';
-import { AppState, Text } from 'react-native';
+import { AppState, Pressable, Text } from 'react-native';
 
 import { RELOCK_AFTER_MS } from '@/application/auth/usecases/biometricUseCases';
 import { AuthTokens } from '@/domain/auth/value-objects/AuthTokens';
@@ -66,10 +66,52 @@ describe('LockScreen (COPAYNI-22)', () => {
     expect(await screen.findByRole('button', { name: 'Ingresar con código' })).toBeOnTheScreen();
   });
 
+  it('con el passcode verificándose no se puede salir con código', async () => {
+    const setup = lockedSetup(new FakeBiometricAuth('not_enrolled'));
+    setup.adapters.passcodes.value = '123456';
+    jest.spyOn(setup.adapters.passcodes, 'verify').mockReturnValue(new Promise(() => undefined));
+    await renderLock(setup);
+
+    await fireEvent.changeText(await screen.findByTestId('lock-passcode'), '123456');
+    await fireEvent.press(screen.getByRole('button', { name: 'Desbloquear con passcode' }));
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'Ingresar con código' })).toBeDisabled(),
+    );
+    expect(screen.getByTestId('status')).toHaveTextContent('locked');
+  });
+
   it('cancelar no cuenta como fallo', async () => {
     await renderLock(lockedSetup(new FakeBiometricAuth('available', ['cancelled'])));
     await waitFor(() => expect(screen.getByRole('button', { name: 'Desbloquear' })).toBeEnabled());
     expect(screen.queryByRole('alert')).toBeNull();
+  });
+});
+
+describe('desbloquear', () => {
+  /** Expone las transiciones de la sesión como botones. */
+  function SessionControls() {
+    const { unlock, signOut } = useSession();
+    return (
+      <>
+        <Status />
+        <Pressable accessibilityRole="button" onPress={() => void signOut()}>
+          <Text>salir</Text>
+        </Pressable>
+        <Pressable accessibilityRole="button" onPress={unlock}>
+          <Text>desbloquear</Text>
+        </Pressable>
+      </>
+    );
+  }
+
+  it('una verificación que llega después de cerrar la sesión no la reabre', async () => {
+    await renderWithProviders(<SessionControls />, lockedSetup(new FakeBiometricAuth()));
+    await waitFor(() => expect(screen.getByTestId('status')).toHaveTextContent('locked'));
+
+    await fireEvent.press(screen.getByRole('button', { name: 'salir' }));
+    await waitFor(() => expect(screen.getByTestId('status')).toHaveTextContent('unauthenticated'));
+    await fireEvent.press(screen.getByRole('button', { name: 'desbloquear' }));
+    expect(screen.getByTestId('status')).toHaveTextContent('unauthenticated');
   });
 });
 
@@ -108,6 +150,24 @@ describe('sesión bloqueada', () => {
 
     await waitFor(() => expect(screen.getByTestId('status')).toHaveTextContent(expected));
   });
+
+  it('si no puede leer la preferencia al volver de segundo plano, se bloquea', async () => {
+    const emit = captureAppState();
+    const setup = createTestContainer();
+    setup.adapters.tokenStorage.tokens = AuthTokens.create({ accessToken: 'a', refreshToken: 'r' });
+    await renderWithProviders(<Status />, setup);
+    await waitFor(() => expect(screen.getByTestId('status')).toHaveTextContent('authenticated'));
+    jest
+      .spyOn(setup.adapters.biometricPreference, 'isEnabled')
+      .mockRejectedValue(new Error('storage'));
+    const now = jest.spyOn(Date, 'now').mockReturnValue(1_000);
+
+    await act(async () => emit('background'));
+    now.mockReturnValue(1_000 + RELOCK_AFTER_MS);
+    await act(async () => emit('active'));
+
+    await waitFor(() => expect(screen.getByTestId('status')).toHaveTextContent('locked'));
+  });
 });
 
 describe('Enable Biometrics en el Perfil', () => {
@@ -129,6 +189,19 @@ describe('Enable Biometrics en el Perfil', () => {
       await screen.findByText('No pudimos verificarte. Inténtalo de nuevo.'),
     ).toBeOnTheScreen();
     expect(setup.adapters.biometricPreference.enabled).toBe(false);
+  });
+
+  it('si se borraron las huellas con la biometría activa, se puede apagar', async () => {
+    const setup = createTestContainer({
+      biometrics: new FakeBiometricAuth('not_enrolled'),
+      biometricPreference: new InMemoryBiometricPreference(true),
+    });
+    await renderWithProviders(<ProfileScreen />, setup);
+    const toggle = await screen.findByTestId('biometric-toggle');
+    expect(toggle).toBeChecked();
+    expect(toggle).toBeEnabled();
+    await fireEvent(toggle, 'valueChange', false);
+    await waitFor(() => expect(setup.adapters.biometricPreference.enabled).toBe(false));
   });
 
   it('sin biometría registrada el interruptor está deshabilitado y lo explica', async () => {

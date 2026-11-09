@@ -14,6 +14,10 @@ export const RELOCK_AFTER_MS = 5 * 60 * 1000;
 
 export interface BiometricStatus {
   availability: BiometricAvailability;
+  /**
+   * La preferencia guardada, aunque el sensor ya no esté disponible (p. ej. se borraron las
+   * huellas): la app sigue bloqueándose y el usuario debe poder desactivarla.
+   */
   enabled: boolean;
 }
 
@@ -28,7 +32,7 @@ export class GetBiometricStatusUseCase {
       this.biometrics.availability(),
       this.preference.isEnabled(),
     ]);
-    return { availability, enabled: enabled && availability === 'available' };
+    return { availability, enabled };
   }
 }
 
@@ -83,11 +87,15 @@ export class UnlockWithBiometricsUseCase {
   }
 }
 
-/** Decide si la app debe bloquearse al volver de segundo plano. */
+/**
+ * Decide si la app debe bloquearse al volver de segundo plano. Si no se puede leer la preferencia,
+ * se bloquea: es la misma incertidumbre que al restaurar la sesión, y ante ella se falla cerrado.
+ */
 export class ShouldRelockUseCase {
   constructor(private readonly preference: BiometricPreferencePort) {}
 
   async execute(backgroundMs: number): Promise<boolean> {
-    return backgroundMs >= RELOCK_AFTER_MS && (await this.preference.isEnabled());
+    if (backgroundMs < RELOCK_AFTER_MS) return false;
+    return this.preference.isEnabled().catch(() => true);
   }
 }

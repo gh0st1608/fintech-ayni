@@ -43,6 +43,7 @@ const startProposalsDto = z.object({
   items: z.array(
     z.object({
       circleId: z.string().min(1),
+      round: z.number().int().positive(),
       current: startTermsDto,
       proposed: startTermsDto,
       position: z.number().int().positive(),
@@ -149,8 +150,12 @@ export class CircleMembershipApiRepository implements CircleMembershipRepository
     }));
   }
 
-  async respondStartProposal(circleId: string, decision: StartDecision): Promise<void> {
+  async respondStartProposal(
+    circleId: string,
+    decision: StartDecision,
+    round: number,
+  ): Promise<void> {
     const action = decision === 'accepted' ? 'accept' : 'withdraw';
-    await this.http.post(`/me/circles/${circleId}/start-proposal/${action}`);
+    await this.http.post(`/me/circles/${circleId}/start-proposal/${action}`, { body: { round } });
   }
 }

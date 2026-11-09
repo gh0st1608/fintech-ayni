@@ -51,7 +51,8 @@ export function BiometricToggle() {
         description={availability === 'available' ? undefined : t(UNAVAILABLE_KEYS[availability])}
         value={enabled}
         onValueChange={(value) => toggle.mutate(value)}
-        disabled={availability !== 'available' || toggle.isPending}
+        // Sin sensor solo se puede apagar: la preferencia sigue bloqueando la app.
+        disabled={toggle.isPending || (availability !== 'available' && !enabled)}
         testID="biometric-toggle"
       />
       {rejected && (

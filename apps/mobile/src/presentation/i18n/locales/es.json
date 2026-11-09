@@ -229,7 +229,9 @@
       "decision": {
         "accepted": "Aceptaste.",
         "withdrawn": "Te retiraste."
-      }
+      },
+      "loadError": "No pudimos cargar las propuestas de inicio: {{reason}}",
+      "changed": "Las condiciones cambiaron porque alguien salió de la junta. Revisa la propuesta nueva."
     }
   },
   "saving": {

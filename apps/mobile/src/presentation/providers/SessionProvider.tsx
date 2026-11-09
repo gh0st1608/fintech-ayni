@@ -10,6 +10,11 @@ interface SessionContextValue {
   status: SessionStatus;
   /** Aplica el estado devuelto por un caso de uso que ya guardó la sesión (p. ej. VerifyOtp). */
   completeSignIn(status: SessionStatus): void;
+  /**
+   * Sale de `locked`. Si mientras tanto la sesión cambió (p. ej. se cerró), no hace nada: una
+   * verificación que responde tarde no puede reabrir el área privada.
+   */
+  unlock(): void;
   signOut(): Promise<void>;
 }
 
@@ -60,6 +65,11 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
 
   const completeSignIn = useCallback((next: SessionStatus) => setStatus(next), []);
 
+  const unlock = useCallback(
+    () => setStatus((current) => (current === 'locked' ? 'authenticated' : current)),
+    [],
+  );
+
   const signOut = useCallback(async () => {
     const next = await auth.signOut.execute();
     queryClient.clear();
@@ -67,8 +77,8 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   }, [auth.signOut, queryClient]);
 
   const value = useMemo(
-    () => ({ status, completeSignIn, signOut }),
-    [status, completeSignIn, signOut],
+    () => ({ status, completeSignIn, unlock, signOut }),
+    [status, completeSignIn, unlock, signOut],
   );
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;
 }

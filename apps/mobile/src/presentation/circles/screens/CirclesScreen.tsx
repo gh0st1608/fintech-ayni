@@ -1,6 +1,13 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ActivityIndicator, FlatList, RefreshControl, StyleSheet, View } from 'react-native';
+import {
+  ActivityIndicator,
+  FlatList,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  View,
+} from 'react-native';
 
 import { installmentFor, type MyCircle, type MyCircleStatus } from '@/domain/circles/MyCircle';
 import type { Money } from '@/domain/shared/value-objects/Money';
@@ -18,7 +25,7 @@ import { SegmentedTabs } from '@/presentation/shared/components/SegmentedTabs';
 import { colors, spacing } from '@/presentation/theme/tokens';
 
 import { RecommendedCircles } from '../components/RecommendedCircles';
-import { StartProposals } from '../components/StartProposals';
+import { StartProposals, useRefreshStartProposals } from '../components/StartProposals';
 import { useMyCircles } from '../useMyCircles';
 import type { JoinTarget } from '@/domain/circles/RecommendedCircle';
 
@@ -59,7 +66,6 @@ export function CirclesScreen({ onJoin, onJoinCircle }: CirclesScreenProps) {
       >
         {t('tabs.circles')}
       </AppText>
-      <StartProposals />
       <SegmentedTabs
         options={[
           { key: 'active', label: t('circles.tabs.active') },
@@ -82,18 +88,29 @@ function MyCirclesList({
 }: { status: MyCircleStatus } & CirclesScreenProps) {
   const { t } = useTranslation();
   const circles = useMyCircles(status);
+  const refreshProposals = useRefreshStartProposals();
+  const refresh = () => {
+    void circles.refetch();
+    void refreshProposals();
+  };
 
-  if (circles.isPending) {
-    return <ActivityIndicator accessibilityLabel={t('common.loading')} style={styles.center} />;
-  }
-  if (circles.isError && !circles.data) {
+  // Las propuestas de inicio (COPAYNI-62) van dentro del contenido desplazable, también mientras
+  // carga o falla la lista: con varias o con texto ampliado, todas deben poder alcanzarse.
+  if (circles.isPending || (circles.isError && !circles.data)) {
     return (
-      <View style={styles.center}>
-        <AppText accessibilityRole="alert" style={styles.centerText}>
-          {errorMessage(t, circles.error)}
-        </AppText>
-        <Button label={t('common.retry')} variant="secondary" onPress={() => circles.refetch()} />
-      </View>
+      <ScrollView contentContainerStyle={styles.list}>
+        <StartProposals />
+        {circles.isPending ? (
+          <ActivityIndicator accessibilityLabel={t('common.loading')} style={styles.center} />
+        ) : (
+          <View style={styles.center}>
+            <AppText accessibilityRole="alert" style={styles.centerText}>
+              {errorMessage(t, circles.error)}
+            </AppText>
+            <Button label={t('common.retry')} variant="secondary" onPress={refresh} />
+          </View>
+        )}
+      </ScrollView>
     );
   }
 
@@ -109,11 +126,14 @@ function MyCirclesList({
       contentContainerStyle={styles.list}
       testID="my-circles-list"
       ListHeaderComponent={
-        stale ? (
-          <AppText accessibilityRole="alert" color={colors.error}>
-            {t('circles.stale', { reason: errorMessage(t, circles.error) })}
-          </AppText>
-        ) : undefined
+        <View style={styles.header}>
+          <StartProposals />
+          {stale && (
+            <AppText accessibilityRole="alert" color={colors.error}>
+              {t('circles.stale', { reason: errorMessage(t, circles.error) })}
+            </AppText>
+          )}
+        </View>
       }
       ListEmptyComponent={
         status === 'active' ? (
@@ -146,7 +166,7 @@ function MyCirclesList({
       refreshControl={
         <RefreshControl
           refreshing={circles.isRefetching && !circles.isFetchingNextPage}
-          onRefresh={() => void circles.refetch()}
+          onRefresh={refresh}
         />
       }
     />
@@ -185,4 +205,5 @@ const styles = StyleSheet.create({
   centerText: { textAlign: 'center' },
   list: { flexGrow: 1, gap: spacing.l, paddingVertical: spacing.l },
   empty: { gap: spacing.xl },
+  header: { gap: spacing.m },
 });

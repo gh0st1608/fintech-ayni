@@ -76,11 +76,18 @@ export class InMemoryCircleMembershipRepository implements CircleMembershipRepos
     return this.startProposals.map((proposal) => ({ ...proposal }));
   }
 
-  async respondStartProposal(circleId: string, decision: StartDecision): Promise<void> {
+  async respondStartProposal(
+    circleId: string,
+    decision: StartDecision,
+    round: number,
+  ): Promise<void> {
     await simulateLatency(this.latencyMs);
     const proposal = this.startProposals.find((item) => item.circleId === circleId);
     if (!proposal) {
       throw new AppError('not_found', 'No proposal', { code: 'START_PROPOSAL_NOT_FOUND' });
+    }
+    if (proposal.round !== round) {
+      throw new AppError('conflict', 'Proposal changed', { code: 'START_PROPOSAL_CHANGED' });
     }
     proposal.decision = decision;
   }
