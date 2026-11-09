@@ -40,6 +40,14 @@ import {
 } from './presentation/http/controllers/mercadopago-webhook.controller';
 import { SetCirclePauseUseCase } from './application/use-cases/set-circle-pause.use-case';
 import { AdminCirclesController } from './presentation/http/controllers/admin-circles.controller';
+import { AdminFinanceController } from './presentation/http/controllers/admin-finance.controller';
+import { ADMIN_FINANCE_QUERY } from './application/ports/admin-finance-query.port';
+import {
+  GetGuaranteeFundUseCase,
+  ListInstallmentsUseCase,
+  ListPayoutsUseCase,
+} from './application/use-cases/admin-finance.use-cases';
+import { SqlAdminFinanceQuery } from './infrastructure/persistence/typeorm/sql-admin-finance.query';
 import { ADMIN_CIRCLES_QUERY } from './application/ports/admin-circles-query.port';
 import {
   GetAdminCircleUseCase,
@@ -115,6 +123,7 @@ import { MyCirclesController } from './presentation/http/controllers/my-circles.
     MyPaymentsController,
     MercadoPagoWebhookController,
     AdminCirclesController,
+    AdminFinanceController,
   ],
   providers: [
     GetJoinConfigUseCase,
@@ -219,6 +228,11 @@ import { MyCirclesController } from './presentation/http/controllers/my-circles.
     GetAdminCircleUseCase,
     SqlAdminCirclesQuery,
     { provide: ADMIN_CIRCLES_QUERY, useExisting: SqlAdminCirclesQuery },
+    // Finanzas del back-office, solo lectura (docs/backoffice-plan.md, fase 3).
+    ListInstallmentsUseCase,
+    ListPayoutsUseCase,
+    GetGuaranteeFundUseCase,
+    { provide: ADMIN_FINANCE_QUERY, useClass: SqlAdminFinanceQuery },
     // Regla de confianza por tipo de turno (COPAYNI-60, valores propuestos de R18).
     TypeOrmMemberHistory,
     { provide: MEMBER_HISTORY, useExisting: TypeOrmMemberHistory },

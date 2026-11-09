@@ -43,6 +43,73 @@ Con `oidc`:
 
 Errores: `UNAUTHORIZED` (401) sin token, con token inválido o sin autenticación reciente; `FORBIDDEN` (403) si el rol no alcanza; `VALIDATION_ERROR` (400); `CIRCLE_NOT_FOUND` (404).
 
+## Revisión manual del KYC
+
+Con `KYC_PROVIDER=manual`, cada documento queda `in_review` hasta que el personal lo resuelve (fase 2 de [backoffice-plan.md](../backoffice-plan.md)). Roles: `operations` y `super_admin`; soporte y finanzas no ven documentos.
+
+| Endpoint                                                 | Qué hace                                                                                                                                 |
+| -------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| `GET /admin/v1/kyc/reviews?status=&type=&limit=&cursor=` | La cola. `status` es `in_review` por defecto (del más antiguo al más nuevo); `approved` y `rejected` van del más reciente al más antiguo |
+| `GET /admin/v1/kyc/reviews/:id`                          | El documento, sus páginas (`pageFiles`) y la persona enmascarada                                                                         |
+| `GET /admin/v1/kyc/reviews/:id/pages/:page/url`          | URL de lectura de **60 s** para ver una página en el navegador. **Auditada** (`kyc.document.view`)                                       |
+| `POST /admin/v1/kyc/reviews/:id/approve`                 | `{ monthlyIncome?, note? }`. **Auditada** (`kyc.approve`)                                                                                |
+| `POST /admin/v1/kyc/reviews/:id/reject`                  | `{ reason, note? }`. **Auditada** (`kyc.reject`)                                                                                         |
+
+- **Motivo del rechazo:** `reason` es un código de un catálogo fijo; la persona ve su texto en la app para corregir y reenviar. El personal no escribe texto que llegue al usuario.
+
+  | Código            | Texto que ve la persona                                          |
+  | ----------------- | ---------------------------------------------------------------- |
+  | `illegible`       | El documento no se pudo leer: vuelve a escanearlo                |
+  | `incomplete`      | Faltan páginas o partes del documento: vuelve a subirlo completo |
+  | `expired`         | El documento está vencido: sube uno vigente                      |
+  | `data_mismatch`   | Los datos del documento no coinciden con los de tu perfil        |
+  | `not_recent`      | El comprobante no es reciente: sube uno de los últimos 3 meses   |
+  | `income_mismatch` | El ingreso declarado no coincide con el comprobante              |
+  | `wrong_document`  | El archivo no corresponde al documento pedido                    |
+
+  Los textos son provisionales hasta que UX y Legal los revisen.
+
+- **Nota interna (`note`):** solo queda en la auditoría.
+- **Ingreso corregido:** al aprobar un comprobante de ingresos, `monthlyIncome` (unidades menores) reemplaza al declarado si el documento dice otro. Es el que usa el límite mensual. En otro tipo de documento responde `INCOME_ADJUSTMENT_NOT_ALLOWED` (422).
+- **Una sola decisión:** si dos personas resuelven el mismo documento a la vez, solo una lo logra; la otra recibe `KYC_ALREADY_REVIEWED` (409) con el estado que quedó.
+- **`superseded`:** la persona envió después otro documento del mismo tipo; conviene revisar el más nuevo.
+- **Sin step-up (supuesto):** aprobar o rechazar no exige autenticación reciente, para no frenar la cola. Se puede exigir si Seguridad lo pide.
+- **Quién lo resolvió:** queda en `reviewedBy` (el id del personal) y en la auditoría.
+
+Errores: `KYC_REVIEW_NOT_FOUND` y `KYC_PAGE_NOT_FOUND` (404), además de los comunes.
+
+## Búsqueda de personas
+
+Para soporte (fase 2 de [backoffice-plan.md](../backoffice-plan.md)). Roles: `support`, `operations`, `finance` y `super_admin`.
+
+| Endpoint                      | Qué hace                                                                                                                                 |
+| ----------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| `GET /admin/v1/users?query=`  | Busca por **email completo**, **teléfono con código de país** (`+51…`, admite espacios y guiones) o **id**. **Auditada** (`user.search`) |
+| `GET /admin/v1/users/:userId` | Perfil, estado del último documento de cada tipo (`kyc`) y juntas (`circles`). **Auditada** (`user.view`)                                |
+
+- **Solo coincidencia exacta:** una búsqueda parcial (`rosa`, `987654321`) responde `VALIDATION_ERROR` con `details.query`. Así no se puede recorrer la base con datos personales.
+- **Enmascarado:** `name`, `email` y `phone` salen enmascarados, igual que en juntas.
+- **Auditoría sin el dato buscado:** la búsqueda queda registrada con el actor, pero sin el email ni el teléfono que se buscó.
+- `kyc` usa los mismos valores que `GET /v1/me/documents`: `not_submitted`, `in_review`, `approved` o `rejected`.
+
+Errores: `USER_NOT_FOUND` (404), además de los comunes.
+
+## Finanzas (solo lectura)
+
+Fase 3 de [backoffice-plan.md](../backoffice-plan.md). Roles: `finance` y `super_admin`. **Ninguno mueve dinero:** registrar el capital semilla o una corrección espera la doble aprobación (BO6).
+
+| Endpoint                                                            | Qué hace                                                                                                                      |
+| ------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| `GET /admin/v1/finance/installments?status=&period=&limit=&cursor=` | Cuotas del vencimiento más reciente al más antiguo, con `totals` (cantidad y suma por estado y moneda). `period` es `AAAA-MM` |
+| `GET /admin/v1/finance/payouts?limit=&cursor=`                      | Pozos entregados, del más reciente al más antiguo                                                                             |
+| `GET /admin/v1/finance/guarantee-fund?limit=&cursor=`               | `balances` por moneda (saldo, círculos en curso, `minimum` y `belowMinimum`) y los movimientos del fondo                      |
+
+- **Estados de cuota:** `pending`, `paid`, `overdue`, `defaulted`, `retained` y `deducted`, como en el ciclo mensual.
+- **Persona:** solo `userId` y el nombre enmascarado; finanzas no necesita email ni teléfono.
+- **Mínimo del fondo:** `GUARANTEE_FUND_MIN_INSTALLMENTS_PER_CIRCLE` cuotas base por círculo en curso (R18), la misma regla que la alerta del backend.
+- **Movimientos:** importe positivo entra al fondo y negativo sale. `reason` solo viene en los movimientos manuales (`seed_capital`, `adjustment`).
+- **Datos simulados:** mientras el ciclo use `CIRCLE_PAYMENTS_ADAPTER=fake` y la tarea diaria siga apagada en prd, estas vistas muestran lo que haya en la base, sin conciliar contra la pasarela.
+
 ## Auditoría
 
 Cada acción marcada con `@StaffAudited` queda en `staff_audit_log`, de solo inserción (un trigger rechaza `UPDATE`, `DELETE` y `TRUNCATE`):

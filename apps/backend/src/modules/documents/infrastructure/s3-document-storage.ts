@@ -1,4 +1,5 @@
 import {
+  GetObjectCommand,
   HeadObjectCommand,
   NotFound,
   PutObjectCommand,
@@ -84,6 +85,32 @@ export class S3DocumentStorage implements DocumentStoragePort {
       if (error instanceof NotFound || (error as { name?: string } | null)?.name === 'NotFound') {
         return false;
       }
+      throw new InfrastructureError('El almacenamiento de documentos no responde', error);
+    }
+  }
+
+  /**
+   * URL de lectura para el back-office, firmada con el endpoint público como la de subida. Pide
+   * mostrar el archivo en el navegador (`inline`) y que no quede en caché.
+   */
+  async presignDownload(props: {
+    key: string;
+    expiresInSeconds: number;
+  }): Promise<{ url: string; expiresAt: Date }> {
+    const expiresAt = new Date(this.now().getTime() + props.expiresInSeconds * 1000);
+    try {
+      const url = await getSignedUrl(
+        this.presigner,
+        new GetObjectCommand({
+          Bucket: this.options.bucket,
+          Key: props.key,
+          ResponseContentDisposition: 'inline',
+          ResponseCacheControl: 'no-store',
+        }),
+        { expiresIn: props.expiresInSeconds },
+      );
+      return { url, expiresAt };
+    } catch (error) {
       throw new InfrastructureError('El almacenamiento de documentos no responde', error);
     }
   }

@@ -148,3 +148,40 @@ run "sin_new_relic" {
     error_message = "Sin New Relic no se crea nada en New Relic ni se reenvían logs."
   }
 }
+
+# Envío real del OTP (pending-scope T6): apagado hasta definir el dominio remitente y registrar la
+# identidad de SMS. Sin él, la API responde 503 al pedir un código, nunca da uno por enviado.
+run "otp_sin_envio_por_defecto" {
+  command = plan
+
+  assert {
+    condition = (
+      !local.otp_enabled &&
+      !contains(keys(local.api_task_policies), "otp") &&
+      !contains(keys(local.api_environment), "OTP_DELIVERY")
+    )
+    error_message = "Sin otp_messaging no se crea nada ni se configura el envío."
+  }
+}
+
+run "otp_por_email_y_sms" {
+  command = plan
+
+  variables {
+    otp_messaging = {
+      email = { domain = "mail.ayni.pe", from_address = "Ayni <no-reply@mail.ayni.pe>" }
+      sms   = { origination_identity_arn = "arn:aws:sms-voice:us-east-1:123456789012:pool/pool-abc123" }
+    }
+  }
+
+  assert {
+    condition = (
+      local.otp_enabled &&
+      local.api_environment["OTP_DELIVERY"] == "aws" &&
+      local.api_environment["OTP_EMAIL_FROM"] == "Ayni <no-reply@mail.ayni.pe>" &&
+      local.api_environment["OTP_SMS_ORIGINATION_IDENTITY"] == "arn:aws:sms-voice:us-east-1:123456789012:pool/pool-abc123" &&
+      contains(keys(local.api_task_policies), "otp")
+    )
+    error_message = "Con email y SMS, la API recibe las variables del envío y el permiso para enviar."
+  }
+}

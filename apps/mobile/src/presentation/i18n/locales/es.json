@@ -302,12 +302,12 @@
         "email": "Email nuevo",
         "phone": "Teléfono nuevo"
       },
-      "phonePlaceholder": "+51 987 654 321",
+      "phonePlaceholder": "987 654 321",
       "explain": "Te enviaremos un código al dato nuevo para confirmar que es tuyo.",
       "sendCode": "Enviar código",
       "invalid": {
         "email": "Revisa el email.",
-        "phone": "Escribe el teléfono con el código de país (+51…)."
+        "phone": "Revisa el número de teléfono."
       },
       "same": "Es el mismo dato que ya tienes.",
       "codeSent": "Escribe el código que enviamos a {{destination}}.",
@@ -356,8 +356,10 @@
       "subtitle": "Ingresa tu email o teléfono para continuar.",
       "identifierLabel": "Email/Teléfono",
       "identifierPlaceholder": "Ingresa tu email o teléfono",
-      "invalidIdentifier": "Ingresa un email válido o un teléfono con código de país (p. ej. +51 987 654 321).",
-      "legal": "Al pulsar Continuar, aceptas los <terms>Términos de uso</terms> y la <privacy>Política de privacidad</privacy> de {{appName}}."
+      "invalidIdentifier": "Ingresa un email válido o tu número de teléfono.",
+      "legal": "Al pulsar Continuar, aceptas los <terms>Términos de uso</terms> y la <privacy>Política de privacidad</privacy> de {{appName}}.",
+      "phoneCountry": "Teléfono de {{flag}} {{country}} ({{code}})",
+      "changeCountry": "Cambiar país"
     },
     "verifyOtp": {
       "title": "Verificar código",
@@ -684,6 +686,26 @@
       "text": "Envía una invitación a tus amigos y ambos tendrán <amount>{{amount}}</amount> de descuento.",
       "label": "Invita a tus amigos: ambos tendrán {{amount}} de descuento"
     }
+  },
+  "countries": {
+    "PE": "Perú",
+    "AR": "Argentina",
+    "BO": "Bolivia",
+    "BR": "Brasil",
+    "CL": "Chile",
+    "CO": "Colombia",
+    "EC": "Ecuador",
+    "MX": "México",
+    "PY": "Paraguay",
+    "UY": "Uruguay",
+    "VE": "Venezuela",
+    "US": "Estados Unidos",
+    "ES": "España"
+  },
+  "countryPicker": {
+    "title": "Elige el país",
+    "button": "País del teléfono: {{country}} ({{code}}). Toca para cambiarlo",
+    "close": "Cerrar"
   },
   "connectivity": {
     "offline": "Sin conexión. Lo que ves puede no estar al día.",

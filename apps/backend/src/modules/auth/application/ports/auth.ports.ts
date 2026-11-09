@@ -79,8 +79,30 @@ export interface OtpHasherPort {
   matches(challengeId: string, code: string, codeHash: string): boolean;
 }
 
+/** Idiomas de los mensajes del código: los mismos que la app (es y en). */
+export const OTP_LANGUAGES = ['es', 'en'] as const;
+export type OtpLanguage = (typeof OTP_LANGUAGES)[number];
+
+/**
+ * Idioma del mensaje: la preferencia guardada de la persona, o el idioma con el que la app hizo la
+ * petición (`Accept-Language`), o español. Un idioma sin mensajes cae en español.
+ */
+export function resolveOtpLanguage(...candidates: (string | null | undefined)[]): OtpLanguage {
+  for (const candidate of candidates) {
+    const primary = candidate?.trim().toLowerCase().split(/[-_]/)[0];
+    const match = OTP_LANGUAGES.find((language) => language === primary);
+    if (match) return match;
+  }
+  return 'es';
+}
+
 export interface OtpSenderPort {
-  send(message: { channel: OtpChannel; destination: string; code: string }): Promise<void>;
+  send(message: {
+    channel: OtpChannel;
+    destination: string;
+    code: string;
+    language: OtpLanguage;
+  }): Promise<void>;
 }
 
 export interface AccessTokenIssuerPort {

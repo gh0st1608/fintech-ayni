@@ -1,4 +1,4 @@
-import { Body, Controller, HttpCode, HttpStatus, Inject, Post } from '@nestjs/common';
+import { Body, Controller, Headers, HttpCode, HttpStatus, Inject, Post } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
   ApiNoContentResponse,
@@ -51,8 +51,12 @@ export class AuthController {
   @ApiBadRequestResponse({ description: 'Formato inválido (VALIDATION_ERROR)' })
   @ApiTooManyRequestsResponse({ description: 'RATE_LIMITED, con Retry-After en segundos' })
   @ApiServiceUnavailableResponse({ description: 'Sin proveedor de envío de OTP' })
-  async start(@Body() body: StartAuthRequest): Promise<AuthChallengeResponse> {
-    return AuthChallengeResponse.from(await this.startAuth.execute(body));
+  async start(
+    @Body() body: StartAuthRequest,
+    // El idioma del mensaje del código, si la persona todavía no eligió uno (T6).
+    @Headers('accept-language') language?: string,
+  ): Promise<AuthChallengeResponse> {
+    return AuthChallengeResponse.from(await this.startAuth.execute({ ...body, language }));
   }
 
   @Post('verify')
@@ -70,8 +74,11 @@ export class AuthController {
   @ApiOkResponse({ type: AuthChallengeResponse, description: ENVELOPE })
   @ApiTooManyRequestsResponse({ description: 'Antes de resendAvailableAt o sin reenvíos' })
   @ApiNotFoundResponse({ description: 'Desafío inexistente' })
-  async resend(@Body() body: ResendOtpRequest): Promise<AuthChallengeResponse> {
-    return AuthChallengeResponse.from(await this.resendOtp.execute(body));
+  async resend(
+    @Body() body: ResendOtpRequest,
+    @Headers('accept-language') language?: string,
+  ): Promise<AuthChallengeResponse> {
+    return AuthChallengeResponse.from(await this.resendOtp.execute({ ...body, language }));
   }
 
   @Post('refresh')

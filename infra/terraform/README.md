@@ -23,6 +23,7 @@ infra/
     │   ├── network/                  VPC, subredes, NAT, endpoint S3, flow logs
     │   ├── ecr/                      repositorio de imágenes
     │   ├── documents-bucket/         S3 + KMS para documentos KYC
+    │   ├── otp-messaging/            envío del OTP: SES (email) y End User Messaging SMS
     │   ├── database/                 RDS PostgreSQL y sus grupos de logs
     │   ├── service-runtime/          ECS Fargate + ALB + autoescalado
     │   ├── api-domain/               certificado ACM + validación y alias en Route 53

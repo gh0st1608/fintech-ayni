@@ -14,8 +14,7 @@ import { VerifyOtpScreen } from './screens/VerifyOtpScreen';
 import { WelcomeScreen } from './screens/WelcomeScreen';
 
 const IDENTIFIER_LABEL = 'Email/Teléfono';
-const INVALID_IDENTIFIER =
-  'Ingresa un email válido o un teléfono con código de país (p. ej. +51 987 654 321).';
+const INVALID_IDENTIFIER = 'Ingresa un email válido o tu número de teléfono.';
 
 describe('WelcomeScreen', () => {
   it('muestra la bienvenida con la marca configurada y continúa al ingreso', async () => {
@@ -51,7 +50,7 @@ describe('SignInScreen', () => {
     const spy = jest.spyOn(setup.adapters.authApi, 'startAuthentication');
     await renderSignIn(setup);
 
-    await fireEvent.changeText(screen.getByLabelText(IDENTIFIER_LABEL), '987654321');
+    await fireEvent.changeText(screen.getByLabelText(IDENTIFIER_LABEL), 'ana@');
     await fireEvent.press(screen.getByRole('button', { name: 'Continuar' }));
 
     expect(screen.getByRole('alert')).toHaveTextContent(INVALID_IDENTIFIER);
@@ -60,6 +59,39 @@ describe('SignInScreen', () => {
     // Tras el primer intento, el error se recalcula en vivo.
     await fireEvent.changeText(screen.getByLabelText(IDENTIFIER_LABEL), '+51987654321');
     expect(screen.queryByText(INVALID_IDENTIFIER)).toBeNull();
+  });
+
+  it('un número local se completa con el país del dispositivo, y se puede cambiar (D14)', async () => {
+    const setup = createTestContainer();
+    const spy = jest.spyOn(setup.adapters.authApi, 'startAuthentication');
+    await renderSignIn(setup);
+
+    await fireEvent.changeText(screen.getByLabelText(IDENTIFIER_LABEL), 'ana@mail.com');
+    expect(screen.queryByTestId('sign-in-country')).toBeNull();
+
+    await fireEvent.changeText(screen.getByLabelText(IDENTIFIER_LABEL), '987 654 321');
+    expect(screen.getByText(/Teléfono de .* Perú \(\+51\)/)).toBeTruthy();
+
+    await fireEvent.press(screen.getByRole('button', { name: /País del teléfono: Perú/ }));
+    await fireEvent.press(await screen.findByTestId('country-option-AR'));
+    expect(screen.getByText(/Teléfono de .* Argentina \(\+54\)/)).toBeTruthy();
+
+    await fireEvent.changeText(screen.getByLabelText(IDENTIFIER_LABEL), '011 2345 6789');
+    await fireEvent.press(screen.getByRole('button', { name: 'Continuar' }));
+    await waitFor(() => expect(spy).toHaveBeenCalled());
+    expect(JSON.stringify(spy.mock.calls[0])).toContain('+541123456789');
+  });
+
+  it('con "+" el número ya trae su país: no se completa', async () => {
+    const setup = createTestContainer();
+    const spy = jest.spyOn(setup.adapters.authApi, 'startAuthentication');
+    await renderSignIn(setup);
+
+    await fireEvent.changeText(screen.getByLabelText(IDENTIFIER_LABEL), '+56 9 1234 5678');
+    expect(screen.queryByTestId('sign-in-country')).toBeNull();
+    await fireEvent.press(screen.getByRole('button', { name: 'Continuar' }));
+    await waitFor(() => expect(spy).toHaveBeenCalled());
+    expect(JSON.stringify(spy.mock.calls[0])).toContain('+56912345678');
   });
 
   it('con un formato válido pide el OTP una sola vez y entrega el desafío', async () => {

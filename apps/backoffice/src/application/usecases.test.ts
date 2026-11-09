@@ -1,9 +1,23 @@
 import { fillRatio, pauseActionFor } from '@/domain/circles/Circle';
 import { AppError } from '@/domain/shared/AppError';
 import { can, type StaffMember } from '@/domain/staff/Staff';
-import { circle, InMemoryCircles, InMemoryStaffAuth, NOW } from '@test/fakes';
+import {
+  circle,
+  InMemoryCircles,
+  InMemoryKyc,
+  InMemoryStaffAuth,
+  kycReview,
+  NOW,
+} from '@test/fakes';
 
-import { MAX_REASON_LENGTH, SetCirclePauseUseCase, SignInUseCase } from './usecases';
+import {
+  ApproveKycUseCase,
+  GetKycPageUrlUseCase,
+  MAX_REASON_LENGTH,
+  RejectKycUseCase,
+  SetCirclePauseUseCase,
+  SignInUseCase,
+} from './usecases';
 
 const staff = (roles: StaffMember['roles']): StaffMember => ({
   staffId: 's',
@@ -87,5 +101,72 @@ describe('SetCirclePauseUseCase', () => {
         'x'.repeat(MAX_REASON_LENGTH + 1),
       ),
     ).toThrow('hasta 500');
+  });
+});
+
+describe('revisión de KYC', () => {
+  it('solo operaciones y el admin general revisan documentos', () => {
+    expect(can({ roles: ['operations'] }, 'kyc.review')).toBe(true);
+    expect(can({ roles: ['super_admin'] }, 'kyc.review')).toBe(true);
+    expect(can({ roles: ['support', 'finance', 'admin'] }, 'kyc.review')).toBe(false);
+  });
+
+  it('aprueba con el ingreso corregido y la nota sin espacios; sin nota no la envía', async () => {
+    const review = kycReview({
+      type: 'proof_of_income',
+      monthlyIncome: { amount: 1, currency: 'PEN' },
+    });
+    const other = kycReview();
+    const kyc = new InMemoryKyc([review, other]);
+    const approve = new ApproveKycUseCase(kyc);
+    await approve.execute(staff(['operations']), review.id, {
+      monthlyIncome: 320_000,
+      note: '  ok ',
+    });
+    await approve.execute(staff(['operations']), other.id, { note: '   ' });
+    expect(kyc.approvals.map((item) => item.approval)).toEqual([
+      { monthlyIncome: 320_000, note: 'ok' },
+      {},
+    ]);
+  });
+
+  it('no aprueba sin el rol, con un ingreso inválido ni con una nota demasiado larga', () => {
+    const approve = new ApproveKycUseCase(new InMemoryKyc());
+    expect(() => approve.execute(staff(['support']), 'x', {})).toThrow('Solo operaciones');
+    for (const monthlyIncome of [0, -1, 1.5]) {
+      expect(() => approve.execute(staff(['operations']), 'x', { monthlyIncome })).toThrow(
+        'mayor que 0',
+      );
+    }
+    expect(() =>
+      approve.execute(staff(['operations']), 'x', { note: 'x'.repeat(MAX_REASON_LENGTH + 1) }),
+    ).toThrow('hasta 500');
+  });
+
+  it('rechaza solo con un motivo del catálogo', async () => {
+    const review = kycReview();
+    const kyc = new InMemoryKyc([review]);
+    const reject = new RejectKycUseCase(kyc);
+    expect(() =>
+      reject.execute(staff(['operations']), review.id, { reason: 'otro' as 'expired' }),
+    ).toThrow('Elige el motivo');
+    expect(() => reject.execute(staff(['finance']), review.id, { reason: 'expired' })).toThrow(
+      AppError,
+    );
+    await reject.execute(staff(['super_admin']), review.id, {
+      reason: 'expired',
+      note: ' vencido ',
+    });
+    expect(kyc.rejections).toEqual([
+      { id: review.id, rejection: { reason: 'expired', note: 'vencido' } },
+    ]);
+  });
+
+  it('pedir la URL de una página exige el rol', async () => {
+    const kyc = new InMemoryKyc([kycReview()]);
+    const pageUrl = new GetKycPageUrlUseCase(kyc);
+    expect(() => pageUrl.execute(staff(['support']), 'x', 1)).toThrow('Solo operaciones');
+    await pageUrl.execute(staff(['operations']), 'x', 1);
+    expect(kyc.viewed).toEqual([{ id: 'x', page: 1 }]);
   });
 });

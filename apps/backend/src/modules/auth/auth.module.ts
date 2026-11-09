@@ -47,12 +47,11 @@ import {
 } from './infrastructure/crypto/es256-jwt';
 import {
   CryptoRefreshTokenSecrets,
-  DevOtpSender,
   FixedOtpGenerator,
   HmacOtpHasher,
   RandomOtpGenerator,
-  UnavailableOtpSender,
 } from './infrastructure/crypto/otp.adapters';
+import { selectOtpSender } from './infrastructure/messaging/otp-sender.factory';
 import { ScryptPasscodeHasher } from './infrastructure/crypto/scrypt-passcode-hasher';
 import {
   AuthChallengeEntity,
@@ -176,11 +175,22 @@ function authPolicy(config: AppConfigService): AuthPolicy {
     {
       provide: OTP_SENDER,
       inject: [ConfigService],
-      // Proveedor pendiente (T6). OTP_DEV_CODE solo se admite fuera de production.
-      useFactory: (config: AppConfigService) =>
-        config.get('OTP_DEV_CODE', { infer: true })
-          ? new DevOtpSender()
-          : new UnavailableOtpSender(),
+      // Envío real con OTP_DELIVERY=aws (T6). OTP_DEV_CODE solo se admite fuera de production.
+      useFactory: (config: AppConfigService) => {
+        const { sender, activeChannels } = selectOtpSender({
+          delivery: config.get('OTP_DELIVERY', { infer: true }),
+          devCode: config.get('OTP_DEV_CODE', { infer: true }),
+          region: config.get('AWS_REGION', { infer: true }),
+          codeTtlSeconds: config.get('OTP_CODE_TTL_SECONDS', { infer: true }),
+          emailFrom: config.get('OTP_EMAIL_FROM', { infer: true }),
+          sesConfigurationSet: config.get('OTP_SES_CONFIGURATION_SET', { infer: true }),
+          sesEndpoint: config.get('OTP_SES_ENDPOINT', { infer: true }),
+          smsOriginationIdentity: config.get('OTP_SMS_ORIGINATION_IDENTITY', { infer: true }),
+          smsConfigurationSet: config.get('OTP_SMS_CONFIGURATION_SET', { infer: true }),
+        });
+        logger.log({ event: 'auth.otp_delivery', channels: activeChannels });
+        return sender;
+      },
     },
   ],
   exports: [ACCESS_TOKEN_VERIFIER],

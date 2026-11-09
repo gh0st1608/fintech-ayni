@@ -13,7 +13,8 @@ API REST de Ayni: NestJS 11 + TypeScript strict con arquitectura hexagonal por m
 - Métodos de cobro (COPAYNI-37): `GET` y `PUT /v1/me/payout-method` con un catálogo provisional ([docs/api/payouts.md](../../docs/api/payouts.md)).
 - Perfil (COPAYNI-50): `PATCH /v1/me` con el idioma preferido ([docs/api/me.md](../../docs/api/me.md)).
 - Autenticación (COPAYNI-19, 20 y 21): OTP, JWT ES256 y refresh tokens rotativos con detección de reutilización ([docs/api/auth.md](../../docs/api/auth.md)).
-- Pendiente: despliegue en AWS (COPAYNI-12) y el proveedor de envío de OTP (pending-scope T6).
+- Envío del OTP por email (SES) y SMS (End User Messaging SMS), activable por canal (pending-scope T6).
+- Pendiente: despliegue en AWS (COPAYNI-12).
 
 ## Requisitos
 
@@ -245,7 +246,12 @@ Se validan al arrancar ([src/config/env.validation.ts](src/config/env.validation
 | `OTP_PEPPER`                                              | efímero fuera de prd                        | **Secreto** (32+ caracteres) para el hash de los OTP. Obligatorio en production.                                                                                                 |
 | `OTP_CODE_TTL_SECONDS` … `OTP_MAX_RESENDS`                | `300`, `30`, `5`, `3`                       | Vigencia, plazo de reenvío, intentos y reenvíos (R10, provisionales).                                                                                                            |
 | `OTP_START_MAX_PER_WINDOW` / `WINDOW_SECONDS`             | `5` / `900`                                 | Inicios por identificador en la ventana.                                                                                                                                         |
-| `OTP_DEV_CODE`                                            | vacío                                       | Solo desarrollo: código fijo y sin envío. Prohibido en production.                                                                                                               |
+| `OTP_DEV_CODE`                                            | vacío                                       | Solo desarrollo: código fijo y sin envío. Prohibido en production y con `OTP_DELIVERY=aws`.                                                                                      |
+| `OTP_DELIVERY`                                            | `none`                                      | `none`: sin envío (503). `aws`: email con SES y SMS con End User Messaging SMS, cada canal con su variable.                                                                      |
+| `OTP_EMAIL_FROM`                                          | vacío                                       | Remitente verificado en SES (`no-reply@dominio` o `Ayni <no-reply@dominio>`). Activa el email.                                                                                   |
+| `OTP_SES_CONFIGURATION_SET` / `OTP_SES_ENDPOINT`          | vacío                                       | Configuration set de SES y endpoint del emulador (floci: `http://localhost:4566`).                                                                                               |
+| `OTP_SMS_ORIGINATION_IDENTITY`                            | vacío                                       | Número, pool o sender ID registrado (ID o ARN). Activa el SMS.                                                                                                                   |
+| `OTP_SMS_CONFIGURATION_SET`                               | vacío                                       | Configuration set de End User Messaging SMS.                                                                                                                                     |
 
 **Secretos:**
 

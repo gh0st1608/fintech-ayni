@@ -35,6 +35,7 @@ import {
   OTP_HASHER,
   OTP_SENDER,
   type OtpGeneratorPort,
+  resolveOtpLanguage,
   type OtpHasherPort,
   type OtpSenderPort,
 } from '../ports/auth.ports';
@@ -62,7 +63,7 @@ export class StartContactChangeUseCase {
 
   async execute(
     principal: Principal,
-    input: { identifier: string; type: LoginIdentifierType },
+    input: { identifier: string; type: LoginIdentifierType; language?: string | null },
   ): Promise<ChallengeView> {
     const identifier = LoginIdentifier.parse(input.identifier, input.type);
     const user = await this.users.findById(principal.userId);
@@ -97,7 +98,12 @@ export class StartContactChangeUseCase {
       type: identifier.type,
       value: identifier.value,
     });
-    await this.sender.send({ channel: identifier.channel, destination: identifier.value, code });
+    await this.sender.send({
+      channel: identifier.channel,
+      destination: identifier.value,
+      code,
+      language: resolveOtpLanguage(user.preferredLanguage, input.language),
+    });
     this.logger.log({
       event: 'auth.contact_change_started',
       userId: user.id,

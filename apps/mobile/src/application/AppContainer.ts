@@ -47,6 +47,7 @@ import type {
   SelectPayoutMethodUseCase,
 } from '@/application/payouts/usecases/payoutMethodUseCases';
 import type { ChangeLanguageUseCase } from '@/application/i18n/usecases/ChangeLanguageUseCase';
+import type { ResolveDefaultCountryUseCase } from '@/application/auth/usecases/ResolveDefaultCountryUseCase';
 import type { ResolveLanguageUseCase } from '@/application/i18n/usecases/ResolveLanguageUseCase';
 import type {
   CapturePendingReferralUseCase,
@@ -163,6 +164,8 @@ export interface AppContainer {
   };
   i18n: {
     resolveLanguage: ResolveLanguageUseCase;
+    /** País inicial del teléfono (D14). */
+    resolveCountry: ResolveDefaultCountryUseCase;
     changeLanguage: ChangeLanguageUseCase;
     /** Envía el idioma al perfil del backend sin bloquear la UI. */
     syncLanguagePreference: SyncLanguagePreferenceUseCase;

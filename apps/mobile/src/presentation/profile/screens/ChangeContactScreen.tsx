@@ -3,13 +3,16 @@ import { useTranslation } from 'react-i18next';
 import { ScrollView, StyleSheet } from 'react-native';
 
 import type { AuthChallenge } from '@/domain/auth/AuthChallenge';
+import { toInternational } from '@/domain/auth/countries';
 import { OtpVerificationError } from '@/domain/auth/errors/OtpVerificationError';
 import { InvalidLoginIdentifierError } from '@/domain/auth/value-objects/LoginIdentifier';
 import { AppError } from '@/domain/shared/errors/AppError';
 import { errorMessage } from '@/presentation/i18n/errorMessageKey';
 import { AppText } from '@/presentation/shared/components/AppText';
 import { Button } from '@/presentation/shared/components/Button';
+import { CountrySheet, useCountry } from '@/presentation/shared/components/CountrySheet';
 import { OTPInput } from '@/presentation/shared/components/OTPInput';
+import { PhoneInput } from '@/presentation/shared/components/PhoneInput';
 import { Screen } from '@/presentation/shared/components/Screen';
 import { TextField } from '@/presentation/shared/components/TextField';
 import { colors, spacing } from '@/presentation/theme/tokens';
@@ -23,13 +26,16 @@ interface ChangeContactScreenProps {
 
 /**
  * Cambiar el email o el teléfono (COPAYNI-45, supuesto R9): un código al dato nuevo confirma que
- * es del usuario. El teléfono va en formato internacional, como en el login (D14).
+ * es del usuario. El teléfono se escribe con el selector de país (D14) y se envía en formato
+ * internacional.
  */
 export function ChangeContactScreen({ type, onChanged }: ChangeContactScreenProps) {
   const { t } = useTranslation();
   const [value, setValue] = useState('');
   const [code, setCode] = useState('');
   const [challenge, setChallenge] = useState<AuthChallenge | null>(null);
+  const [country, setCountry] = useCountry();
+  const [pickingCountry, setPickingCountry] = useState(false);
   const start = useStartContactChange();
   const verify = useVerifyContactChange();
 
@@ -57,20 +63,40 @@ export function ChangeContactScreen({ type, onChanged }: ChangeContactScreenProp
     return (
       <Screen edges={['bottom']}>
         <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-          <TextField
-            label={t(`profile.contact.new.${type}`)}
-            value={value}
-            onChangeText={(text) => {
-              setValue(text);
-              start.reset();
-            }}
-            keyboardType={type === 'email' ? 'email-address' : 'phone-pad'}
-            autoCapitalize="none"
-            autoComplete={type === 'email' ? 'email' : 'tel'}
-            placeholder={type === 'phone' ? t('profile.contact.phonePlaceholder') : undefined}
-            error={start.isError ? startError(start.error) : undefined}
-            testID="contact-value"
-          />
+          {type === 'phone' ? (
+            <PhoneInput
+              label={t('profile.contact.new.phone')}
+              regionCode={country.regionCode}
+              callingCode={country.callingCode}
+              value={value}
+              onChangeText={(text) => {
+                setValue(text);
+                start.reset();
+              }}
+              onPressCountry={() => setPickingCountry(true)}
+              countryAccessibilityLabel={t('countryPicker.button', {
+                country: t(`countries.${country.regionCode}`),
+                code: country.callingCode,
+              })}
+              placeholder={t('profile.contact.phonePlaceholder')}
+              error={start.isError ? startError(start.error) : undefined}
+              testID="contact-value"
+            />
+          ) : (
+            <TextField
+              label={t('profile.contact.new.email')}
+              value={value}
+              onChangeText={(text) => {
+                setValue(text);
+                start.reset();
+              }}
+              keyboardType="email-address"
+              autoCapitalize="none"
+              autoComplete="email"
+              error={start.isError ? startError(start.error) : undefined}
+              testID="contact-value"
+            />
+          )}
           <AppText variant="caption" color={colors.neutral500}>
             {t('profile.contact.explain')}
           </AppText>
@@ -79,7 +105,20 @@ export function ChangeContactScreen({ type, onChanged }: ChangeContactScreenProp
           label={t('profile.contact.sendCode')}
           disabled={value.trim().length === 0}
           loading={start.isPending}
-          onPress={() => start.mutate(value, { onSuccess: setChallenge })}
+          onPress={() =>
+            start.mutate(type === 'phone' ? toInternational(country, value) : value, {
+              onSuccess: setChallenge,
+            })
+          }
+        />
+        <CountrySheet
+          visible={pickingCountry}
+          selected={country}
+          onSelect={(next) => {
+            setCountry(next);
+            start.reset();
+          }}
+          onClose={() => setPickingCountry(false)}
         />
       </Screen>
     );

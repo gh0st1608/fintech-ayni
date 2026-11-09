@@ -123,9 +123,24 @@ describe('ChangeContactScreen (COPAYNI-45, R9)', () => {
       <ChangeContactScreen type="phone" onChanged={jest.fn()} />,
       createTestContainer({ userProfile: profiles() }),
     );
-    await fireEvent.changeText(screen.getByTestId('contact-value'), '987654321');
+    await fireEvent.changeText(screen.getByTestId('contact-value'), '12');
     await fireEvent.press(screen.getByRole('button', { name: 'Enviar código' }));
-    expect(await screen.findByText(/con el código de país/)).toBeTruthy();
+    expect(await screen.findByText('Revisa el número de teléfono.')).toBeTruthy();
+  });
+
+  it('el teléfono nuevo se escribe con el selector de país y se envía completo (D14)', async () => {
+    const userProfile = profiles();
+    const spy = jest.spyOn(userProfile, 'startContactChange');
+    await renderWithProviders(
+      <ChangeContactScreen type="phone" onChanged={jest.fn()} />,
+      createTestContainer({ userProfile }),
+    );
+    await fireEvent.press(screen.getByRole('button', { name: /País del teléfono: Perú \(\+51\)/ }));
+    await fireEvent.press(await screen.findByTestId('country-option-CO'));
+    await fireEvent.changeText(screen.getByTestId('contact-value'), '300 123 4567');
+    await fireEvent.press(screen.getByRole('button', { name: 'Enviar código' }));
+    await waitFor(() => expect(spy).toHaveBeenCalled());
+    expect(JSON.stringify(spy.mock.calls[0])).toContain('+573001234567');
   });
 
   it('un dato ya registrado en otra cuenta no se aplica', async () => {
