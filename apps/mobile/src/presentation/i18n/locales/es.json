@@ -706,5 +706,9 @@
     "title": "Elige el país",
     "button": "País del teléfono: {{country}} ({{code}}). Toca para cambiarlo",
     "close": "Cerrar"
+  },
+  "connectivity": {
+    "offline": "Sin conexión. Lo que ves puede no estar al día.",
+    "retry": "Reintentar"
   }
 }
