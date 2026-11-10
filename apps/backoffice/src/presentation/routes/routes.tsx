@@ -10,8 +10,19 @@ import { useSession, useStaff } from '../providers/AppProviders';
  * Cada sección se descarga recién al visitarla (`lazy` de React Router): el bundle inicial solo
  * trae el login y el layout. Quien solo revisa KYC nunca descarga finanzas.
  */
-const screen = (load: () => Promise<React.ComponentType>): Pick<RouteObject, 'lazy'> => ({
+const screen = (
+  load: () => Promise<React.ComponentType>,
+): Pick<RouteObject, 'lazy' | 'errorElement'> => ({
   lazy: async () => ({ Component: await load() }),
+  errorElement: (
+    <div role="alert" className="space-y-4">
+      <EmptyState
+        title="No se pudo cargar esta sección"
+        description="Recarga la aplicación para volver a intentarlo."
+      />
+      <Button onClick={() => window.location.reload()}>Recargar aplicación</Button>
+    </div>
+  ),
 });
 
 const CIRCLES = () => import('../circles/CirclesScreen').then((m) => m.CirclesScreen);
