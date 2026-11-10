@@ -1,7 +1,7 @@
 import { AppError } from '@/domain/shared/errors/AppError';
 
 import { createI18n } from './createI18n';
-import { errorMessageKey } from './errorMessageKey';
+import { errorMessage, errorMessageKey } from './errorMessageKey';
 import { LANGUAGE_CATALOG, SUPPORTED_LANGUAGES } from './languages';
 
 type Tree = { [key: string]: string | Tree };
@@ -89,5 +89,14 @@ describe('errorMessageKey', () => {
     expect(errorMessageKey(new AppError('timeout', 'x'))).toBe('errors.timeout');
     expect(errorMessageKey(new Error('x'))).toBe('errors.unknown');
     expect(i18n.t(errorMessageKey(new AppError('network', 'x')))).toMatch(/conexión/);
+  });
+});
+
+describe('errorMessage', () => {
+  it('una cuenta bloqueada por el personal tiene su propio mensaje, no el de permisos', async () => {
+    const i18n = await createI18n('es', 'es');
+    const blocked = new AppError('forbidden', 'x', { code: 'USER_BLOCKED', status: 403 });
+    expect(errorMessage(i18n.t, blocked)).toMatch(/cuenta está bloqueada/);
+    expect(errorMessage(i18n.t, new AppError('forbidden', 'x'))).toBe(i18n.t('errors.forbidden'));
   });
 });

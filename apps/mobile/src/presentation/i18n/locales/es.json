@@ -21,7 +21,8 @@
     "business": "No pudimos completar la operación.",
     "server": "Tuvimos un problema. Inténtalo más tarde.",
     "unknown": "Ocurrió un error inesperado.",
-    "rateLimitedWait": "Demasiados intentos. Vuelve a intentarlo en {{count}} s."
+    "rateLimitedWait": "Demasiados intentos. Vuelve a intentarlo en {{count}} s.",
+    "userBlocked": "Tu cuenta está bloqueada. Escríbenos a soporte para revisarla."
   },
   "welcome": {
     "title": "Bienvenido a {{appName}}",
