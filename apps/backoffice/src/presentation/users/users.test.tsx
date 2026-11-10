@@ -54,6 +54,7 @@ describe('búsqueda exacta', () => {
                   phone: null,
                   preferredLanguage: null,
                   createdAt: '2026-11-09T15:00:00.000Z',
+                  blocked: null,
                 },
               ],
             })
@@ -65,6 +66,7 @@ describe('búsqueda exacta', () => {
               phone: '+51******321',
               preferredLanguage: 'es',
               createdAt: '2026-11-09T15:00:00.000Z',
+              blocked: null,
               kyc: {
                 national_id: 'not_submitted',
                 proof_of_income: 'not_submitted',

@@ -59,8 +59,8 @@ export class UnauthorizedError extends AppError {
 export class ForbiddenError extends AppError {
   readonly kind = 'forbidden';
 
-  constructor(message = 'Acceso denegado') {
-    super('FORBIDDEN', message);
+  constructor(message = 'Acceso denegado', code = 'FORBIDDEN') {
+    super(code, message);
   }
 }
 

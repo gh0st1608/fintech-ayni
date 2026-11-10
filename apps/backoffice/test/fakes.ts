@@ -23,10 +23,18 @@ import type {
   UsersRepositoryPort,
   FinanceRepositoryPort,
   InstallmentsFilter,
+  CycleRunsRepositoryPort,
 } from '@/domain/ports';
 import { AppError } from '@/domain/shared/AppError';
 import type { StaffMember } from '@/domain/staff/Staff';
-import type { UserDetail, UserSummary } from '@/domain/users/User';
+import type {
+  BlockResult,
+  SupportNote,
+  UserContact,
+  UserDetail,
+  UserSummary,
+} from '@/domain/users/User';
+import type { CycleRunsPage } from '@/domain/circles/CycleRun';
 import type {
   GuaranteeFund,
   Installment,
@@ -226,6 +234,7 @@ export function person(overrides: Partial<UserDetail> = {}): UserDetail {
     createdAt: NOW,
     kyc: { national_id: 'approved', proof_of_income: 'in_review', additional: 'not_submitted' },
     circles: [],
+    blocked: null,
     ...overrides,
   };
 }
@@ -256,6 +265,7 @@ export class InMemoryUsers implements UsersRepositoryPort {
           phone: item.phone,
           preferredLanguage: item.preferredLanguage,
           createdAt: item.createdAt,
+          blocked: item.blocked,
         })),
     );
   }
@@ -265,6 +275,61 @@ export class InMemoryUsers implements UsersRepositoryPort {
     return found
       ? Promise.resolve(structuredClone(found))
       : Promise.reject(new AppError('not_found', 'No existe', 'USER_NOT_FOUND'));
+  }
+
+  readonly actions: { userId: string; action: string; reason: string }[] = [];
+  readonly noteBook: Record<string, SupportNote[]> = {};
+  contact: UserContact = {
+    email: 'rosa.quispe@mail.com',
+    phone: '+51987654321',
+    firstName: 'Rosa',
+    lastName: 'Quispe',
+  };
+
+  revokeSessions(userId: string, reason: string): Promise<{ revokedSessions: number }> {
+    this.actions.push({ userId, action: 'revoke', reason });
+    return Promise.resolve({ revokedSessions: 2 });
+  }
+
+  setBlocked(userId: string, action: 'block' | 'unblock', reason: string): Promise<BlockResult> {
+    this.actions.push({ userId, action, reason });
+    const found = this.people.find((item) => item.userId === userId);
+    const changed = action === 'block' ? found?.blocked === null : found?.blocked !== null;
+    if (found) found.blocked = action === 'block' ? { at: NOW, reason } : null;
+    return Promise.resolve({
+      blocked: action === 'block',
+      changed,
+      revokedSessions: action === 'block' ? 1 : 0,
+    });
+  }
+
+  revealContact(userId: string, reason: string): Promise<UserContact> {
+    this.actions.push({ userId, action: 'reveal', reason });
+    return Promise.resolve({ ...this.contact });
+  }
+
+  notes(userId: string): Promise<SupportNote[]> {
+    return Promise.resolve(structuredClone(this.noteBook[userId] ?? []));
+  }
+
+  addNote(userId: string, body: string): Promise<SupportNote> {
+    const note: SupportNote = {
+      id: `00000000-0000-4000-d000-${String((this.noteBook[userId]?.length ?? 0) + 1).padStart(12, '0')}`,
+      body,
+      authorId: 'dev:soporte@ayni.local',
+      authorEmail: 'soporte@ayni.local',
+      createdAt: NOW,
+    };
+    this.noteBook[userId] = [note, ...(this.noteBook[userId] ?? [])];
+    return Promise.resolve(structuredClone(note));
+  }
+}
+
+export class InMemoryCycleRuns implements CycleRunsRepositoryPort {
+  constructor(public page: CycleRunsPage = { items: [], nextCursor: null }) {}
+
+  list(): Promise<CycleRunsPage> {
+    return Promise.resolve(structuredClone(this.page));
   }
 }
 

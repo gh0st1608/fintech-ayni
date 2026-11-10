@@ -5,6 +5,12 @@ import {
   GetKycPageUrlUseCase,
   GetKycReviewUseCase,
   GetUserUseCase,
+  AddSupportNoteUseCase,
+  ListCycleRunsUseCase,
+  ListSupportNotesUseCase,
+  RevealUserContactUseCase,
+  RevokeUserSessionsUseCase,
+  SetUserBlockedUseCase,
   GetGuaranteeFundUseCase,
   ListInstallmentsUseCase,
   ListPayoutsUseCase,
@@ -22,6 +28,7 @@ import type {
   StaffAuthPort,
   UsersRepositoryPort,
   FinanceRepositoryPort,
+  CycleRunsRepositoryPort,
 } from '@/domain/ports';
 import {
   CirclesApiRepository,
@@ -29,6 +36,7 @@ import {
   KycApiRepository,
   UsersApiRepository,
   FinanceApiRepository,
+  CycleRunsApiRepository,
 } from '@/infrastructure/api/adapters';
 import { FetchHttpClient } from '@/infrastructure/http/FetchHttpClient';
 import { TokenStore } from '@/infrastructure/http/TokenStore';
@@ -56,6 +64,14 @@ export interface AppContainer {
   users: {
     search: SearchUsersUseCase;
     get: GetUserUseCase;
+    revokeSessions: RevokeUserSessionsUseCase;
+    setBlocked: SetUserBlockedUseCase;
+    revealContact: RevealUserContactUseCase;
+    notes: ListSupportNotesUseCase;
+    addNote: AddSupportNoteUseCase;
+  };
+  cycleRuns: {
+    list: ListCycleRunsUseCase;
   };
   finance: {
     installments: ListInstallmentsUseCase;
@@ -70,6 +86,7 @@ export interface ContainerAdapters {
   kyc: KycRepositoryPort;
   users: UsersRepositoryPort;
   finance: FinanceRepositoryPort;
+  cycleRuns: CycleRunsRepositoryPort;
 }
 
 /** Casos de uso sobre los adaptadores dados; las pruebas pasan dobles. */
@@ -95,6 +112,14 @@ export function createContainer(adapters: ContainerAdapters): AppContainer {
     users: {
       search: new SearchUsersUseCase(adapters.users),
       get: new GetUserUseCase(adapters.users),
+      revokeSessions: new RevokeUserSessionsUseCase(adapters.users),
+      setBlocked: new SetUserBlockedUseCase(adapters.users),
+      revealContact: new RevealUserContactUseCase(adapters.users),
+      notes: new ListSupportNotesUseCase(adapters.users),
+      addNote: new AddSupportNoteUseCase(adapters.users),
+    },
+    cycleRuns: {
+      list: new ListCycleRunsUseCase(adapters.cycleRuns),
     },
     finance: {
       installments: new ListInstallmentsUseCase(adapters.finance),
@@ -114,5 +139,6 @@ export function createAppContainer(config: AppConfig): AppContainer {
     kyc: new KycApiRepository(http),
     users: new UsersApiRepository(http),
     finance: new FinanceApiRepository(http),
+    cycleRuns: new CycleRunsApiRepository(http),
   });
 }

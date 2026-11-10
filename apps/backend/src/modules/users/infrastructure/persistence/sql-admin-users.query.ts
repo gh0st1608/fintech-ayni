@@ -22,10 +22,12 @@ interface UserRow {
   last_name: string | null;
   preferred_language: string | null;
   created_at: Date;
+  blocked_at: Date | null;
+  blocked_reason: string | null;
 }
 
 const USER_COLUMNS = `u.id, u.status, u.email, u.phone, u.first_name, u.last_name,
-  u.preferred_language, u.created_at`;
+  u.preferred_language, u.created_at, u.blocked_at, u.blocked_reason`;
 
 const toRecord = (row: UserRow): AdminUserRecord => ({
   userId: row.id,
@@ -36,6 +38,10 @@ const toRecord = (row: UserRow): AdminUserRecord => ({
   lastName: row.last_name,
   preferredLanguage: row.preferred_language,
   createdAt: new Date(row.created_at),
+  blocked:
+    row.blocked_at && row.blocked_reason
+      ? { at: new Date(row.blocked_at), reason: row.blocked_reason }
+      : null,
 });
 
 /** Columna de `users` para cada criterio. Lista cerrada: nunca se arma SQL con el valor. */

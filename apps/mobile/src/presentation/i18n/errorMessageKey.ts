@@ -12,5 +12,7 @@ export function errorMessage(t: TFunction, error: unknown): string {
   if (error instanceof AppError && error.kind === 'rate_limited' && error.retryAfterSeconds) {
     return t('errors.rateLimitedWait', { count: error.retryAfterSeconds });
   }
+  // El personal bloqueó la cuenta desde el back-office: no es un problema de permisos de la app.
+  if (error instanceof AppError && error.code === 'USER_BLOCKED') return t('errors.userBlocked');
   return t(errorMessageKey(error));
 }

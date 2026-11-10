@@ -3,7 +3,15 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 
 import { KycPayInLimit } from '../documents/application/kyc-pay-in-limit';
 import { DocumentsModule } from '../documents/documents.module';
+import { ADMIN_USER_ACTIONS } from './application/ports/admin-user-actions.port';
 import { ADMIN_USERS_QUERY } from './application/ports/admin-users-query.port';
+import {
+  RevealUserContactUseCase,
+  RevokeUserSessionsUseCase,
+  SetUserBlockedUseCase,
+  SupportNotesUseCase,
+} from './application/use-cases/admin-user-actions.use-cases';
+import { SqlAdminUserActions } from './infrastructure/persistence/sql-admin-user-actions';
 import { PAY_IN_LIMIT } from './application/ports/pay-in-limit.port';
 import { USER_REPOSITORY } from './application/ports/user-repository.port';
 import {
@@ -32,6 +40,12 @@ import { MeController } from './presentation/http/controllers/me.controller';
     SearchAdminUsersUseCase,
     GetAdminUserUseCase,
     { provide: ADMIN_USERS_QUERY, useClass: SqlAdminUsersQuery },
+    // Acciones de soporte: sesiones, bloqueo, dato completo y notas.
+    RevokeUserSessionsUseCase,
+    SetUserBlockedUseCase,
+    RevealUserContactUseCase,
+    SupportNotesUseCase,
+    { provide: ADMIN_USER_ACTIONS, useClass: SqlAdminUserActions },
   ],
   exports: [USER_REPOSITORY, GetMyProfileUseCase],
 })

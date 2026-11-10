@@ -1,7 +1,11 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsNotEmpty, IsString, MaxLength } from 'class-validator';
+import { IsNotEmpty, IsString, Matches, MaxLength } from 'class-validator';
 
 import { MoneyResponse } from '../../../../circles/presentation/http/dto/join-config.response';
+import {
+  type SupportNote,
+  type UserContact,
+} from '../../../application/ports/admin-user-actions.port';
 import { type KycDocumentState } from '../../../application/ports/admin-users-query.port';
 import {
   type AdminUserDetailView,
@@ -43,6 +47,13 @@ export class AdminUserResponse {
   @ApiProperty()
   createdAt!: string;
 
+  @ApiProperty({
+    nullable: true,
+    type: Object,
+    description: 'Bloqueo puesto por el personal: `{ at, reason }`. El motivo es interno',
+  })
+  blocked!: { at: string; reason: string } | null;
+
   static from(user: AdminUserView): AdminUserResponse {
     return {
       userId: user.userId,
@@ -52,6 +63,9 @@ export class AdminUserResponse {
       phone: user.phone,
       preferredLanguage: user.preferredLanguage,
       createdAt: user.createdAt.toISOString(),
+      blocked: user.blocked
+        ? { at: user.blocked.at.toISOString(), reason: user.blocked.reason }
+        : null,
     };
   }
 }
@@ -123,4 +137,81 @@ export class AdminUserDetailResponse extends AdminUserResponse {
       })),
     };
   }
+}
+
+/** Motivo obligatorio de una acción de soporte: queda en la auditoría. */
+export class AdminUserReasonRequest {
+  @ApiProperty({ example: 'La persona reportó el robo de su teléfono', description: 'Obligatorio' })
+  @IsString()
+  @Matches(/\S/, { message: 'reason no puede estar vacío' })
+  @MaxLength(500)
+  reason!: string;
+}
+
+export class RevokeSessionsResponse {
+  @ApiProperty({ description: 'Sesiones que estaban abiertas y se cerraron' })
+  revokedSessions!: number;
+}
+
+export class UserBlockResponse {
+  @ApiProperty()
+  blocked!: boolean;
+
+  @ApiProperty({ description: 'false si ya estaba así' })
+  changed!: boolean;
+
+  @ApiProperty()
+  revokedSessions!: number;
+}
+
+export class UserContactResponse {
+  @ApiProperty({ nullable: true, type: String })
+  email!: string | null;
+
+  @ApiProperty({ nullable: true, type: String })
+  phone!: string | null;
+
+  @ApiProperty({ nullable: true, type: String })
+  firstName!: string | null;
+
+  @ApiProperty({ nullable: true, type: String })
+  lastName!: string | null;
+
+  static from(contact: UserContact): UserContactResponse {
+    return { ...contact };
+  }
+}
+
+export class SupportNoteRequest {
+  @ApiProperty({ example: 'Llamó por un cobro duplicado; se derivó a finanzas' })
+  @IsString()
+  @Matches(/\S/, { message: 'body no puede estar vacío' })
+  @MaxLength(2000)
+  body!: string;
+}
+
+export class SupportNoteResponse {
+  @ApiProperty({ format: 'uuid' })
+  id!: string;
+
+  @ApiProperty()
+  body!: string;
+
+  @ApiProperty()
+  authorId!: string;
+
+  @ApiProperty({ nullable: true, type: String })
+  authorEmail!: string | null;
+
+  @ApiProperty()
+  createdAt!: string;
+
+  static from(note: SupportNote): SupportNoteResponse {
+    return { ...note, createdAt: note.createdAt.toISOString() };
+  }
+}
+
+export class SupportNotesResponse {
+  @ApiProperty({ type: [SupportNoteResponse], description: 'De la más reciente a la más antigua' })
+  items!: SupportNoteResponse[];
 }

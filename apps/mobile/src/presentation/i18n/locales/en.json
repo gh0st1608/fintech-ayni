@@ -21,7 +21,8 @@
     "business": "We couldn't complete the operation.",
     "server": "Something went wrong on our side. Please try later.",
     "unknown": "An unexpected error occurred.",
-    "rateLimitedWait": "Too many attempts. Try again in {{count}} s."
+    "rateLimitedWait": "Too many attempts. Try again in {{count}} s.",
+    "userBlocked": "Your account is blocked. Contact support to review it."
   },
   "welcome": {
     "title": "Welcome to {{appName}}",

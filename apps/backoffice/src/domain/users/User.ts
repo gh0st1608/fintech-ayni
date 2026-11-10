@@ -17,6 +17,8 @@ export interface UserSummary {
   phone: string | null;
   preferredLanguage: string | null;
   createdAt: Date;
+  /** Bloqueo puesto por el personal; el motivo es interno. */
+  blocked: { at: Date; reason: string } | null;
 }
 
 export interface UserCircle {
@@ -58,3 +60,28 @@ export function isExactUserQuery(query: string): boolean {
   const value = query.trim();
   return UUID.test(value) || EMAIL.test(value) || PHONE.test(value.replace(/[\s-]/g, ''));
 }
+
+/** Dato completo de contacto, revelado con motivo y auditoría. */
+export interface UserContact {
+  email: string | null;
+  phone: string | null;
+  firstName: string | null;
+  lastName: string | null;
+}
+
+export interface SupportNote {
+  id: string;
+  body: string;
+  authorId: string;
+  authorEmail: string | null;
+  createdAt: Date;
+}
+
+export interface BlockResult {
+  blocked: boolean;
+  changed: boolean;
+  revokedSessions: number;
+}
+
+/** El backend admite notas de hasta 2000 caracteres. */
+export const MAX_NOTE_LENGTH = 2000;

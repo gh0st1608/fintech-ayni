@@ -17,6 +17,8 @@ export interface AdminUserRecord {
   lastName: string | null;
   preferredLanguage: string | null;
   createdAt: Date;
+  /** Bloqueo puesto por el personal: sin él, `null`. El motivo es interno. */
+  blocked: { at: Date; reason: string } | null;
 }
 
 /** Estado del último documento de cada tipo, como el resumen de `GET /v1/me/documents`. */

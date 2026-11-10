@@ -119,6 +119,7 @@ const userSummary = z.object({
   phone: z.string().nullable(),
   preferredLanguage: z.string().nullable(),
   createdAt: isoDate,
+  blocked: z.object({ at: isoDate, reason: z.string() }).nullable(),
 });
 
 export const usersSearchSchema = z.object({ items: z.array(userSummary) });
@@ -200,6 +201,47 @@ export const guaranteeFundSchema = z.object({
       reason: z.string().nullable(),
       amount: money,
       createdAt: isoDate,
+    }),
+  ),
+  nextCursor: z.string().nullable(),
+});
+
+export const revokeSessionsSchema = z.object({ revokedSessions: z.number().int().nonnegative() });
+
+export const blockResultSchema = z.object({
+  blocked: z.boolean(),
+  changed: z.boolean(),
+  revokedSessions: z.number().int().nonnegative(),
+});
+
+export const userContactSchema = z.object({
+  email: z.string().nullable(),
+  phone: z.string().nullable(),
+  firstName: z.string().nullable(),
+  lastName: z.string().nullable(),
+});
+
+export const supportNoteSchema = z.object({
+  id: z.uuid(),
+  body: z.string(),
+  authorId: z.string(),
+  authorEmail: z.string().nullable(),
+  createdAt: isoDate,
+});
+
+export const supportNotesSchema = z.object({ items: z.array(supportNoteSchema) });
+
+export const cycleRunsPageSchema = z.object({
+  items: z.array(
+    z.object({
+      id: z.uuid(),
+      businessDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+      startedAt: isoDate,
+      finishedAt: isoDate,
+      advanced: z.number().int().nonnegative(),
+      locked: z.number().int().nonnegative(),
+      failed: z.number().int().nonnegative(),
+      failures: z.array(z.object({ circleId: z.uuid(), reason: z.string() })),
     }),
   ),
   nextCursor: z.string().nullable(),

@@ -13,6 +13,7 @@ import {
 import { Badge, EmptyState, ErrorAlert, Spinner } from '../components/ui';
 import { formatDateTime, formatMoney, STATE_LABELS } from '../format';
 import { useStaff } from '../providers/AppProviders';
+import { SupportActions, SupportNotes } from './SupportPanel';
 import { useUser } from './useUsers';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -72,7 +73,14 @@ function UserView({ user }: { user: UserDetail }) {
         <Badge tone={user.status === 'active' ? 'success' : 'warning'}>
           {USER_STATUS_LABELS[user.status]}
         </Badge>
+        {user.blocked && <Badge tone="danger">Bloqueada</Badge>}
       </header>
+
+      {user.blocked && (
+        <p role="note" className="rounded-md border border-danger/40 bg-danger/5 p-3 text-sm">
+          Bloqueada el {formatDateTime(user.blocked.at)}. Motivo: {user.blocked.reason}
+        </p>
+      )}
 
       <p className="text-xs text-ink-soft">Los datos personales se muestran enmascarados.</p>
       <dl className="grid grid-cols-1 gap-4 rounded-md border border-line bg-surface p-4 sm:grid-cols-4">
@@ -100,6 +108,8 @@ function UserView({ user }: { user: UserDetail }) {
           ))}
         </ul>
       </section>
+
+      <SupportActions user={user} />
 
       <section aria-labelledby="circles" className="flex flex-col gap-2">
         <h2 id="circles" className="text-lg font-semibold">
@@ -161,6 +171,7 @@ function UserView({ user }: { user: UserDetail }) {
           </div>
         )}
       </section>
+      <SupportNotes userId={user.userId} />
     </section>
   );
 }

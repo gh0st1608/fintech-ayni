@@ -17,10 +17,18 @@ import type {
   FinanceRepositoryPort,
   InstallmentsFilter,
   PageFilter,
+  CycleRunsRepositoryPort,
 } from '@/domain/ports';
 import { AppError } from '@/domain/shared/AppError';
 import type { StaffMember } from '@/domain/staff/Staff';
-import type { UserDetail, UserSummary } from '@/domain/users/User';
+import type {
+  BlockResult,
+  SupportNote,
+  UserContact,
+  UserDetail,
+  UserSummary,
+} from '@/domain/users/User';
+import type { CycleRunsPage } from '@/domain/circles/CycleRun';
 import type { GuaranteeFund, InstallmentsPage, PayoutsPage } from '@/domain/finance/Finance';
 
 import type { HttpClientPort } from '../http/FetchHttpClient';
@@ -36,6 +44,12 @@ import {
   staffMeSchema,
   userDetailSchema,
   usersSearchSchema,
+  blockResultSchema,
+  cycleRunsPageSchema,
+  revokeSessionsSchema,
+  supportNoteSchema,
+  supportNotesSchema,
+  userContactSchema,
   guaranteeFundSchema,
   installmentsPageSchema,
   payoutsPageSchema,
@@ -170,6 +184,42 @@ export class UsersApiRepository implements UsersRepositoryPort {
       signal,
     });
   }
+
+  revokeSessions(userId: string, reason: string): Promise<{ revokedSessions: number }> {
+    return this.http.post(`/admin/v1/users/${encodeURIComponent(userId)}/sessions/revoke`, {
+      schema: revokeSessionsSchema,
+      body: { reason },
+    });
+  }
+
+  setBlocked(userId: string, action: 'block' | 'unblock', reason: string): Promise<BlockResult> {
+    return this.http.post(`/admin/v1/users/${encodeURIComponent(userId)}/${action}`, {
+      schema: blockResultSchema,
+      body: { reason },
+    });
+  }
+
+  revealContact(userId: string, reason: string): Promise<UserContact> {
+    return this.http.post(`/admin/v1/users/${encodeURIComponent(userId)}/pii/reveal`, {
+      schema: userContactSchema,
+      body: { reason },
+    });
+  }
+
+  async notes(userId: string, signal?: AbortSignal): Promise<SupportNote[]> {
+    const page = await this.http.get(`/admin/v1/users/${encodeURIComponent(userId)}/notes`, {
+      schema: supportNotesSchema,
+      signal,
+    });
+    return page.items;
+  }
+
+  addNote(userId: string, body: string): Promise<SupportNote> {
+    return this.http.post(`/admin/v1/users/${encodeURIComponent(userId)}/notes`, {
+      schema: supportNoteSchema,
+      body: { body },
+    });
+  }
 }
 
 function pageQuery(filter: PageFilter, extra: Record<string, string | undefined> = {}): string {
@@ -201,6 +251,17 @@ export class FinanceApiRepository implements FinanceRepositoryPort {
   guaranteeFund(filter: PageFilter, signal?: AbortSignal): Promise<GuaranteeFund> {
     return this.http.get(`/admin/v1/finance/guarantee-fund${pageQuery(filter)}`, {
       schema: guaranteeFundSchema,
+      signal,
+    });
+  }
+}
+
+export class CycleRunsApiRepository implements CycleRunsRepositoryPort {
+  constructor(private readonly http: HttpClientPort) {}
+
+  list(filter: PageFilter, signal?: AbortSignal): Promise<CycleRunsPage> {
+    return this.http.get(`/admin/v1/cycle-runs${pageQuery(filter)}`, {
+      schema: cycleRunsPageSchema,
       signal,
     });
   }

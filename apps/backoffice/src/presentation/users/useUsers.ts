@@ -1,6 +1,6 @@
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
-import { useContainer } from '../providers/AppProviders';
+import { useContainer, useStaff } from '../providers/AppProviders';
 
 export const usersKeys = {
   search: (query: string) => ['users', 'search', query] as const,
@@ -25,5 +25,57 @@ export function useUser(userId: string) {
   return useQuery({
     queryKey: usersKeys.detail(userId),
     queryFn: ({ signal }) => users.get.execute(userId, signal),
+  });
+}
+
+/** Tras una acción sobre la persona se recarga su perfil (bloqueo, sesiones). */
+function useRefreshUser(userId: string) {
+  const queryClient = useQueryClient();
+  return () => queryClient.invalidateQueries({ queryKey: usersKeys.detail(userId) });
+}
+
+export function useRevokeSessions(userId: string) {
+  const { users } = useContainer();
+  const staff = useStaff();
+  return useMutation({
+    mutationFn: (reason: string) => users.revokeSessions.execute(staff, userId, reason),
+  });
+}
+
+export function useSetBlocked(userId: string) {
+  const { users } = useContainer();
+  const staff = useStaff();
+  const refresh = useRefreshUser(userId);
+  return useMutation({
+    mutationFn: ({ action, reason }: { action: 'block' | 'unblock'; reason: string }) =>
+      users.setBlocked.execute(staff, userId, action, reason),
+    onSuccess: refresh,
+  });
+}
+
+/** El dato completo no se guarda en caché: vive solo en el estado del diálogo. */
+export function useRevealContact(userId: string) {
+  const { users } = useContainer();
+  const staff = useStaff();
+  return useMutation({
+    mutationFn: (reason: string) => users.revealContact.execute(staff, userId, reason),
+  });
+}
+
+export function useSupportNotes(userId: string) {
+  const { users } = useContainer();
+  return useQuery({
+    queryKey: ['users', 'notes', userId],
+    queryFn: ({ signal }) => users.notes.execute(userId, signal),
+  });
+}
+
+export function useAddSupportNote(userId: string) {
+  const { users } = useContainer();
+  const staff = useStaff();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (body: string) => users.addNote.execute(staff, userId, body),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['users', 'notes', userId] }),
   });
 }
