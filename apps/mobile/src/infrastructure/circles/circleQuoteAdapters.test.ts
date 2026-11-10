@@ -39,7 +39,7 @@ describe('CircleQuoteApiRepository', () => {
     const options = await new ListInstallmentOptionsUseCase(repository).execute(pen(30_000));
 
     expect(fetchImpl.mock.calls[0]?.[0]).toBe(
-      'https://api.test/v1/circles/installment-options?payoutAmount=3000000',
+      'https://api.test/v1/circles/installment-options?payoutAmount=3000000&currency=PEN',
     );
     expect(options.map(({ months }) => months)).toEqual([6, 10, 12]);
     expect(options[0]?.installment.equals(pen(5_000))).toBe(true);
@@ -135,7 +135,7 @@ describe('CircleQuoteApiRepository.listSlots', () => {
     const slots = await repository.listSlots(pen(30_000), 10);
 
     expect(fetchImpl.mock.calls[0]?.[0]).toBe(
-      'https://api.test/v1/circles/slots?payoutAmount=3000000&months=10',
+      'https://api.test/v1/circles/slots?payoutAmount=3000000&months=10&currency=PEN',
     );
     expect(slots.map(({ position, type, available }) => [position, type, available])).toEqual([
       [1, 'fastestPayout', false],

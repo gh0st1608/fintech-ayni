@@ -1,5 +1,6 @@
 import type { JoinConfig } from '../JoinConfig';
 
 export interface JoinConfigRepositoryPort {
-  get(signal?: AbortSignal): Promise<JoinConfig>;
+  /** La configuración en `currency`, o en la moneda oficial si no se indica. */
+  get(signal?: AbortSignal, currency?: string): Promise<JoinConfig>;
 }

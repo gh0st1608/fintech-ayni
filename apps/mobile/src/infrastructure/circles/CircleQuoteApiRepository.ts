@@ -92,7 +92,7 @@ export class CircleQuoteApiRepository implements CircleQuoteRepositoryPort {
 
   async listInstallmentOptions(payout: Money, signal?: AbortSignal): Promise<InstallmentOption[]> {
     const dto = await this.http.get('/circles/installment-options', {
-      query: { payoutAmount: payout.amount },
+      query: { payoutAmount: payout.amount, currency: payout.currency },
       signal,
       parse: (data) => installmentOptionsDto.parse(data),
     });
@@ -125,7 +125,12 @@ export class CircleQuoteApiRepository implements CircleQuoteRepositoryPort {
     circleId?: string | null,
   ): Promise<Slot[]> {
     const dto = await this.http.get('/circles/slots', {
-      query: { payoutAmount: payout.amount, months, ...(circleId && { circleId }) },
+      query: {
+        payoutAmount: payout.amount,
+        months,
+        ...(circleId && { circleId }),
+        currency: payout.currency,
+      },
       signal,
       parse: (data) => slotsDto.parse(data),
     });

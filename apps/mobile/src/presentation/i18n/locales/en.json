@@ -186,6 +186,10 @@
         "catchUp": "Your installments include {{amount}} to catch up on past months, until {{month}}."
       },
       "retention": "{{amount}} of your payout will be withheld to pay your last {{count}} installments automatically."
+    },
+    "currency": {
+      "label": "Currency",
+      "rate": "Fixed exchange rate: {{from}} = {{to}}"
     }
   },
   "circles": {

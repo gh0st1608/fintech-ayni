@@ -60,6 +60,7 @@ describe('availablePayoutRange', () => {
     payoutRange: range(),
     userPayoutLimit,
     savingProgramMax: pen(1000000),
+    currencies: [{ code: 'PEN', official: true, rateToOfficial: '1' }],
   });
 
   it('sin límite del usuario devuelve el rango general', () => {

@@ -186,6 +186,10 @@
         "catchUp": "Tus cuotas incluyen {{amount}} de puesta al día de los meses ya transcurridos, hasta {{month}}."
       },
       "retention": "Se retendrán {{amount}} de tu pozo para pagar automáticamente tus últimas {{count}} cuotas."
+    },
+    "currency": {
+      "label": "Moneda",
+      "rate": "Tipo de cambio fijo: {{from}} = {{to}}"
     }
   },
   "circles": {

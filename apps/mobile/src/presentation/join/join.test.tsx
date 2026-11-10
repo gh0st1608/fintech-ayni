@@ -182,6 +182,55 @@ describe('PayoutAmountScreen', () => {
     expect(screen.queryByTestId('payout-slider')).toBeNull();
   });
 
+  it('con una sola moneda no muestra el selector', async () => {
+    await renderPayout();
+    expect(screen.queryByTestId('payout-currency')).toBeNull();
+  });
+
+  describe('con soles y dólares (pending-scope M2)', () => {
+    const usd = (major: number) =>
+      formatMoney(Money.fromMajor(major, 'USD'), 'es', { trimZeroDecimals: true });
+    const withDollars = () =>
+      new InMemoryJoinConfigRepository('PEN', {
+        latencyMs: 0,
+        secondCurrency: { code: 'USD', rateToOfficial: '3.75' },
+      });
+
+    it('empieza en la moneda oficial, con las pestañas de moneda del Figma', async () => {
+      await renderPayout({ repository: withDollars() });
+      expect(screen.getByText('Moneda')).toBeTruthy();
+      expect(screen.getByRole('tab', { name: 'Soles peruanos', selected: true })).toBeTruthy();
+      expect(
+        screen.getByRole('tab', { name: 'Dólares estadounidenses', selected: false }),
+      ).toBeTruthy();
+      expect(amount()).toHaveTextContent(text`${3_000}`);
+      expect(screen.queryByTestId('payout-currency-rate')).toBeNull();
+    });
+
+    it('al elegir dólares usa su rango, muestra el tipo de cambio y lo guarda en el borrador', async () => {
+      const { onNext } = await renderPayout({ repository: withDollars() });
+      await fireEvent.press(screen.getByRole('tab', { name: 'Dólares estadounidenses' }));
+
+      await waitFor(() =>
+        expect(slider().props.accessibilityValue).toMatchObject({ min: 80_000, max: 3_200_000 }),
+      );
+      expect(amount()).toHaveTextContent(usd(800));
+      expect(screen.getByTestId('payout-currency-rate')).toHaveTextContent(
+        `Tipo de cambio fijo: ${formatMoney(Money.fromMajor(1, 'USD'), 'es')} = ${formatMoney(
+          Money.fromMajor(3.75, 'PEN'),
+          'es',
+        )}`,
+      );
+
+      await fireEvent(slider(), 'accessibilityAction', {
+        nativeEvent: { actionName: 'increment' },
+      });
+      await fireEvent.press(screen.getByRole('button', { name: 'Siguiente' }));
+      expect(screen.getByTestId('draft')).toHaveTextContent('900');
+      expect(onNext).toHaveBeenCalledTimes(1);
+    });
+  });
+
   it('ante un error al cargar muestra un mensaje y permite reintentar', async () => {
     const repository = new InMemoryJoinConfigRepository('PEN', { latencyMs: 0 });
     const get = jest
