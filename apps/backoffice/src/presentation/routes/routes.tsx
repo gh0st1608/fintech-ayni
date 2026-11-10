@@ -3,16 +3,46 @@ import { Navigate, NavLink, Outlet, type RouteObject, useLocation } from 'react-
 import { can, ROLE_LABELS } from '@/domain/staff/Staff';
 
 import { LoginScreen } from '../auth/LoginScreen';
-import { CircleDetailScreen } from '../circles/CircleDetailScreen';
-import { CirclesScreen } from '../circles/CirclesScreen';
 import { Button, EmptyState, Spinner } from '../components/ui';
-import { KycQueueScreen } from '../kyc/KycQueueScreen';
-import { KycReviewScreen } from '../kyc/KycReviewScreen';
-import { UserDetailScreen } from '../users/UserDetailScreen';
-import { UsersScreen } from '../users/UsersScreen';
-import { FinanceScreen } from '../finance/FinanceScreen';
-import { CycleRunsScreen } from '../cycle-runs/CycleRunsScreen';
 import { useSession, useStaff } from '../providers/AppProviders';
+
+/**
+ * Cada sección se descarga recién al visitarla (`lazy` de React Router): el bundle inicial solo
+ * trae el login y el layout. Quien solo revisa KYC nunca descarga finanzas.
+ */
+const screen = (
+  load: () => Promise<React.ComponentType>,
+): Pick<RouteObject, 'lazy' | 'errorElement'> => ({
+  lazy: async () => ({ Component: await load() }),
+  errorElement: (
+    <div role="alert" className="space-y-4">
+      <EmptyState
+        title="No se pudo cargar esta sección"
+        description="Recarga la aplicación para volver a intentarlo."
+      />
+      <Button onClick={() => window.location.reload()}>Recargar aplicación</Button>
+    </div>
+  ),
+});
+
+const CIRCLES = () => import('../circles/CirclesScreen').then((m) => m.CirclesScreen);
+const CIRCLE_DETAIL = () =>
+  import('../circles/CircleDetailScreen').then((m) => m.CircleDetailScreen);
+const CYCLE_RUNS = () => import('../cycle-runs/CycleRunsScreen').then((m) => m.CycleRunsScreen);
+const KYC_QUEUE = () => import('../kyc/KycQueueScreen').then((m) => m.KycQueueScreen);
+const KYC_REVIEW = () => import('../kyc/KycReviewScreen').then((m) => m.KycReviewScreen);
+const USERS = () => import('../users/UsersScreen').then((m) => m.UsersScreen);
+const USER_DETAIL = () => import('../users/UserDetailScreen').then((m) => m.UserDetailScreen);
+const FINANCE = () => import('../finance/FinanceScreen').then((m) => m.FinanceScreen);
+
+/** Mientras se descarga la primera pantalla de la sesión. */
+function LoadingScreen() {
+  return (
+    <main className="flex min-h-screen items-center justify-center">
+      <Spinner label="Cargando" />
+    </main>
+  );
+}
 
 /** Rutas privadas: sin sesión, al login, recordando a dónde se quería ir. */
 function RequireSession() {
@@ -116,33 +146,34 @@ export const routes: RouteObject[] = [
   { path: '/login', element: <LoginScreen /> },
   {
     element: <RequireSession />,
+    hydrateFallbackElement: <LoadingScreen />,
     children: [
       { index: true, element: <Home /> },
       {
         element: <RequirePermission permission="circles.read" />,
         children: [
-          { path: '/circles', element: <CirclesScreen /> },
-          { path: '/circles/:circleId', element: <CircleDetailScreen /> },
-          { path: '/cycle-runs', element: <CycleRunsScreen /> },
+          { path: '/circles', ...screen(CIRCLES) },
+          { path: '/circles/:circleId', ...screen(CIRCLE_DETAIL) },
+          { path: '/cycle-runs', ...screen(CYCLE_RUNS) },
         ],
       },
       {
         element: <RequirePermission permission="kyc.review" />,
         children: [
-          { path: '/kyc', element: <KycQueueScreen /> },
-          { path: '/kyc/:id', element: <KycReviewScreen /> },
+          { path: '/kyc', ...screen(KYC_QUEUE) },
+          { path: '/kyc/:id', ...screen(KYC_REVIEW) },
         ],
       },
       {
         element: <RequirePermission permission="users.read" />,
         children: [
-          { path: '/users', element: <UsersScreen /> },
-          { path: '/users/:userId', element: <UserDetailScreen /> },
+          { path: '/users', ...screen(USERS) },
+          { path: '/users/:userId', ...screen(USER_DETAIL) },
         ],
       },
       {
         element: <RequirePermission permission="finance.read" />,
-        children: [{ path: '/finance', element: <FinanceScreen /> }],
+        children: [{ path: '/finance', ...screen(FINANCE) }],
       },
       { path: '*', element: <EmptyState title="No encontramos esta página" /> },
     ],
