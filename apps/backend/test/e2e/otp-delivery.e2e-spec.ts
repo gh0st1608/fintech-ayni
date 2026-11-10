@@ -10,20 +10,36 @@ import { createTestApp } from '@test/support/create-test-app';
 
 import { FLOCI_ENDPOINT } from '../setup-env';
 
-/** Último email que floci recibió para el destino, o `undefined`. */
+interface FlociEmail {
+  Id: string;
+  Source: string;
+  Destination: { ToAddresses: string[] };
+  Body: { text_part: string | null };
+  Timestamp: string;
+}
+
+async function emailsTo(destination: string): Promise<FlociEmail[]> {
+  const response = await fetch(`${FLOCI_ENDPOINT}/_aws/ses`);
+  const { messages } = (await response.json()) as { messages: FlociEmail[] };
+  return messages.filter((m) => m.Destination.ToAddresses.includes(destination));
+}
+
+/**
+ * Email más reciente que floci recibió para el destino, por su fecha: floci no garantiza el orden
+ * de la lista. Con `after`, espera a que llegue uno que no estaba (el de la última petición).
+ */
 async function lastEmailTo(
   destination: string,
-): Promise<{ Source: string; text: string } | undefined> {
-  const response = await fetch(`${FLOCI_ENDPOINT}/_aws/ses`);
-  const { messages } = (await response.json()) as {
-    messages: {
-      Source: string;
-      Destination: { ToAddresses: string[] };
-      Body: { text_part: string | null };
-    }[];
-  };
-  const message = messages.filter((m) => m.Destination.ToAddresses.includes(destination)).at(-1);
-  return message && { Source: message.Source, text: message.Body.text_part ?? '' };
+  after: string[] = [],
+): Promise<{ Source: string; text: string; id: string } | undefined> {
+  for (let attempt = 0; attempt < 20; attempt += 1) {
+    const fresh = (await emailsTo(destination)).filter((m) => !after.includes(m.Id));
+    const message = fresh.sort((a, b) => a.Timestamp.localeCompare(b.Timestamp)).at(-1);
+    if (message)
+      return { Source: message.Source, text: message.Body.text_part ?? '', id: message.Id };
+    await new Promise((resolve) => setTimeout(resolve, 100));
+  }
+  return undefined;
 }
 
 /**
@@ -80,12 +96,15 @@ describe('Envío del OTP por email (floci)', () => {
       .send({ preferredLanguage: 'es' })
       .expect(200);
 
+    const before = (await emailsTo(identifier)).map((m) => m.Id);
     await http()
       .post('/v1/auth/start')
       .set('Accept-Language', 'en')
       .send({ identifier, type: 'email' })
       .expect(200);
-    expect((await lastEmailTo(identifier))?.text).toContain('Tu código de verificación de Ayni es');
+    expect((await lastEmailTo(identifier, before))?.text).toContain(
+      'Tu código de verificación de Ayni es',
+    );
   });
 
   it('sin identidad de SMS, pedir el código por teléfono responde 503', async () => {

@@ -41,6 +41,9 @@ import {
 import { SetCirclePauseUseCase } from './application/use-cases/set-circle-pause.use-case';
 import { AdminCirclesController } from './presentation/http/controllers/admin-circles.controller';
 import { AdminFinanceController } from './presentation/http/controllers/admin-finance.controller';
+import { AdminCycleRunsController } from './presentation/http/controllers/admin-cycle-runs.controller';
+import { CYCLE_RUNS } from './application/ports/cycle-runs.port';
+import { SqlCycleRuns } from './infrastructure/persistence/typeorm/sql-cycle-runs';
 import { ADMIN_FINANCE_QUERY } from './application/ports/admin-finance-query.port';
 import {
   GetGuaranteeFundUseCase,
@@ -124,6 +127,7 @@ import { MyCirclesController } from './presentation/http/controllers/my-circles.
     MercadoPagoWebhookController,
     AdminCirclesController,
     AdminFinanceController,
+    AdminCycleRunsController,
   ],
   providers: [
     GetJoinConfigUseCase,
@@ -233,6 +237,8 @@ import { MyCirclesController } from './presentation/http/controllers/my-circles.
     ListPayoutsUseCase,
     GetGuaranteeFundUseCase,
     { provide: ADMIN_FINANCE_QUERY, useClass: SqlAdminFinanceQuery },
+    // Ejecuciones del ciclo mensual: las guarda la tarea diaria y las lee el back-office.
+    { provide: CYCLE_RUNS, useClass: SqlCycleRuns },
     // Regla de confianza por tipo de turno (COPAYNI-60, valores propuestos de R18).
     TypeOrmMemberHistory,
     { provide: MEMBER_HISTORY, useExisting: TypeOrmMemberHistory },

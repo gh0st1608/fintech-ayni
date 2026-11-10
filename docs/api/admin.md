@@ -94,6 +94,22 @@ Para soporte (fase 2 de [backoffice-plan.md](../backoffice-plan.md)). Roles: `su
 
 Errores: `USER_NOT_FOUND` (404), además de los comunes.
 
+### Acciones de soporte
+
+| Endpoint                                       | Roles                                        | Qué hace                                                                                                             |
+| ---------------------------------------------- | -------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| `POST /admin/v1/users/:userId/sessions/revoke` | `support`, `operations`, `super_admin`       | `{ reason }`. Cierra todas las sesiones abiertas (`revokedSessions`). La persona puede volver a entrar               |
+| `POST /admin/v1/users/:userId/block`           | Los mismos                                   | `{ reason }`. Cierra sus sesiones y le impide abrir otra: verificar el código y renovar responden `403 USER_BLOCKED` |
+| `POST /admin/v1/users/:userId/unblock`         | Los mismos, **con step-up**                  | `{ reason }`                                                                                                         |
+| `POST /admin/v1/users/:userId/pii/reveal`      | `operations`, `super_admin`, **con step-up** | `{ reason }`. Devuelve email, teléfono y nombre completos                                                            |
+| `GET /admin/v1/users/:userId/notes`            | El personal operativo                        | Notas de soporte, de la más reciente a la más antigua                                                                |
+| `POST /admin/v1/users/:userId/notes`           | `support`, `operations`, `super_admin`       | `{ body }` (hasta 2000 caracteres). **De solo inserción**: no se editan ni se borran                                 |
+
+- **Todas quedan en la auditoría** con el motivo (`user.sessions.revoke`, `user.block`, `user.unblock`, `user.pii.reveal`, `user.note.add`). El motivo no se escribe en los logs de la aplicación.
+- **Bloqueo:** `block` y `unblock` son idempotentes (`changed: false` si ya estaba así). El perfil (`GET /admin/v1/users/:userId`) incluye `blocked: { at, reason }` o `null`; el motivo es interno.
+- **Access token vigente:** bloquear o revocar no invalida el access token que la persona ya tiene; vence solo (`ACCESS_TOKEN_TTL_SECONDS`, 15 minutos por defecto). Lo que se corta es la renovación.
+- **Supuesto:** las notas de soporte no están en la matriz del plan. Las leen todos los que ven a la persona y las escriben quienes atienden (`support`, `operations` y `super_admin`).
+
 ## Finanzas (solo lectura)
 
 Fase 3 de [backoffice-plan.md](../backoffice-plan.md). Roles: `finance` y `super_admin`. **Ninguno mueve dinero:** registrar el capital semilla o una corrección espera la doble aprobación (BO6).
@@ -109,6 +125,10 @@ Fase 3 de [backoffice-plan.md](../backoffice-plan.md). Roles: `finance` y `super
 - **Mínimo del fondo:** `GUARANTEE_FUND_MIN_INSTALLMENTS_PER_CIRCLE` cuotas base por círculo en curso (R18), la misma regla que la alerta del backend.
 - **Movimientos:** importe positivo entra al fondo y negativo sale. `reason` solo viene en los movimientos manuales (`seed_capital`, `adjustment`).
 - **Datos simulados:** mientras el ciclo use `CIRCLE_PAYMENTS_ADAPTER=fake` y la tarea diaria siga apagada en prd, estas vistas muestran lo que haya en la base, sin conciliar contra la pasarela.
+
+## Ejecuciones del ciclo mensual
+
+`GET /admin/v1/cycle-runs?limit=&cursor=` (`support`, `operations`, `finance` y `super_admin`): cada ejecución de la tarea diaria, de la más reciente a la más antigua, con `businessDate` (día del negocio en America/Lima), `advanced`, `locked`, `failed` y `failures` (`circleId` y el mensaje del error, recortado a 300 caracteres). La tarea guarda el resumen al terminar; si no puede guardarlo, la ejecución igual termina y queda el error `circles.cycle.run_record_failed` en el log.
 
 ## Auditoría
 

@@ -10,6 +10,12 @@ export const OTP_SENDER = Symbol('OTP_SENDER');
 export const ACCESS_TOKEN_ISSUER = Symbol('ACCESS_TOKEN_ISSUER');
 export const REFRESH_TOKEN_SECRETS = Symbol('REFRESH_TOKEN_SECRETS');
 export const AUTH_POLICY = Symbol('AUTH_POLICY');
+export const ACCOUNT_ACCESS = Symbol('ACCOUNT_ACCESS');
+
+/** Si la persona puede tener sesión: el personal la bloquea desde el back-office. */
+export interface AccountAccessPort {
+  isBlocked(userId: string): Promise<boolean>;
+}
 
 /** Parámetros de la autenticación, desde la configuración validada (pending-scope R10). */
 export interface AuthPolicy {

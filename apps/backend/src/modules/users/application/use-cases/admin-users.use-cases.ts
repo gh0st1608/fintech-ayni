@@ -28,6 +28,7 @@ function mask(record: AdminUserRecord): AdminUserView {
     status: record.status,
     preferredLanguage: record.preferredLanguage,
     createdAt: record.createdAt,
+    blocked: record.blocked,
     name: maskName(record.firstName, record.lastName),
     email: record.email ? maskEmail(record.email) : null,
     phone: record.phone ? maskPhone(record.phone) : null,

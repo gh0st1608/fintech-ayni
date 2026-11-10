@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 
-import { Inject, Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable, Logger, Optional } from '@nestjs/common';
 
 import { CLOCK, type ClockPort } from '../../../../shared/application/ports/clock.port';
 import { LocalDate } from '../../../../shared/domain/value-objects/local-date';
@@ -23,6 +23,7 @@ import {
   DISBURSEMENTS,
   type DisbursementsPort,
 } from '../ports/cycle-payments.port';
+import { CYCLE_RUNS, type CycleRunFailure, type CycleRunsPort } from '../ports/cycle-runs.port';
 import { CircleTerms } from '../../domain/value-objects/circle-terms';
 import { CIRCLE_CYCLE, type CircleCycleSettings } from './cycle-settings';
 import { SLOT_PRICING } from './get-available-slots.use-case';
@@ -65,11 +66,15 @@ export class AdvanceCircleCyclesUseCase {
     @Inject(CONTRIBUTIONS) private readonly contributions: ContributionsPort,
     @Inject(DISBURSEMENTS) private readonly disbursements: DisbursementsPort,
     @Inject(CLOCK) private readonly clock: ClockPort,
+    // Opcional: sin registro, la ejecución solo queda en los logs.
+    @Optional() @Inject(CYCLE_RUNS) private readonly runs?: CycleRunsPort,
   ) {}
 
   async execute(): Promise<AdvanceCyclesResult> {
-    const today = LocalDate.fromDate(this.clock.now(), this.settings.timeZone);
+    const startedAt = this.clock.now();
+    const today = LocalDate.fromDate(startedAt, this.settings.timeZone);
     const result: AdvanceCyclesResult = { advanced: 0, locked: 0, failed: 0 };
+    const failures: CycleRunFailure[] = [];
     for (const circleId of await this.cycles.listToAdvance(today.period)) {
       try {
         const advanced = await this.cycles.withLock(circleId, (stored) =>
@@ -78,14 +83,37 @@ export class AdvanceCircleCyclesUseCase {
         result[advanced ? 'advanced' : 'locked'] += 1;
       } catch (error) {
         result.failed += 1;
-        this.logger.error({
-          event: 'circles.cycle.failed',
-          circleId,
-          reason: error instanceof Error ? error.message : String(error),
-        });
+        const reason = error instanceof Error ? error.message : String(error);
+        failures.push({ circleId, reason: reason.slice(0, 300) });
+        this.logger.error({ event: 'circles.cycle.failed', circleId, reason });
       }
     }
+    await this.record({ startedAt, businessDate: today, result, failures });
     return result;
+  }
+
+  /** Guarda el resumen para el back-office. Si falla, la ejecución igual terminó: solo se avisa. */
+  private async record(props: {
+    startedAt: Date;
+    businessDate: LocalDate;
+    result: AdvanceCyclesResult;
+    failures: CycleRunFailure[];
+  }): Promise<void> {
+    if (!this.runs) return;
+    try {
+      await this.runs.record({
+        businessDate: props.businessDate.toString(),
+        startedAt: props.startedAt,
+        finishedAt: this.clock.now(),
+        ...props.result,
+        failures: props.failures,
+      });
+    } catch (error) {
+      this.logger.error({
+        event: 'circles.cycle.run_record_failed',
+        reason: error instanceof Error ? error.message : String(error),
+      });
+    }
   }
 
   private propose(

@@ -17,6 +17,7 @@ import {
   OTP_HASHER,
   OTP_SENDER,
   REFRESH_TOKEN_REPOSITORY,
+  ACCOUNT_ACCESS,
   REFRESH_TOKEN_SECRETS,
   type AuthPolicy,
 } from './application/ports/auth.ports';
@@ -27,6 +28,7 @@ import {
   type PasscodePolicy,
 } from './application/ports/passcode.ports';
 import { SessionIssuer } from './application/services/session-issuer';
+import { SqlAccountAccess } from './infrastructure/persistence/sql-account-access';
 import {
   ResendOtpUseCase,
   StartAuthenticationUseCase,
@@ -141,6 +143,7 @@ function authPolicy(config: AppConfigService): AuthPolicy {
     TypeOrmRefreshTokenRepository,
     { provide: AUTH_CHALLENGE_REPOSITORY, useExisting: TypeOrmAuthChallengeRepository },
     { provide: REFRESH_TOKEN_REPOSITORY, useExisting: TypeOrmRefreshTokenRepository },
+    { provide: ACCOUNT_ACCESS, useClass: SqlAccountAccess },
     { provide: REFRESH_TOKEN_SECRETS, useClass: CryptoRefreshTokenSecrets },
     { provide: AUTH_POLICY, inject: [ConfigService], useFactory: authPolicy },
     { provide: JWT_SETTINGS, inject: [ConfigService], useFactory: jwtSettings },

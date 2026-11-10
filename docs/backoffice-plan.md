@@ -126,12 +126,12 @@ El código ya define 5 roles. Propuesta para el MVP, sin agregar roles hasta que
 **Endpoints de la fase 2 [I]** (nombres provisionales):
 
 - **[H] Implementado:** `GET /admin/v1/users?query=` (búsqueda exacta) y `GET /admin/v1/users/:id` ([admin.md](api/admin.md#búsqueda-de-personas))
-- `POST /admin/v1/users/:id/sessions/revoke`, `POST /admin/v1/users/:id/block` y `/unblock`
-- `POST /admin/v1/users/:id/pii/reveal` (motivo, step-up)
+- **[H] Implementado:** `POST /admin/v1/users/:id/sessions/revoke`, `POST /admin/v1/users/:id/block` y `/unblock`, y notas de soporte
+- **[H] Implementado:** `POST /admin/v1/users/:id/pii/reveal` (motivo, step-up)
 - **[H] Implementado:** `GET /admin/v1/kyc/reviews`, `GET /admin/v1/kyc/reviews/:id` y `GET /admin/v1/kyc/reviews/:id/pages/:page/url`
 - **[H] Implementado:** `POST /admin/v1/kyc/reviews/:id/approve` y `/reject` (motivo de un catálogo; [admin.md](api/admin.md#revisión-manual-del-kyc))
 - `GET /admin/v1/circles?state=` y `GET /admin/v1/circles/:id`
-- `GET /admin/v1/cycle-runs` (requiere guardar las ejecuciones, hoy solo en logs)
+- **[H] Implementado:** `GET /admin/v1/cycle-runs` (la tarea diaria guarda cada ejecución)
 
 **Endpoints de la fase 3 [I]:**
 

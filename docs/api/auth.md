@@ -68,11 +68,12 @@ Seguridad:
 - El access token es un JWT de vida corta.
 - El refresh token es rotativo (ver COPAYNI-21).
 
-| HTTP | `error.code`            | `details`                      | Caso                                           |
-| ---- | ----------------------- | ------------------------------ | ---------------------------------------------- |
-| 422  | `OTP_INVALID`           | `{ "attemptsRemaining": "2" }` | Código incorrecto.                             |
-| 422  | `OTP_EXPIRED`           | —                              | Código vencido o desafío inexistente.          |
-| 422  | `OTP_ATTEMPTS_EXCEEDED` | —                              | Intentos agotados: el código queda invalidado. |
+| HTTP | `error.code`            | `details`                      | Caso                                                                     |
+| ---- | ----------------------- | ------------------------------ | ------------------------------------------------------------------------ |
+| 422  | `OTP_INVALID`           | `{ "attemptsRemaining": "2" }` | Código incorrecto.                                                       |
+| 422  | `OTP_EXPIRED`           | —                              | Código vencido o desafío inexistente.                                    |
+| 422  | `OTP_ATTEMPTS_EXCEEDED` | —                              | Intentos agotados: el código queda invalidado.                           |
+| 403  | `USER_BLOCKED`          | —                              | El personal bloqueó la cuenta desde el back-office (también al renovar). |
 
 La comparación del código debe hacerse en tiempo constante.
 
