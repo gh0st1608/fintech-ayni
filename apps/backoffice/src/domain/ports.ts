@@ -15,7 +15,8 @@ import type {
   KycType,
 } from './kyc/Kyc';
 import type { StaffMember, StaffRole } from './staff/Staff';
-import type { UserDetail, UserSummary } from './users/User';
+import type { BlockResult, SupportNote, UserContact, UserDetail, UserSummary } from './users/User';
+import type { CycleRunsPage } from './circles/CycleRun';
 import type {
   GuaranteeFund,
   InstallmentsPage,
@@ -71,6 +72,12 @@ export interface KycRepositoryPort {
 export interface UsersRepositoryPort {
   search(query: string, signal?: AbortSignal): Promise<UserSummary[]>;
   get(userId: string, signal?: AbortSignal): Promise<UserDetail>;
+  revokeSessions(userId: string, reason: string): Promise<{ revokedSessions: number }>;
+  setBlocked(userId: string, action: 'block' | 'unblock', reason: string): Promise<BlockResult>;
+  /** El dato completo: el backend exige motivo, autenticación reciente y lo audita. */
+  revealContact(userId: string, reason: string): Promise<UserContact>;
+  notes(userId: string, signal?: AbortSignal): Promise<SupportNote[]>;
+  addNote(userId: string, body: string): Promise<SupportNote>;
 }
 
 export interface PageFilter {
@@ -89,4 +96,9 @@ export interface FinanceRepositoryPort {
   installments(filter: InstallmentsFilter, signal?: AbortSignal): Promise<InstallmentsPage>;
   payouts(filter: PageFilter, signal?: AbortSignal): Promise<PayoutsPage>;
   guaranteeFund(filter: PageFilter, signal?: AbortSignal): Promise<GuaranteeFund>;
+}
+
+/** Ejecuciones de la tarea diaria del ciclo mensual (docs/api/admin.md). */
+export interface CycleRunsRepositoryPort {
+  list(filter: PageFilter, signal?: AbortSignal): Promise<CycleRunsPage>;
 }

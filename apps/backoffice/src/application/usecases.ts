@@ -18,10 +18,20 @@ import type {
   FinanceRepositoryPort,
   InstallmentsFilter,
   PageFilter,
+  CycleRunsRepositoryPort,
 } from '@/domain/ports';
 import { AppError } from '@/domain/shared/AppError';
 import { can, type StaffMember } from '@/domain/staff/Staff';
-import { isExactUserQuery, type UserDetail, type UserSummary } from '@/domain/users/User';
+import {
+  type BlockResult,
+  isExactUserQuery,
+  MAX_NOTE_LENGTH,
+  type SupportNote,
+  type UserContact,
+  type UserDetail,
+  type UserSummary,
+} from '@/domain/users/User';
+import type { CycleRunsPage } from '@/domain/circles/CycleRun';
 import {
   type GuaranteeFund,
   type InstallmentsPage,
@@ -233,5 +243,89 @@ export class GetGuaranteeFundUseCase {
 
   execute(filter: PageFilter, signal?: AbortSignal): Promise<GuaranteeFund> {
     return this.finance.guaranteeFund(filter, signal);
+  }
+}
+
+/** Motivo obligatorio de una acción de soporte: queda en la auditoría del backend. */
+function cleanReason(reason: string): string {
+  const trimmed = reason.trim();
+  if (!trimmed) throw new AppError('validation', 'Escribe el motivo');
+  if (trimmed.length > MAX_REASON_LENGTH) {
+    throw new AppError('validation', `El motivo admite hasta ${MAX_REASON_LENGTH} caracteres`);
+  }
+  return trimmed;
+}
+
+function assertCan(staff: StaffMember, permission: 'users.support' | 'users.reveal'): void {
+  if (!can(staff, permission)) throw new AppError('forbidden', 'Tu rol no permite esta acción');
+}
+
+/** Cierra las sesiones de la persona (p. ej. por un teléfono robado). Puede volver a entrar. */
+export class RevokeUserSessionsUseCase {
+  constructor(private readonly users: UsersRepositoryPort) {}
+
+  execute(
+    staff: StaffMember,
+    userId: string,
+    reason: string,
+  ): Promise<{ revokedSessions: number }> {
+    assertCan(staff, 'users.support');
+    return this.users.revokeSessions(userId, cleanReason(reason));
+  }
+}
+
+/** Bloquea (cierra sus sesiones y no puede volver a entrar) o desbloquea. Desbloquear exige step-up. */
+export class SetUserBlockedUseCase {
+  constructor(private readonly users: UsersRepositoryPort) {}
+
+  execute(
+    staff: StaffMember,
+    userId: string,
+    action: 'block' | 'unblock',
+    reason: string,
+  ): Promise<BlockResult> {
+    assertCan(staff, 'users.support');
+    return this.users.setBlocked(userId, action, cleanReason(reason));
+  }
+}
+
+/** Revela el dato completo. Solo operaciones y el admin general; el backend lo audita. */
+export class RevealUserContactUseCase {
+  constructor(private readonly users: UsersRepositoryPort) {}
+
+  execute(staff: StaffMember, userId: string, reason: string): Promise<UserContact> {
+    assertCan(staff, 'users.reveal');
+    return this.users.revealContact(userId, cleanReason(reason));
+  }
+}
+
+export class ListSupportNotesUseCase {
+  constructor(private readonly users: UsersRepositoryPort) {}
+
+  execute(userId: string, signal?: AbortSignal): Promise<SupportNote[]> {
+    return this.users.notes(userId, signal);
+  }
+}
+
+/** Agrega una nota al historial de atención. Las notas no se editan ni se borran. */
+export class AddSupportNoteUseCase {
+  constructor(private readonly users: UsersRepositoryPort) {}
+
+  execute(staff: StaffMember, userId: string, body: string): Promise<SupportNote> {
+    assertCan(staff, 'users.support');
+    const trimmed = body.trim();
+    if (!trimmed) throw new AppError('validation', 'Escribe la nota');
+    if (trimmed.length > MAX_NOTE_LENGTH) {
+      throw new AppError('validation', `La nota admite hasta ${MAX_NOTE_LENGTH} caracteres`);
+    }
+    return this.users.addNote(userId, trimmed);
+  }
+}
+
+export class ListCycleRunsUseCase {
+  constructor(private readonly runs: CycleRunsRepositoryPort) {}
+
+  execute(filter: PageFilter, signal?: AbortSignal): Promise<CycleRunsPage> {
+    return this.runs.list(filter, signal);
   }
 }

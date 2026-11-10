@@ -20,6 +20,8 @@ export const PERMISSIONS = {
   'kyc.review': ['operations', 'super_admin'],
   'users.read': ['support', 'operations', 'finance', 'super_admin'],
   'finance.read': ['finance', 'super_admin'],
+  'users.support': ['support', 'operations', 'super_admin'],
+  'users.reveal': ['operations', 'super_admin'],
 } as const satisfies Record<string, readonly StaffRole[]>;
 
 export type Permission = keyof typeof PERMISSIONS;

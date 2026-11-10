@@ -11,6 +11,7 @@ import { KycReviewScreen } from '../kyc/KycReviewScreen';
 import { UserDetailScreen } from '../users/UserDetailScreen';
 import { UsersScreen } from '../users/UsersScreen';
 import { FinanceScreen } from '../finance/FinanceScreen';
+import { CycleRunsScreen } from '../cycle-runs/CycleRunsScreen';
 import { useSession, useStaff } from '../providers/AppProviders';
 
 /** Rutas privadas: sin sesión, al login, recordando a dónde se quería ir. */
@@ -48,6 +49,11 @@ function Layout() {
               {can(staff, 'circles.read') && (
                 <NavLink to="/circles" className={navClass}>
                   Juntas
+                </NavLink>
+              )}
+              {can(staff, 'circles.read') && (
+                <NavLink to="/cycle-runs" className={navClass}>
+                  Ciclo mensual
                 </NavLink>
               )}
               {can(staff, 'users.read') && (
@@ -117,6 +123,7 @@ export const routes: RouteObject[] = [
         children: [
           { path: '/circles', element: <CirclesScreen /> },
           { path: '/circles/:circleId', element: <CircleDetailScreen /> },
+          { path: '/cycle-runs', element: <CycleRunsScreen /> },
         ],
       },
       {
