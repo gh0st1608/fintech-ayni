@@ -1,7 +1,7 @@
 import { ApiProperty } from '@nestjs/swagger';
 
 import { type Money } from '../../../../../shared/domain/value-objects/money';
-import { type JoinConfig } from '../../../domain/entities/join-config';
+import { type JoinConfigView } from '../../../application/use-cases/get-join-config.use-case';
 
 export class MoneyResponse {
   @ApiProperty({ example: 300000, description: 'Entero en unidades menores (céntimos)' })
@@ -26,6 +26,21 @@ export class PayoutRangeResponse {
   step!: MoneyResponse;
 }
 
+export class CurrencyOptionResponse {
+  @ApiProperty({ example: 'USD', description: 'Código ISO 4217' })
+  code!: string;
+
+  @ApiProperty({ description: 'true en la moneda oficial (PEN)' })
+  official!: boolean;
+
+  @ApiProperty({
+    example: '3.75',
+    description:
+      'Unidades de la moneda oficial por unidad de esta (tipo de cambio fijo); 1 en la oficial',
+  })
+  rateToOfficial!: string;
+}
+
 /** Contrato `GET /v1/circles/join-config` (docs/api/circles.md). */
 export class JoinConfigResponse {
   @ApiProperty({ type: PayoutRangeResponse })
@@ -41,7 +56,13 @@ export class JoinConfigResponse {
   @ApiProperty({ type: MoneyResponse })
   savingProgramMax!: MoneyResponse;
 
-  static from(config: JoinConfig): JoinConfigResponse {
+  @ApiProperty({
+    type: [CurrencyOptionResponse],
+    description: "Monedas en las que se puede abrir un Game'ya; la oficial va primero",
+  })
+  currencies!: CurrencyOptionResponse[];
+
+  static from({ config, currencies }: JoinConfigView): JoinConfigResponse {
     const { payoutRange } = config;
     return {
       payout: {
@@ -51,6 +72,7 @@ export class JoinConfigResponse {
       },
       userPayoutLimit: config.userPayoutLimit && MoneyResponse.from(config.userPayoutLimit),
       savingProgramMax: MoneyResponse.from(config.savingProgramMax),
+      currencies,
     };
   }
 }

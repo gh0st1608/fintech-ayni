@@ -1,7 +1,8 @@
 import { DomainError } from '../../../../shared/errors/app-error';
-import { type Money } from '../../../../shared/domain/value-objects/money';
+import { type ExchangeRates } from '../../../../shared/domain/value-objects/exchange-rates';
+import { Money } from '../../../../shared/domain/value-objects/money';
 import { MIN_CIRCLE_MONTHS } from '../value-objects/circle-terms';
-import { type PayoutRange } from '../value-objects/payout-range';
+import { minorPerUnit, type PayoutRange } from '../value-objects/payout-range';
 
 export class InvalidJoinConfigError extends DomainError {
   constructor(message: string) {
@@ -49,6 +50,29 @@ export class JoinConfig {
     }
     const durations = [...new Set(durationOptions)].sort((a, b) => a - b);
     return new JoinConfig(payoutRange, savingProgramMax, userPayoutLimit, durations);
+  }
+
+  get currency(): string {
+    return this.payoutRange.currency;
+  }
+
+  /**
+   * La misma configuración en otra moneda (pending-scope M6): el rango equivalente y los topes
+   * convertidos hacia abajo, en unidades enteras, para no superar nunca el monto original.
+   */
+  convertedTo(currency: string, rates: ExchangeRates): JoinConfig {
+    if (currency === this.currency) return this;
+    const unit = minorPerUnit(currency);
+    const cap = (money: Money): Money => {
+      const converted = rates.convert(money, currency, 'down').amount;
+      return Money.of(Math.floor(converted / unit) * unit, currency);
+    };
+    return JoinConfig.create({
+      payoutRange: this.payoutRange.convertedTo(currency, rates),
+      savingProgramMax: cap(this.savingProgramMax),
+      userPayoutLimit: this.userPayoutLimit && cap(this.userPayoutLimit),
+      durationOptions: this.durationOptions,
+    });
   }
 
   /** Si el usuario puede elegir este payout: dentro del rango, en un salto y bajo su límite. */

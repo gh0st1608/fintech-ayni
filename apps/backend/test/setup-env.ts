@@ -14,6 +14,9 @@ export const TEST_ENV = {
   RATE_LIMIT_MAX: '5',
   ENABLE_SWAGGER: 'true',
   DEFAULT_CURRENCY: 'PEN',
+  // PEN oficial y USD habilitada con un tipo de cambio fijo (pending-scope M2 y M6).
+  SUPPORTED_CURRENCIES: 'PEN,USD',
+  EXCHANGE_RATES: 'USD:3.75',
   // Pasarela simulada (COPAYNI-34): las pruebas nunca llaman a Mercado Pago.
   PAYMENT_GATEWAY: 'fake',
   JOIN_PAYOUT_MIN: '300000',

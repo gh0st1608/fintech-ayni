@@ -58,6 +58,31 @@ describe('POST /v1/circles/join', () => {
   // 87.500 en 10 meses: cuotas exactas y en un salto del slider.
   const NEW_CIRCLE = { circleId: null, payoutAmount: 8_750_000, months: 10, position: 3 };
 
+  it("abre un Game'ya en USD y lo ofrece solo a quien elige USD (pending-scope M2)", async () => {
+    // USD 23.500 en 10 meses: un payout propio, que también es un salto válido en PEN.
+    const usdCircle = { ...NEW_CIRCLE, payoutAmount: 2_350_000, currency: 'USD' };
+    const ana = await signIn();
+    const created = await join(ana, usdCircle).expect(201);
+    expect(created.body.data).toMatchObject({
+      payout: { amount: 2_350_000, currency: 'USD' },
+      created: true,
+    });
+    expect(created.body.data.installments[0].currency).toBe('USD');
+    const { circleId } = created.body.data as { circleId: string };
+
+    const beto = await signIn();
+    const slots = (currency?: string) =>
+      request(app.getHttpServer())
+        .get('/v1/circles/slots')
+        .query({ payoutAmount: 2_350_000, months: 10, ...(currency ? { currency } : {}) })
+        .set('Authorization', `Bearer ${beto}`);
+    const inUsd = await slots('USD').expect(200);
+    expect(inUsd.body.data.circleId).toBe(circleId);
+    // El mismo monto en PEN es otro Game'ya: no se mezclan monedas.
+    const inPen = await slots().expect(200);
+    expect(inPen.body.data.circleId).not.toBe(circleId);
+  });
+
   it('abre el círculo nuevo, responde lo mismo al reintentar y lo ofrece a los demás', async () => {
     const ana = await signIn();
     const key = randomUUID();

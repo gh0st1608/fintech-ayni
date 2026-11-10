@@ -1,3 +1,8 @@
+import { type CurrencySettings } from '@src/shared/application/ports/currencies.port';
+import {
+  CurrencyNotSupportedError,
+  type JoinConfigRepositoryPort,
+} from '@src/modules/circles/application/ports/join-config-repository.port';
 import { type CircleRepositoryPort } from '@src/modules/circles/application/ports/circle-repository.port';
 import { type MemberDebtsPort } from '@src/modules/circles/application/ports/member-debts.port';
 import { type MemberHistoryPort } from '@src/modules/circles/application/ports/member-history.port';
@@ -11,6 +16,7 @@ import { SlotPricing } from '@src/modules/circles/domain/services/slot-pricing';
 import { PayoutRange } from '@src/modules/circles/domain/value-objects/payout-range';
 import { SlotPricingRules } from '@src/modules/circles/domain/value-objects/slot-pricing-rules';
 import { Money } from '@src/shared/domain/value-objects/money';
+import { currencySettingsFrom } from '@src/shared/infrastructure/currency/currency-settings';
 
 import { TestClock } from './create-test-app';
 
@@ -68,11 +74,33 @@ export const NO_DEBTS: MemberDebtsPort = {
   settle: () => Promise.resolve(null),
 };
 
+/** PEN oficial y única habilitada por defecto; el tipo de cambio de USD sirve a las conversiones. */
+export const TEST_CURRENCIES = currencySettingsFrom({
+  DEFAULT_CURRENCY: 'PEN',
+  SUPPORTED_CURRENCIES: [],
+  EXCHANGE_RATES: ['USD:3.75'],
+});
+
 export const TEST_JOIN_CONFIG = JoinConfig.create({
   payoutRange: PayoutRange.create({ min: pen(3_000), max: pen(120_000), step: pen(500) }),
   savingProgramMax: pen(1_000_000),
   userPayoutLimit: null,
   durationOptions: [6, 10, 12],
+});
+
+/** La configuración de prueba en cada moneda habilitada, como `ConfigJoinConfigRepository`. */
+export const joinConfigsFor = (currencies: CurrencySettings): JoinConfigRepositoryPort => ({
+  getForUser: (_userId, currency = currencies.official) =>
+    currencies.supported.includes(currency)
+      ? Promise.resolve(TEST_JOIN_CONFIG.convertedTo(currency, currencies.rates))
+      : Promise.reject(new CurrencyNotSupportedError()),
+});
+
+/** PEN y USD habilitadas, con USD a 3,75. */
+export const TEST_CURRENCIES_WITH_USD = currencySettingsFrom({
+  DEFAULT_CURRENCY: 'PEN',
+  SUPPORTED_CURRENCIES: ['PEN', 'USD'],
+  EXCHANGE_RATES: ['USD:3.75'],
 });
 
 /** Usuario con National ID, sin límite mensual y con método de cobro elegido. */
@@ -96,11 +124,12 @@ export function createJoinCircleUseCase(
     debts?: MemberDebtsPort;
     /** Círculos completados sin expulsión; por defecto 1, así puede tomar cualquier turno. */
     completedCircles?: number;
+    currencies?: CurrencySettings;
   } = {},
 ): JoinCircleUseCase {
   const applicant = options.applicant ?? ELIGIBLE;
   return new JoinCircleUseCase(
-    { getForUser: () => Promise.resolve(TEST_JOIN_CONFIG) },
+    joinConfigsFor(options.currencies ?? TEST_CURRENCIES),
     circles,
     options.pricing ?? TEST_PRICING,
     {
@@ -114,6 +143,7 @@ export function createJoinCircleUseCase(
     { dueDay: TEST_DUE_DAY },
     historyWith(options.completedCircles ?? 1),
     TEST_TRUST,
+    options.currencies ?? TEST_CURRENCIES,
     new TestClock(options.now ?? JOIN_NOW),
   );
 }

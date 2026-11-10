@@ -14,6 +14,8 @@ import { InMemoryCircleRepository } from '@test/support/in-memory-circle.reposit
 import {
   createJoinCircleUseCase,
   ELIGIBLE,
+  TEST_CURRENCIES,
+  TEST_CURRENCIES_WITH_USD,
   TEST_PRICING,
   TEST_PRICING_RULES,
 } from '@test/support/join-circle.fixture';
@@ -30,7 +32,11 @@ const NEW_CIRCLE: JoinCircleCommand = {
   idempotencyKey: 'key-ana-0000000001',
 };
 
-function setup(applicant: Partial<JoinApplicant> = {}, debts: MemberDebt[] = []) {
+function setup(
+  applicant: Partial<JoinApplicant> = {},
+  debts: MemberDebt[] = [],
+  currencies = TEST_CURRENCIES_WITH_USD,
+) {
   const circles = new InMemoryCircleRepository();
   // Mutable: el caso de uso lo lee en cada ejecución, así se simula un cambio de elegibilidad.
   const current: { -readonly [K in keyof JoinApplicant]: JoinApplicant[K] } = {
@@ -45,6 +51,7 @@ function setup(applicant: Partial<JoinApplicant> = {}, debts: MemberDebt[] = [])
       openDebtsOf: () => Promise.resolve([...openDebts]),
       settle: () => Promise.resolve(openDebts.splice(0)[0] ?? null),
     },
+    currencies,
   });
   const addCircle = (id: string, props: { startsOn?: Period; months?: number } = {}) =>
     circles.add(
@@ -256,5 +263,81 @@ describe('JoinCircleUseCase', () => {
     jest.spyOn(circles, 'create').mockRejectedValueOnce(failure);
 
     await expect(useCase.execute(NEW_CIRCLE)).rejects.toBe(failure);
+  });
+
+  describe('en USD (pending-scope M2 y M6)', () => {
+    /** USD 8.000 en 10 meses: la cuota base es USD 800 (S/ 3.000). */
+    const USD_CIRCLE: JoinCircleCommand = {
+      ...NEW_CIRCLE,
+      payoutAmount: 800_000,
+      currency: 'USD',
+      idempotencyKey: 'key-ana-usd-000001',
+    };
+
+    it("abre un Game'ya en USD con el rango equivalente", async () => {
+      const { circles, useCase } = setup();
+      const result = await useCase.execute(USD_CIRCLE);
+
+      expect(result.terms.payout).toEqual(Money.of(800_000, 'USD'));
+      expect(circles.size).toBe(1);
+    });
+
+    it('rechaza un payout que no cae en el rango en USD', async () => {
+      const { useCase } = setup();
+      // S/ 30.000 no es un payout válido en USD: el máximo es USD 32.000, pero el salto es 100.
+      await expect(useCase.execute({ ...USD_CIRCLE, payoutAmount: 800_050 })).rejects.toMatchObject(
+        { code: 'PAYOUT_NOT_ALLOWED' },
+      );
+    });
+
+    it('rechaza una moneda que no está habilitada', async () => {
+      const { useCase } = setup({}, [], TEST_CURRENCIES);
+      await expect(useCase.execute(USD_CIRCLE)).rejects.toMatchObject({
+        details: { currency: 'not_supported' },
+      });
+    });
+
+    it('compara las cuotas en USD con el límite mensual convertido desde PEN', async () => {
+      // La cuota más alta del slot 3 es USD 1.120 = S/ 4.200 justos; S/ 4.199 no alcanza.
+      const tight = setup({ monthlyPayInLimit: pen(4_199) });
+      await expect(tight.useCase.execute(USD_CIRCLE)).rejects.toMatchObject({
+        code: 'MONTHLY_LIMIT_EXCEEDED',
+      });
+      const roomy = setup({ monthlyPayInLimit: pen(4_200) });
+      await expect(roomy.useCase.execute(USD_CIRCLE)).resolves.toMatchObject({ created: true });
+    });
+
+    it('compara el payout en USD con el límite del método de cobro en PEN', async () => {
+      // Tarjeta prepago de S/ 30.000 = USD 8.000: alcanza justo; USD 8.100 la supera.
+      const { useCase } = setup({ payoutMethod: { type: 'prepaid_card', limit: pen(30_000) } });
+      await expect(useCase.execute(USD_CIRCLE)).resolves.toMatchObject({ created: true });
+      await expect(
+        useCase.execute({
+          ...USD_CIRCLE,
+          payoutAmount: 810_000,
+          idempotencyKey: 'key-ana-usd-000002',
+        }),
+      ).rejects.toMatchObject({ code: 'PAYOUT_METHOD_LIMIT_EXCEEDED' });
+    });
+
+    it('con deudas en PEN y USD, informa el total en PEN redondeado hacia arriba', async () => {
+      const { useCase } = setup({}, [
+        { circleId: 'c-pen', overdue: Money.of(10_000, 'PEN'), lateFee: Money.of(300, 'PEN') },
+        { circleId: 'c-usd', overdue: Money.of(1_001, 'USD'), lateFee: Money.of(0, 'USD') },
+      ]);
+      // USD 10,01 = S/ 37,5375 → S/ 37,54; total S/ 103,00 + 37,54.
+      await expect(useCase.execute(NEW_CIRCLE)).rejects.toMatchObject({
+        code: 'MEMBER_BLOCKED',
+        details: { amountDue: '14054', currency: 'PEN' },
+      });
+    });
+
+    it('un reintento con la misma clave en otra moneda es una clave reutilizada', async () => {
+      const { useCase } = setup();
+      await useCase.execute({ ...NEW_CIRCLE, payoutAmount: 800_000 });
+      await expect(
+        useCase.execute({ ...NEW_CIRCLE, payoutAmount: 800_000, currency: 'USD' }),
+      ).rejects.toMatchObject({ code: 'IDEMPOTENCY_KEY_REUSED' });
+    });
   });
 });

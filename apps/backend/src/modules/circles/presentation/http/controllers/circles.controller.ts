@@ -37,6 +37,7 @@ import {
 import { JoinCircleRequest, JoinCircleResponse } from '../dto/join-circle.dto';
 import { JoinConfigResponse } from '../dto/join-config.response';
 import { RecommendedCirclesResponse } from '../dto/recommended-circles.dto';
+import { CurrencyQuery } from '../dto/currency.dto';
 import { SlotsQuery, SlotsResponse } from '../dto/slots.dto';
 
 /** La genera el cliente una vez por borrador (en la app, un UUID) y la repite en los reintentos. */
@@ -66,9 +67,13 @@ export class CirclesController {
     type: JoinConfigResponse,
     description: 'Envuelto en { success, data, traceId }',
   })
+  @ApiBadRequestResponse({ description: 'Moneda no habilitada (VALIDATION_ERROR, currency)' })
   @ApiUnauthorizedResponse({ description: 'Sin token o token inválido (UNAUTHORIZED)' })
-  async joinConfig(@CurrentPrincipal() principal: Principal): Promise<JoinConfigResponse> {
-    return JoinConfigResponse.from(await this.getJoinConfig.execute(principal));
+  async joinConfig(
+    @CurrentPrincipal() principal: Principal,
+    @Query() query: CurrencyQuery,
+  ): Promise<JoinConfigResponse> {
+    return JoinConfigResponse.from(await this.getJoinConfig.execute(principal, query.currency));
   }
 
   @Get('recommended')
@@ -86,7 +91,9 @@ export class CirclesController {
     type: InstallmentOptionsResponse,
     description: 'Envuelto en { success, data, traceId }',
   })
-  @ApiBadRequestResponse({ description: 'payoutAmount ausente o no entero (VALIDATION_ERROR)' })
+  @ApiBadRequestResponse({
+    description: 'payoutAmount ausente o no entero, o moneda no habilitada (VALIDATION_ERROR)',
+  })
   @ApiUnprocessableEntityResponse({
     description: 'Payout fuera del rango o del salto permitidos (PAYOUT_NOT_ALLOWED)',
   })
@@ -96,7 +103,7 @@ export class CirclesController {
     @Query() query: InstallmentOptionsQuery,
   ): Promise<InstallmentOptionsResponse> {
     return InstallmentOptionsResponse.from(
-      await this.getInstallmentOptions.execute(principal, query.payoutAmount),
+      await this.getInstallmentOptions.execute(principal, query.payoutAmount, query.currency),
     );
   }
 
@@ -124,6 +131,7 @@ export class CirclesController {
         query.payoutAmount,
         query.months,
         query.circleId,
+        query.currency,
       ),
     );
   }

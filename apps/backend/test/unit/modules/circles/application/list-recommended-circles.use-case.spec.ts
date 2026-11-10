@@ -5,22 +5,28 @@ import { Money } from '@src/shared/domain/value-objects/money';
 import { Period } from '@src/shared/domain/value-objects/period';
 import { TestClock } from '@test/support/create-test-app';
 import { InMemoryCircleRepository } from '@test/support/in-memory-circle.repository';
-import { TEST_JOIN_CONFIG, TEST_PRICING } from '@test/support/join-circle.fixture';
+import {
+  joinConfigsFor,
+  TEST_CURRENCIES,
+  TEST_CURRENCIES_WITH_USD,
+  TEST_PRICING,
+} from '@test/support/join-circle.fixture';
 
 const pen = (major: number) => Money.of(major * 100, 'PEN');
 const ANA = { userId: 'ana' };
 /** 15 de octubre de 2026 en Lima. */
 const NOW = new Date('2026-10-15T15:00:00Z');
 
-function setup(limit = 5) {
+function setup(limit = 5, currencies = TEST_CURRENCIES) {
   const circles = new InMemoryCircleRepository();
   const useCase = new ListRecommendedCirclesUseCase(
-    { getForUser: () => Promise.resolve(TEST_JOIN_CONFIG) },
+    joinConfigsFor(currencies),
     circles,
     TEST_PRICING,
     { strategy: 'fill_oldest', startOffsetMonths: 1, timeZone: 'America/Lima' },
     { limit },
     { dueDay: 5 },
+    currencies,
     new TestClock(NOW),
   );
   const addCircle = (
@@ -69,6 +75,22 @@ describe('ListRecommendedCirclesUseCase', () => {
     const { useCase, addCircle } = setup(2);
     ['a', 'b', 'c'].forEach((id) => addCircle(id));
     await expect(useCase.execute(ANA)).resolves.toHaveLength(2);
+  });
+
+  it("recomienda Game'yas en USD solo si USD está habilitada y su payout está en el rango (M2)", async () => {
+    const usd = (major: number) => Money.of(major * 100, 'USD');
+    const withUsd = setup(5, TEST_CURRENCIES_WITH_USD);
+    withUsd.addCircle('usd', { payout: usd(8_400) });
+    withUsd.addCircle('usd-fuera-de-salto', { payout: usd(8_010) });
+    withUsd.addCircle('pen');
+    await expect(withUsd.useCase.execute(ANA)).resolves.toEqual([
+      expect.objectContaining({ circleId: 'usd' }),
+      expect.objectContaining({ circleId: 'pen' }),
+    ]);
+
+    const penOnly = setup();
+    penOnly.addCircle('usd', { payout: usd(8_400) });
+    await expect(penOnly.useCase.execute(ANA)).resolves.toEqual([]);
   });
 
   it('sin círculos abiertos no recomienda nada', async () => {

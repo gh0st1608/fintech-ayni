@@ -1,6 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { IsInt, IsOptional, IsUUID, Max, Min } from 'class-validator';
+import { IsInt, IsOptional, IsUUID, Matches, Max, Min } from 'class-validator';
 
 import { type AvailableSlotsResult } from '../../../application/use-cases/get-available-slots.use-case';
 import { catchUpTotal, SLOT_TYPES, type SlotType } from '../../../domain/services/slot-pricing';
@@ -30,6 +30,16 @@ export class SlotsQuery {
   @IsOptional()
   @IsUUID()
   circleId?: string;
+
+  @ApiProperty({
+    required: false,
+    example: 'PEN',
+    description:
+      "Moneda del Game'ya (ISO 4217), una de join-config.currencies; la oficial si falta",
+  })
+  @IsOptional()
+  @Matches(/^[A-Z]{3}$/)
+  currency?: string;
 }
 
 export class SlotResponse {

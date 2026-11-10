@@ -1,5 +1,24 @@
 import { DomainError } from '../../../../shared/errors/app-error';
-import { type Money } from '../../../../shared/domain/value-objects/money';
+import { type ExchangeRates } from '../../../../shared/domain/value-objects/exchange-rates';
+import { Money } from '../../../../shared/domain/value-objects/money';
+
+/** Unidades menores de una unidad entera de la moneda (100 en PEN y USD). */
+export const minorPerUnit = (currency: string): number =>
+  10 **
+  (new Intl.NumberFormat('en', { style: 'currency', currency }).resolvedOptions()
+    .maximumFractionDigits ?? 2);
+
+/** El salto más cercano de la forma 1, 2 o 5 × 10ⁿ unidades enteras (al menos 1 unidad). */
+function roundStep(amount: number, unit: number): number {
+  const units = Math.max(1, amount / unit);
+  const magnitude = 10 ** Math.floor(Math.log10(units));
+  const nearest = [1, 2, 5, 10]
+    .map((factor) => factor * magnitude)
+    .reduce((best, candidate) =>
+      Math.abs(candidate - units) < Math.abs(best - units) ? candidate : best,
+    );
+  return nearest * unit;
+}
 
 export class InvalidPayoutRangeError extends DomainError {
   constructor(message: string) {
@@ -36,6 +55,23 @@ export class PayoutRange {
 
   get currency(): string {
     return this.min.currency;
+  }
+
+  /**
+   * El rango equivalente en otra moneda (pending-scope M6): el salto convertido se redondea a
+   * 1, 2 o 5 por una potencia de 10 unidades enteras, el mínimo sube al salto siguiente y el
+   * máximo baja al anterior, así el rango queda dentro del original.
+   */
+  convertedTo(currency: string, rates: ExchangeRates): PayoutRange {
+    if (currency === this.currency) return this;
+    const step = roundStep(rates.convert(this.step, currency).amount, minorPerUnit(currency));
+    const min = Math.ceil(rates.convert(this.min, currency).amount / step) * step;
+    const max = Math.max(min, Math.floor(rates.convert(this.max, currency).amount / step) * step);
+    return PayoutRange.create({
+      min: Money.of(min, currency),
+      max: Money.of(max, currency),
+      step: Money.of(step, currency),
+    });
   }
 
   /** Si `amount` está en el rango y cae en un salto completo desde `min`. */

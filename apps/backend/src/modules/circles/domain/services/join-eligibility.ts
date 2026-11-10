@@ -1,3 +1,4 @@
+import { type ExchangeRates } from '../../../../shared/domain/value-objects/exchange-rates';
 import { type Money } from '../../../../shared/domain/value-objects/money';
 import { DomainError } from '../../../../shared/errors/app-error';
 
@@ -35,6 +36,26 @@ export interface JoinApplicant {
   readonly incomeDeclared: boolean;
   /** Método de cobro elegido y todavía disponible, con su límite por payout; `null` si no hay. */
   readonly payoutMethod: { readonly type: string; readonly limit: Money | null } | null;
+}
+
+/**
+ * El mismo postulante con sus límites en `currency` (pending-scope M2): se convierten hacia abajo
+ * con el tipo de cambio fijo, para que una cuota en otra moneda nunca supere el límite real.
+ */
+export function applicantIn(
+  applicant: JoinApplicant,
+  currency: string,
+  rates: ExchangeRates,
+): JoinApplicant {
+  const { monthlyPayInLimit, payoutMethod } = applicant;
+  return {
+    ...applicant,
+    monthlyPayInLimit: monthlyPayInLimit && rates.convert(monthlyPayInLimit, currency, 'down'),
+    payoutMethod: payoutMethod && {
+      ...payoutMethod,
+      limit: payoutMethod.limit && rates.convert(payoutMethod.limit, currency, 'down'),
+    },
+  };
 }
 
 /**

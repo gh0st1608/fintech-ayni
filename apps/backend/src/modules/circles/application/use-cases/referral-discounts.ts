@@ -26,8 +26,12 @@ export class ReferralDiscounts {
     @Inject(GUARANTEE_FUND) private readonly ledger: GuaranteeFundPort,
   ) {}
 
-  /** Cuánto del saldo se aplica a una cuota de `amount`. */
+  /**
+   * Cuánto del saldo se aplica a una cuota de `amount`. El saldo está en la moneda del beneficio
+   * (la oficial): una cuota en otra moneda no lo usa (supuesto de pending-scope M2).
+   */
   async quote(userId: string, amount: Money): Promise<Money> {
+    if (amount.currency !== this.settings.reward.currency) return Money.zero(amount.currency);
     const { earned, redeemed } = await this.referrals.totalsOf(
       userId,
       this.settings.maxRewardedInvites,
