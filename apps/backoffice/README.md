@@ -46,6 +46,7 @@ Pantalla → hook (TanStack Query) → caso de uso → puerto → adaptador → 
 
 - **Límites entre capas:** los vigila ESLint (`no-restricted-imports`). El dominio no importa React; la presentación no importa adaptadores concretos.
 - **Contrato con el backend:** cada respuesta se valida con Zod (`src/infrastructure/api/schemas.ts`). Un cambio incompatible falla con un error claro, no con datos a medias.
+- **Carga por sección:** cada pantalla se descarga al visitarla (`lazy` de React Router), y React, React Router, TanStack Query y Zod van en archivos propios que el navegador conserva entre despliegues (`vite.config.ts`).
 - **Permisos:** la UI no ofrece lo que el rol no puede hacer (`src/domain/staff/Staff.ts`), pero la autorización real es la del backend.
 
 ## Requisitos
