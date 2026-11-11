@@ -43,6 +43,8 @@ export interface Membership {
    * que se cotizan con las reglas vigentes (`SlotPricing.quoteOf`).
    */
   readonly price?: SlotPrice;
+  /** Versión de los términos aceptada al unirse (COPAYNI-86); falta en las membresías anteriores. */
+  readonly termsVersion?: string;
 }
 
 export interface JoinResult {
@@ -170,7 +172,7 @@ export class Circle {
   }
 
   join(request: Membership): JoinResult {
-    const { userId, position, idempotencyKey, price } = request;
+    const { userId, position, idempotencyKey, price, termsVersion } = request;
     const previous = this.members.find((member) => member.idempotencyKey === idempotencyKey);
     if (previous) {
       if (previous.userId !== userId || previous.position !== position) {
@@ -189,7 +191,13 @@ export class Circle {
       );
     }
 
-    const membership: Membership = { userId, position, idempotencyKey, ...(price && { price }) };
+    const membership: Membership = {
+      userId,
+      position,
+      idempotencyKey,
+      ...(price && { price }),
+      ...(termsVersion && { termsVersion }),
+    };
     this.members.push(membership);
     if (this.runningState) {
       this.runningState = {

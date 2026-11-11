@@ -18,11 +18,12 @@ import {
   createJoinCircleUseCase,
   TEST_PRICING,
   TEST_PRICING_RULES,
+  TEST_TERMS_VERSION,
 } from '@test/support/join-circle.fixture';
 import { insertTestUser, openTestDatabase } from '@test/support/test-database';
 
 const MONTHS = 12;
-const TERMS = { payoutAmount: 2_400_000, months: MONTHS };
+const TERMS = { payoutAmount: 2_400_000, months: MONTHS, termsVersion: TEST_TERMS_VERSION };
 
 /**
  * El adaptador contra PostgreSQL real: mapeo, índices únicos y las mismas carreras que
@@ -85,6 +86,7 @@ describe('TypeOrmCircleRepository', () => {
         position: 4,
         idempotencyKey: `key-${ana}`,
         price: priceOf(TEST_PRICING.quote(circle!.terms, 4)),
+        termsVersion: TEST_TERMS_VERSION,
       },
     ]);
   });

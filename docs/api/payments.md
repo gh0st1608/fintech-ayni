@@ -23,19 +23,22 @@ Resumen de la pestaña Payment (COPAYNI-35): las cuotas que el usuario todavía 
       "period": "2026-12",
       "dueOn": "2026-12-05",
       "amount": { "amount": 300000, "currency": "PEN" },
-      "status": "pending"
+      "status": "pending",
+      "position": 6,
+      "slots": 10,
+      "payout": { "amount": 3000000, "currency": "PEN" }
     }
   ]
 }
 ```
 
-| Campo            | Notas                                                                                                                                                                                        |
-| ---------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `duePayments`    | Cuotas `pending` u `overdue` (el cobro falló y está en gracia) de los círculos donde sigue, de la que vence antes a la última. `installmentId` sirve para pagarla desde la app (COPAYNI-63). |
-| `totalDue`       | Suma de `duePayments`; `null` si no hay. Un solo país y una sola moneda en el MVP.                                                                                                           |
-| `nextDueOn`      | El vencimiento más próximo (`YYYY-MM-DD`); `null` si no hay cuotas.                                                                                                                          |
-| `debt`           | Deuda por impago: lo vencido más el cargo por mora (COPAYNI-57); `null` si no tiene. Mientras exista, no puede unirse.                                                                       |
-| `hasDuePayments` | `true` si tiene cuotas por pagar o deuda. Sin pagos pendientes, la app muestra el estado vacío "Join New Circle".                                                                            |
+| Campo            | Notas                                                                                                                                                                                                                                                                                               |
+| ---------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `duePayments`    | Cuotas `pending` u `overdue` (el cobro falló y está en gracia) de los círculos donde sigue, de la que vence antes a la última. `installmentId` sirve para pagarla desde la app (COPAYNI-63). `position` y `slots` dan "Turno 6 de 10" y `payout` identifica el círculo en el pago (D1, COPAYNI-77). |
+| `totalDue`       | Suma de `duePayments`; `null` si no hay. Un solo país y una sola moneda en el MVP.                                                                                                                                                                                                                  |
+| `nextDueOn`      | El vencimiento más próximo (`YYYY-MM-DD`); `null` si no hay cuotas.                                                                                                                                                                                                                                 |
+| `debt`           | Deuda por impago: lo vencido más el cargo por mora (COPAYNI-57); `null` si no tiene. Mientras exista, no puede unirse.                                                                                                                                                                              |
+| `hasDuePayments` | `true` si tiene cuotas por pagar o deuda. Sin pagos pendientes, la app muestra el estado vacío "Join New Circle".                                                                                                                                                                                   |
 
 - Las cuotas se cobran con el débito automático del ciclo mensual (COPAYNI-56). Pagar una cuota desde la app (D1) y la pasarela real (COPAYNI-34) están pendientes.
 
@@ -205,7 +208,8 @@ Pago manual de una cuota `pending` u `overdue` (en gracia) con **Yape** o con un
   - **Solo soles.** Una cuota en otra moneda responde `VALIDATION_ERROR` con `details.method: "currency_not_supported"`.
   - **Rechazo:** Mercado Pago responde 402 con la orden fallida, y la API responde `PAYMENT_REJECTED` con el motivo del pago (p. ej. `insufficient_amount`).
   - **Idempotencia:** la `X-Idempotency-Key` de la orden se deriva de la cuota y de la `Idempotency-Key`, así que un reintento con la misma clave no crea otra orden.
-- **200** `{ "status": "paid" | "pending", "paymentId": "…" }`. Con `paid`, la cuota ya está pagada en el ciclo y el débito automático no la vuelve a cobrar. Con `pending`, la confirma el webhook.
+- **200** `{ "status": "paid" | "pending", "paymentId": "…", "paidAt": "2026-12-01T15:42:00.000Z" | null }`. Con `paid`, la cuota ya está pagada en el ciclo y el débito automático no la vuelve a cobrar. Con `pending`, la confirma el webhook y `paidAt` es `null`.
+  - `paymentId` es el número de operación del recibo (D1, COPAYNI-77): el id del pago con tarjeta, de la orden de Yape o `referral` si la pagó el saldo de referidos.
 - Antes de cobrar busca los pagos de la cuota en Mercado Pago: si ya hay uno aprobado (p. ej. del débito automático) no cobra de nuevo, y si hay uno pendiente responde `PAYMENT_PENDING`.
 - **Supuesto [?]:** se puede pagar desde que se abre el mes de la cuota, antes del vencimiento.
 

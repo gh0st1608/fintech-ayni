@@ -30,6 +30,9 @@ const summaryDto = z.object({
       dueOn: z.string().regex(DATE),
       amount: moneyDto,
       status: z.enum(['pending', 'overdue']),
+      position: z.number().int().positive(),
+      slots: z.number().int().positive(),
+      payout: moneyDto,
     }),
   ),
 });
@@ -80,6 +83,7 @@ const eligibilityDto = z.object({
 const paymentResultDto = z.object({
   status: z.enum(['paid', 'pending']),
   paymentId: z.string().min(1),
+  paidAt: z.iso.datetime({ offset: true }).nullable(),
 });
 
 /** DTO de GET y PATCH /me/payment-settings. */
@@ -105,7 +109,11 @@ export class PaymentApiRepository implements PaymentRepositoryPort {
       totalDue: dto.totalDue && toMoney(dto.totalDue),
       nextDueOn: dto.nextDueOn,
       debt: dto.debt && toMoney(dto.debt),
-      duePayments: dto.duePayments.map((due) => ({ ...due, amount: toMoney(due.amount) })),
+      duePayments: dto.duePayments.map((due) => ({
+        ...due,
+        amount: toMoney(due.amount),
+        payout: toMoney(due.payout),
+      })),
     };
   }
 

@@ -14,6 +14,9 @@ const due = (status: DueInstallment['status']): DueInstallment => ({
   dueOn: LocalDate.parse('2026-12-05'),
   amount: Money.of(300_000, 'PEN'),
   status,
+  position: 1,
+  slots: 10,
+  payout: Money.of(3_000_000, 'PEN'),
 });
 
 async function eligibilityOf(

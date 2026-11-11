@@ -52,8 +52,15 @@ describe('POST /v1/circles/join', () => {
     const call = request(app.getHttpServer())
       .post('/v1/circles/join')
       .set('Authorization', `Bearer ${token}`);
-    return (key === null ? call : call.set('Idempotency-Key', key)).send(body);
+    // Acepta los términos vigentes salvo que la prueba diga otra cosa (COPAYNI-86).
+    return (key === null ? call : call.set('Idempotency-Key', key)).send({
+      termsVersion: TERMS_VERSION,
+      ...body,
+    });
   };
+
+  /** Versión por defecto de CIRCLE_TERMS_VERSION. */
+  const TERMS_VERSION = '2026-11';
 
   // 87.500 en 10 meses: cuotas exactas y en un salto del slider.
   const NEW_CIRCLE = { circleId: null, payoutAmount: 8_750_000, months: 10, position: 3 };
@@ -193,6 +200,28 @@ describe('POST /v1/circles/join', () => {
     await join(token, { ...NEW_CIRCLE, circleId: randomUUID() })
       .expect(404)
       .expect(({ body }) => expect(body.error.code).toBe('CIRCLE_NOT_FOUND'));
+  });
+
+  it('exige aceptar los términos vigentes y guarda la versión aceptada (COPAYNI-86)', async () => {
+    const ana = await signIn();
+    const body = { ...NEW_CIRCLE, payoutAmount: 8_650_000 };
+    const missing = await join(ana, { ...body, termsVersion: undefined }).expect(400);
+    expect(missing.body.error).toMatchObject({ code: 'VALIDATION_ERROR' });
+    const outdated = await join(ana, { ...body, termsVersion: '2025-01' }).expect(400);
+    expect(outdated.body.error).toMatchObject({
+      code: 'VALIDATION_ERROR',
+      details: { termsVersion: 'outdated' },
+    });
+
+    const joined = await join(ana, body).expect(201);
+    const [row] = await app
+      .get(DataSource)
+      .query<{ terms_version: string; terms_accepted_at: Date }[]>(
+        'SELECT terms_version, terms_accepted_at FROM circle_memberships WHERE circle_id = $1',
+        [joined.body.data.circleId],
+      );
+    expect(row?.terms_version).toBe(TERMS_VERSION);
+    expect(row?.terms_accepted_at).toBeInstanceOf(Date);
   });
 
   it('sin token responde 401', async () => {

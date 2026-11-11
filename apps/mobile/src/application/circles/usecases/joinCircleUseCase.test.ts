@@ -16,6 +16,7 @@ import { FakeIdGenerator } from '@test/fakes/ports';
 import { JoinCircleUseCase } from './JoinCircleUseCase';
 
 const pen = (major: number) => Money.fromMajor(major, 'PEN');
+const TERMS = '2026-11';
 
 function draft(position = 3, circleId: string | null = null) {
   return JoinCircleDraft.empty()
@@ -45,13 +46,13 @@ function setup() {
 describe('JoinCircleUseCase', () => {
   it('une al usuario con el pedido del borrador', async () => {
     const { useCase, join } = setup();
-    await expect(useCase.execute(draft())).resolves.toMatchObject({
+    await expect(useCase.execute(draft(), TERMS)).resolves.toMatchObject({
       position: 3,
       payoutPeriod: '2027-01',
       created: true,
     });
     expect(join).toHaveBeenCalledWith(
-      { circleId: null, payout: pen(30_000), months: 10, position: 3 },
+      { circleId: null, payout: pen(30_000), months: 10, position: 3, termsVersion: TERMS },
       'key-1',
     );
   });
@@ -59,10 +60,10 @@ describe('JoinCircleUseCase', () => {
   it('repite la clave en los reintentos, también con un borrador nuevo igual', async () => {
     const { useCase, join, ids, repository } = setup();
     repository.rejectNextWith('SLOT_TAKEN');
-    await expect(useCase.execute(draft())).rejects.toThrow(SlotNoLongerAvailableError);
+    await expect(useCase.execute(draft(), TERMS)).rejects.toThrow(SlotNoLongerAvailableError);
 
-    const retried = await useCase.execute(draft());
-    const replay = await useCase.execute(draft());
+    const retried = await useCase.execute(draft(), TERMS);
+    const replay = await useCase.execute(draft(), TERMS);
     expect([retried.created, replay.created]).toEqual([true, false]);
     expect(join.mock.calls.map(([, key]) => key)).toEqual(['key-1', 'key-1', 'key-1']);
     expect(ids.issued).toEqual(['key-1']);
@@ -70,15 +71,15 @@ describe('JoinCircleUseCase', () => {
 
   it('otro pedido genera otra clave', async () => {
     const { useCase, join } = setup();
-    await useCase.execute(draft(3));
-    await useCase.execute(draft(4));
-    await useCase.execute(draft(4, 'c-1'));
+    await useCase.execute(draft(3), TERMS);
+    await useCase.execute(draft(4), TERMS);
+    await useCase.execute(draft(4, 'c-1'), TERMS);
     expect(join.mock.calls.map(([, key]) => key)).toEqual(['key-1', 'key-2', 'key-3']);
   });
 
   it('no llama al backend con un borrador incompleto', async () => {
     const { useCase, join } = setup();
-    await expect(useCase.execute(JoinCircleDraft.empty())).rejects.toThrow(
+    await expect(useCase.execute(JoinCircleDraft.empty(), TERMS)).rejects.toThrow(
       IncompleteJoinDraftError,
     );
     expect(join).not.toHaveBeenCalled();
@@ -96,7 +97,7 @@ describe('JoinCircleUseCase', () => {
   ])('traduce %s a un error tipado', async (code, TypedError) => {
     const { useCase, repository } = setup();
     jest.spyOn(repository, 'join').mockRejectedValueOnce(new AppError('conflict', 'no', { code }));
-    await expect(useCase.execute(draft())).rejects.toThrow(TypedError);
+    await expect(useCase.execute(draft(), TERMS)).rejects.toThrow(TypedError);
   });
 
   it('MEMBER_BLOCKED trae lo que debe el expulsado, si el backend lo informa (COPAYNI-57)', async () => {
@@ -107,7 +108,7 @@ describe('JoinCircleUseCase', () => {
     jest
       .spyOn(repository, 'join')
       .mockRejectedValueOnce(blocked({ amountDue: '309000', currency: 'PEN' }));
-    const error = await useCase.execute(draft()).catch((caught: unknown) => caught);
+    const error = await useCase.execute(draft(), TERMS).catch((caught: unknown) => caught);
     expect(error).toBeInstanceOf(MemberBlockedError);
     expect((error as MemberBlockedError).amountDue?.equals(Money.of(309_000, 'PEN'))).toBe(true);
 
@@ -117,7 +118,7 @@ describe('JoinCircleUseCase', () => {
       { amountDue: '1', currency: 'pen' },
     ]) {
       jest.spyOn(repository, 'join').mockRejectedValueOnce(blocked(details));
-      await expect(useCase.execute(draft())).rejects.toMatchObject({
+      await expect(useCase.execute(draft(), TERMS)).rejects.toMatchObject({
         code: 'MEMBER_BLOCKED',
         amountDue: null,
       });
@@ -128,10 +129,10 @@ describe('JoinCircleUseCase', () => {
     const { useCase, repository } = setup();
     const offline = new AppError('network', 'offline');
     jest.spyOn(repository, 'join').mockRejectedValueOnce(offline);
-    await expect(useCase.execute(draft())).rejects.toBe(offline);
+    await expect(useCase.execute(draft(), TERMS)).rejects.toBe(offline);
 
     const reused = new AppError('conflict', 'no', { code: 'IDEMPOTENCY_KEY_REUSED' });
     jest.spyOn(repository, 'join').mockRejectedValueOnce(reused);
-    await expect(useCase.execute(draft())).rejects.toBe(reused);
+    await expect(useCase.execute(draft(), TERMS)).rejects.toBe(reused);
   });
 });

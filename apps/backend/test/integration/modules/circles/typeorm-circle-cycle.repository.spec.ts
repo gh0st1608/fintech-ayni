@@ -562,6 +562,9 @@ describe('TypeOrmCircleCycleRepository', () => {
         dueOn: LocalDate.parse('2026-11-05'),
         amount: first!.price.installments[0],
         status: 'pending',
+        position: expect.any(Number),
+        slots: expect.any(Number),
+        payout: expect.any(Money),
       },
     ]);
     await job([id])('2026-11-05');

@@ -21,6 +21,7 @@ import { AddStartProposalRound1763294400000 } from './1763294400000-add-start-pr
 import { CreateStaffAuditLog1763380800000 } from './1763380800000-create-staff-audit-log';
 import { AddKycReview1763467200000 } from './1763467200000-add-kyc-review';
 import { AddBackofficeSupport1763553600000 } from './1763553600000-add-backoffice-support';
+import { AddMembershipTermsAcceptance1763640000000 } from './1763640000000-add-membership-terms-acceptance';
 
 /** Migraciones en orden. Se listan explícitamente: el build no depende de globs. */
 export const MIGRATIONS = [
@@ -47,4 +48,5 @@ export const MIGRATIONS = [
   CreateStaffAuditLog1763380800000,
   AddKycReview1763467200000,
   AddBackofficeSupport1763553600000,
+  AddMembershipTermsAcceptance1763640000000,
 ];

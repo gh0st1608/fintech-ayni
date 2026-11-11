@@ -74,9 +74,50 @@ async function renderConfirm({
   return { ...view, ...handlers, circleMembership, ids: test.adapters.ids };
 }
 
-const submit = () => screen.findByRole('button', { name: 'Confirmar y unirme' });
+const TERMS = 'Acepto los Términos del círculo, la política de pagos y la política de mora.';
+
+/** Acepta los términos (si no lo están) y devuelve el botón de confirmar. */
+async function submit() {
+  const terms = await screen.findByRole('checkbox', { name: TERMS });
+  await waitFor(() => expect(terms).toBeEnabled());
+  if (!screen.queryByRole('checkbox', { name: TERMS, checked: true })) {
+    await fireEvent.press(terms);
+  }
+  return screen.getByRole('button', { name: 'Confirmar y unirme' });
+}
 
 describe('JoinConfirmScreen', () => {
+  describe('términos y diseño D2 (COPAYNI-86)', () => {
+    it('no se puede confirmar sin aceptar los términos; al aceptarlos, envía su versión', async () => {
+      const { circleMembership } = await renderConfirm();
+      const join = jest.spyOn(circleMembership, 'join');
+      const button = await screen.findByRole('button', { name: 'Confirmar y unirme' });
+      await waitFor(() => expect(screen.getByRole('checkbox', { name: TERMS })).toBeEnabled());
+      expect(button).toBeDisabled();
+      await fireEvent.press(button);
+      expect(join).not.toHaveBeenCalled();
+
+      await fireEvent.press(await submit());
+      await screen.findByTestId('join-success');
+      expect(join).toHaveBeenCalledWith(
+        expect.objectContaining({ termsVersion: '2026-11' }),
+        expect.any(String),
+      );
+    });
+
+    it('si los términos cambiaron, lo explica y pide aceptarlos de nuevo', async () => {
+      const { circleMembership } = await renderConfirm();
+      jest.spyOn(circleMembership, 'join').mockRejectedValueOnce(
+        new AppError('validation', 'Outdated', {
+          code: 'VALIDATION_ERROR',
+          fieldErrors: { termsVersion: 'outdated' },
+        }),
+      );
+      await fireEvent.press(await submit());
+      expect(await screen.findByText(/Los términos del círculo cambiaron/)).toBeTruthy();
+    });
+  });
+
   it('resume los cuatro pasos y cada uno se puede editar', async () => {
     const { onEditSlot, onEditPayoutMethod } = await renderConfirm();
     const summary = await screen.findByTestId('join-summary');
@@ -236,12 +277,15 @@ describe('JoinConfirmScreen', () => {
     expect(await screen.findByTestId('join-retention')).toHaveTextContent(
       /Se retendrán .*6\.?000.* para pagar automáticamente tus últimas 2 cuotas/,
     );
+    // El payout menos la retención (D2, COPAYNI-86).
+    expect(screen.getByTestId('join-net-payout')).toHaveTextContent(/Recibes en .*24\.?000/);
   });
 
   it('sin retención no la menciona', async () => {
     await renderConfirm();
     await screen.findByTestId('join-summary');
     expect(screen.queryByTestId('join-retention')).toBeNull();
+    expect(screen.queryByTestId('join-net-payout')).toBeNull();
   });
 
   it('con SLOT_NOT_ALLOWED pide elegir otro turno (COPAYNI-60)', async () => {

@@ -5,5 +5,8 @@ export type InstallmentPaymentMethod =
 /** `pending`: la pasarela lo está procesando y lo confirma después. */
 export interface InstallmentPaymentResult {
   status: 'paid' | 'pending';
+  /** Número de operación del recibo (pago, orden de Yape o `referral`). */
   paymentId: string;
+  /** Cuándo quedó pagada (ISO 8601); `null` mientras está en proceso. */
+  paidAt: string | null;
 }

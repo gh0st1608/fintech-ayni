@@ -1,4 +1,5 @@
 import type { TFunction } from 'i18next';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ScrollView, StyleSheet, View } from 'react-native';
 
@@ -11,23 +12,26 @@ import {
   NationalIdRequiredError,
   PayoutMethodLimitExceededError,
   PayoutMethodRequiredError,
+  TermsOutdatedError,
 } from '@/domain/circles/JoinedCircle';
 import {
   SlotNoLongerAvailableError,
   SlotNotAllowedError,
 } from '@/domain/circles/value-objects/Slot';
-import type { Money } from '@/domain/shared/value-objects/Money';
+import { Money } from '@/domain/shared/value-objects/Money';
 import { useFormatDate } from '@/presentation/formatters/formatDate';
 import { useFormatMoney } from '@/presentation/formatters/formatMoney';
 import { errorMessage } from '@/presentation/i18n/errorMessageKey';
 import { AppText } from '@/presentation/shared/components/AppText';
 import { Button } from '@/presentation/shared/components/Button';
+import { Checkbox } from '@/presentation/shared/components/Checkbox';
 import { InfoBanner } from '@/presentation/shared/components/InfoBanner';
 import { Screen } from '@/presentation/shared/components/Screen';
 import { colors, spacing } from '@/presentation/theme/tokens';
 
 import { JoinSummary } from '../components/JoinSummary';
 import { useJoinCircle } from '../hooks/useJoinCircle';
+import { useJoinConfig } from '../hooks/useJoinConfig';
 import { useJoinFlow } from '../JoinFlowProvider';
 
 interface JoinConfirmScreenProps {
@@ -53,9 +57,10 @@ function periodDate(period: string): Date {
 }
 
 /**
- * Confirmación de la unión (COPAYNI-31). No hay diseño (pending-scope D2): resume el borrador
- * con los componentes del flujo y traduce cada rechazo a un mensaje con su acción. La firma del
- * contrato (D3) y el primer pago (D1) quedan fuera hasta que se diseñen.
+ * Confirmación de la unión (COPAYNI-31) con el diseño D2 aprobado (COPAYNI-86): resume el
+ * borrador, muestra la retención y lo que recibe, y exige aceptar los términos vigentes, cuya
+ * versión se envía al unirse. Traduce cada rechazo a un mensaje con su acción. La firma del
+ * contrato y del pagaré (D3, COPAYNI-89) se agrega después de confirmar cuando exista.
  */
 export function JoinConfirmScreen(props: JoinConfirmScreenProps) {
   const { t } = useTranslation();
@@ -100,6 +105,12 @@ function Review({
   const formatDate = useFormatDate();
   const money = (amount: Money) => formatMoney(amount, { trimZeroDecimals: true });
   const { payoutAmount, installment, slot, payoutMethod } = draft;
+  const config = useJoinConfig();
+  const termsVersion = config.data?.termsVersion;
+  // La aceptación es de una versión: si cambia, hay que volver a aceptarla.
+  const [acceptedVersion, setAcceptedVersion] = useState<string | null>(null);
+  const accepted = termsVersion !== undefined && acceptedVersion === termsVersion;
+  const netPayout = Money.of(payoutAmount!.amount - slot!.retention.amount, payoutAmount!.currency);
 
   const rows = [
     {
@@ -159,7 +170,24 @@ function Review({
             testID="join-retention"
           />
         )}
+        {slot!.retention.amount > 0 && (
+          <View style={styles.net} testID="join-net-payout">
+            <AppText color={colors.textSecondary} style={styles.netLabel}>
+              {t('join.confirm.netPayout', { month: formatDate(slot!.payoutDate, 'monthYear') })}
+            </AppText>
+            <AppText weight="semibold" color={colors.primary}>
+              {money(netPayout)}
+            </AppText>
+          </View>
+        )}
         <InfoBanner message={t('join.confirm.info')} />
+        <Checkbox
+          label={t('join.confirm.acceptTerms')}
+          checked={accepted}
+          disabled={termsVersion === undefined}
+          onChange={(checked) => setAcceptedVersion(checked ? (termsVersion ?? null) : null)}
+          testID="join-accept-terms"
+        />
         {join.isError && (
           <View style={styles.error}>
             <AppText accessibilityRole="alert" color={colors.error}>
@@ -178,9 +206,10 @@ function Review({
       <Button
         label={t('join.confirm.submit')}
         loading={join.isPending}
+        disabled={!accepted}
         onPress={() => {
           // Un reintento tras un fallo de red repite la misma clave: no crea otra membresía.
-          if (!join.isPending) join.mutate(draft);
+          if (!join.isPending && accepted) join.mutate({ draft, termsVersion: termsVersion! });
         }}
       />
     </>
@@ -235,6 +264,9 @@ function recoveryFor(
         ? t('join.confirm.errors.memberBlocked', { amount: money(error.amountDue) })
         : t('join.confirm.errors.memberBlockedNoAmount'),
     };
+  }
+  if (error instanceof TermsOutdatedError) {
+    return { message: t('join.confirm.errors.termsOutdated') };
   }
   if (error instanceof SlotNotAllowedError) {
     return {
@@ -303,4 +335,6 @@ const styles = StyleSheet.create({
   centerText: { textAlign: 'center' },
   content: { gap: spacing.l, paddingVertical: spacing.l },
   error: { gap: spacing.m },
+  net: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  netLabel: { flex: 1 },
 });

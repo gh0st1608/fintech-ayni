@@ -16,6 +16,7 @@ import {
   ELIGIBLE,
   TEST_PRICING,
   TEST_PRICING_RULES,
+  TEST_TERMS_VERSION,
 } from '@test/support/join-circle.fixture';
 
 const pen = (major: number) => Money.of(major * 100, 'PEN');
@@ -28,6 +29,7 @@ const NEW_CIRCLE: JoinCircleCommand = {
   months: 10,
   position: 3,
   idempotencyKey: 'key-ana-0000000001',
+  termsVersion: TEST_TERMS_VERSION,
 };
 
 function setup(applicant: Partial<JoinApplicant> = {}, debts: MemberDebt[] = []) {
@@ -84,6 +86,8 @@ describe('JoinCircleUseCase', () => {
         position: 3,
         idempotencyKey: NEW_CIRCLE.idempotencyKey,
         price: priceOf(result.quote),
+        // Los términos aceptados quedan con la membresía (COPAYNI-86).
+        termsVersion: TEST_TERMS_VERSION,
       },
     ]);
     // Auditoría: quién se unió, a qué círculo y en qué slot.
@@ -95,6 +99,15 @@ describe('JoinCircleUseCase', () => {
       newCircle: true,
       replacement: false,
     });
+  });
+
+  it('exige los términos vigentes (COPAYNI-86): con otra versión no se une', async () => {
+    const { useCase, circles } = setup();
+    const create = jest.spyOn(circles, 'create');
+    await expect(useCase.execute({ ...NEW_CIRCLE, termsVersion: '2025-01' })).rejects.toMatchObject(
+      { code: 'VALIDATION_ERROR', details: { termsVersion: 'outdated' } },
+    );
+    expect(create).not.toHaveBeenCalled();
   });
 
   it('se une al círculo ofrecido', async () => {

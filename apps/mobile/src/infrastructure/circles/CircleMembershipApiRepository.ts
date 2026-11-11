@@ -97,6 +97,7 @@ export class CircleMembershipApiRepository implements CircleMembershipRepository
         payoutAmount: request.payout.amount,
         months: request.months,
         position: request.position,
+        termsVersion: request.termsVersion,
       },
       parse: (data) => joinedCircleDto.parse(data),
     });

@@ -60,10 +60,24 @@ export class PayInstallmentResponse {
   @ApiProperty({ enum: ['paid', 'pending'], description: 'pending: se confirma por webhook' })
   status!: 'paid' | 'pending';
 
-  @ApiProperty({ description: 'Id del pago en Mercado Pago' })
+  @ApiProperty({
+    description: 'Número de operación: id del pago (tarjeta) o de la orden (Yape) en Mercado Pago',
+  })
   paymentId!: string;
 
+  @ApiProperty({
+    type: String,
+    format: 'date-time',
+    nullable: true,
+    description: 'Cuándo quedó pagada, para el recibo; null mientras está en proceso',
+  })
+  paidAt!: string | null;
+
   static from(result: PayInstallmentResult): PayInstallmentResponse {
-    return { status: result.status, paymentId: result.paymentId };
+    return {
+      status: result.status,
+      paymentId: result.paymentId,
+      paidAt: result.paidAt?.toISOString() ?? null,
+    };
   }
 }

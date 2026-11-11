@@ -8,6 +8,7 @@ import HAND from '@assets/images/onboarding/welcome-hand.webp';
 import { useSession } from '@/presentation/providers/SessionProvider';
 import { AppText } from '@/presentation/shared/components/AppText';
 import { Button } from '@/presentation/shared/components/Button';
+import { Wordmark } from '@/presentation/shared/components/Wordmark';
 import { colors, radius, spacing } from '@/presentation/theme/tokens';
 
 /** Proporción de la ilustración exportada del Figma (Design 2, 55:10723). */
@@ -38,16 +39,9 @@ export function WelcomeScreen({ onContinue }: WelcomeScreenProps) {
       />
 
       <SafeAreaView edges={['top', 'bottom']} style={styles.safeArea}>
-        <AppText
-          variant="hero"
-          weight="semibold"
-          color={colors.background}
-          style={styles.brand}
-          importantForAccessibility="no"
-          accessibilityElementsHidden
-        >
-          {appName}
-        </AppText>
+        <View style={styles.brand}>
+          <Wordmark size="hero" color={colors.background} decorative />
+        </View>
 
         <View style={styles.illustration} importantForAccessibility="no-hide-descendants">
           <Image
