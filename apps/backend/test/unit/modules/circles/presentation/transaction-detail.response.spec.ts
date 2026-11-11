@@ -50,6 +50,7 @@ describe('Detalle de un movimiento (COPAYNI-78)', () => {
       dueInstallmentsOf: jest.fn(),
       transactionsOf: jest.fn(),
       transactionOf,
+      installmentHistoryOf: jest.fn(),
     });
     await expect(
       useCase.execute({ userId: 'u-1' }, { type: 'payout', id: 't-1' }),

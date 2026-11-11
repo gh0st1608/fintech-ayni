@@ -540,6 +540,19 @@ describe('TypeOrmCircleCycleRepository', () => {
         amount: second!.price.netPayout,
       }),
     ]);
+    // Historial para la racha (COPAYNI-82): todas sus cuotas, con el día de pago en Lima.
+    const history = await payments.installmentHistoryOf(second!.userId, 'America/Lima');
+    expect(history.map(({ period }) => period.toString())).toEqual([
+      '2027-04',
+      '2027-03',
+      '2027-02',
+      '2027-01',
+      '2026-12',
+      '2026-11',
+    ]);
+    expect(history.every(({ paidOn, status }) => status !== 'paid' || paidOn !== null)).toBe(true);
+    await expect(payments.installmentHistoryOf('no-es-uuid', 'America/Lima')).resolves.toEqual([]);
+
     // Detalle de un movimiento (COPAYNI-78): el del usuario, con el pozo y su turno.
     const [payoutItem] = payouts.items;
     const detail = await payments.transactionOf({

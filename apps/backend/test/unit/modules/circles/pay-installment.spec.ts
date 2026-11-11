@@ -39,6 +39,7 @@ const queryWith = (installment: InstallmentRef | null) => ({
   dueInstallmentsOf: jest.fn(),
   transactionsOf: jest.fn(),
   transactionOf: jest.fn(),
+  installmentHistoryOf: jest.fn(),
 });
 
 describe('Cobro de una cuota desde la app (COPAYNI-63)', () => {

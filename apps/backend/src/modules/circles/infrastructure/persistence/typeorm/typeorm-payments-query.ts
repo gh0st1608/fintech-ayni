@@ -76,6 +76,7 @@ function decodeCursor(cursor: string): [string, string] {
   }
   throw new InvalidCursorError();
 }
+import { type InstallmentRecord } from '../../../domain/services/payment-streak';
 import { CircleEntity } from './circle.entity';
 
 /** PaymentsQueryPort sobre PostgreSQL: lee las cuotas y payouts que guarda el ciclo. */
@@ -156,6 +157,27 @@ export class TypeOrmPaymentsQuery implements PaymentsQueryPort {
       position: Number(row.position),
       slots: Number(row.slots),
       payout: Money.of(Number(row.payout_amount), row.payout_currency),
+    }));
+  }
+
+  async installmentHistoryOf(userId: string, timeZone: string): Promise<InstallmentRecord[]> {
+    if (!isUuid(userId)) return [];
+    const rows = await this.circles.query<
+      { period: string; due_on: string; status: string; paid_on: string | null }[]
+    >(
+      `SELECT to_char(i.period, 'YYYY-MM') AS period, to_char(i.due_on, 'YYYY-MM-DD') AS due_on,
+              i.status, to_char((i.paid_at AT TIME ZONE $2)::date, 'YYYY-MM-DD') AS paid_on
+         FROM circle_installments i
+         JOIN circle_memberships m ON m.circle_id = i.circle_id AND m.user_id = i.user_id
+        WHERE i.user_id = $1 AND m.expelled_at IS NULL
+        ORDER BY i.period DESC`,
+      [userId, timeZone],
+    );
+    return rows.map((row) => ({
+      period: Period.parse(row.period),
+      dueOn: LocalDate.parse(row.due_on),
+      status: row.status,
+      paidOn: row.paid_on ? LocalDate.parse(row.paid_on) : null,
     }));
   }
 

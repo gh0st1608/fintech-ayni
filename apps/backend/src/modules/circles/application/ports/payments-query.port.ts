@@ -1,6 +1,7 @@
 import { type LocalDate } from '../../../../shared/domain/value-objects/local-date';
 import { type Money } from '../../../../shared/domain/value-objects/money';
 import { type Period } from '../../../../shared/domain/value-objects/period';
+import { type InstallmentRecord } from '../../domain/services/payment-streak';
 
 export const PAYMENTS_QUERY = Symbol('PAYMENTS_QUERY');
 
@@ -83,6 +84,11 @@ export interface PaymentsQueryPort {
     limit: number;
     cursor: string | null;
   }): Promise<TransactionPage>;
+  /**
+   * Todas las cuotas del usuario en los círculos donde sigue, con el día de pago en `timeZone`,
+   * para la racha de pagos a tiempo (COPAYNI-82).
+   */
+  installmentHistoryOf(userId: string, timeZone: string): Promise<InstallmentRecord[]>;
   /** Un pago o un cobro del usuario por su id, o `null` si no existe o es de otro usuario. */
   transactionOf(query: {
     userId: string;

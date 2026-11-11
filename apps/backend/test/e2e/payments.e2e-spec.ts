@@ -52,6 +52,14 @@ describe('Sección Payment', () => {
     },
   );
 
+  it('sin cuotas la racha de pagos está vacía (COPAYNI-82)', async () => {
+    const response = await request(app.getHttpServer())
+      .get('/v1/me/payment-streak')
+      .set('Authorization', `Bearer ${VALID_TOKEN}`)
+      .expect(200);
+    expect(response.body.data).toEqual({ months: 0, lastMonths: [] });
+  });
+
   it('el detalle de un movimiento ajeno o inexistente es TRANSACTION_NOT_FOUND (COPAYNI-78)', async () => {
     const detail = (id: string, query: Record<string, string>) =>
       request(app.getHttpServer())
