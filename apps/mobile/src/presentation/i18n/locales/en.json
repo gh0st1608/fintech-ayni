@@ -170,7 +170,8 @@
         "slotNoLongerAvailable": "That slot is no longer available. Choose another one.",
         "memberBlocked": "You were removed from a circle for missing an installment. Pay the overdue amount plus the late fee ({{amount}}) to join another one.",
         "memberBlockedNoAmount": "You were removed from a circle for missing an installment. Pay the overdue amount plus the late fee to join another one.",
-        "slotNotAllowed": "You can't take this type of slot yet. Choose another one."
+        "slotNotAllowed": "You can't take this type of slot yet. Choose another one.",
+        "termsOutdated": "The circle terms changed. Review and accept them again to join."
       },
       "actions": {
         "verifyIdentity": "Verify my National ID",
@@ -185,7 +186,9 @@
         "viewCircles": "View my circles",
         "catchUp": "Your installments include {{amount}} to catch up on past months, until {{month}}."
       },
-      "retention": "{{amount}} of your payout will be withheld to pay your last {{count}} installments automatically."
+      "retention": "{{amount}} of your payout will be withheld to pay your last {{count}} installments automatically.",
+      "acceptTerms": "I accept the circle Terms, the payment policy and the late payment policy.",
+      "netPayout": "You receive in {{month}}"
     }
   },
   "circles": {

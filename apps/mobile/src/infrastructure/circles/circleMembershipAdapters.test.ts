@@ -7,7 +7,13 @@ import { InMemoryCircleMembershipRepository } from './InMemoryCircleMembershipRe
 
 const money = (amount: number, currency = 'PEN') => ({ amount, currency });
 const pen = (major: number) => Money.fromMajor(major, 'PEN');
-const REQUEST = { circleId: null, payout: pen(30_000), months: 10, position: 3 };
+const REQUEST = {
+  circleId: null,
+  payout: pen(30_000),
+  months: 10,
+  position: 3,
+  termsVersion: '2026-11',
+};
 
 const JOINED = {
   circleId: '6f1c2b0e-0000-4000-8000-000000000001',
@@ -52,6 +58,7 @@ describe('CircleMembershipApiRepository', () => {
       payoutAmount: 3_000_000,
       months: 10,
       position: 3,
+      termsVersion: '2026-11',
     });
     expect(joined).toMatchObject({ circleId: JOINED.circleId, type: 'lowestFees', created: true });
     expect(joined.installments[0]?.toMajor()).toBe(3_360);

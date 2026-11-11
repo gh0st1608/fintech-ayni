@@ -32,6 +32,7 @@ export class InMemoryJoinConfigRepository implements JoinConfigRepositoryPort {
       payoutRange: PayoutRange.create({ min: money(3000), max: money(120000), step: money(500) }),
       userPayoutLimit: userPayoutLimit === undefined ? undefined : money(userPayoutLimit),
       savingProgramMax: money(1000000),
+      termsVersion: '2026-11',
     };
   }
 }

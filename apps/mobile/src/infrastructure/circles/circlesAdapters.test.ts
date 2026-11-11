@@ -12,6 +12,7 @@ const CONFIG = {
   payout: { min: money(300_000), max: money(12_000_000), step: money(50_000) },
   userPayoutLimit: money(2_000_000),
   savingProgramMax: money(100_000_000),
+  termsVersion: '2026-11',
 };
 
 function setup(body: unknown) {
