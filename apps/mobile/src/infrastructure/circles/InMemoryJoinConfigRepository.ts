@@ -54,6 +54,7 @@ export class InMemoryJoinConfigRepository implements JoinConfigRepositoryPort {
       userPayoutLimit: userPayoutLimit === undefined ? undefined : money(userPayoutLimit),
       savingProgramMax: money(official ? 1000000 : 266666),
       currencies,
+      termsVersion: '2026-11',
     };
   }
 }

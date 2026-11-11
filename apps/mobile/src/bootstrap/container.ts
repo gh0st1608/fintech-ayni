@@ -138,6 +138,7 @@ import {
   FakePaymentTokenizer,
   UnconfiguredPaymentTokenizer,
 } from '@/infrastructure/payments/FakePaymentTokenizer';
+import { MercadoPagoPaymentTokenizer } from '@/infrastructure/payments/MercadoPagoPaymentTokenizer';
 import { InMemoryCardRepository } from '@/infrastructure/payments/InMemoryCardRepository';
 import { InMemoryPaymentRepository } from '@/infrastructure/payments/InMemoryPaymentRepository';
 import { PaymentApiRepository } from '@/infrastructure/payments/PaymentApiRepository';
@@ -247,11 +248,15 @@ export function createContainer(
         ? new InMemoryPaymentRepository(env.defaultCurrency)
         : new PaymentApiRepository(http),
     cards: env.paymentsApi === 'fake' ? new InMemoryCardRepository() : new CardApiRepository(http),
-    // Mercado Pago simulado hasta usar la cuenta sandbox (COPAYNI-34).
     paymentTokenizer:
       env.paymentTokenizer === 'fake'
         ? new FakePaymentTokenizer()
-        : new UnconfiguredPaymentTokenizer(),
+        : env.paymentTokenizer === 'mercadopago' && env.mercadoPagoPublicKey
+          ? new MercadoPagoPaymentTokenizer(
+              { publicKey: env.mercadoPagoPublicKey, timeoutMs: env.httpTimeoutMs },
+              overrides.ids ?? new ExpoCryptoIdGenerator(),
+            )
+          : new UnconfiguredPaymentTokenizer(),
     documents:
       env.documentsApi === 'fake'
         ? new InMemoryDocumentRepository()
@@ -298,6 +303,14 @@ export function createContainer(
       environment: env.appEnv,
       defaultCurrency: env.defaultCurrency,
       legal: { termsUrl: env.termsUrl, privacyUrl: env.privacyUrl },
+      /**
+       * Pagos de prueba: la pasarela simulada o Mercado Pago con una public key `TEST-`. Habilita,
+       * p. ej., los celulares de prueba de Yape.
+       */
+      paymentsSandbox:
+        env.paymentTokenizer === 'fake' ||
+        (env.paymentTokenizer === 'mercadopago' &&
+          (env.mercadoPagoPublicKey?.startsWith('TEST-') ?? false)),
     },
     auth: {
       restoreSession: new RestoreSessionUseCase(

@@ -21,6 +21,7 @@ const joinConfigDto = z.object({
       }),
     )
     .min(1),
+  termsVersion: z.string().min(1),
 });
 
 /** Adaptador HTTP de la configuración de unión a círculos. */
@@ -42,6 +43,7 @@ export class JoinConfigApiRepository implements JoinConfigRepositoryPort {
       userPayoutLimit: dto.userPayoutLimit ? toMoney(dto.userPayoutLimit) : undefined,
       savingProgramMax: toMoney(dto.savingProgramMax),
       currencies: dto.currencies,
+      termsVersion: dto.termsVersion,
     };
   }
 }

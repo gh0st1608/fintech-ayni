@@ -18,7 +18,7 @@ describe('JoinConfigResponse', () => {
       { code: 'USD', official: false, rateToOfficial: '3.75' },
     ];
 
-    expect(JoinConfigResponse.from({ config, currencies })).toEqual({
+    expect(JoinConfigResponse.from({ config, currencies }, '2026-11')).toEqual({
       payout: {
         min: { amount: 1_000, currency: 'USD' },
         max: { amount: 5_000, currency: 'USD' },
@@ -27,6 +27,7 @@ describe('JoinConfigResponse', () => {
       userPayoutLimit: { amount: 3_000, currency: 'USD' },
       savingProgramMax: { amount: 9_000, currency: 'USD' },
       currencies,
+      termsVersion: '2026-11',
     });
   });
 });

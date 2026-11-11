@@ -8,6 +8,7 @@ import { RecommendedCircles } from '@/presentation/circles/components/Recommende
 import { ReferralBanner } from '@/presentation/referrals/components/ReferralBanner';
 import { myReferralQueryKey } from '@/presentation/referrals/useReferrals';
 import { recommendedCirclesQueryKey } from '@/presentation/circles/useRecommendedCircles';
+import { BrandHeader } from '@/presentation/shared/components/BrandHeader';
 import { EmptyState } from '@/presentation/shared/components/EmptyState';
 import { Screen } from '@/presentation/shared/components/Screen';
 import { spacing } from '@/presentation/theme/tokens';
@@ -46,6 +47,7 @@ export function HomeScreen({ onJoinCircle, onJoin, onOpenReferral }: HomeScreenP
 
   return (
     <Screen>
+      <BrandHeader />
       <ScrollView
         contentContainerStyle={styles.content}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} />}

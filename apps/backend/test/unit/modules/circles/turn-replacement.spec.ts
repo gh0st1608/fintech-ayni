@@ -21,6 +21,7 @@ import {
   TEST_JOIN_CONFIG,
   TEST_PRICING,
   TEST_TRUST,
+  TEST_TERMS_VERSION,
 } from '@test/support/join-circle.fixture';
 
 const pen = (major: number) => Money.of(major * 100, 'PEN');
@@ -125,6 +126,7 @@ describe('Unirse a una vacante', () => {
     months: 10,
     position: 7,
     idempotencyKey: 'key-nuevo-00000001',
+    termsVersion: TEST_TERMS_VERSION,
   };
 
   function setup(now = at('2027-04-04'), applicant = ELIGIBLE) {

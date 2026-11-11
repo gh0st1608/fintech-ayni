@@ -22,6 +22,8 @@ export interface JoinConfig {
   savingProgramMax: Money;
   /** Monedas habilitadas; la oficial va primero. Con una sola, no hay nada que elegir. */
   currencies: readonly CurrencyOption[];
+  /** Versión vigente de los términos del círculo: se acepta y se envía al unirse (COPAYNI-86). */
+  termsVersion: string;
 }
 
 /** Rango que el usuario puede elegir de verdad: null si su límite no alcanza el mínimo. */

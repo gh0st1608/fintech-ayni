@@ -60,8 +60,11 @@ export class MercadoPagoWebhookController {
         maxAgeSeconds: MAX_AGE_SECONDS,
       });
     if (!valid) throw new UnauthorizedError('Firma del webhook inválida');
-    // Solo interesan los pagos; los demás tipos se confirman para que no se reintenten.
-    if (body?.type === 'payment' && dataId) await this.reconcile.execute(dataId);
+    // Solo interesan los pagos (tarjeta) y las órdenes (Yape, Checkout API con Orders); los demás
+    // tipos se confirman para que no se reintenten.
+    if ((body?.type === 'payment' || body?.type === 'order') && dataId) {
+      await this.reconcile.execute(dataId);
+    }
     return { received: true };
   }
 }

@@ -295,6 +295,8 @@ export class TypeOrmCircleRepository implements CircleRepositoryPort {
       position: membership.position,
       idempotencyKey: membership.idempotencyKey,
       price: membership.price ? toStoredPrice(membership.price) : null,
+      termsVersion: membership.termsVersion ?? null,
+      termsAcceptedAt: membership.termsVersion ? new Date() : null,
     });
   }
 
@@ -309,11 +311,12 @@ export class TypeOrmCircleRepository implements CircleRepositoryPort {
       }),
       memberships: (row.memberships ?? [])
         .filter(({ expelledAt }) => expelledAt === null)
-        .map(({ userId, position, idempotencyKey, price }) => ({
+        .map(({ userId, position, idempotencyKey, price, termsVersion }) => ({
           userId,
           position,
           idempotencyKey,
           ...(price && { price: fromStoredPrice(price) }),
+          ...(termsVersion && { termsVersion }),
         })),
       running,
     });

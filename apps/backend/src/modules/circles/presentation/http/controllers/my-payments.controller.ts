@@ -82,7 +82,12 @@ export class MyPaymentsController {
     }
     const method =
       body.method === 'yape'
-        ? { type: 'yape' as const, token: body.token! }
+        ? {
+            type: 'yape' as const,
+            token: body.token!,
+            phoneNumber: body.phoneNumber,
+            documentNumber: body.documentNumber,
+          }
         : { type: 'card' as const, cardId: body.cardId! };
     return PayInstallmentResponse.from(
       await this.payInstallment.execute(principal, { installmentId: id, idempotencyKey, method }),

@@ -14,6 +14,9 @@ const due = (circleId: string, dueOn: string, amount: number): DueInstallment =>
   dueOn: LocalDate.parse(dueOn),
   amount: pen(amount),
   status: 'pending',
+  position: 6,
+  slots: 10,
+  payout: pen(30_000),
 });
 
 function useCase(dues: DueInstallment[], debts = NO_DEBTS) {
@@ -62,6 +65,9 @@ describe('GetPaymentSummaryUseCase (COPAYNI-35)', () => {
       dueOn: '2026-12-05',
       amount: { amount: 300_000, currency: 'PEN' },
       status: 'pending',
+      position: 6,
+      slots: 10,
+      payout: { amount: 3_000_000, currency: 'PEN' },
     });
   });
 

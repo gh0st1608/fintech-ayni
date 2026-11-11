@@ -50,7 +50,13 @@ describe('GET /v1/circles/recommended', () => {
       .post('/v1/circles/join')
       .set('Authorization', `Bearer ${ana}`)
       .set('Idempotency-Key', randomUUID())
-      .send({ circleId: null, payoutAmount: 7_800_000, months: 6, position: 4 })
+      .send({
+        circleId: null,
+        payoutAmount: 7_800_000,
+        months: 6,
+        position: 4,
+        termsVersion: '2026-11',
+      })
       .expect(201);
 
     const forAna = await recommended(ana);
@@ -64,14 +70,17 @@ describe('GET /v1/circles/recommended', () => {
     expect(forBeto.length).toBeGreaterThan(0);
     expect(forBeto.length).toBeLessThanOrEqual(5);
     for (const item of forBeto) {
+      // Con varias monedas (M2) puede recomendar juntas en PEN o USD: cada una, en una sola.
+      const { currency } = item.payout as { currency: string };
+      expect(['PEN', 'USD']).toContain(currency);
       expect(item).toEqual({
         circleId: expect.any(String),
-        payout: { amount: expect.any(Number), currency: 'PEN' },
+        payout: { amount: expect.any(Number), currency },
         months: expect.any(Number),
         startsOn: expect.stringMatching(/^\d{4}-\d{2}$/),
         endsOn: expect.stringMatching(/^\d{4}-\d{2}$/),
-        baseInstallment: { amount: expect.any(Number), currency: 'PEN' },
-        adminFee: { amount: expect.any(Number), currency: 'PEN' },
+        baseInstallment: { amount: expect.any(Number), currency },
+        adminFee: { amount: expect.any(Number), currency },
         availableSlots: expect.any(Number),
         vacancies: expect.any(Array),
       });

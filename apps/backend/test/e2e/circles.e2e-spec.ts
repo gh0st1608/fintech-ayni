@@ -32,6 +32,7 @@ describe('GET /v1/circles/join-config', () => {
           { code: 'PEN', official: true, rateToOfficial: '1' },
           { code: 'USD', official: false, rateToOfficial: '3.75' },
         ],
+        termsVersion: '2026-11',
       },
       traceId: response.headers['x-trace-id'],
     });

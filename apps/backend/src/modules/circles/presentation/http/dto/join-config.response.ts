@@ -62,7 +62,13 @@ export class JoinConfigResponse {
   })
   currencies!: CurrencyOptionResponse[];
 
-  static from({ config, currencies }: JoinConfigView): JoinConfigResponse {
+  @ApiProperty({
+    example: '2026-11',
+    description: 'Versión vigente de los términos del círculo; se envía al unirse (COPAYNI-86)',
+  })
+  termsVersion!: string;
+
+  static from({ config, currencies }: JoinConfigView, termsVersion: string): JoinConfigResponse {
     const { payoutRange } = config;
     return {
       payout: {
@@ -73,6 +79,7 @@ export class JoinConfigResponse {
       userPayoutLimit: config.userPayoutLimit && MoneyResponse.from(config.userPayoutLimit),
       savingProgramMax: MoneyResponse.from(config.savingProgramMax),
       currencies,
+      termsVersion,
     };
   }
 }

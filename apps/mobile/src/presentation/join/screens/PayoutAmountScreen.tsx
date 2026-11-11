@@ -18,6 +18,7 @@ import { Slider } from '@/presentation/shared/components/Slider';
 import { Stepper } from '@/presentation/shared/components/Stepper';
 import { colors, spacing } from '@/presentation/theme/tokens';
 
+import { GameyaIntro } from '../components/GameyaIntro';
 import { useJoinConfig } from '../hooks/useJoinConfig';
 import { useJoinFlow } from '../JoinFlowProvider';
 
@@ -197,6 +198,8 @@ function PayoutPicker({
           </AppText>
         )}
         <InfoBanner message={t('join.payout.info')} illustration={ROCKET} />
+        {/* Diseño D16 aprobado (COPAYNI-87): qué es un Game'ya, con el monto elegido. */}
+        <GameyaIntro payout={amount} />
       </ScrollView>
       <Button
         label={t('join.next')}

@@ -24,6 +24,14 @@ const withRecommended = (...ids: string[]) =>
   });
 
 describe('HomeScreen', () => {
+  it('muestra la marca "ayni" con su nombre accesible (D15, COPAYNI-90)', async () => {
+    await renderHome();
+    const wordmark = await screen.findByLabelText('Ayni');
+    expect(wordmark).toHaveTextContent('ayni');
+    expect(screen.getByTestId('brand-header')).toBeTruthy();
+    expect(screen.queryByText('Dart')).toBeNull();
+  });
+
   it('el banner de invitación muestra el beneficio y abre "Invita a un amigo"', async () => {
     const onOpenReferral = jest.fn();
     await renderWithProviders(

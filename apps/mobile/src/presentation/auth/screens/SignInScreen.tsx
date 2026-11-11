@@ -13,6 +13,7 @@ import { CountrySheet, useCountry } from '@/presentation/shared/components/Count
 import { FieldError } from '@/presentation/shared/components/FieldError';
 import { flagEmoji } from '@/presentation/shared/components/PhoneInput';
 import { TextField } from '@/presentation/shared/components/TextField';
+import { Wordmark } from '@/presentation/shared/components/Wordmark';
 import { colors, spacing } from '@/presentation/theme/tokens';
 
 import { AuthSheet } from '../components/AuthSheet';
@@ -81,15 +82,7 @@ export function SignInScreen({ onChallengeStarted }: SignInScreenProps) {
     <AuthSheet>
       <View style={styles.form}>
         <View style={styles.header}>
-          <AppText
-            variant="title"
-            weight="semibold"
-            color={colors.primary}
-            importantForAccessibility="no"
-            accessibilityElementsHidden
-          >
-            {t('common.appName')}
-          </AppText>
+          <Wordmark size="display" decorative />
           <AppText variant="title" weight="semibold" accessibilityRole="header">
             {t('auth.signIn.title')}
           </AppText>

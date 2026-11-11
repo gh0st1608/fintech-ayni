@@ -29,6 +29,7 @@ import {
   TEST_FUND_SHARE_BPS,
   TEST_JOIN_CONFIG,
   TEST_TRUST,
+  TEST_TERMS_VERSION,
 } from '@test/support/join-circle.fixture';
 
 const pen = (major: number) => Money.of(major * 100, 'PEN');
@@ -89,6 +90,7 @@ describe('Regla de confianza por tipo de turno (COPAYNI-60)', () => {
       months: 10,
       position: 1,
       idempotencyKey: 'key-ana-0000000001',
+      termsVersion: TEST_TERMS_VERSION,
     };
     await expect(
       createJoinCircleUseCase(new InMemoryCircleRepository(), { completedCircles: 0 }).execute(

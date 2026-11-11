@@ -27,6 +27,10 @@ import { ValidationError } from '../../../../../shared/errors/app-error';
 import { CurrentPrincipal } from '../../../../../shared/presentation/decorators/current-principal.decorator';
 import { GetAvailableSlotsUseCase } from '../../../application/use-cases/get-available-slots.use-case';
 import { GetInstallmentOptionsUseCase } from '../../../application/use-cases/get-installment-options.use-case';
+import {
+  CIRCLE_TERMS,
+  type CircleTermsSettings,
+} from '../../../application/use-cases/circle-terms';
 import { GetJoinConfigUseCase } from '../../../application/use-cases/get-join-config.use-case';
 import { JoinCircleUseCase } from '../../../application/use-cases/join-circle.use-case';
 import { ListRecommendedCirclesUseCase } from '../../../application/use-cases/list-recommended-circles.use-case';
@@ -54,6 +58,7 @@ interface StatusResponse {
 export class CirclesController {
   constructor(
     @Inject(GetJoinConfigUseCase) private readonly getJoinConfig: GetJoinConfigUseCase,
+    @Inject(CIRCLE_TERMS) private readonly termsSettings: CircleTermsSettings,
     @Inject(GetInstallmentOptionsUseCase)
     private readonly getInstallmentOptions: GetInstallmentOptionsUseCase,
     @Inject(GetAvailableSlotsUseCase) private readonly getAvailableSlots: GetAvailableSlotsUseCase,
@@ -73,7 +78,10 @@ export class CirclesController {
     @CurrentPrincipal() principal: Principal,
     @Query() query: CurrencyQuery,
   ): Promise<JoinConfigResponse> {
-    return JoinConfigResponse.from(await this.getJoinConfig.execute(principal, query.currency));
+    return JoinConfigResponse.from(
+      await this.getJoinConfig.execute(principal, query.currency),
+      this.termsSettings.version,
+    );
   }
 
   @Get('recommended')

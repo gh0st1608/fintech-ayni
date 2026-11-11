@@ -1,7 +1,12 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 
 import { type Money } from '../../../../shared/domain/value-objects/money';
-import { ConflictError, DomainError, NotFoundError } from '../../../../shared/errors/app-error';
+import {
+  ConflictError,
+  DomainError,
+  NotFoundError,
+  ValidationError,
+} from '../../../../shared/errors/app-error';
 import {
   USER_REPOSITORY,
   type UserRepositoryPort,
@@ -15,8 +20,23 @@ import {
 import { SAVED_CARDS, type SavedCardRepositoryPort } from '../ports/saved-card-repository.port';
 import { EmailRequiredError } from './add-card.use-case';
 
-/** Con qué paga el usuario la cuota desde la app (COPAYNI-63). */
-export type PayInMethod = { type: 'yape'; token: string } | { type: 'card'; cardId: string };
+/**
+ * Con qué paga el usuario la cuota desde la app (COPAYNI-63). Con Yape, el celular con el que
+ * generó el token (si falta, el del perfil) y, opcional, su DNI.
+ */
+export type PayInMethod =
+  | { type: 'yape'; token: string; phoneNumber?: string; documentNumber?: string }
+  | { type: 'card'; cardId: string };
+
+/** Yape solo cobra en soles (pending-scope M2: una Game'ya en USD se paga con tarjeta). */
+const YAPE_CURRENCY = 'PEN';
+
+/** El celular de Yape en 9 dígitos, sin el código de país (51) ni separadores. */
+export function yapePhone(value: string | null | undefined): string | null {
+  const digits = (value ?? '').replace(/\D/g, '');
+  const local = digits.length === 11 && digits.startsWith('51') ? digits.slice(2) : digits;
+  return /^\d{9}$/.test(local) ? local : null;
+}
 
 export class PaymentRejectedError extends DomainError {
   constructor(detail: string | null) {
@@ -66,7 +86,19 @@ export class ChargeInstallmentUseCase {
     if (!user.email) throw new EmailRequiredError();
     let source: ChargeSource;
     if (method.type === 'yape') {
-      source = { type: 'yape', token: method.token };
+      if (request.amount.currency !== YAPE_CURRENCY) {
+        throw new ValidationError('Yape solo cobra en soles', { method: 'currency_not_supported' });
+      }
+      const phone = yapePhone(method.phoneNumber) ?? yapePhone(user.phone);
+      if (!phone) {
+        throw new ValidationError('Falta el celular de Yape', { phoneNumber: 'required' });
+      }
+      source = {
+        type: 'yape',
+        token: method.token,
+        phone,
+        documentNumber: method.documentNumber ?? null,
+      };
     } else {
       const card = (await this.cards.list(userId)).find(({ id }) => id === method.cardId);
       const customerId = await this.cards.customerOf(userId);

@@ -30,6 +30,7 @@ import {
 import { JOIN_ELIGIBILITY, type JoinEligibilityPort } from '../ports/join-eligibility.port';
 import { MEMBER_DEBTS, type MemberDebtsPort } from '../ports/member-debts.port';
 import { MEMBER_HISTORY, type MemberHistoryPort } from '../ports/member-history.port';
+import { CIRCLE_TERMS, type CircleTermsSettings } from './circle-terms';
 import { CIRCLE_CYCLE, type CircleCycleSettings } from './cycle-settings';
 import { TRUST_SETTINGS, type TrustSettings, trustProfileOf } from './trust';
 import {
@@ -66,6 +67,8 @@ export interface JoinCircleCommand {
   months: number;
   position: number;
   idempotencyKey: string;
+  /** Versión de los términos que el usuario aceptó en la confirmación (COPAYNI-86). */
+  termsVersion: string;
 }
 
 export interface JoinCircleResult {
@@ -92,6 +95,7 @@ export interface JoinCircleResult {
  *   (COPAYNI-59); el límite mensual se valida con esas cuotas.
  * - Guarda con la membresía el precio del slot (COPAYNI-55): un reintento responde ese precio
  *   aunque las reglas hayan cambiado.
+ * - Exige aceptar los términos vigentes (COPAYNI-86) y guarda la versión con la membresía.
  * - El repositorio inserta con unicidad: si otra solicitud tomó el slot entre la lectura y la
  *   escritura, responde SLOT_TAKEN; si el mismo pedido llegó dos veces, responde la unión que ganó.
  */
@@ -111,11 +115,18 @@ export class JoinCircleUseCase {
     @Inject(TRUST_SETTINGS) private readonly trust: TrustSettings,
     @Inject(CURRENCIES) private readonly currencies: CurrencySettings,
     @Inject(CLOCK) private readonly clock: ClockPort,
+    @Inject(CIRCLE_TERMS) private readonly termsSettings: CircleTermsSettings,
   ) {}
 
   async execute(command: JoinCircleCommand): Promise<JoinCircleResult> {
     const previous = await this.previousJoin(command);
     if (previous) return previous;
+    // Unos términos que no son los vigentes no valen: la app debe mostrar los nuevos.
+    if (command.termsVersion !== this.termsSettings.version) {
+      throw new ValidationError('Acepta los términos vigentes del círculo', {
+        termsVersion: 'outdated',
+      });
+    }
     await this.assertNotBlocked(command.userId);
 
     const joinConfig = await this.joinConfigs.getForUser(command.userId, command.currency);
@@ -132,12 +143,13 @@ export class JoinCircleUseCase {
     const profile = await trustProfileOf(command.userId, this.eligibility, this.history);
     assertSlotAllowed(quote.type, profile, this.trust);
 
-    const { userId, position, idempotencyKey } = command;
+    const { userId, position, idempotencyKey, termsVersion } = command;
     const { membership } = circle.join({
       userId,
       position,
       idempotencyKey,
       price: priceOf(quote),
+      termsVersion,
     });
     try {
       if (isNew) await this.circles.create(circle);

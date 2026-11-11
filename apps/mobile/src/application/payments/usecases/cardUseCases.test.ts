@@ -69,16 +69,18 @@ describe('Casos de uso de tarjetas y pago de cuotas', () => {
     await expect(new ListCardsUseCase(cards).execute()).resolves.toEqual([]);
   });
 
-  it('paga con Yape tokenizando el celular y el OTP, y con una tarjeta guardada', async () => {
+  it('paga con Yape tokenizando el celular y el OTP, y manda el token con el celular', async () => {
     const { tokenizer, payments } = setup();
     const pay = jest.spyOn(payments, 'payInstallment');
     const useCase = new PayInstallmentUseCase(tokenizer, payments);
     await expect(
       useCase.execute('i-1', { method: 'yape', phoneNumber: '987654321', otp: '123456' }, 'k'),
     ).resolves.toMatchObject({ status: 'paid' });
+    // El OTP solo se usa para el token: nunca llega al backend.
     expect((pay.mock.calls[0] as unknown[])[1]).toEqual({
       method: 'yape',
       token: expect.any(String),
+      phoneNumber: '987654321',
     });
 
     await useCase.execute('i-2', { method: 'card', cardId: 'card-1' }, 'k2');

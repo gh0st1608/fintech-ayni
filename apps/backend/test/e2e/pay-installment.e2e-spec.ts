@@ -60,6 +60,8 @@ describe('Pagar una cuota desde la app', () => {
     return installmentId;
   }
 
+  /** Celular de Yape de prueba de Mercado Pago (aprobado). */
+  const PHONE = '111111111';
   const pay = (id: string, body: object, key: string | null = randomUUID()) => {
     const call = request(app.getHttpServer())
       .post(`/v1/me/installments/${id}/pay`)
@@ -76,11 +78,19 @@ describe('Pagar una cuota desde la app', () => {
   it('paga con Yape: la cuota queda pagada y un reintento no cobra de nuevo', async () => {
     const id = await pendingInstallment();
     const key = randomUUID();
-    const paid = await pay(id, { method: 'yape', token: 'yape-ok' }, key).expect(200);
-    expect(paid.body.data).toEqual({ status: 'paid', paymentId: expect.any(String) });
+    const paid = await pay(
+      id,
+      { method: 'yape', token: 'yape-ok', phoneNumber: PHONE },
+      key,
+    ).expect(200);
+    expect(paid.body.data).toEqual({
+      status: 'paid',
+      paymentId: expect.any(String),
+      paidAt: expect.stringMatching(/^\d{4}-\d{2}-\d{2}T/),
+    });
     await expect(statusOf(id)).resolves.toBe('paid');
 
-    const retry = await pay(id, { method: 'yape', token: 'yape-ok' }, key);
+    const retry = await pay(id, { method: 'yape', token: 'yape-ok', phoneNumber: PHONE }, key);
     expect(retry.status).toBe(409);
     expect(retry.body.error.code).toBe('INSTALLMENT_NOT_PAYABLE');
   });
@@ -101,7 +111,11 @@ describe('Pagar una cuota desde la app', () => {
 
   it('un pago rechazado no cambia la cuota', async () => {
     const id = await pendingInstallment();
-    const rejected = await pay(id, { method: 'yape', token: 'rejected-yape' }).expect(422);
+    const rejected = await pay(id, {
+      method: 'yape',
+      token: 'rejected-yape',
+      phoneNumber: PHONE,
+    }).expect(422);
     expect(rejected.body.error.code).toBe('PAYMENT_REJECTED');
     await expect(statusOf(id)).resolves.toBe('pending');
   });
@@ -121,10 +135,22 @@ describe('Pagar una cuota desde la app', () => {
       [{ method: 'card', cardId: 'x' }, randomUUID()],
       [{ method: 'efectivo' }, randomUUID()],
       [{ method: 'yape', token: 't' }, null],
+      [{ method: 'yape', token: 't', phoneNumber: '98765' }, randomUUID()],
+      [{ method: 'yape', token: 't', documentNumber: '1234' }, randomUUID()],
     ] as const) {
       const response = await pay(foreign, body, key).expect(400);
       expect(response.body.error.code).toBe('VALIDATION_ERROR');
     }
+  });
+
+  it('con Yape exige el celular si el perfil no lo tiene (Checkout API con Orders)', async () => {
+    const id = await pendingInstallment();
+    const response = await pay(id, { method: 'yape', token: 'yape-ok' }).expect(400);
+    expect(response.body.error).toMatchObject({
+      code: 'VALIDATION_ERROR',
+      details: { phoneNumber: 'required' },
+    });
+    await expect(statusOf(id)).resolves.toBe('pending');
   });
 
   it('aplica el saldo de referidos: cobra la cuota menos el descuento (COPAYNI-53)', async () => {
@@ -172,7 +198,7 @@ describe('Pagar una cuota desde la app', () => {
       .post(`/v1/me/installments/${id}/pay`)
       .set('Authorization', `Bearer ${freshToken}`)
       .set('Idempotency-Key', randomUUID())
-      .send({ method: 'yape', token: 'yape-ref' })
+      .send({ method: 'yape', token: 'yape-ref', phoneNumber: PHONE })
       .expect(200);
     const db = app.get(DataSource);
     const [ledger] = await db.query<{ amount: string }[]>(

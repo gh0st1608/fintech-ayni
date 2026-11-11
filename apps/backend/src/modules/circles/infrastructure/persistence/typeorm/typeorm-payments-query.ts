@@ -128,13 +128,19 @@ export class TypeOrmPaymentsQuery implements PaymentsQueryPort {
         amount: string;
         currency: string;
         status: DueInstallment['status'];
+        position: number;
+        slots: number;
+        payout_amount: string;
+        payout_currency: string;
       }[]
     >(
       `SELECT i.id, i.circle_id, to_char(i.period, 'YYYY-MM') AS period,
               to_char(i.due_on, 'YYYY-MM-DD') AS due_on, i.amount::text AS amount, i.currency,
-              i.status
+              i.status, m.position, c.months AS slots, c.payout_amount::text AS payout_amount,
+              c.currency AS payout_currency
          FROM circle_installments i
          JOIN circle_memberships m ON m.circle_id = i.circle_id AND m.user_id = i.user_id
+         JOIN circles c ON c.id = i.circle_id
         WHERE i.user_id = $1 AND i.status IN ('pending', 'overdue') AND m.expelled_at IS NULL
         ORDER BY i.due_on, i.circle_id`,
       [userId],
@@ -146,6 +152,9 @@ export class TypeOrmPaymentsQuery implements PaymentsQueryPort {
       dueOn: LocalDate.parse(row.due_on),
       amount: Money.of(Number(row.amount), row.currency),
       status: row.status,
+      position: Number(row.position),
+      slots: Number(row.slots),
+      payout: Money.of(Number(row.payout_amount), row.payout_currency),
     }));
   }
 
