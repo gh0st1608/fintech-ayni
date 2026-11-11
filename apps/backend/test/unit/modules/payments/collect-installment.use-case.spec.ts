@@ -151,26 +151,28 @@ describe('Débito automático de la cuota (COPAYNI-40)', () => {
     await expect(payments.refund()).rejects.toThrow('T5');
   });
 
-  it('Mercado Pago busca los pagos por referencia externa', async () => {
-    const http = jest.fn().mockResolvedValue(
-      new Response(
-        JSON.stringify({
-          results: [
-            {
-              id: 7,
-              status: 'approved',
-              external_reference: 'inst-1',
-              transaction_amount: 3000,
-              currency_id: 'PEN',
-            },
-          ],
+  it('Mercado Pago busca los pagos (y las órdenes de Yape) por referencia externa', async () => {
+    const payments = {
+      results: [
+        {
+          id: 7,
+          status: 'approved',
+          external_reference: 'inst-1',
+          transaction_amount: 3000,
+          currency_id: 'PEN',
+        },
+      ],
+    };
+    const http = jest.fn((url: string) =>
+      Promise.resolve(
+        new Response(JSON.stringify(url.includes('/v1/orders') ? { data: [] } : payments), {
+          status: 200,
         }),
-        { status: 200 },
       ),
     );
     const mp = new MercadoPagoGateway(
       { accessToken: 't', apiUrl: 'https://api.test', timeoutMs: 1000 },
-      http,
+      http as unknown as typeof fetch,
     );
     await expect(mp.paymentsFor('inst-1')).resolves.toEqual([
       expect.objectContaining({ id: '7', status: 'approved', amount: Money.of(300_000, 'PEN') }),

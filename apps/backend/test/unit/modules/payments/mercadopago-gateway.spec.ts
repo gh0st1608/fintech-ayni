@@ -5,6 +5,7 @@ import { Logger } from '@nestjs/common';
 import { FakePaymentGateway } from '@src/modules/payments/infrastructure/fake-payment-gateway';
 import {
   MercadoPagoGateway,
+  orderIdempotencyKey,
   PaymentGatewayError,
 } from '@src/modules/payments/infrastructure/mercadopago/mercadopago-gateway';
 import { isValidWebhookSignature } from '@src/modules/payments/infrastructure/mercadopago/webhook-signature';
@@ -15,10 +16,11 @@ const SETTINGS = { accessToken: 'TEST-token-secreto', apiUrl: 'https://api.test'
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
 
+const NOW = new Date('2026-11-10T15:00:00Z');
 function gateway(...responses: Response[]) {
   const http = jest.fn<Promise<Response>, Parameters<typeof fetch>>();
   for (const response of responses) http.mockResolvedValueOnce(response);
-  return { http, mp: new MercadoPagoGateway(SETTINGS, http) };
+  return { http, mp: new MercadoPagoGateway(SETTINGS, http, () => NOW) };
 }
 const callOf = (http: jest.Mock, index: number) => {
   const [url, init] = http.mock.calls[index] as [string, RequestInit];
@@ -28,6 +30,43 @@ const callOf = (http: jest.Mock, index: number) => {
     headers: init.headers as Record<string, string>,
     body: init.body ? (JSON.parse(init.body as string) as Record<string, unknown>) : undefined,
   };
+};
+const YAPE = {
+  type: 'yape' as const,
+  token: 'yape-tok',
+  phone: '111111111',
+  documentNumber: null,
+};
+const YAPE_CHARGE = {
+  idempotencyKey: 'inst-1:k-1',
+  amount: Money.of(1000, 'PEN'),
+  description: 'Cuota de diciembre',
+  payerEmail: 'ana@mail.com',
+  externalReference: 'inst-1',
+  source: YAPE,
+};
+/** Orden de la API de Orders, como la del ejemplo de Mercado Pago para Yape. */
+const ORDER = {
+  id: 'ORDPE01EXAMPLEPE1234NCAKKBF68N64S',
+  type: 'online',
+  processing_mode: 'automatic',
+  external_reference: 'inst-1',
+  total_amount: '10.00',
+  total_paid_amount: '10.00',
+  status: 'processed',
+  status_detail: 'accredited',
+  transactions: {
+    payments: [
+      {
+        id: 'PAYPE01EXAMPLEPE1234BSAR5ZWXX5YZG',
+        amount: '10.00',
+        paid_amount: '10.00',
+        status: 'processed',
+        status_detail: 'accredited',
+        payment_method: { id: 'yape', type: 'debit_card' },
+      },
+    ],
+  },
 };
 const PAYMENT = {
   id: 123,
@@ -99,35 +138,145 @@ describe('MercadoPagoGateway (COPAYNI-34)', () => {
     );
   });
 
-  it('cobra con Yape: el token de la app, en unidades mayores y con clave de idempotencia', async () => {
-    const { http, mp } = gateway(json(PAYMENT, 201));
-    const payment = await mp.charge({
-      idempotencyKey: 'inst-1',
-      amount: Money.of(3050, 'PEN'),
-      description: 'Cuota de diciembre',
-      payerEmail: 'ana@mail.com',
-      externalReference: 'inst-1',
-      source: { type: 'yape', token: 'yape-tok' },
-    });
-    expect(payment).toEqual({
-      id: '123',
+  it('cobra con Yape creando una orden con el token, el celular y la clave derivada', async () => {
+    const { http, mp } = gateway(json(ORDER, 201));
+    await expect(
+      mp.charge({ ...YAPE_CHARGE, source: { ...YAPE, documentNumber: '12345678' } }),
+    ).resolves.toEqual({
+      id: 'ORDPE01EXAMPLEPE1234NCAKKBF68N64S',
       status: 'approved',
       statusDetail: 'accredited',
       externalReference: 'inst-1',
-      amount: Money.of(3050, 'PEN'),
+      amount: Money.of(1000, 'PEN'),
     });
-    expect(callOf(http, 0)).toMatchObject({
-      url: 'https://api.test/v1/payments',
-      headers: { 'X-Idempotency-Key': 'inst-1' },
-      body: {
-        transaction_amount: 30.5,
-        token: 'yape-tok',
-        installments: 1,
-        payment_method_id: 'yape',
-        external_reference: 'inst-1',
-        payer: { email: 'ana@mail.com' },
+    const call = callOf(http, 0);
+    expect(call).toMatchObject({
+      url: 'https://api.test/v1/orders',
+      method: 'POST',
+      headers: {
+        Authorization: 'Bearer TEST-token-secreto',
+        'X-Idempotency-Key': orderIdempotencyKey('inst-1:k-1'),
       },
     });
+    expect(call.body).toEqual({
+      type: 'online',
+      external_reference: 'inst-1',
+      processing_mode: 'automatic',
+      total_amount: '10.00',
+      payer: {
+        email: 'ana@mail.com',
+        entity_type: 'individual',
+        phone: { area_code: '51', number: '111111111' },
+        identification: { type: 'DNI', number: '12345678' },
+      },
+      config: { location: { state_id: 'PE-LIM' } },
+      transactions: {
+        payments: [
+          {
+            amount: '10.00',
+            payment_method: { id: 'yape', type: 'debit_card', token: 'yape-tok' },
+          },
+        ],
+      },
+    });
+  });
+
+  it('la clave de la orden tiene forma de UUID y es la misma para la misma clave de Ayni', () => {
+    const key = orderIdempotencyKey('inst-1:k-1');
+    expect(key).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/);
+    expect(orderIdempotencyKey('inst-1:k-1')).toBe(key);
+    expect(orderIdempotencyKey('inst-1:k-2')).not.toBe(key);
+  });
+
+  it('un Yape rechazado (402) devuelve la orden fallida con el motivo del pago', async () => {
+    const [payment] = ORDER.transactions.payments;
+    const failed = {
+      ...ORDER,
+      status: 'failed',
+      status_detail: 'failed',
+      transactions: {
+        payments: [{ ...payment, status: 'failed', status_detail: 'insufficient_amount' }],
+      },
+    };
+    const withOrder = gateway(
+      json({ errors: [{ code: 'failed', message: 'transactions failed' }], data: failed }, 402),
+    );
+    await expect(withOrder.mp.charge(YAPE_CHARGE)).resolves.toMatchObject({
+      id: ORDER.id,
+      status: 'rejected',
+      statusDetail: 'insufficient_amount',
+    });
+
+    // Sin la orden en la respuesta, el motivo sale de errors[].details.
+    const withoutOrder = gateway(
+      json(
+        { errors: [{ code: 'failed', details: ['PAYPE01X: required_call_for_authorize'] }] },
+        402,
+      ),
+    );
+    await expect(withoutOrder.mp.charge(YAPE_CHARGE)).resolves.toEqual({
+      id: `order:${orderIdempotencyKey('inst-1:k-1')}`,
+      status: 'rejected',
+      statusDetail: 'required_call_for_authorize',
+      externalReference: 'inst-1',
+      amount: Money.of(1000, 'PEN'),
+    });
+  });
+
+  it('Yape solo cobra en soles y otro error de la API no es un rechazo', async () => {
+    const { http, mp } = gateway();
+    await expect(
+      mp.charge({ ...YAPE_CHARGE, amount: Money.of(1000, 'USD') }),
+    ).rejects.toBeInstanceOf(PaymentGatewayError);
+    expect(http).not.toHaveBeenCalled();
+    const conflict = gateway(json({ errors: [{ code: 'idempotency_key_already_used' }] }, 409));
+    await expect(conflict.mp.charge(YAPE_CHARGE)).rejects.toMatchObject({ status: 409 });
+  });
+
+  it('consulta una orden por su id y normaliza sus estados', async () => {
+    const { http, mp } = gateway(json(ORDER));
+    await expect(mp.getPayment(ORDER.id)).resolves.toMatchObject({ status: 'approved' });
+    expect(callOf(http, 0)).toMatchObject({
+      url: `https://api.test/v1/orders/${ORDER.id}`,
+      method: 'GET',
+    });
+
+    const statusOf = async (status: string) =>
+      (await gateway(json({ ...ORDER, status })).mp.getPayment(ORDER.id)).status;
+    for (const status of ['failed', 'canceled', 'refunded', 'charged_back']) {
+      await expect(statusOf(status)).resolves.toBe('rejected');
+    }
+    for (const status of ['created', 'processing', 'action_required']) {
+      await expect(statusOf(status)).resolves.toBe('pending');
+    }
+  });
+
+  it('busca los pagos y las órdenes de una referencia en los últimos 90 días', async () => {
+    const { http, mp } = gateway(
+      json({ results: [PAYMENT] }),
+      json({ data: [ORDER, { ...ORDER, id: 'ORD-OTRA', external_reference: 'inst-10' }] }),
+    );
+    const found = await mp.paymentsFor('inst-1');
+    expect(found.map(({ id }) => id)).toEqual(['123', ORDER.id]);
+    const url = new URL(callOf(http, 1).url);
+    expect(url.pathname).toBe('/v1/orders');
+    expect(Object.fromEntries(url.searchParams)).toEqual({
+      external_reference: 'inst-1',
+      begin_date: '2026-08-12T15:00:00.000Z',
+      end_date: '2026-11-11T15:00:00.000Z',
+      page_size: '100',
+    });
+  });
+
+  it('si la búsqueda de órdenes no está permitida, sigue solo con los pagos', async () => {
+    const warn = jest.spyOn(Logger.prototype, 'warn');
+    const denied = gateway(json({ results: [PAYMENT] }), json({}, 403));
+    await expect(denied.mp.paymentsFor('inst-1')).resolves.toHaveLength(1);
+    expect(warn).toHaveBeenCalledWith(
+      expect.objectContaining({ event: 'payments.gateway.orders_search_unavailable', status: 403 }),
+    );
+    const broken = gateway(json({ results: [] }), json({}, 500));
+    await expect(broken.mp.paymentsFor('inst-1')).rejects.toMatchObject({ status: 500 });
   });
 
   it('cobra con una tarjeta guardada: pide un token de la tarjeta y paga como cliente', async () => {
@@ -249,7 +398,7 @@ describe('Pasarelas de desarrollo', () => {
       fake.charge({
         ...request,
         idempotencyKey: 'k-2',
-        source: { type: 'yape', token: 'rejected' },
+        source: { type: 'yape', token: 'rejected', phone: '111111111', documentNumber: null },
       }),
     ).resolves.toMatchObject({ status: 'rejected' });
     await fake.deleteCard(customer, card.id);
