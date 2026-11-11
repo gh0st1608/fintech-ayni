@@ -40,6 +40,23 @@
       "title": "There are no open circles for you yet",
       "description": "Choose your amount and payout month: we'll open a new circle for you.",
       "join": "Join a circle"
+    },
+    "streak": {
+      "buttonA11y_one": "{{count}}-month on-time payment streak",
+      "buttonA11y_other": "{{count}}-month on-time payment streak",
+      "emptyA11y": "On-time payment streak",
+      "title_one": "{{count}}-month streak!",
+      "title_other": "{{count}}-month streak!",
+      "emptyTitle": "Your payment streak",
+      "description": "It's the number of months in a row you paid all your installments on time. Paying within the grace days doesn't break it; a late payment does.",
+      "emptyDescription": "Once you pay your installments on time, you'll see how many months in a row you've kept it up.",
+      "ok": "Got it",
+      "close": "Close",
+      "monthA11y": {
+        "onTime": "{{month}}: on time",
+        "late": "{{month}}: late",
+        "pending": "{{month}}: still to pay"
+      }
     }
   },
   "join": {
@@ -233,7 +250,8 @@
       "duration": "{{months}} Months",
       "adminFees": "Admin Fees:",
       "joined": "Joined",
-      "expelled": "Removed"
+      "expelled": "Removed",
+      "viewDetailA11y": "View the details of the {{amount}} circle"
     },
     "empty": {
       "active": "Your active circles will appear here!",
@@ -267,6 +285,38 @@
       },
       "loadError": "We couldn't load the start proposals: {{reason}}",
       "changed": "The terms changed because someone left the circle. Review the new proposal."
+    },
+    "detail": {
+      "title": "My circle",
+      "pot": "Monthly pot",
+      "states": {
+        "collecting": "Not started",
+        "approving": "Awaiting approval",
+        "contributing": "Active",
+        "paused": "Paused",
+        "cancelled": "Cancelled",
+        "finished": "Finished"
+      },
+      "progressA11y": "Circle progress",
+      "progress": "Month {{current}} of {{total}} · ends in {{end}}",
+      "startsOn": "Starts in {{month}}",
+      "yourTurn": "Your turn",
+      "turnValue": "{{month}} (#{{position}})",
+      "yourInstallment": "Your installment",
+      "retention": "Payout withholding",
+      "nextDue": "Next due date",
+      "nothingDue": "You're up to date",
+      "pay": "Pay {{amount}}",
+      "turns": "Turns",
+      "turnRow": "{{month}} · {{name}}",
+      "you": "You",
+      "member": "Member",
+      "vacant": "Vacant turn",
+      "turnStatus": {
+        "paid": "Paid out",
+        "current": "This month",
+        "vacant": "Vacant"
+      }
     }
   },
   "saving": {
@@ -598,6 +648,23 @@
       "max_attempts": "You've used up the allowed attempts. Try another method.",
       "invalid_token": "The code is no longer valid. Get a new one in Yape.",
       "processing_error": "The payment couldn't be processed. Try again in a few minutes."
+    },
+    "transaction": {
+      "title": "Details",
+      "openA11y": "View the details of the {{amount}} transaction on {{date}}",
+      "status": "Status",
+      "completed": "Completed",
+      "circle": "Circle",
+      "circleValue": "{{payout}} circle",
+      "month": "Month",
+      "turn": "Turn",
+      "date": "Date",
+      "pot": "Pot",
+      "deductions": "Withholding and deductions",
+      "received": "Received",
+      "operation": "Transaction no.  {{id}}",
+      "copy": "Copy the transaction number",
+      "copied": "Transaction number copied."
     }
   },
   "documents": {

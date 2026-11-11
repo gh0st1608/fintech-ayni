@@ -1,5 +1,6 @@
 import type { JoinCircleRequest, JoinedCircle } from '../JoinedCircle';
 import type { MyCirclesPage, MyCircleStatus } from '../MyCircle';
+import type { MyCircleDetail } from '../MyCircleDetail';
 import type { StartDecision, StartProposal } from '../StartProposal';
 
 /** Membresías del usuario: unirse (POST /v1/circles/join) y mis círculos (GET /v1/me/circles). */
@@ -15,6 +16,11 @@ export interface CircleMembershipRepositoryPort {
     cursor: string | null,
     signal?: AbortSignal,
   ): Promise<MyCirclesPage>;
+  /**
+   * Detalle de un círculo del usuario (COPAYNI-88). Si no es miembro vigente falla con
+   * `CIRCLE_NOT_FOUND`.
+   */
+  getMine(circleId: string, signal?: AbortSignal): Promise<MyCircleDetail>;
   /** Círculos incompletos que esperan la respuesta del usuario (COPAYNI-62). */
   listStartProposals(signal?: AbortSignal): Promise<StartProposal[]>;
   /** Responde a la ronda que vio el usuario; si cambió, falla con `START_PROPOSAL_CHANGED`. */

@@ -23,11 +23,23 @@ export function useCatalogScreenOptions() {
   return { title: t('catalog.title'), headerBackButtonDisplayMode: 'minimal' } as const;
 }
 
+/** Pantallas de Circles apiladas sobre las pestañas. */
+export function useCircleScreenOptions() {
+  const { t } = useTranslation();
+  return {
+    detail: { title: t('circles.detail.title'), headerBackButtonDisplayMode: 'minimal' },
+  } as const;
+}
+
 /** Pantallas de la sección Payment apiladas sobre las pestañas. */
 export function usePaymentScreenOptions() {
   const { t } = useTranslation();
   return {
     history: { title: t('payment.history.title'), headerBackButtonDisplayMode: 'minimal' },
+    transaction: {
+      title: t('payment.transaction.title'),
+      headerBackButtonDisplayMode: 'minimal',
+    },
     eligibility: {
       title: t('payment.eligibility.title'),
       headerBackButtonDisplayMode: 'minimal',

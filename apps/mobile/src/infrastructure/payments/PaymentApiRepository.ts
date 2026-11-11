@@ -3,12 +3,14 @@ import { z } from 'zod';
 import type { PaymentRepositoryPort } from '@/domain/payments/ports/PaymentRepositoryPort';
 import type { InstallmentPaymentResult } from '@/domain/payments/InstallmentPayment';
 import type { PaymentSettings } from '@/domain/payments/PaymentSettings';
+import type { PaymentStreak } from '@/domain/payments/PaymentStreak';
 import type { PaymentSummary } from '@/domain/payments/PaymentSummary';
 import type { PayoutEligibility, PayoutRequirement } from '@/domain/payments/PayoutEligibility';
 import type {
+  TransactionDetail,
   TransactionKind,
-  TransactionsPage,
   TransactionType,
+  TransactionsPage,
 } from '@/domain/payments/Transaction';
 import type { HttpClientPort } from '@/domain/shared/ports/HttpClientPort';
 import { moneyDto, toMoney } from '@/infrastructure/circles/moneyDto';
@@ -45,19 +47,38 @@ const KIND_BY_DTO = {
 } as const satisfies Record<string, TransactionKind>;
 
 /** DTO de GET /me/transactions (docs/api/payments.md). */
+const transactionDto = z.object({
+  id: z.string().min(1),
+  type: z.enum(['payment', 'payout']),
+  kind: z.enum(['installment', 'debt_settlement', 'payout', 'refund']),
+  circleId: z.string().min(1),
+  period: z.string().regex(PERIOD).nullable(),
+  amount: moneyDto,
+  occurredAt: z.iso.datetime({ offset: true }),
+});
+
 const transactionsDto = z.object({
-  items: z.array(
+  items: z.array(transactionDto),
+  nextCursor: z.string().min(1).nullable(),
+});
+
+/** DTO de GET /me/payment-streak (COPAYNI-82). */
+const paymentStreakDto = z.object({
+  months: z.number().int().nonnegative(),
+  lastMonths: z.array(
     z.object({
-      id: z.string().min(1),
-      type: z.enum(['payment', 'payout']),
-      kind: z.enum(['installment', 'debt_settlement', 'payout', 'refund']),
-      circleId: z.string().min(1),
-      period: z.string().regex(PERIOD).nullable(),
-      amount: moneyDto,
-      occurredAt: z.iso.datetime({ offset: true }),
+      period: z.string().regex(PERIOD),
+      status: z.enum(['on_time', 'late', 'pending']),
     }),
   ),
-  nextCursor: z.string().min(1).nullable(),
+});
+const STREAK_STATUS_BY_DTO = { on_time: 'onTime', late: 'late', pending: 'pending' } as const;
+
+/** DTO de GET /me/transactions/:id (COPAYNI-78). */
+const transactionDetailDto = transactionDto.extend({
+  circlePayout: moneyDto,
+  position: z.number().int().positive(),
+  deductions: moneyDto.nullable(),
 });
 
 const REQUIREMENT_BY_DTO = {
@@ -114,6 +135,40 @@ export class PaymentApiRepository implements PaymentRepositoryPort {
         amount: toMoney(due.amount),
         payout: toMoney(due.payout),
       })),
+    };
+  }
+
+  async getPaymentStreak(signal?: AbortSignal): Promise<PaymentStreak> {
+    const dto = await this.http.get('/me/payment-streak', {
+      signal,
+      parse: (data) => paymentStreakDto.parse(data),
+    });
+    return {
+      months: dto.months,
+      lastMonths: dto.lastMonths.map(({ period, status }) => ({
+        period,
+        status: STREAK_STATUS_BY_DTO[status],
+      })),
+    };
+  }
+
+  async getTransaction(
+    type: TransactionType,
+    id: string,
+    signal?: AbortSignal,
+  ): Promise<TransactionDetail> {
+    const dto = await this.http.get(`/me/transactions/${encodeURIComponent(id)}`, {
+      query: { type },
+      signal,
+      parse: (data) => transactionDetailDto.parse(data),
+    });
+    return {
+      ...dto,
+      kind: KIND_BY_DTO[dto.kind],
+      amount: toMoney(dto.amount),
+      occurredAt: new Date(dto.occurredAt),
+      circlePayout: toMoney(dto.circlePayout),
+      deductions: dto.deductions ? toMoney(dto.deductions) : null,
     };
   }
 

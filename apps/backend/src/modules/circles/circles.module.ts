@@ -18,6 +18,8 @@ import { JOIN_ELIGIBILITY } from './application/ports/join-eligibility.port';
 import { MEMBER_HISTORY } from './application/ports/member-history.port';
 import { PAYMENTS_QUERY } from './application/ports/payments-query.port';
 import { GetPaymentSummaryUseCase } from './application/use-cases/get-payment-summary.use-case';
+import { GetPaymentStreakUseCase } from './application/use-cases/get-payment-streak.use-case';
+import { GetTransactionUseCase } from './application/use-cases/get-transaction.use-case';
 import { ListTransactionsUseCase } from './application/use-cases/list-transactions.use-case';
 import { GetPayoutEligibilityUseCase } from './application/use-cases/get-payout-eligibility.use-case';
 import { PAYMENT_SETTINGS } from './application/ports/payment-settings.port';
@@ -52,11 +54,13 @@ import {
 } from './application/use-cases/admin-finance.use-cases';
 import { SqlAdminFinanceQuery } from './infrastructure/persistence/typeorm/sql-admin-finance.query';
 import { ADMIN_CIRCLES_QUERY } from './application/ports/admin-circles-query.port';
+import { MY_CIRCLE_CALENDAR } from './application/ports/my-circle-calendar.port';
 import {
   GetAdminCircleUseCase,
   ListAdminCirclesUseCase,
 } from './application/use-cases/admin-circles.use-cases';
 import { SqlAdminCirclesQuery } from './infrastructure/persistence/typeorm/sql-admin-circles.query';
+import { SqlMyCircleCalendarQuery } from './infrastructure/persistence/typeorm/sql-my-circle-calendar.query';
 import { TRUST_SETTINGS, type TrustSettings } from './application/use-cases/trust';
 import { TypeOrmMemberHistory } from './infrastructure/persistence/typeorm/typeorm-member-history.repository';
 import { MEMBER_DEBTS } from './application/ports/member-debts.port';
@@ -83,6 +87,7 @@ import {
 import { GetInstallmentOptionsUseCase } from './application/use-cases/get-installment-options.use-case';
 import { CIRCLE_TERMS, type CircleTermsSettings } from './application/use-cases/circle-terms';
 import { GetJoinConfigUseCase } from './application/use-cases/get-join-config.use-case';
+import { GetMyCircleUseCase } from './application/use-cases/get-my-circle.use-case';
 import { JoinCircleUseCase } from './application/use-cases/join-circle.use-case';
 import { ListMyCirclesUseCase } from './application/use-cases/list-my-circles.use-case';
 import { SettleMemberDebtUseCase } from './application/use-cases/settle-member-debt.use-case';
@@ -226,6 +231,8 @@ import { MyCirclesController } from './presentation/http/controllers/my-circles.
     // Sección Payment de la app (COPAYNI-35).
     GetPaymentSummaryUseCase,
     ListTransactionsUseCase,
+    GetTransactionUseCase,
+    GetPaymentStreakUseCase,
     GetPayoutEligibilityUseCase,
     GetPaymentSettingsUseCase,
     UpdatePaymentSettingsUseCase,
@@ -240,6 +247,10 @@ import { MyCirclesController } from './presentation/http/controllers/my-circles.
     GetAdminCircleUseCase,
     SqlAdminCirclesQuery,
     { provide: ADMIN_CIRCLES_QUERY, useExisting: SqlAdminCirclesQuery },
+    // Detalle de un círculo para sus miembros (COPAYNI-88).
+    GetMyCircleUseCase,
+    SqlMyCircleCalendarQuery,
+    { provide: MY_CIRCLE_CALENDAR, useExisting: SqlMyCircleCalendarQuery },
     // Finanzas del back-office, solo lectura (docs/backoffice-plan.md, fase 3).
     ListInstallmentsUseCase,
     ListPayoutsUseCase,

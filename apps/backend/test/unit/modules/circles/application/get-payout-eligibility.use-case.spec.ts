@@ -29,6 +29,8 @@ async function eligibilityOf(
     {
       dueInstallmentsOf: () => Promise.resolve(dues),
       transactionsOf: jest.fn(),
+      transactionOf: jest.fn(),
+      installmentHistoryOf: jest.fn(),
       installment: jest.fn(),
     },
     debts,

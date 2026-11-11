@@ -1,13 +1,22 @@
 import type { InstallmentPaymentResult } from '../InstallmentPayment';
 import type { PaymentSettings } from '../PaymentSettings';
+import type { PaymentStreak } from '../PaymentStreak';
 import type { PaymentSummary } from '../PaymentSummary';
 import type { PayoutEligibility } from '../PayoutEligibility';
-import type { TransactionsPage, TransactionType } from '../Transaction';
+import type { TransactionDetail, TransactionsPage, TransactionType } from '../Transaction';
 
 /** Sección Payment del backend (docs/api/payments.md). */
 export interface PaymentRepositoryPort {
   getSummary(signal?: AbortSignal): Promise<PaymentSummary>;
   /** Una página del historial, del más reciente al más antiguo. */
+  /** Racha de pagos a tiempo del icono de fuego (COPAYNI-82). */
+  getPaymentStreak(signal?: AbortSignal): Promise<PaymentStreak>;
+  /** Un movimiento del historial; si no es del usuario falla con `TRANSACTION_NOT_FOUND`. */
+  getTransaction(
+    type: TransactionType,
+    id: string,
+    signal?: AbortSignal,
+  ): Promise<TransactionDetail>;
   listTransactions(
     type: TransactionType,
     cursor: string | null,

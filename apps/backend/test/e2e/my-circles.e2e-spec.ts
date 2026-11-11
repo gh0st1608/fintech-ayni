@@ -101,6 +101,47 @@ describe('GET /v1/me/circles', () => {
       .expect(({ body }) => expect(body.error.details).toEqual({ cursor: 'invalid' }));
   });
 
+  it('el detalle de un círculo propio trae el pozo, mi turno y los turnos (COPAYNI-88)', async () => {
+    const token = await signIn();
+    const joined = await join(token, 7_500_000, 3);
+    const { circleId } = joined.body.data as { circleId: string };
+    const startsOn = Period.fromDate(new Date(), 'America/Lima').addMonths(1);
+
+    const detail = await request(app.getHttpServer())
+      .get(`/v1/me/circles/${circleId}`)
+      .set('Authorization', `Bearer ${token}`)
+      .expect(200);
+    expect(detail.body.data).toMatchObject({
+      circleId,
+      state: 'collecting',
+      payout: { amount: 7_500_000, currency: 'PEN' },
+      months: 6,
+      startsOn: startsOn.toString(),
+      endsOn: startsOn.addMonths(5).toString(),
+      currentPeriod: null,
+      currentMonth: null,
+      position: 3,
+      payoutPeriod: startsOn.addMonths(2).toString(),
+      nextDue: null,
+    });
+    const turns = detail.body.data.turns as { position: number; isMe: boolean; status: string }[];
+    expect(turns).toHaveLength(6);
+    expect(turns.find(({ isMe }) => isMe)).toMatchObject({ position: 3, status: 'upcoming' });
+    expect(turns.filter(({ status }) => status === 'vacant')).toHaveLength(5);
+
+    // Otro usuario no ve el detalle de un círculo donde no está.
+    const stranger = await signIn();
+    await request(app.getHttpServer())
+      .get(`/v1/me/circles/${circleId}`)
+      .set('Authorization', `Bearer ${stranger}`)
+      .expect(404)
+      .expect(({ body }) => expect(body.error.code).toBe('CIRCLE_NOT_FOUND'));
+    await request(app.getHttpServer())
+      .get('/v1/me/circles/no-es-uuid')
+      .set('Authorization', `Bearer ${token}`)
+      .expect(404);
+  });
+
   it('sin token responde 401', async () => {
     await request(app.getHttpServer()).get('/v1/me/circles?status=active').expect(401);
   });

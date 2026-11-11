@@ -1,6 +1,7 @@
 import { type LocalDate } from '../../../../shared/domain/value-objects/local-date';
 import { type Money } from '../../../../shared/domain/value-objects/money';
 import { type Period } from '../../../../shared/domain/value-objects/period';
+import { type InstallmentRecord } from '../../domain/services/payment-streak';
 
 export const PAYMENTS_QUERY = Symbol('PAYMENTS_QUERY');
 
@@ -41,6 +42,14 @@ export interface Transaction {
   occurredAt: Date;
 }
 
+/** Un movimiento con lo necesario para su detalle (COPAYNI-78). */
+export interface TransactionDetail extends Transaction {
+  /** Pozo del círculo: lo identifica y, en un payout, es el monto bruto. */
+  circlePayout: Money;
+  /** Turno del usuario en ese círculo. */
+  position: number;
+}
+
 export interface TransactionPage {
   items: Transaction[];
   /** `null` si no hay más páginas. */
@@ -75,4 +84,15 @@ export interface PaymentsQueryPort {
     limit: number;
     cursor: string | null;
   }): Promise<TransactionPage>;
+  /**
+   * Todas las cuotas del usuario en los círculos donde sigue, con el día de pago en `timeZone`,
+   * para la racha de pagos a tiempo (COPAYNI-82).
+   */
+  installmentHistoryOf(userId: string, timeZone: string): Promise<InstallmentRecord[]>;
+  /** Un pago o un cobro del usuario por su id, o `null` si no existe o es de otro usuario. */
+  transactionOf(query: {
+    userId: string;
+    type: TransactionType;
+    id: string;
+  }): Promise<TransactionDetail | null>;
 }

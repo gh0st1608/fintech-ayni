@@ -24,11 +24,13 @@ import {
 
 import { type Principal } from '../../../../../shared/application/ports/access-token-verifier.port';
 import { CurrentPrincipal } from '../../../../../shared/presentation/decorators/current-principal.decorator';
+import { GetMyCircleUseCase } from '../../../application/use-cases/get-my-circle.use-case';
 import { ListMyCirclesUseCase } from '../../../application/use-cases/list-my-circles.use-case';
 import {
   ListStartProposalsUseCase,
   RespondStartProposalUseCase,
 } from '../../../application/use-cases/start-proposal.use-cases';
+import { MyCircleDetailResponse } from '../dto/my-circle-detail.dto';
 import { MyCirclesQuery, MyCirclesResponse } from '../dto/my-circles.dto';
 import {
   RespondStartProposalRequest,
@@ -45,6 +47,7 @@ export class MyCirclesController {
     @Inject(ListStartProposalsUseCase) private readonly startProposals: ListStartProposalsUseCase,
     @Inject(RespondStartProposalUseCase)
     private readonly respondProposal: RespondStartProposalUseCase,
+    @Inject(GetMyCircleUseCase) private readonly getMyCircle: GetMyCircleUseCase,
   ) {}
 
   @Get('start-proposals')
@@ -110,5 +113,21 @@ export class MyCirclesController {
         limit: query.limit,
       }),
     );
+  }
+
+  @Get(':circleId')
+  @ApiOkResponse({
+    type: MyCircleDetailResponse,
+    description: 'Envuelto en { success, data, traceId }',
+  })
+  @ApiNotFoundResponse({
+    description: 'No existe o el usuario no es miembro vigente (CIRCLE_NOT_FOUND)',
+  })
+  @ApiUnauthorizedResponse({ description: 'Sin token o token inválido (UNAUTHORIZED)' })
+  async detail(
+    @CurrentPrincipal() principal: Principal,
+    @Param('circleId') circleId: string,
+  ): Promise<MyCircleDetailResponse> {
+    return MyCircleDetailResponse.from(await this.getMyCircle.execute(principal, circleId));
   }
 }

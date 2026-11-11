@@ -22,6 +22,7 @@ import type { GetJoinConfigUseCase } from '@/application/circles/usecases/GetJoi
 import type { ListAvailableSlotsUseCase } from '@/application/circles/usecases/ListAvailableSlotsUseCase';
 import type { JoinCircleUseCase } from '@/application/circles/usecases/JoinCircleUseCase';
 import type { ListInstallmentOptionsUseCase } from '@/application/circles/usecases/ListInstallmentOptionsUseCase';
+import type { GetMyCircleUseCase } from '@/application/circles/usecases/GetMyCircleUseCase';
 import type { ListMyCirclesUseCase } from '@/application/circles/usecases/ListMyCirclesUseCase';
 import type { ListRecommendedCirclesUseCase } from '@/application/circles/usecases/ListRecommendedCirclesUseCase';
 import type {
@@ -40,6 +41,9 @@ import type {
   GetPaymentSummaryUseCase,
   GetPayoutEligibilityUseCase,
   ListTransactionsUseCase,
+  GetTransactionUseCase,
+  GetPaymentStreakUseCase,
+  CopyOperationNumberUseCase,
   UpdatePaymentSettingsUseCase,
 } from '@/application/payments/usecases/paymentUseCases';
 import type {
@@ -117,6 +121,7 @@ export interface AppContainer {
     confirmSlotSelection: ConfirmSlotSelectionUseCase;
     joinCircle: JoinCircleUseCase;
     listMyCircles: ListMyCirclesUseCase;
+    getMyCircle: GetMyCircleUseCase;
     listRecommended: ListRecommendedCirclesUseCase;
     listStartProposals: ListStartProposalsUseCase;
     respondStartProposal: RespondStartProposalUseCase;
@@ -124,6 +129,9 @@ export interface AppContainer {
   payments: {
     getSummary: GetPaymentSummaryUseCase;
     listTransactions: ListTransactionsUseCase;
+    getTransaction: GetTransactionUseCase;
+    getPaymentStreak: GetPaymentStreakUseCase;
+    copyOperationNumber: CopyOperationNumberUseCase;
     getPayoutEligibility: GetPayoutEligibilityUseCase;
     getSettings: GetPaymentSettingsUseCase;
     updateSettings: UpdatePaymentSettingsUseCase;

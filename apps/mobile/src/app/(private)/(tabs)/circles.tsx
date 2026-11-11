@@ -17,6 +17,9 @@ export default function CirclesRoute() {
   return (
     <CirclesScreen
       onJoin={() => router.push('/join')}
+      onOpenCircle={(circleId) =>
+        router.push({ pathname: '/circles/[circleId]', params: { circleId } })
+      }
       onJoinCircle={(payout, target) => {
         start(payout, target);
         router.push('/join/payout-amount');

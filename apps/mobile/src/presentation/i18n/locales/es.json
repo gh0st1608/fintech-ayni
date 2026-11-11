@@ -40,6 +40,23 @@
       "title": "Todavía no hay juntas abiertas para ti",
       "description": "Elige tu monto y tu mes de cobro: armaremos una junta nueva para ti.",
       "join": "Unirme a una junta"
+    },
+    "streak": {
+      "buttonA11y_one": "Racha de {{count}} mes pagando a tiempo",
+      "buttonA11y_other": "Racha de {{count}} meses pagando a tiempo",
+      "emptyA11y": "Racha de pagos a tiempo",
+      "title_one": "¡Racha de {{count}} mes!",
+      "title_other": "¡Racha de {{count}} meses!",
+      "emptyTitle": "Tu racha de pagos",
+      "description": "Son los meses seguidos en que pagaste todas tus cuotas a tiempo. Pagar dentro de los días de gracia no la rompe; la mora, sí.",
+      "emptyDescription": "Cuando pagues tus cuotas a tiempo, aquí verás cuántos meses seguidos llevas.",
+      "ok": "Entendido",
+      "close": "Cerrar",
+      "monthA11y": {
+        "onTime": "{{month}}: a tiempo",
+        "late": "{{month}}: con atraso",
+        "pending": "{{month}}: por pagar"
+      }
     }
   },
   "join": {
@@ -233,7 +250,8 @@
       "duration": "{{months}} meses",
       "adminFees": "Gastos de administración:",
       "joined": "Unido",
-      "expelled": "Expulsado"
+      "expelled": "Expulsado",
+      "viewDetailA11y": "Ver el detalle de la junta de {{amount}}"
     },
     "empty": {
       "active": "¡Tus juntas activas aparecerán aquí!",
@@ -267,6 +285,38 @@
       },
       "loadError": "No pudimos cargar las propuestas de inicio: {{reason}}",
       "changed": "Las condiciones cambiaron porque alguien salió de la junta. Revisa la propuesta nueva."
+    },
+    "detail": {
+      "title": "Mi junta",
+      "pot": "Pozo mensual",
+      "states": {
+        "collecting": "Por empezar",
+        "approving": "Esperando aprobación",
+        "contributing": "Activa",
+        "paused": "Pausada",
+        "cancelled": "Cancelada",
+        "finished": "Finalizada"
+      },
+      "progressA11y": "Avance de la junta",
+      "progress": "Mes {{current}} de {{total}} · termina en {{end}}",
+      "startsOn": "Empieza en {{month}}",
+      "yourTurn": "Tu turno",
+      "turnValue": "{{month}} ({{position}}.º)",
+      "yourInstallment": "Tu cuota",
+      "retention": "Retención de tu payout",
+      "nextDue": "Próximo vencimiento",
+      "nothingDue": "Estás al día",
+      "pay": "Pagar {{amount}}",
+      "turns": "Turnos",
+      "turnRow": "{{month}} · {{name}}",
+      "you": "Tú",
+      "member": "Miembro",
+      "vacant": "Turno vacante",
+      "turnStatus": {
+        "paid": "Cobrado",
+        "current": "Este mes",
+        "vacant": "Vacante"
+      }
     }
   },
   "saving": {
@@ -598,6 +648,23 @@
       "max_attempts": "Superaste los intentos permitidos. Prueba con otro método.",
       "invalid_token": "El código ya no es válido. Genera uno nuevo en Yape.",
       "processing_error": "No se pudo procesar el pago. Vuelve a intentarlo en unos minutos."
+    },
+    "transaction": {
+      "title": "Detalle",
+      "openA11y": "Ver el detalle del movimiento de {{amount}} del {{date}}",
+      "status": "Estado",
+      "completed": "Completado",
+      "circle": "Junta",
+      "circleValue": "Junta de {{payout}}",
+      "month": "Mes",
+      "turn": "Turno",
+      "date": "Fecha",
+      "pot": "Pozo",
+      "deductions": "Retención y descuentos",
+      "received": "Recibido",
+      "operation": "N.º de operación  {{id}}",
+      "copy": "Copiar el número de operación",
+      "copied": "Número de operación copiado."
     }
   },
   "documents": {

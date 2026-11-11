@@ -1,5 +1,6 @@
 import type { JoinCircleRequest, JoinedCircle } from '@/domain/circles/JoinedCircle';
 import type { MyCircle, MyCirclesPage, MyCircleStatus } from '@/domain/circles/MyCircle';
+import type { MyCircleDetail } from '@/domain/circles/MyCircleDetail';
 import type { CircleMembershipRepositoryPort } from '@/domain/circles/ports/CircleMembershipRepositoryPort';
 import type { StartDecision, StartProposal } from '@/domain/circles/StartProposal';
 import { AppError, type AppErrorKind } from '@/domain/shared/errors/AppError';
@@ -46,6 +47,14 @@ function thisMonth(): string {
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
 }
 
+function monthsBetween(from: string, to: string): number {
+  const index = (period: string) => {
+    const [year, month] = period.split('-').map(Number);
+    return year! * 12 + (month! - 1);
+  };
+  return index(to) - index(from);
+}
+
 function addMonths(period: string, months: number): string {
   const [year, month] = period.split('-').map(Number);
   const index = year! * 12 + (month! - 1) + months;
@@ -69,6 +78,51 @@ export class InMemoryCircleMembershipRepository implements CircleMembershipRepos
     this.rejection = options.rejectWith;
     this.mine = [...(options.circles ?? [])];
     this.startProposals = [...(options.startProposals ?? [])];
+  }
+
+  /**
+   * Detalle de uno de mis círculos: los demás turnos tienen nombres de ejemplo, los anteriores al
+   * mes actual ya cobraron y no hay cuota pendiente.
+   */
+  async getMine(circleId: string, signal?: AbortSignal): Promise<MyCircleDetail> {
+    await simulateLatency(this.latencyMs, signal);
+    const circle = this.mine.find((item) => item.circleId === circleId && !item.expelled);
+    if (!circle) {
+      throw new AppError('not_found', 'Circle not found', { code: 'CIRCLE_NOT_FOUND' });
+    }
+    const current = this.options.currentPeriod ?? thisMonth();
+    const started = circle.startsOn <= current;
+    const finished = circle.endsOn < current;
+    const currentPeriod = started && !finished ? current : null;
+    const names = ['María R.', 'Luis T.', 'Carla M.', 'Jorge P.', 'Rosa V.', 'Diego S.'];
+    return {
+      circleId,
+      state: finished ? 'finished' : started ? 'contributing' : 'collecting',
+      payout: circle.payout,
+      months: circle.months,
+      startsOn: circle.startsOn,
+      endsOn: circle.endsOn,
+      currentPeriod,
+      currentMonth: currentPeriod ? monthsBetween(circle.startsOn, currentPeriod) + 1 : null,
+      position: circle.position,
+      payoutPeriod: circle.payoutPeriod,
+      type: circle.type,
+      installments: circle.installments,
+      netPayout: circle.netPayout,
+      retention: Money.of(0, circle.payout.currency),
+      nextDue: null,
+      turns: Array.from({ length: circle.months }, (_, index) => {
+        const period = addMonths(circle.startsOn, index);
+        const isMe = index + 1 === circle.position;
+        return {
+          position: index + 1,
+          period,
+          memberName: isMe ? 'Tú' : (names[index % names.length] ?? null),
+          isMe,
+          status: period < current ? 'paid' : period === current ? 'current' : 'upcoming',
+        };
+      }),
+    };
   }
 
   async listStartProposals(signal?: AbortSignal): Promise<StartProposal[]> {

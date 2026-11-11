@@ -23,6 +23,7 @@ import { GetJoinConfigUseCase } from '@/application/circles/usecases/GetJoinConf
 import { ListAvailableSlotsUseCase } from '@/application/circles/usecases/ListAvailableSlotsUseCase';
 import { JoinCircleUseCase } from '@/application/circles/usecases/JoinCircleUseCase';
 import { ListInstallmentOptionsUseCase } from '@/application/circles/usecases/ListInstallmentOptionsUseCase';
+import { GetMyCircleUseCase } from '@/application/circles/usecases/GetMyCircleUseCase';
 import { ListMyCirclesUseCase } from '@/application/circles/usecases/ListMyCirclesUseCase';
 import { ListRecommendedCirclesUseCase } from '@/application/circles/usecases/ListRecommendedCirclesUseCase';
 import {
@@ -41,6 +42,9 @@ import {
   GetPaymentSummaryUseCase,
   GetPayoutEligibilityUseCase,
   ListTransactionsUseCase,
+  GetTransactionUseCase,
+  GetPaymentStreakUseCase,
+  CopyOperationNumberUseCase,
   UpdatePaymentSettingsUseCase,
 } from '@/application/payments/usecases/paymentUseCases';
 import {
@@ -346,6 +350,7 @@ export function createContainer(
       confirmSlotSelection: new ConfirmSlotSelectionUseCase(adapters.circleQuote),
       joinCircle: new JoinCircleUseCase(adapters.circleMembership, adapters.ids),
       listMyCircles: new ListMyCirclesUseCase(adapters.circleMembership),
+      getMyCircle: new GetMyCircleUseCase(adapters.circleMembership),
       listRecommended: new ListRecommendedCirclesUseCase(adapters.circleQuote),
       listStartProposals: new ListStartProposalsUseCase(adapters.circleMembership),
       respondStartProposal: new RespondStartProposalUseCase(adapters.circleMembership),
@@ -353,6 +358,9 @@ export function createContainer(
     payments: {
       getSummary: new GetPaymentSummaryUseCase(adapters.payments),
       listTransactions: new ListTransactionsUseCase(adapters.payments),
+      getTransaction: new GetTransactionUseCase(adapters.payments),
+      getPaymentStreak: new GetPaymentStreakUseCase(adapters.payments),
+      copyOperationNumber: new CopyOperationNumberUseCase(adapters.clipboard),
       getPayoutEligibility: new GetPayoutEligibilityUseCase(adapters.payments),
       getSettings: new GetPaymentSettingsUseCase(adapters.payments),
       updateSettings: new UpdatePaymentSettingsUseCase(adapters.payments),

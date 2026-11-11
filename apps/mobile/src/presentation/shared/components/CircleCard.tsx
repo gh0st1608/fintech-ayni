@@ -28,6 +28,9 @@ export interface CircleCardProps {
   badge?: string;
   /** "Join now" en recomendados. */
   action?: { label: string; onPress: () => void };
+  /** Toda la tarjeta abre algo (el detalle en mis círculos, COPAYNI-88), con su etiqueta accesible. */
+  onPress?: () => void;
+  accessibilityLabel?: string;
   testID?: string;
 }
 
@@ -46,12 +49,19 @@ export function CircleCard({
   feesAmount,
   badge,
   action,
+  onPress,
+  accessibilityLabel,
   testID,
 }: CircleCardProps) {
   const hasTurn = turnIndex !== undefined && turnIndex >= 0 && turnIndex < months;
 
   return (
-    <Card style={styles.card} testID={testID}>
+    <Card
+      style={styles.card}
+      onPress={onPress}
+      accessibilityLabel={accessibilityLabel}
+      testID={testID}
+    >
       <View style={styles.header}>
         <View style={styles.amounts}>
           <AppText variant="highlight" weight="semibold">

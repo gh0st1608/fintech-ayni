@@ -540,6 +540,54 @@ describe('TypeOrmCircleCycleRepository', () => {
         amount: second!.price.netPayout,
       }),
     ]);
+    // Historial para la racha (COPAYNI-82): todas sus cuotas, con el día de pago en Lima.
+    const history = await payments.installmentHistoryOf(second!.userId, 'America/Lima');
+    expect(history.map(({ period }) => period.toString())).toEqual([
+      '2027-04',
+      '2027-03',
+      '2027-02',
+      '2027-01',
+      '2026-12',
+      '2026-11',
+    ]);
+    expect(history.every(({ paidOn, status }) => status !== 'paid' || paidOn !== null)).toBe(true);
+    await expect(payments.installmentHistoryOf('no-es-uuid', 'America/Lima')).resolves.toEqual([]);
+
+    // Detalle de un movimiento (COPAYNI-78): el del usuario, con el pozo y su turno.
+    const [payoutItem] = payouts.items;
+    const detail = await payments.transactionOf({
+      userId: second!.userId,
+      type: 'payout',
+      id: payoutItem!.id,
+    });
+    expect(detail).toMatchObject({
+      id: payoutItem!.id,
+      kind: 'payout',
+      amount: second!.price.netPayout,
+      circlePayout: Money.of(
+        Number(
+          (
+            await dataSource.query<{ payout_amount: string }[]>(
+              'SELECT payout_amount::text AS payout_amount FROM circles WHERE id = $1',
+              [id],
+            )
+          )[0]!.payout_amount,
+        ),
+        'PEN',
+      ),
+      position: 2,
+    });
+    // Otro usuario, otro tipo o un id que no es uuid: no existe.
+    const [first0] = members;
+    await expect(
+      payments.transactionOf({ userId: first0!.userId, type: 'payout', id: payoutItem!.id }),
+    ).resolves.toBeNull();
+    await expect(
+      payments.transactionOf({ userId: second!.userId, type: 'payment', id: payoutItem!.id }),
+    ).resolves.toBeNull();
+    await expect(
+      payments.transactionOf({ userId: second!.userId, type: 'payout', id: 'x' }),
+    ).resolves.toBeNull();
     await expect(page('no-es-un-cursor')).rejects.toMatchObject({ code: 'VALIDATION_ERROR' });
     await expect(
       payments.transactionsOf({ userId: 'no-es-uuid', type: 'payment', limit: 4, cursor: null }),
