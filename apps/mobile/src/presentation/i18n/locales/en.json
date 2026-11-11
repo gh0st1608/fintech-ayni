@@ -64,7 +64,34 @@
       "sliderLabel": "Payout amount",
       "userLimit": "Your monthly limit allows a payout of up to {{amount}}. Upload more documents to increase it.",
       "belowMinimum": "Your monthly limit doesn't reach the minimum payout yet. Upload more documents to increase it.",
-      "info": "Your monthly pay-in is deducted automatically."
+      "info": "Your monthly pay-in is deducted automatically.",
+      "carousel": {
+        "position": "Card {{current}} of {{total}}",
+        "noInterest": {
+          "title": "No interest",
+          "description": "You receive the full pot: you only pay the Admin Fees, spread across your installments."
+        },
+        "yourTurn": {
+          "title": "A turn that suits you",
+          "description": "Choose to get paid first, pay less, or get a discount at the end."
+        },
+        "guarantee": {
+          "title": "Guarantee fund",
+          "description": "If someone stops paying, the fund covers their installment and your payout stays the same."
+        }
+      },
+      "howItWorks": {
+        "link": "How does a Game’ya work?",
+        "title": "How does a Game’ya work?",
+        "close": "Close",
+        "steps": {
+          "contribute": "Every month, all members pay their installment.",
+          "receive": "Those installments make up the pot, which one member receives on their turn.",
+          "repeat": "It repeats every month until everyone has been paid once."
+        },
+        "exampleTitle": "Example",
+        "example": "In a circle of {{months}} members with a {{payout}} pot, each one pays about {{installment}} a month, plus the Admin Fees, and receives {{payout}} on their turn."
+      }
     },
     "monthlyPayIn": {
       "title": "Monthly Pay-in",

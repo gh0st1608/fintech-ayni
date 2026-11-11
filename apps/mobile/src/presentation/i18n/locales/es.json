@@ -64,7 +64,34 @@
       "sliderLabel": "Monto a recibir",
       "userLimit": "Tu límite mensual te permite recibir hasta {{amount}}. Sube más documentos para aumentarlo.",
       "belowMinimum": "Tu límite mensual todavía no alcanza el monto mínimo a recibir. Sube más documentos para aumentarlo.",
-      "info": "Tu cuota mensual se descuenta automáticamente."
+      "info": "Tu cuota mensual se descuenta automáticamente.",
+      "carousel": {
+        "position": "Tarjeta {{current}} de {{total}}",
+        "noInterest": {
+          "title": "Sin intereses",
+          "description": "Recibes el pozo completo: solo pagas las Admin Fees, repartidas en tus cuotas."
+        },
+        "yourTurn": {
+          "title": "Turno a tu medida",
+          "description": "Elige cobrar primero, pagar menos o recibir un descuento al final."
+        },
+        "guarantee": {
+          "title": "Fondo de garantía",
+          "description": "Si alguien deja de pagar, el fondo cubre su cuota y tu payout no cambia."
+        }
+      },
+      "howItWorks": {
+        "link": "¿Cómo funciona un Game’ya?",
+        "title": "¿Cómo funciona un Game’ya?",
+        "close": "Cerrar",
+        "steps": {
+          "contribute": "Cada mes, todos los miembros pagan su cuota.",
+          "receive": "Con esas cuotas se arma el pozo, que recibe un miembro en su turno.",
+          "repeat": "Se repite cada mes hasta que todos cobran una vez."
+        },
+        "exampleTitle": "Ejemplo",
+        "example": "En una junta de {{months}} miembros con un pozo de {{payout}}, cada uno aporta alrededor de {{installment}} al mes, más las Admin Fees, y cobra {{payout}} en su turno."
+      }
     },
     "monthlyPayIn": {
       "title": "Cuota mensual",
