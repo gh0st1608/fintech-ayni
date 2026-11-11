@@ -17,10 +17,14 @@ export interface PaymentRepositoryPort {
   getSettings(signal?: AbortSignal): Promise<PaymentSettings>;
   /** Devuelve las preferencias guardadas. */
   updateSettings(settings: PaymentSettings): Promise<PaymentSettings>;
-  /** Paga la cuota con un token de Yape o una tarjeta guardada. */
+  /**
+   * Paga la cuota con un token de Yape o una tarjeta guardada. Con Yape va también el celular con
+   * el que se generó el token: la orden de Mercado Pago lo pide. El OTP nunca va al backend.
+   */
   payInstallment(
     installmentId: string,
-    payment: { method: 'yape'; token: string } | { method: 'card'; cardId: string },
+    payment:
+      { method: 'yape'; token: string; phoneNumber: string } | { method: 'card'; cardId: string },
     idempotencyKey: string,
   ): Promise<InstallmentPaymentResult>;
 }
