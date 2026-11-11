@@ -300,7 +300,7 @@ export class MercadoPagoGateway implements PaymentGatewayPort {
           event: 'payments.gateway.orders_search_unavailable',
           status: error.status,
         });
-        return [];
+        throw error;
       }
       throw error;
     }
