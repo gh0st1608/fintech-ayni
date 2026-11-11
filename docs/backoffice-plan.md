@@ -1,6 +1,6 @@
 # Plan de implementación — Back-office de Ayni
 
-Estado: **propuesta v2** (9 de noviembre de 2026), pendiente de aprobación del PO y del TL. Corresponde al pendiente **D13** de [pending-scope.md](pending-scope.md). Reemplaza la v1, que priorizaba el contenido de Home.
+Estado: **en ejecución** (actualizado el 10 de noviembre de 2026). La propuesta v2 es del 9 de noviembre; las fases 1 y 2 y la lectura de finanzas están integradas en `main` (§7.1), y el seguimiento está en la épica **COPAYNI-64** de Jira. Corresponde al pendiente **D13** de [pending-scope.md](pending-scope.md). Reemplaza la v1, que priorizaba el contenido de Home.
 
 Convención: **[H]** hecho observado (código, Figma o docs), **[I]** inferencia técnica, **[?]** decisión pendiente. En este documento "círculo" es el término del dominio; la app lo muestra como **junta** ([ui-glossary.md](ui-glossary.md)).
 
@@ -9,9 +9,11 @@ Convención: **[H]** hecho observado (código, Figma o docs), **[I]** inferencia
 - **Qué es:** una aplicación web interna para operar Ayni: atender usuarios, revisar KYC, seguir los círculos, controlar el dinero y, más adelante, administrar contenido y reglas.
 - **Por qué cambia la prioridad respecto de la v1:** para lanzar no falta contenido, falta **operación**. Hoy hay procesos del backend que exigen a una persona y no tienen dónde hacerse (§2).
 - **MVP propuesto:** fases 1 a 3 (fundaciones, operación mínima y finanzas). Entre 55 y 89 story points, con confianza baja (§8).
-- **Bloqueo principal:** elegir el proveedor de identidad del personal (BO2). Sin él, toda la API de administración responde 401.
+- **Bloqueo principal:** elegir el proveedor de identidad del personal (BO2). Sin él, la API de administración solo funciona en local con `STAFF_AUTH_PROVIDER=dev`; en un entorno real responde 401.
 
-## 2. Qué existe hoy
+## 2. Punto de partida (9 de noviembre de 2026)
+
+Así estaba el backend antes del back-office. Lo implementado desde entonces está en §7.1.
 
 | Pieza                               | Estado [H]                                                                                                                                                                             |
 | ----------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -66,7 +68,7 @@ flowchart LR
 1. **API de administración dentro del backend actual [I].** Las reglas ya viven ahí; un servicio aparte las duplicaría. Los controladores `/admin/v1` reutilizan los casos de uso existentes, como ya hace la pausa.
 2. **Front en el monorepo, en `apps/backoffice`.** Decidido el 9 de noviembre de 2026: el front valida las respuestas de `/admin/v1`, así que un cambio de contrato toca backend y front en el mismo PR. SPA en TypeScript con React, Vite y TanStack Query, según la base técnica enterprise del front. Usa npm como el resto del monorepo (la base técnica propone pnpm; se revisará si el monorepo pasa a workspaces). Se publica como estático.
 3. **Identidad del personal: Amazon Cognito recomendado [?].** Encaja con AWS (T1) y con SES y SNS si se eligen para el OTP. Un user pool solo para el personal, MFA obligatorio y grupos como roles. Alternativas: Microsoft Entra ID o Google Workspace, si la organización ya los usa. Se implementa como `CognitoStaffAuthenticator` sobre el puerto existente.
-4. **Contrato tipado.** El backend publica OpenAPI y el back-office genera su cliente en CI: si el contrato cambia, el build falla.
+4. **Contrato tipado.** Hoy el back-office valida cada respuesta de `/admin/v1` con esquemas Zod, contrastados con las respuestas reales del backend. Propuesto [?]: que el backend publique OpenAPI y el back-office genere su cliente en CI, para que un cambio de contrato rompa el build.
 5. **Exposición separada [?].** Recomendado: `/admin/*` por un ALB o listener interno, con acceso por VPN. Alternativa: el mismo ALB con una regla de WAF.
 
 ### Modelo de datos nuevo [I]
@@ -123,6 +125,16 @@ El código ya define 5 roles. Propuesta para el MVP, sin agregar roles hasta que
 | 5    | **Contenido:** ofertas y metas de Home, banners, carrusel, ayuda y legales; `GET /v1/home/content` y secciones en la app                                                                              | Resto de COPAYNI-25; D7, D16, L4                 | Fase 1; BO4, BO5                 |
 | 6    | **Notificaciones, referidos y reportes**                                                                                                                                                              | D6, E7                                           | T7, R7                           |
 
+### 7.1 Avance (10 de noviembre de 2026)
+
+| Fase | Estado                                                                                                                                                                                                                                                   | Jira                 |
+| ---- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------- |
+| 0    | Decidido BO9 (React, Vite y TanStack Query en `apps/backoffice`). Siguen abiertas BO1–BO8                                                                                                                                                                | —                    |
+| 1    | **Parcial.** Hecho: `apps/backoffice` con CI, lint, pruebas y carga por sección; `staff_audit_log` de solo inserción; puerto de identidad con `oidc` y `dev`. Falta: el user pool y el login con MFA (BO2), y publicar el front y exponer `/admin` (BO8) | COPAYNI-65 · 72 y 74 |
+| 2    | **Hecha.** Juntas con pausa y reanudación, cola y revisión de KYC, búsqueda de personas, acciones de soporte (sesiones, bloqueo, PII y notas) y ejecuciones del ciclo                                                                                    | COPAYNI-66 a 69 y 71 |
+| 3    | **Parcial.** Hecha la lectura de cuotas, pozos y fondo de garantía. Falta lo que mueve dinero (movimientos del fondo con `staff_approvals`), mora y devoluciones, y la conciliación con la pasarela (BO6 y T3)                                           | COPAYNI-70 · 73      |
+| 4–6  | Sin empezar                                                                                                                                                                                                                                              | —                    |
+
 **Endpoints de la fase 2 [I]** (nombres provisionales):
 
 - **[H] Implementado:** `GET /admin/v1/users?query=` (búsqueda exacta) y `GET /admin/v1/users/:id` ([admin.md](api/admin.md#búsqueda-de-personas))
@@ -130,14 +142,13 @@ El código ya define 5 roles. Propuesta para el MVP, sin agregar roles hasta que
 - **[H] Implementado:** `POST /admin/v1/users/:id/pii/reveal` (motivo, step-up)
 - **[H] Implementado:** `GET /admin/v1/kyc/reviews`, `GET /admin/v1/kyc/reviews/:id` y `GET /admin/v1/kyc/reviews/:id/pages/:page/url`
 - **[H] Implementado:** `POST /admin/v1/kyc/reviews/:id/approve` y `/reject` (motivo de un catálogo; [admin.md](api/admin.md#revisión-manual-del-kyc))
-- `GET /admin/v1/circles?state=` y `GET /admin/v1/circles/:id`
+- **[H] Implementado:** `GET /admin/v1/circles?state=` y `GET /admin/v1/circles/:id`
 - **[H] Implementado:** `GET /admin/v1/cycle-runs` (la tarea diaria guarda cada ejecución)
 
 **Endpoints de la fase 3 [I]:**
 
 - **[H] Implementado, solo lectura:** `GET /admin/v1/finance/installments`, `/payouts` y `/guarantee-fund` ([admin.md](api/admin.md#finanzas-solo-lectura)). Lo que mueve dinero sigue pendiente de BO6
 - `POST /admin/v1/guarantee-fund/movements` (propone) y `POST /admin/v1/approvals/:id/approve`
-- `GET /admin/v1/installments?status=`, `GET /admin/v1/payouts?status=`
 - `GET /admin/v1/delinquency` (en gracia, expulsados, deudas y devoluciones)
 
 ## 8. Estimación preliminar
@@ -183,10 +194,11 @@ Story points relativos al backlog actual. **Confianza baja:** no hay diseño del
 | BO6 | ¿Qué acciones requieren doble aprobación y quién aprueba?                                        | PO / Legal  |
 | BO7 | Diseño UX del back-office (no existe en el Figma)                                                | UX          |
 | BO8 | Exposición de `/admin`: ALB interno con VPN o WAF en el ALB público                              | TL          |
-| BO9 | Stack del front (propuesto: React, Vite, TanStack Query y una librería de administración)        | TL          |
+| BO9 | ~~Stack del front~~ **Decidido:** React, Vite y TanStack Query, sin librería de administración   | TL          |
 
 ## 12. Siguiente paso
 
-1. Revisar este plan con el PO y el TL, y cerrar BO2, BO3, BO8 y BO9, que bloquean la fase 1.
-2. Crear en Jira una épica de back-office con las fases 1 a 3 como historias. **Pendiente de aprobación; no se crea nada todavía.**
-3. Si UX diseña el back-office en Figma, analizarlo antes de la fase 2.
+1. Cerrar **BO2** y **BO8** con el TL: bloquean el login real (COPAYNI-72) y la publicación (COPAYNI-74).
+2. Cerrar **BO6** con PO y Legal: bloquea lo que mueve dinero (COPAYNI-73).
+3. Confirmar la matriz de roles (BO3) antes de dar acceso al personal real.
+4. Si UX diseña el back-office en Figma (BO7), contrastarlo con las pantallas ya construidas.
