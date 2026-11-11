@@ -1,5 +1,6 @@
 import { Logger } from '@nestjs/common';
 
+import { type PaymentGatewayPort } from '@src/modules/payments/application/ports/payment-gateway.port';
 import { type SavedCardRepositoryPort } from '@src/modules/payments/application/ports/saved-card-repository.port';
 import { CollectInstallmentUseCase } from '@src/modules/payments/application/use-cases/collect-installment.use-case';
 import { GatewayCyclePayments } from '@src/modules/circles/infrastructure/payments/cycle-payments';
@@ -46,7 +47,10 @@ const cardsWith = (...saved: ReturnType<typeof card>[]): SavedCardRepositoryPort
   remove: jest.fn(),
 });
 
-function setup(gateway = new FakePaymentGateway(), cards = cardsWith(card('card-1'))) {
+function setup<G extends PaymentGatewayPort = FakePaymentGateway>(
+  gateway: G = new FakePaymentGateway() as unknown as G,
+  cards = cardsWith(card('card-1')),
+) {
   const clock = new TestClock(new Date('2026-12-05T17:00:00Z'));
   const useCase = new CollectInstallmentUseCase(
     gateway,
@@ -178,8 +182,41 @@ describe('Débito automático de la cuota (COPAYNI-40)', () => {
       expect.objectContaining({ id: '7', status: 'approved', amount: Money.of(300_000, 'PEN') }),
     ]);
     expect(http.mock.calls[0]?.[0]).toBe(
-      'https://api.test/v1/payments/search?external_reference=inst-1',
+      'https://api.test/v1/payments/search?external_reference=inst-1&limit=100&offset=0',
     );
     await expect(new UnconfiguredPaymentGateway().paymentsFor()).rejects.toThrow();
+  });
+
+  it('no vuelve a cobrar si la orden pendiente está en la segunda página de la búsqueda', async () => {
+    const order = (id: string, status: string) => ({
+      id,
+      status,
+      external_reference: 'inst-1',
+      total_amount: '3000.00',
+    });
+    const firstPage = Array.from({ length: 100 }, (_, i) => order(`ORD-R${i}`, 'failed'));
+    const http = jest.fn((url: string) => {
+      const { pathname, searchParams } = new URL(url);
+      const body =
+        pathname === '/v1/payments/search'
+          ? { results: [], paging: { total: 0, limit: 100, offset: 0 } }
+          : searchParams.get('page') === '1'
+            ? { data: firstPage, paging: { total: '101', total_pages: '2' } }
+            : {
+                data: [order('ORD-PEND', 'processing')],
+                paging: { total: '101', total_pages: '2' },
+              };
+      return Promise.resolve(new Response(JSON.stringify(body), { status: 200 }));
+    });
+    const gateway = new MercadoPagoGateway(
+      { accessToken: 't', apiUrl: 'https://api.test', timeoutMs: 1000 },
+      http as unknown as typeof fetch,
+    );
+    const charge = jest.spyOn(gateway, 'charge');
+    await expect(setup(gateway).useCase.execute(REQUEST)).resolves.toBe(false);
+    expect(charge).not.toHaveBeenCalled();
+    expect(
+      http.mock.calls.map(([url]) => new URL(url).searchParams.get('page')).filter(Boolean),
+    ).toEqual(['1', '2']);
   });
 });

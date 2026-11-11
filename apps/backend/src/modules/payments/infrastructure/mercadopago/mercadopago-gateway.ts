@@ -71,6 +71,10 @@ const ORDER_CURRENCY = 'PEN';
 /** Ventana de búsqueda de órdenes por referencia: una cuota se paga dentro de su mes y la gracia. */
 const ORDER_SEARCH_DAYS = 90;
 const DAY_MS = 24 * 3600 * 1000;
+/** Resultados por página en las búsquedas de pagos y órdenes. */
+const SEARCH_PAGE_SIZE = 100;
+/** Tope de páginas por búsqueda: una cuota tiene pocos intentos; más páginas es una anomalía. */
+const SEARCH_MAX_PAGES = 20;
 
 const isOrderBody = (value: unknown): value is OrderBody =>
   typeof value === 'object' &&
@@ -200,19 +204,56 @@ export class MercadoPagoGateway implements PaymentGatewayPort {
     );
   }
 
-  /** Los pagos con tarjeta y las órdenes de Yape con esa referencia. */
+  /**
+   * Los pagos con tarjeta y las órdenes de Yape con esa referencia, recorriendo todas las páginas:
+   * los casos de uso de cobro deciden con este historial si ya hay un pago aprobado o pendiente,
+   * así que un historial incompleto podría cobrar dos veces.
+   */
   async paymentsFor(externalReference: string): Promise<GatewayPayment[]> {
     const [payments, orders] = await Promise.all([
-      this.request<{ results: PaymentBody[] }>(
-        'GET',
-        `/v1/payments/search?external_reference=${encodeURIComponent(externalReference)}`,
-      ),
+      this.paymentsSearch(externalReference),
       this.ordersFor(externalReference),
     ]);
     return [
-      ...payments.results.map((body) => MercadoPagoGateway.toPayment(body)),
+      ...payments.map((body) => MercadoPagoGateway.toPayment(body)),
       ...orders.map((order) => MercadoPagoGateway.toOrderPayment(order)),
     ];
+  }
+
+  /** `/v1/payments/search` pagina con `offset` y `limit`, y responde `paging.total`. */
+  private async paymentsSearch(externalReference: string): Promise<PaymentBody[]> {
+    const results: PaymentBody[] = [];
+    for (let page = 0; ; page += 1) {
+      this.assertWithinPages(page, 'payments');
+      const query = new URLSearchParams({
+        external_reference: externalReference,
+        limit: String(SEARCH_PAGE_SIZE),
+        offset: String(page * SEARCH_PAGE_SIZE),
+      });
+      const found = await this.request<{
+        results?: PaymentBody[] | null;
+        paging?: { total?: number | string | null } | null;
+      }>('GET', `/v1/payments/search?${query.toString()}`);
+      const batch = found.results ?? [];
+      results.push(...batch);
+      const total = Number(found.paging?.total);
+      const more = Number.isFinite(total)
+        ? results.length < total
+        : batch.length === SEARCH_PAGE_SIZE;
+      if (!more) return results;
+    }
+  }
+
+  /**
+   * Un historial que no cabe en el máximo de páginas no se da por completo: se falla en vez de
+   * decidir un cobro con datos parciales.
+   */
+  private assertWithinPages(page: number, search: 'payments' | 'orders'): void {
+    if (page < SEARCH_MAX_PAGES) return;
+    this.logger.error({ event: 'payments.gateway.search_too_large', search });
+    throw new PaymentGatewayError(
+      `La búsqueda de ${search} en Mercado Pago supera ${SEARCH_MAX_PAGES} páginas`,
+    );
   }
 
   /**
@@ -275,47 +316,65 @@ export class MercadoPagoGateway implements PaymentGatewayPort {
   }
 
   /**
-   * Las órdenes con esa referencia creadas en los últimos días. La búsqueda de órdenes no admite
-   * credenciales de prueba: si Mercado Pago la niega, se avisa y se sigue solo con los pagos.
+   * Las órdenes con esa referencia creadas en los últimos días. Si Mercado Pago niega la búsqueda
+   * (401/403), se falla: sin las órdenes no se sabe si la cuota ya se pagó con Yape. La excepción
+   * son las credenciales de prueba (`TEST-…`), con las que la búsqueda de órdenes no está
+   * disponible: se avisa y se sigue solo con los pagos, para que el sandbox pueda cobrar.
    */
   private async ordersFor(externalReference: string): Promise<OrderBody[]> {
     const now = this.now().getTime();
-    const pageSize = 100;
-    const query = new URLSearchParams({
-      external_reference: externalReference,
-      begin_date: new Date(now - ORDER_SEARCH_DAYS * DAY_MS).toISOString(),
-      end_date: new Date(now + DAY_MS).toISOString(),
-      page_size: String(pageSize),
-    });
+    const beginDate = new Date(now - ORDER_SEARCH_DAYS * DAY_MS).toISOString();
+    const endDate = new Date(now + DAY_MS).toISOString();
+    const orders: OrderBody[] = [];
+    let page = 1;
     try {
-      const orders: OrderBody[] = [];
-      let offset = 0;
-      let total: number | undefined;
-      while (true) {
-        query.set('offset', String(offset));
+      // La búsqueda de órdenes pagina por número de página (desde 1) y responde
+      // `paging.total_pages` (como texto).
+      for (; ; page += 1) {
+        this.assertWithinPages(page - 1, 'orders');
+        const query = new URLSearchParams({
+          external_reference: externalReference,
+          begin_date: beginDate,
+          end_date: endDate,
+          page: String(page),
+          page_size: String(SEARCH_PAGE_SIZE),
+        });
         const found = await this.request<{
           data?: unknown[] | null;
-          paging?: { total?: number };
+          paging?: { total_pages?: number | string | null } | null;
         }>('GET', `/v1/orders?${query.toString()}`);
-        const page = found.data ?? [];
-        orders.push(...page.filter(isOrderBody));
-        if (page.length === 0) break;
-
-        offset += page.length;
-        total = found.paging?.total;
-        if (total === undefined ? page.length < pageSize : offset >= total) break;
+        const batch = found.data ?? [];
+        orders.push(
+          ...batch
+            .filter(isOrderBody)
+            .filter((order) => order.external_reference === externalReference),
+        );
+        const totalPages = Number(found.paging?.total_pages);
+        const more = Number.isFinite(totalPages)
+          ? page < totalPages
+          : batch.length === SEARCH_PAGE_SIZE;
+        if (!more) return orders;
       }
-      return orders.filter((order) => order.external_reference === externalReference);
     } catch (error) {
-      if (error instanceof PaymentGatewayError && (error.status === 401 || error.status === 403)) {
+      // Una negativa a mitad de la paginación dejaría el historial incompleto: nunca se tolera.
+      const denied =
+        error instanceof PaymentGatewayError && (error.status === 401 || error.status === 403);
+      if (denied) {
+        const tolerated = this.isTestCredential() && page === 1;
         this.logger.warn({
           event: 'payments.gateway.orders_search_unavailable',
           status: error.status,
+          tolerated,
         });
-        throw error;
+        if (tolerated) return [];
       }
       throw error;
     }
+  }
+
+  /** Las credenciales de prueba de Mercado Pago empiezan con `TEST-`. */
+  private isTestCredential(): boolean {
+    return this.settings.accessToken.startsWith('TEST-');
   }
 
   /**

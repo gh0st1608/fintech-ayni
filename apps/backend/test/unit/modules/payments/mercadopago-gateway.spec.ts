@@ -264,41 +264,141 @@ describe('MercadoPagoGateway (COPAYNI-34)', () => {
       external_reference: 'inst-1',
       begin_date: '2026-08-12T15:00:00.000Z',
       end_date: '2026-11-11T15:00:00.000Z',
+      page: '1',
       page_size: '100',
-      offset: '0',
     });
   });
 
-  it('continúa la búsqueda de órdenes para encontrar resultados en la página siguiente', async () => {
-    const firstPage = Array.from({ length: 100 }, (_, index) => ({
-      ...ORDER,
-      id: `ORD-${index}`,
-      external_reference: 'otra-cuota',
-    }));
-    const { http, mp } = gateway(
-      json({ results: [] }),
-      json({ data: firstPage, paging: { total: 101, offset: 0, limit: 100 } }),
-      json({ data: [ORDER], paging: { total: 101, offset: 100, limit: 100 } }),
-    );
+  /** Mock que responde según la ruta y la página pedidas, sin depender del orden de las llamadas. */
+  function routed(pages: {
+    payments?: Record<string, unknown>[];
+    orders?: Record<string, unknown>[];
+  }) {
+    const http = jest.fn((url: string) => {
+      const { pathname, searchParams } = new URL(url);
+      if (pathname === '/v1/payments/search') {
+        const offset = Number(searchParams.get('offset'));
+        return Promise.resolve(json(pages.payments?.[offset / 100] ?? { results: [] }));
+      }
+      const page = Number(searchParams.get('page'));
+      return Promise.resolve(json(pages.orders?.[page - 1] ?? { data: [] }));
+    });
+    return {
+      http,
+      mp: new MercadoPagoGateway(SETTINGS, http as unknown as typeof fetch, () => NOW),
+    };
+  }
+  const urlsOf = (http: jest.Mock, path: string) =>
+    (http.mock.calls as [string][])
+      .map(([url]) => new URL(url))
+      .filter(({ pathname }) => pathname === path)
+      .map(({ searchParams }) => Object.fromEntries(searchParams));
 
-    await expect(mp.paymentsFor('inst-1')).resolves.toEqual([
-      {
-        id: ORDER.id,
-        status: 'approved',
-        statusDetail: 'accredited',
-        externalReference: 'inst-1',
-        amount: Money.of(1000, 'PEN'),
-      },
-    ]);
-    expect(new URL(callOf(http, 2).url).searchParams.get('offset')).toBe('100');
+  it('recorre todas las páginas de órdenes: la aprobada en la segunda página aparece', async () => {
+    const failed = Array.from({ length: 100 }, (_, i) => ({
+      ...ORDER,
+      id: `ORD-F${i}`,
+      status: 'failed',
+    }));
+    const paging = { total: '101', total_pages: '2', offset: '0', limit: '100' };
+    const { http, mp } = routed({
+      orders: [
+        { data: failed, paging },
+        { data: [ORDER], paging: { ...paging, offset: '100' } },
+      ],
+    });
+    const found = await mp.paymentsFor('inst-1');
+    expect(found).toHaveLength(101);
+    expect(found.find(({ status }) => status === 'approved')?.id).toBe(ORDER.id);
+    expect(urlsOf(http, '/v1/orders').map(({ page }) => page)).toEqual(['1', '2']);
   });
 
-  it('si la búsqueda de órdenes no está permitida, sigue solo con los pagos', async () => {
+  it('sin paging, sigue mientras la página venga llena', async () => {
+    const full = Array.from({ length: 100 }, (_, i) => ({
+      ...ORDER,
+      id: `ORD-F${i}`,
+      status: 'failed',
+    }));
+    const { http, mp } = routed({ orders: [{ data: full }, { data: [ORDER] }] });
+    await expect(mp.paymentsFor('inst-1')).resolves.toHaveLength(101);
+    expect(urlsOf(http, '/v1/orders')).toHaveLength(2);
+  });
+
+  it('recorre todas las páginas de pagos con offset y limit', async () => {
+    const rejected = Array.from({ length: 100 }, (_, i) => ({
+      ...PAYMENT,
+      id: 1000 + i,
+      status: 'rejected',
+    }));
+    const paging = { total: 101, limit: 100 };
+    const { http, mp } = routed({
+      payments: [
+        { results: rejected, paging: { ...paging, offset: 0 } },
+        { results: [PAYMENT], paging: { ...paging, offset: 100 } },
+      ],
+    });
+    const found = await mp.paymentsFor('inst-1');
+    expect(found.filter(({ status }) => status === 'approved')).toHaveLength(1);
+    expect(urlsOf(http, '/v1/payments/search')).toEqual([
+      { external_reference: 'inst-1', limit: '100', offset: '0' },
+      { external_reference: 'inst-1', limit: '100', offset: '100' },
+    ]);
+  });
+
+  it('si la búsqueda supera el tope de páginas, falla en vez de dar un historial parcial', async () => {
+    const error = jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
+    const full = { data: Array.from({ length: 100 }, (_, i) => ({ ...ORDER, id: `ORD-${i}` })) };
+    const { mp } = routed({ orders: Array.from({ length: 50 }, () => full) });
+    await expect(mp.paymentsFor('inst-1')).rejects.toBeInstanceOf(PaymentGatewayError);
+    expect(error).toHaveBeenCalledWith(
+      expect.objectContaining({ event: 'payments.gateway.search_too_large', search: 'orders' }),
+    );
+  });
+
+  it('con credenciales de producción, una negativa (401/403) de la búsqueda de órdenes falla', async () => {
+    const warn = jest.spyOn(Logger.prototype, 'warn');
+    for (const status of [401, 403]) {
+      const http = jest.fn((url: string) =>
+        Promise.resolve(
+          new URL(url).pathname === '/v1/orders' ? json({}, status) : json({ results: [PAYMENT] }),
+        ),
+      );
+      const mp = new MercadoPagoGateway(
+        { ...SETTINGS, accessToken: 'APP_USR-token-secreto' },
+        http as unknown as typeof fetch,
+        () => NOW,
+      );
+      await expect(mp.paymentsFor('inst-1')).rejects.toMatchObject({ status });
+    }
+    expect(warn).toHaveBeenCalledWith(
+      expect.objectContaining({
+        event: 'payments.gateway.orders_search_unavailable',
+        tolerated: false,
+      }),
+    );
+  });
+
+  it('una negativa (403) a mitad de la paginación no se tolera', async () => {
+    const full = { data: Array.from({ length: 100 }, (_, i) => ({ ...ORDER, id: `ORD-${i}` })) };
+    const http = jest.fn((url: string) => {
+      const { pathname, searchParams } = new URL(url);
+      if (pathname === '/v1/payments/search') return Promise.resolve(json({ results: [] }));
+      return Promise.resolve(searchParams.get('page') === '1' ? json(full) : json({}, 403));
+    });
+    const mp = new MercadoPagoGateway(SETTINGS, http as unknown as typeof fetch, () => NOW);
+    await expect(mp.paymentsFor('inst-1')).rejects.toMatchObject({ status: 403 });
+  });
+
+  it('con credenciales de prueba, si la búsqueda de órdenes no está permitida, sigue solo con los pagos', async () => {
     const warn = jest.spyOn(Logger.prototype, 'warn');
     const denied = gateway(json({ results: [PAYMENT] }), json({}, 403));
     await expect(denied.mp.paymentsFor('inst-1')).resolves.toHaveLength(1);
     expect(warn).toHaveBeenCalledWith(
-      expect.objectContaining({ event: 'payments.gateway.orders_search_unavailable', status: 403 }),
+      expect.objectContaining({
+        event: 'payments.gateway.orders_search_unavailable',
+        status: 403,
+        tolerated: true,
+      }),
     );
     const broken = gateway(json({ results: [] }), json({}, 500));
     await expect(broken.mp.paymentsFor('inst-1')).rejects.toMatchObject({ status: 500 });
