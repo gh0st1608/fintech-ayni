@@ -25,10 +25,10 @@ const INSTALLMENT: InstallmentRef = {
   status: 'pending',
   expelled: false,
 };
-const users = (email: string | null) => ({
+const users = (email: string | null, phone: string | null = null) => ({
   findById: () =>
     Promise.resolve(
-      User.restore({ id: 'u-1', email, phone: null, status: 'active', preferredLanguage: null }),
+      User.restore({ id: 'u-1', email, phone, status: 'active', preferredLanguage: null }),
     ),
   findOrRegister: jest.fn(),
   findByIdentifier: jest.fn(),
@@ -50,7 +50,7 @@ describe('Cobro de una cuota desde la app (COPAYNI-63)', () => {
     amount: Money.of(300_000, 'PEN'),
     description: 'Cuota',
     idempotencyKey: 'k-1',
-    method: { type: 'yape' as const, token: 'yape-ok' },
+    method: { type: 'yape' as const, token: 'yape-ok', phoneNumber: '987654321' },
   };
 
   it('no vuelve a cobrar una cuota ya aprobada y rechaza si hay un pago pendiente', async () => {
@@ -85,6 +85,55 @@ describe('Cobro de una cuota desde la app (COPAYNI-63)', () => {
       ).execute({ ...request, method: { type: 'card', cardId: 'otra' } }),
     ).rejects.toMatchObject({ code: 'CARD_NOT_FOUND' });
   });
+
+  it('con Yape manda el celular del pedido o, si falta, el del perfil, y el DNI si llega', async () => {
+    const gateway = new FakePaymentGateway();
+    const spy = jest.spyOn(gateway, 'charge');
+    await new ChargeInstallmentUseCase(gateway, new InMemoryCards(), users('ana@mail.com')).execute(
+      {
+        ...request,
+        method: { ...request.method, phoneNumber: '+51 987 654 321', documentNumber: '12345678' },
+      },
+    );
+    expect(spy.mock.calls[0]?.[0].source).toEqual({
+      type: 'yape',
+      token: 'yape-ok',
+      phone: '987654321',
+      documentNumber: '12345678',
+    });
+
+    await new ChargeInstallmentUseCase(
+      gateway,
+      new InMemoryCards(),
+      users('ana@mail.com', '+51911222333'),
+    ).execute({
+      ...request,
+      idempotencyKey: 'k-perfil',
+      installmentId: 'inst-2',
+      method: { type: 'yape', token: 't' },
+    });
+    expect(spy.mock.calls[1]?.[0].source).toMatchObject({
+      phone: '911222333',
+      documentNumber: null,
+    });
+  });
+
+  it('con Yape exige un celular y una cuota en soles', async () => {
+    const charge = new ChargeInstallmentUseCase(
+      new FakePaymentGateway(),
+      new InMemoryCards(),
+      users('ana@mail.com'),
+    );
+    await expect(
+      charge.execute({ ...request, method: { type: 'yape', token: 't' } }),
+    ).rejects.toMatchObject({ code: 'VALIDATION_ERROR', details: { phoneNumber: 'required' } });
+    await expect(
+      charge.execute({ ...request, amount: Money.of(80_000, 'USD') }),
+    ).rejects.toMatchObject({
+      code: 'VALIDATION_ERROR',
+      details: { method: 'currency_not_supported' },
+    });
+  });
 });
 
 describe('Webhook de Mercado Pago (COPAYNI-63)', () => {
@@ -98,7 +147,7 @@ describe('Webhook de Mercado Pago (COPAYNI-63)', () => {
       description: 'x',
       payerEmail: 'ana@mail.com',
       externalReference: reference,
-      source: { type: 'yape', token: 'ok' },
+      source: { type: 'yape', token: 'ok', phone: '987654321', documentNumber: null },
     });
   }
 
@@ -123,7 +172,7 @@ describe('Webhook de Mercado Pago (COPAYNI-63)', () => {
       description: 'x',
       payerEmail: 'a@mail.com',
       externalReference: 'inst-1',
-      source: { type: 'yape', token: 'rejected' },
+      source: { type: 'yape', token: 'rejected', phone: '987654321', documentNumber: null },
     });
     const orphan = await approvedPayment(gateway, 'otra');
     const settlement = { markPaid: jest.fn() };
@@ -161,12 +210,18 @@ describe('Webhook de Mercado Pago (COPAYNI-63)', () => {
     // El data.id también puede venir solo en el cuerpo.
     await controller('clave').receive(signature, 'req-1', undefined, body);
     expect(reconcile.execute).toHaveBeenCalledTimes(2);
+    // Las órdenes de Yape (Checkout API con Orders) llegan con el tipo order.
+    await controller('clave').receive(signature, 'req-1', '123', {
+      type: 'order',
+      data: { id: '123' },
+    });
+    expect(reconcile.execute).toHaveBeenCalledTimes(3);
     // Otros tipos se confirman sin conciliar.
     await controller('clave').receive(signature, 'req-1', '123', {
       type: 'plan',
       data: { id: '123' },
     });
-    expect(reconcile.execute).toHaveBeenCalledTimes(2);
+    expect(reconcile.execute).toHaveBeenCalledTimes(3);
 
     await expect(controller('otra').receive(signature, 'req-1', '123', body)).rejects.toMatchObject(
       {

@@ -64,7 +64,34 @@
       "sliderLabel": "Payout amount",
       "userLimit": "Your monthly limit allows a payout of up to {{amount}}. Upload more documents to increase it.",
       "belowMinimum": "Your monthly limit doesn't reach the minimum payout yet. Upload more documents to increase it.",
-      "info": "Your monthly pay-in is deducted automatically."
+      "info": "Your monthly pay-in is deducted automatically.",
+      "carousel": {
+        "position": "Card {{current}} of {{total}}",
+        "noInterest": {
+          "title": "No interest",
+          "description": "You receive the full pot: you only pay the Admin Fees, spread across your installments."
+        },
+        "yourTurn": {
+          "title": "A turn that suits you",
+          "description": "Choose to get paid first, pay less, or get a discount at the end."
+        },
+        "guarantee": {
+          "title": "Guarantee fund",
+          "description": "If someone stops paying, the fund covers their installment and your payout stays the same."
+        }
+      },
+      "howItWorks": {
+        "link": "How does a Game’ya work?",
+        "title": "How does a Game’ya work?",
+        "close": "Close",
+        "steps": {
+          "contribute": "Every month, all members pay their installment.",
+          "receive": "Those installments make up the pot, which one member receives on their turn.",
+          "repeat": "It repeats every month until everyone has been paid once."
+        },
+        "exampleTitle": "Example",
+        "example": "In a circle of {{months}} members with a {{payout}} pot, each one pays about {{installment}} a month, plus the Admin Fees, and receives {{payout}} on their turn."
+      }
     },
     "monthlyPayIn": {
       "title": "Monthly Pay-in",
@@ -170,7 +197,8 @@
         "slotNoLongerAvailable": "That slot is no longer available. Choose another one.",
         "memberBlocked": "You were removed from a circle for missing an installment. Pay the overdue amount plus the late fee ({{amount}}) to join another one.",
         "memberBlockedNoAmount": "You were removed from a circle for missing an installment. Pay the overdue amount plus the late fee to join another one.",
-        "slotNotAllowed": "You can't take this type of slot yet. Choose another one."
+        "slotNotAllowed": "You can't take this type of slot yet. Choose another one.",
+        "termsOutdated": "The circle terms changed. Review and accept them again to join."
       },
       "actions": {
         "verifyIdentity": "Verify my National ID",
@@ -185,7 +213,9 @@
         "viewCircles": "View my circles",
         "catchUp": "Your installments include {{amount}} to catch up on past months, until {{month}}."
       },
-      "retention": "{{amount}} of your payout will be withheld to pay your last {{count}} installments automatically."
+      "retention": "{{amount}} of your payout will be withheld to pay your last {{count}} installments automatically.",
+      "acceptTerms": "I accept the circle Terms, the payment policy and the late payment policy.",
+      "netPayout": "You receive in {{month}}"
     }
   },
   "circles": {
@@ -521,7 +551,30 @@
       "pending": "Your payment is being processed. We'll let you know when it's confirmed.",
       "done": "Back to payments",
       "notDue": "This installment is no longer due.",
-      "back": "Back"
+      "back": "Back",
+      "summary": "{{month}} installment · {{payout}} circle",
+      "dueOn": "Due on {{date}}",
+      "overdueOn": "In grace period · was due on {{date}}",
+      "slot": "Turn {{position}} of {{slots}}",
+      "yapeHelp": "Find the code in Yape › Approval code and use it before it changes.",
+      "yapeMayExceed": "Yape allows payments of up to {{limits}} per transaction, depending on your settings. If your installment is over your limit, pay by card.",
+      "yapeOverMax": "This installment is over Yape's maximum ({{max}} per payment). Pay with a card.",
+      "yapeUnavailable": "Yape only charges in soles. Pay this installment with a card.",
+      "retryHint": "You can try again or pay with another method.",
+      "processing": "Your payment is being processed. Don't pay again: we'll let you know when it's confirmed.",
+      "receipt": {
+        "title": "Receipt",
+        "amount": "Amount",
+        "installment": "Installment",
+        "circle": "Circle",
+        "method": "Method",
+        "date": "Date",
+        "operation": "Transaction no.",
+        "status": "Status",
+        "statusPending": "Processing",
+        "yape": "Yape ••• {{lastThree}}",
+        "circleValue": "{{payout}} circle"
+      }
     },
     "errors": {
       "CARD_REJECTED": "The card was rejected. Check the details or use another one.",
@@ -533,6 +586,14 @@
       "INSTALLMENT_NOT_PAYABLE": "This installment can no longer be paid.",
       "PAYMENT_PENDING": "A payment for this installment is already in progress.",
       "PAYMENT_REJECTED": "The payment was rejected. Try another method."
+    },
+    "rejectionReasons": {
+      "insufficient_amount": "The payment was declined for insufficient funds.",
+      "call_for_authorize": "Your bank or Yape needs you to authorize the payment. Authorize it and try again.",
+      "bad_filled": "Some payment details are wrong. Check them and try again.",
+      "max_attempts": "You've used up the allowed attempts. Try another method.",
+      "invalid_token": "The code is no longer valid. Get a new one in Yape.",
+      "processing_error": "The payment couldn't be processed. Try again in a few minutes."
     }
   },
   "documents": {

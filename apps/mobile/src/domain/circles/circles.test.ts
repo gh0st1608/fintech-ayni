@@ -60,6 +60,7 @@ describe('availablePayoutRange', () => {
     payoutRange: range(),
     userPayoutLimit,
     savingProgramMax: pen(1000000),
+    termsVersion: '2026-11',
   });
 
   it('sin límite del usuario devuelve el rango general', () => {

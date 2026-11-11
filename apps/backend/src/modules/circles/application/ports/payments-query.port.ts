@@ -14,6 +14,11 @@ export interface DueInstallment {
   amount: Money;
   /** `overdue`: el cobro falló y la cuota está en gracia (COPAYNI-57). */
   status: 'pending' | 'overdue';
+  /** Turno del miembro y turnos del círculo: "Turno 6 de 10" en el pago (D1, COPAYNI-77). */
+  position: number;
+  slots: number;
+  /** El pozo del círculo, que lo identifica en la app (los círculos no tienen nombre). */
+  payout: Money;
 }
 
 export const TRANSACTION_TYPES = ['payment', 'payout'] as const;

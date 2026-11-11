@@ -64,7 +64,34 @@
       "sliderLabel": "Monto a recibir",
       "userLimit": "Tu límite mensual te permite recibir hasta {{amount}}. Sube más documentos para aumentarlo.",
       "belowMinimum": "Tu límite mensual todavía no alcanza el monto mínimo a recibir. Sube más documentos para aumentarlo.",
-      "info": "Tu cuota mensual se descuenta automáticamente."
+      "info": "Tu cuota mensual se descuenta automáticamente.",
+      "carousel": {
+        "position": "Tarjeta {{current}} de {{total}}",
+        "noInterest": {
+          "title": "Sin intereses",
+          "description": "Recibes el pozo completo: solo pagas las Admin Fees, repartidas en tus cuotas."
+        },
+        "yourTurn": {
+          "title": "Turno a tu medida",
+          "description": "Elige cobrar primero, pagar menos o recibir un descuento al final."
+        },
+        "guarantee": {
+          "title": "Fondo de garantía",
+          "description": "Si alguien deja de pagar, el fondo cubre su cuota y tu payout no cambia."
+        }
+      },
+      "howItWorks": {
+        "link": "¿Cómo funciona un Game’ya?",
+        "title": "¿Cómo funciona un Game’ya?",
+        "close": "Cerrar",
+        "steps": {
+          "contribute": "Cada mes, todos los miembros pagan su cuota.",
+          "receive": "Con esas cuotas se arma el pozo, que recibe un miembro en su turno.",
+          "repeat": "Se repite cada mes hasta que todos cobran una vez."
+        },
+        "exampleTitle": "Ejemplo",
+        "example": "En una junta de {{months}} miembros con un pozo de {{payout}}, cada uno aporta alrededor de {{installment}} al mes, más las Admin Fees, y cobra {{payout}} en su turno."
+      }
     },
     "monthlyPayIn": {
       "title": "Cuota mensual",
@@ -170,7 +197,8 @@
         "slotNoLongerAvailable": "Ese turno ya no está disponible. Elige otro.",
         "memberBlocked": "Fuiste expulsado de una junta por no pagar una cuota. Paga lo vencido más el cargo por mora ({{amount}}) para unirte a otra.",
         "memberBlockedNoAmount": "Fuiste expulsado de una junta por no pagar una cuota. Paga lo vencido más el cargo por mora para unirte a otra.",
-        "slotNotAllowed": "Todavía no puedes tomar ese tipo de turno. Elige otro."
+        "slotNotAllowed": "Todavía no puedes tomar ese tipo de turno. Elige otro.",
+        "termsOutdated": "Los términos del círculo cambiaron. Revísalos y acéptalos de nuevo para unirte."
       },
       "actions": {
         "verifyIdentity": "Verificar mi National ID",
@@ -185,7 +213,9 @@
         "viewCircles": "Ver mis juntas",
         "catchUp": "Tus cuotas incluyen {{amount}} de puesta al día de los meses ya transcurridos, hasta {{month}}."
       },
-      "retention": "Se retendrán {{amount}} de tu pozo para pagar automáticamente tus últimas {{count}} cuotas."
+      "retention": "Se retendrán {{amount}} de tu pozo para pagar automáticamente tus últimas {{count}} cuotas.",
+      "acceptTerms": "Acepto los Términos del círculo, la política de pagos y la política de mora.",
+      "netPayout": "Recibes en {{month}}"
     }
   },
   "circles": {
@@ -521,7 +551,30 @@
       "pending": "Tu pago está en proceso. Te avisaremos cuando se confirme.",
       "done": "Volver a pagos",
       "notDue": "Esta cuota ya no está pendiente.",
-      "back": "Volver"
+      "back": "Volver",
+      "summary": "Cuota de {{month}} · Junta de {{payout}}",
+      "dueOn": "Vence el {{date}}",
+      "overdueOn": "En gracia · venció el {{date}}",
+      "slot": "Turno {{position}} de {{slots}}",
+      "yapeHelp": "Encuentra el código en Yape › Código de aprobación y úsalo antes de que cambie.",
+      "yapeMayExceed": "Yape permite pagar hasta {{limits}} por operación, según lo configuraste. Si tu cuota supera tu tope, paga con tarjeta.",
+      "yapeOverMax": "Esta cuota supera el máximo de Yape ({{max}} por pago). Paga con una tarjeta.",
+      "yapeUnavailable": "Yape solo cobra en soles. Paga esta cuota con una tarjeta.",
+      "retryHint": "Puedes intentarlo de nuevo o pagar con otro método.",
+      "processing": "Tu pago está en proceso. No vuelvas a pagar: te avisaremos cuando se confirme.",
+      "receipt": {
+        "title": "Recibo",
+        "amount": "Monto",
+        "installment": "Cuota",
+        "circle": "Junta",
+        "method": "Método",
+        "date": "Fecha",
+        "operation": "N.º de operación",
+        "status": "Estado",
+        "statusPending": "En proceso",
+        "yape": "Yape ••• {{lastThree}}",
+        "circleValue": "Junta de {{payout}}"
+      }
     },
     "errors": {
       "CARD_REJECTED": "La tarjeta fue rechazada. Revisa los datos o usa otra.",
@@ -533,6 +586,14 @@
       "INSTALLMENT_NOT_PAYABLE": "Esta cuota ya no se puede pagar.",
       "PAYMENT_PENDING": "Ya hay un pago de esta cuota en proceso.",
       "PAYMENT_REJECTED": "El pago fue rechazado. Intenta con otro método."
+    },
+    "rejectionReasons": {
+      "insufficient_amount": "El pago fue rechazado por saldo insuficiente.",
+      "call_for_authorize": "Tu banco o Yape pide autorizar el pago. Autorízalo y vuelve a intentarlo.",
+      "bad_filled": "Algún dato del pago es incorrecto. Revísalo y vuelve a intentarlo.",
+      "max_attempts": "Superaste los intentos permitidos. Prueba con otro método.",
+      "invalid_token": "El código ya no es válido. Genera uno nuevo en Yape.",
+      "processing_error": "No se pudo procesar el pago. Vuelve a intentarlo en unos minutos."
     }
   },
   "documents": {

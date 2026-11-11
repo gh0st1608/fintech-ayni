@@ -27,10 +27,19 @@ const envSchema = z
     /** Igual que authApi, para la sección Payment (/me/payments, /me/transactions). */
     paymentsApi: z.enum(['http', 'fake']).default('http'),
     /**
-     * Tokenización de tarjetas y Yape: `fake` simula Mercado Pago (solo dev); `unconfigured` no
-     * permite agregar tarjetas ni pagar con Yape hasta conectar la cuenta (COPAYNI-34).
+     * Tokenización de tarjetas y Yape: `fake` simula Mercado Pago (solo dev); `mercadopago`
+     * tokeniza de verdad con la public key; `unconfigured` no permite agregar tarjetas ni pagar
+     * con Yape (COPAYNI-34).
      */
-    paymentTokenizer: z.enum(['fake', 'unconfigured']).default('unconfigured'),
+    paymentTokenizer: z.enum(['fake', 'mercadopago', 'unconfigured']).default('unconfigured'),
+    /** Public key de Mercado Pago (`TEST-…` en el sandbox, `APP_USR-…` en producción). */
+    mercadoPagoPublicKey: z.preprocess(
+      (value) => (value === '' ? undefined : value),
+      z
+        .string()
+        .regex(/^(TEST|APP_USR)-[\w-]+$/)
+        .optional(),
+    ),
     /** Igual que authApi, para los documentos KYC (/me/documents). */
     documentsApi: z.enum(['http', 'fake']).default('http'),
     /** Igual que authApi, para los referidos (/me/referral, /me/referrals). */
@@ -63,6 +72,14 @@ const envSchema = z
   .refine((env) => env.paymentTokenizer !== 'fake' || env.appEnv === 'dev', {
     path: ['paymentTokenizer'],
     message: 'fake is only allowed in dev',
+  })
+  .refine((env) => env.paymentTokenizer !== 'mercadopago' || env.mercadoPagoPublicKey, {
+    path: ['mercadoPagoPublicKey'],
+    message: 'required with the mercadopago tokenizer',
+  })
+  .refine((env) => env.appEnv !== 'prod' || !env.mercadoPagoPublicKey?.startsWith('TEST-'), {
+    path: ['mercadoPagoPublicKey'],
+    message: 'test keys are not allowed in prod',
   })
   .refine((env) => env.documentsApi === 'http' || env.appEnv === 'dev', {
     path: ['documentsApi'],
@@ -105,6 +122,7 @@ export function loadEnv(): Env {
     payoutsApi: process.env.EXPO_PUBLIC_PAYOUTS_API,
     paymentsApi: process.env.EXPO_PUBLIC_PAYMENTS_API,
     paymentTokenizer: process.env.EXPO_PUBLIC_PAYMENT_TOKENIZER,
+    mercadoPagoPublicKey: process.env.EXPO_PUBLIC_MERCADOPAGO_PUBLIC_KEY,
     documentsApi: process.env.EXPO_PUBLIC_DOCUMENTS_API,
     referralsApi: process.env.EXPO_PUBLIC_REFERRALS_API,
     savingsApi: process.env.EXPO_PUBLIC_SAVINGS_API,

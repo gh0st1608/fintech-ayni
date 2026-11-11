@@ -48,7 +48,7 @@ describe('GET /v1/me/circles', () => {
       .post('/v1/circles/join')
       .set('Authorization', `Bearer ${token}`)
       .set('Idempotency-Key', randomUUID())
-      .send({ circleId: null, payoutAmount, months: 6, position })
+      .send({ circleId: null, payoutAmount, months: 6, position, termsVersion: '2026-11' })
       .expect(201);
 
   it('lista los círculos activos con el turno y el precio del usuario, paginados', async () => {

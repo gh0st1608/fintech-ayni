@@ -21,6 +21,18 @@ export class DuePaymentResponse {
 
   @ApiProperty({ enum: ['pending', 'overdue'], description: 'overdue: el cobro falló, en gracia' })
   status!: 'pending' | 'overdue';
+
+  @ApiProperty({ example: 6, description: 'Turno del miembro (1 = cobra primero)' })
+  position!: number;
+
+  @ApiProperty({ example: 10, description: 'Turnos del círculo' })
+  slots!: number;
+
+  @ApiProperty({
+    type: MoneyResponse,
+    description: 'Pozo del círculo, que lo identifica en la app',
+  })
+  payout!: MoneyResponse;
 }
 
 /** Contrato de `GET /v1/me/payments/summary` (docs/api/payments.md). */
@@ -54,6 +66,9 @@ export class PaymentSummaryResponse {
         dueOn: due.dueOn.toString(),
         amount: MoneyResponse.from(due.amount),
         status: due.status,
+        position: due.position,
+        slots: due.slots,
+        payout: MoneyResponse.from(due.payout),
       })),
     };
   }

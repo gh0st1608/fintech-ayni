@@ -33,7 +33,8 @@ Montos permitidos para unirse a un Game'ya o al programa de ahorro.
     "step": { "amount": 50000, "currency": "PEN" }
   },
   "userPayoutLimit": { "amount": 2000000, "currency": "PEN" },
-  "savingProgramMax": { "amount": 100000000, "currency": "PEN" }
+  "savingProgramMax": { "amount": 100000000, "currency": "PEN" },
+  "termsVersion": "2026-11"
 }
 ```
 
@@ -42,6 +43,7 @@ Montos permitidos para unirse a un Game'ya o al programa de ahorro.
 | `payout`           | Rango general del slider de Payout Amount. Los saltos se cuentan desde `min`; los tres montos en la misma moneda. |
 | `userPayoutLimit`  | Payout máximo según el límite mensual del usuario (R5), o `null` si no lo restringe.                              |
 | `savingProgramMax` | Máximo del programa de ahorro, para la descripción de "Elige un servicio".                                        |
+| `termsVersion`     | Versión vigente de los términos del círculo (`CIRCLE_TERMS_VERSION`). La app la envía al unirse (COPAYNI-86).     |
 
 Comportamiento de la app:
 
@@ -156,7 +158,7 @@ Errores: los mismos que `installment-options`, más `VALIDATION_ERROR` si `month
 
 ## `POST /v1/circles/join`
 
-**Estado:** implementado en el backend (COPAYNI-31), con **reglas de elegibilidad provisionales y configurables**: el KYC (COPAYNI-47) y el límite mensual (R5) todavía no existen. No hay diseño de la pantalla de confirmación (D2).
+**Estado:** implementado en el backend (COPAYNI-31), con **reglas de elegibilidad provisionales y configurables**: el KYC (COPAYNI-47) y el límite mensual (R5) todavía no existen. La confirmación sigue el diseño D2 aprobado, con la aceptación de los términos (COPAYNI-86).
 
 Confirma la unión al círculo que ofreció `slots` y reserva el slot de forma **atómica e idempotente**.
 
@@ -166,14 +168,21 @@ Cabeceras:
 - `Idempotency-Key`: de 16 a 255 caracteres `[A-Za-z0-9_-]`. La app genera una (un UUID) por borrador y la repite en cada reintento.
 
 ```json
-{ "circleId": null, "payoutAmount": 3000000, "months": 10, "position": 3 }
+{
+  "circleId": null,
+  "payoutAmount": 3000000,
+  "months": 10,
+  "position": 3,
+  "termsVersion": "2026-11"
+}
 ```
 
-| Campo                     | Notas                                                                                                      |
-| ------------------------- | ---------------------------------------------------------------------------------------------------------- |
-| `circleId`                | El `circleId` de `slots`. `null` abre el círculo nuevo que ofreció `slots`, con el mismo mes de inicio.    |
-| `payoutAmount` / `months` | La combinación de `installment-options`. Si hay `circleId`, tienen que ser las condiciones de ese círculo. |
-| `position`                | El slot elegido.                                                                                           |
+| Campo                     | Notas                                                                                                                                                                                                                                                                                                                                                                                                |
+| ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `circleId`                | El `circleId` de `slots`. `null` abre el círculo nuevo que ofreció `slots`, con el mismo mes de inicio.                                                                                                                                                                                                                                                                                              |
+| `payoutAmount` / `months` | La combinación de `installment-options`. Si hay `circleId`, tienen que ser las condiciones de ese círculo.                                                                                                                                                                                                                                                                                           |
+| `position`                | El slot elegido.                                                                                                                                                                                                                                                                                                                                                                                     |
+| `termsVersion`            | La versión de los términos que el usuario aceptó: el `termsVersion` de `join-config`. Se guarda con la membresía, con la fecha de aceptación. Sin ella, `VALIDATION_ERROR`; si no es la vigente, `VALIDATION_ERROR` con `details.termsVersion: "outdated"` (la app debe mostrar los términos nuevos). Un reintento con la misma `Idempotency-Key` responde la unión aunque la versión haya cambiado. |
 
 **201** (unión creada) o **200** (reintento con la misma clave: la unión ya existía):
 

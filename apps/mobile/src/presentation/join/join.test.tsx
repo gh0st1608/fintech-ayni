@@ -119,6 +119,40 @@ describe('PayoutAmountScreen', () => {
   const amount = () => screen.getByTestId('payout-amount');
   const slider = () => screen.getByTestId('payout-slider');
 
+  describe('qué es un Game’ya (D16, COPAYNI-87)', () => {
+    it('el carrusel tiene tres tarjetas y el indicador sigue la página', async () => {
+      await renderPayout();
+      for (const card of ['noInterest', 'yourTurn', 'guarantee']) {
+        expect(screen.getByTestId(`gameya-card-${card}`)).toBeTruthy();
+      }
+      expect(screen.getByLabelText(/^Sin intereses\. .*Tarjeta 1 de 3$/)).toBeTruthy();
+      const dots = screen.getByTestId('gameya-carousel-dots');
+      expect(dots).toHaveProp('accessibilityLabel', 'Tarjeta 1 de 3');
+
+      const carousel = screen.getByTestId('gameya-carousel');
+      await fireEvent(carousel.parent!, 'layout', {
+        nativeEvent: { layout: { width: 300, height: 120, x: 0, y: 0 } },
+      });
+      await fireEvent(carousel, 'momentumScrollEnd', {
+        nativeEvent: { contentOffset: { x: 600, y: 0 } },
+      });
+      expect(dots).toHaveProp('accessibilityLabel', 'Tarjeta 3 de 3');
+    });
+
+    it('"¿Cómo funciona?" abre la hoja con un ejemplo con el monto elegido', async () => {
+      await renderPayout();
+      await fireEvent.press(screen.getByRole('link', { name: /Cómo funciona un Game/ }));
+      const example = await screen.findByTestId('gameya-example');
+      expect(example).toHaveTextContent(new RegExp(`pozo de ${text`${3_000}`.source}`));
+      expect(example).toHaveTextContent(new RegExp(`alrededor de ${text`${300}`.source}`));
+    });
+
+    it('no muestra cashback: es del programa de ahorro', async () => {
+      await renderPayout();
+      expect(screen.queryByText(/cashback/i)).toBeNull();
+    });
+  });
+
   it('muestra el paso 1 de 4 y empieza en el mínimo', async () => {
     await renderPayout();
     expect(screen.getByRole('progressbar', { name: 'Paso 1 de 4' })).toBeTruthy();

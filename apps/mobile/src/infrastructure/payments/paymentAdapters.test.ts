@@ -47,6 +47,9 @@ describe('PaymentApiRepository', () => {
           dueOn: '2026-12-05',
           amount: { amount: 560000, currency: 'PEN' },
           status: 'overdue',
+          position: 6,
+          slots: 10,
+          payout: { amount: 5600000, currency: 'PEN' },
         },
       ],
     });
@@ -54,7 +57,13 @@ describe('PaymentApiRepository', () => {
     expect(calls[0]!.path).toBe('/me/payments/summary');
     expect(summary.totalDue).toEqual(Money.of(560000, 'PEN'));
     expect(summary.debt).toEqual(Money.of(10000, 'PEN'));
-    expect(summary.duePayments[0]).toMatchObject({ status: 'overdue', dueOn: '2026-12-05' });
+    expect(summary.duePayments[0]).toMatchObject({
+      status: 'overdue',
+      dueOn: '2026-12-05',
+      position: 6,
+      slots: 10,
+      payout: Money.of(5600000, 'PEN'),
+    });
   });
 
   it('pide el historial por tipo y cursor y traduce el tipo de movimiento', async () => {
@@ -119,13 +128,20 @@ describe('PaymentApiRepository', () => {
   });
 
   it('paga una cuota con la clave de idempotencia y el método', async () => {
-    const { http, calls } = httpReturning({ status: 'pending', paymentId: 'mp-1' });
+    const { http, calls } = httpReturning({ status: 'pending', paymentId: 'mp-1', paidAt: null });
     await expect(
-      new PaymentApiRepository(http).payInstallment('i 1', { method: 'yape', token: 't' }, 'key'),
-    ).resolves.toEqual({ status: 'pending', paymentId: 'mp-1' });
+      new PaymentApiRepository(http).payInstallment(
+        'i 1',
+        { method: 'yape', token: 't', phoneNumber: '987654321' },
+        'key',
+      ),
+    ).resolves.toEqual({ status: 'pending', paymentId: 'mp-1', paidAt: null });
     expect(calls[0]).toMatchObject({
       path: '/me/installments/i%201/pay',
-      options: { idempotencyKey: 'key', body: { method: 'yape', token: 't' } },
+      options: {
+        idempotencyKey: 'key',
+        body: { method: 'yape', token: 't', phoneNumber: '987654321' },
+      },
     });
   });
 });

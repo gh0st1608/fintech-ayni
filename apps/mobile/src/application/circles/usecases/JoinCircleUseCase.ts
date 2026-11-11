@@ -6,6 +6,7 @@ import {
   NationalIdRequiredError,
   PayoutMethodLimitExceededError,
   PayoutMethodRequiredError,
+  TermsOutdatedError,
 } from '@/domain/circles/JoinedCircle';
 import type { CircleMembershipRepositoryPort } from '@/domain/circles/ports/CircleMembershipRepositoryPort';
 import {
@@ -59,11 +60,22 @@ export class JoinCircleUseCase {
     private readonly ids: IdGeneratorPort,
   ) {}
 
-  async execute(draft: JoinCircleDraft): Promise<JoinedCircle> {
+  /** `termsVersion`: la versión de los términos que el usuario aceptó (COPAYNI-86). */
+  async execute(draft: JoinCircleDraft, termsVersion: string): Promise<JoinedCircle> {
     const request = draft.joinRequest();
     try {
-      return await this.repository.join(request, this.keyFor(joinRequestFingerprint(request)));
+      return await this.repository.join(
+        { ...request, termsVersion },
+        this.keyFor(joinRequestFingerprint(request)),
+      );
     } catch (error) {
+      if (
+        error instanceof AppError &&
+        error.code === 'VALIDATION_ERROR' &&
+        error.fieldErrors?.termsVersion === 'outdated'
+      ) {
+        throw new TermsOutdatedError('Join rejected: terms outdated');
+      }
       if (error instanceof AppError && error.code === 'MEMBER_BLOCKED') {
         throw new MemberBlockedError('Join rejected: MEMBER_BLOCKED', amountDue(error));
       }

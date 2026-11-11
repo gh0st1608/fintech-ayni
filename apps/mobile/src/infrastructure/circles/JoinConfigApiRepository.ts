@@ -12,6 +12,7 @@ const joinConfigDto = z.object({
   payout: z.object({ min: moneyDto, max: moneyDto, step: moneyDto }),
   userPayoutLimit: moneyDto.nullable(),
   savingProgramMax: moneyDto,
+  termsVersion: z.string().min(1),
 });
 
 /** Adaptador HTTP de la configuración de unión a círculos. */
@@ -31,6 +32,7 @@ export class JoinConfigApiRepository implements JoinConfigRepositoryPort {
       }),
       userPayoutLimit: dto.userPayoutLimit ? toMoney(dto.userPayoutLimit) : undefined,
       savingProgramMax: toMoney(dto.savingProgramMax),
+      termsVersion: dto.termsVersion,
     };
   }
 }

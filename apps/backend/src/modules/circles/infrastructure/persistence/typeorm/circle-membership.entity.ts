@@ -28,6 +28,13 @@ export class CircleMembershipEntity {
   @Column('jsonb', { nullable: true })
   price!: StoredSlotPrice | null;
 
+  /** Términos aceptados al unirse (COPAYNI-86); `NULL` en las membresías anteriores. */
+  @Column('varchar', { name: 'terms_version', length: 32, nullable: true })
+  termsVersion!: string | null;
+
+  @Column('timestamptz', { name: 'terms_accepted_at', nullable: true })
+  termsAcceptedAt!: Date | null;
+
   /** Expulsión por impago (COPAYNI-57); `NULL` mientras sigue en el círculo. */
   @Column('timestamptz', { name: 'expelled_at', nullable: true })
   expelledAt!: Date | null;

@@ -10,6 +10,8 @@ export interface JoinConfig {
   userPayoutLimit?: Money;
   /** Máximo que se puede ahorrar en el programa de ahorro. */
   savingProgramMax: Money;
+  /** Versión vigente de los términos del círculo: se acepta y se envía al unirse (COPAYNI-86). */
+  termsVersion: string;
 }
 
 /** Rango que el usuario puede elegir de verdad: null si su límite no alcanza el mínimo. */

@@ -75,6 +75,10 @@ export class PayInstallmentUseCase {
       phoneNumber: payment.phoneNumber,
       otp: payment.otp,
     });
-    return this.payments.payInstallment(installmentId, { method: 'yape', token }, idempotencyKey);
+    return this.payments.payInstallment(
+      installmentId,
+      { method: 'yape', token, phoneNumber: payment.phoneNumber },
+      idempotencyKey,
+    );
   }
 }

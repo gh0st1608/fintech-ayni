@@ -44,7 +44,15 @@ export interface JoinCircleRequest {
   payout: Money;
   months: number;
   position: number;
+  /** Versión de los términos que el usuario aceptó en la confirmación (COPAYNI-86). */
+  termsVersion: string;
 }
+
+/** Lo que sale del borrador; los términos se agregan al confirmar. */
+export type JoinDraftRequest = Omit<JoinCircleRequest, 'termsVersion'>;
+
+/** Los términos cambiaron mientras el usuario confirmaba: hay que aceptar los vigentes. */
+export class TermsOutdatedError extends Error {}
 
 /** Unión confirmada por el backend (POST /v1/circles/join). */
 export interface JoinedCircle {

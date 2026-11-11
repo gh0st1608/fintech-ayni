@@ -2,6 +2,7 @@ import { fireEvent, screen, waitFor } from '@testing-library/react-native';
 import { Alert, type AlertButton } from 'react-native';
 
 import type { SavedCard } from '@/domain/payments/SavedCard';
+import { AppError } from '@/domain/shared/errors/AppError';
 import { InMemoryCardRepository } from '@/infrastructure/payments/InMemoryCardRepository';
 import { InMemoryPaymentRepository } from '@/infrastructure/payments/InMemoryPaymentRepository';
 import { createTestContainer } from '@test/fakes/createTestContainer';
@@ -168,6 +169,32 @@ describe('Pagar una cuota (COPAYNI-63)', () => {
     expect(payments.paid.has('i-1')).toBe(true);
   });
 
+  it('los celulares de prueba de Yape solo valen en el sandbox de pagos', async () => {
+    const real = createTestContainer({ payments: withDue() });
+    const view = await renderWithProviders(
+      <PayInstallmentScreen installmentId="i-1" onAddCard={jest.fn()} onDone={jest.fn()} />,
+      real,
+    );
+    await fireEvent.changeText(await screen.findByTestId('yape-phone'), '111111111');
+    await fireEvent.changeText(screen.getByTestId('yape-otp'), '123456');
+    await fireEvent.press(screen.getByRole('button', { name: /^Pagar / }));
+    expect(screen.getByText('Escribe los 9 dígitos de tu celular.')).toBeTruthy();
+    view.unmount();
+
+    const payments = withDue();
+    const sandbox = createTestContainer({ payments });
+    sandbox.container.config.paymentsSandbox = true;
+    await renderWithProviders(
+      <PayInstallmentScreen installmentId="i-1" onAddCard={jest.fn()} onDone={jest.fn()} />,
+      sandbox,
+    );
+    await fireEvent.changeText(await screen.findByTestId('yape-phone'), '111111111');
+    await fireEvent.changeText(screen.getByTestId('yape-otp'), '123456');
+    await fireEvent.press(screen.getByRole('button', { name: /^Pagar / }));
+    expect(await screen.findByText('¡Listo! Tu cuota quedó pagada.')).toBeTruthy();
+    expect(payments.paid.has('i-1')).toBe(true);
+  });
+
   it('un código de Yape rechazado se explica y permite reintentar', async () => {
     await renderWithProviders(
       <PayInstallmentScreen installmentId="i-1" onAddCard={jest.fn()} onDone={jest.fn()} />,
@@ -189,6 +216,89 @@ describe('Pagar una cuota (COPAYNI-63)', () => {
     await fireEvent.press(await screen.findByTestId('pay-card-card-1'));
     await fireEvent.press(screen.getByRole('button', { name: /^Pagar / }));
     expect(await screen.findByTestId('payment-result')).toBeTruthy();
+  });
+
+  describe('diseño D1 aprobado (COPAYNI-77)', () => {
+    const renderPay = (
+      payments = withDue(),
+      cards = new InMemoryCardRepository({ latencyMs: 0 }),
+    ) =>
+      renderWithProviders(
+        <PayInstallmentScreen installmentId="i-1" onAddCard={jest.fn()} onDone={jest.fn()} />,
+        createTestContainer({ payments, cards }),
+      );
+
+    it('resume la cuota: mes, junta, vencimiento y turno', async () => {
+      await renderPay();
+      const summary = await screen.findByTestId('pay-summary');
+      expect(summary).toHaveTextContent(/Cuota de diciembre · Junta de .*56\.?000/);
+      expect(summary).toHaveTextContent(/Vence el 5 dic/);
+      expect(screen.getByTestId('pay-slot')).toHaveTextContent('Turno 6 de 10');
+    });
+
+    it('si la cuota supera el tope de Yape, lo avisa y sugiere la tarjeta guardada', async () => {
+      await renderPay(withDue(), new InMemoryCardRepository({ latencyMs: 0, cards: [card({})] }));
+      expect(await screen.findByTestId('pay-yape-limit')).toHaveTextContent(
+        /supera el máximo de Yape \(.*2\.?000.* por pago\)/,
+      );
+      await waitFor(() => expect(screen.getByTestId('pay-card-card-1')).toBeChecked());
+      expect(screen.getByTestId('pay-yape')).not.toBeChecked();
+      expect(screen.queryByTestId('yape-phone')).toBeNull();
+    });
+
+    it('un rechazo muestra el motivo y el reintento usa otra clave de idempotencia', async () => {
+      const payments = withDue();
+      const pay = jest.spyOn(payments, 'payInstallment').mockRejectedValueOnce(
+        new AppError('business', 'Rejected', {
+          code: 'PAYMENT_REJECTED',
+          fieldErrors: { detail: 'insufficient_amount' },
+        }),
+      );
+      await renderPay(payments);
+      await fireEvent.changeText(await screen.findByTestId('yape-phone'), '987654321');
+      await fireEvent.changeText(screen.getByTestId('yape-otp'), '123456');
+      await fireEvent.press(screen.getByRole('button', { name: /^Pagar / }));
+      expect(await screen.findByTestId('pay-error')).toHaveTextContent(
+        /saldo insuficiente.*intentarlo de nuevo o pagar con otro método/,
+      );
+      // El código de Yape es de un solo uso: se pide uno nuevo.
+      expect(screen.getByTestId('yape-otp')).toHaveDisplayValue('');
+
+      await fireEvent.changeText(screen.getByTestId('yape-otp'), '123456');
+      await fireEvent.press(screen.getByRole('button', { name: /^Pagar / }));
+      expect(await screen.findByTestId('payment-receipt')).toBeTruthy();
+      const [first, second] = pay.mock.calls.map((call) => (call as unknown[])[2]);
+      expect(first).not.toBe(second);
+    });
+
+    it('el recibo muestra el monto, el método, la fecha y el número de operación', async () => {
+      await renderPay(withDue(), new InMemoryCardRepository({ latencyMs: 0, cards: [card({})] }));
+      await waitFor(() => expect(screen.getByTestId('pay-card-card-1')).toBeChecked());
+      await fireEvent.press(screen.getByRole('button', { name: /^Pagar / }));
+      const receipt = await screen.findByTestId('payment-receipt');
+      expect(screen.getByText('¡Listo! Tu cuota quedó pagada.')).toBeTruthy();
+      expect(receipt).toHaveTextContent(/Monto.*5\.?600/);
+      expect(receipt).toHaveTextContent(/Junta de .*56\.?000/);
+      expect(receipt).toHaveTextContent(/VISA •••• 3704/);
+      expect(receipt).toHaveTextContent(/Fecha/);
+      expect(receipt).toHaveTextContent(/N\.º de operación.*pay-i-1/);
+    });
+
+    it('un pago en proceso no muestra fecha y pide no volver a pagar', async () => {
+      const payments = withDue();
+      jest
+        .spyOn(payments, 'payInstallment')
+        .mockResolvedValueOnce({ status: 'pending', paymentId: 'ORDPE01X', paidAt: null });
+      await renderPay(payments);
+      await fireEvent.changeText(await screen.findByTestId('yape-phone'), '987654321');
+      await fireEvent.changeText(screen.getByTestId('yape-otp'), '123456');
+      await fireEvent.press(screen.getByRole('button', { name: /^Pagar / }));
+      const receipt = await screen.findByTestId('payment-receipt');
+      expect(screen.getByText(/No vuelvas a pagar/)).toBeTruthy();
+      expect(receipt).toHaveTextContent(/Estado.*En proceso/);
+      expect(receipt).toHaveTextContent(/Yape ••• 321/);
+      expect(receipt).not.toHaveTextContent(/Fecha/);
+    });
   });
 
   it('una cuota que ya no está pendiente no se puede pagar', async () => {

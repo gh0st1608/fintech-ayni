@@ -118,7 +118,11 @@ describe('shell de navegación', () => {
     await fireEvent.press(screen.getByRole('button', { name: 'Continuar' }));
     await waitFor(() => expect(screen).toHavePathname('/join/confirm'));
 
-    // Confirmar une al usuario y lleva a Mis círculos con el flujo reiniciado.
+    // Aceptar los términos (COPAYNI-86) y confirmar une al usuario y lleva a Mis círculos con el
+    // flujo reiniciado.
+    const terms = await screen.findByRole('checkbox', { name: /Acepto los Términos del círculo/ });
+    await waitFor(() => expect(terms).toBeEnabled());
+    await fireEvent.press(terms);
     await fireEvent.press(await screen.findByRole('button', { name: 'Confirmar y unirme' }));
     await fireEvent.press(
       await screen.findByRole('button', { name: 'Ver mis juntas' }, { timeout: 5000 }),
