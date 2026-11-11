@@ -168,6 +168,32 @@ describe('Pagar una cuota (COPAYNI-63)', () => {
     expect(payments.paid.has('i-1')).toBe(true);
   });
 
+  it('los celulares de prueba de Yape solo valen en el sandbox de pagos', async () => {
+    const real = createTestContainer({ payments: withDue() });
+    const view = await renderWithProviders(
+      <PayInstallmentScreen installmentId="i-1" onAddCard={jest.fn()} onDone={jest.fn()} />,
+      real,
+    );
+    await fireEvent.changeText(await screen.findByTestId('yape-phone'), '111111111');
+    await fireEvent.changeText(screen.getByTestId('yape-otp'), '123456');
+    await fireEvent.press(screen.getByRole('button', { name: /^Pagar / }));
+    expect(screen.getByText('Escribe los 9 dígitos de tu celular.')).toBeTruthy();
+    view.unmount();
+
+    const payments = withDue();
+    const sandbox = createTestContainer({ payments });
+    sandbox.container.config.paymentsSandbox = true;
+    await renderWithProviders(
+      <PayInstallmentScreen installmentId="i-1" onAddCard={jest.fn()} onDone={jest.fn()} />,
+      sandbox,
+    );
+    await fireEvent.changeText(await screen.findByTestId('yape-phone'), '111111111');
+    await fireEvent.changeText(screen.getByTestId('yape-otp'), '123456');
+    await fireEvent.press(screen.getByRole('button', { name: /^Pagar / }));
+    expect(await screen.findByText('¡Listo! Tu cuota quedó pagada.')).toBeTruthy();
+    expect(payments.paid.has('i-1')).toBe(true);
+  });
+
   it('un código de Yape rechazado se explica y permite reintentar', async () => {
     await renderWithProviders(
       <PayInstallmentScreen installmentId="i-1" onAddCard={jest.fn()} onDone={jest.fn()} />,

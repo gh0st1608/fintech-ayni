@@ -1,6 +1,7 @@
 import { FAKE_OTP_CODE } from '@/infrastructure/auth/InMemoryAuthApi';
 import { createTestContainer } from '@test/fakes/createTestContainer';
 
+import { createContainer } from './container';
 import { loadEnv, parseEnv } from './env';
 
 describe('parseEnv', () => {
@@ -91,5 +92,40 @@ describe('createContainer', () => {
     const base = { apiUrl: 'https://api.example.com/v1', paymentTokenizer: 'fake' };
     expect(parseEnv({ ...base, appEnv: 'dev' }).paymentTokenizer).toBe('fake');
     expect(() => parseEnv({ ...base, appEnv: 'prod' })).toThrow();
+  });
+
+  it('Mercado Pago exige la public key y no admite una de prueba en prod', () => {
+    const base = { apiUrl: 'https://api.example.com/v1', paymentTokenizer: 'mercadopago' };
+    expect(() => parseEnv({ ...base, appEnv: 'dev' })).toThrow(/mercadoPagoPublicKey/);
+    expect(() => parseEnv({ ...base, mercadoPagoPublicKey: '' })).toThrow(/mercadoPagoPublicKey/);
+    expect(() => parseEnv({ ...base, mercadoPagoPublicKey: 'pk 123' })).toThrow();
+    const sandbox = parseEnv({ ...base, appEnv: 'staging', mercadoPagoPublicKey: 'TEST-abc-123' });
+    expect(sandbox.mercadoPagoPublicKey).toBe('TEST-abc-123');
+    expect(() =>
+      parseEnv({ ...base, appEnv: 'prod', mercadoPagoPublicKey: 'TEST-abc-123' }),
+    ).toThrow(/mercadoPagoPublicKey/);
+    expect(
+      parseEnv({ ...base, appEnv: 'prod', mercadoPagoPublicKey: 'APP_USR-abc-123' })
+        .mercadoPagoPublicKey,
+    ).toBe('APP_USR-abc-123');
+  });
+
+  it('marca el sandbox de pagos con la pasarela simulada o una public key de prueba', () => {
+    const apiUrl = 'https://api.example.com/v1';
+    const sandboxOf = (raw: Parameters<typeof parseEnv>[0]) =>
+      createContainer(parseEnv({ apiUrl, ...raw }), createTestContainer().adapters).config
+        .paymentsSandbox;
+    expect(sandboxOf({ paymentTokenizer: 'fake' })).toBe(true);
+    expect(
+      sandboxOf({ paymentTokenizer: 'mercadopago', mercadoPagoPublicKey: 'TEST-abc-123' }),
+    ).toBe(true);
+    expect(
+      sandboxOf({
+        appEnv: 'prod',
+        paymentTokenizer: 'mercadopago',
+        mercadoPagoPublicKey: 'APP_USR-abc-123',
+      }),
+    ).toBe(false);
+    expect(sandboxOf({ paymentTokenizer: 'unconfigured' })).toBe(false);
   });
 });
