@@ -18,6 +18,16 @@ export interface Transaction {
   occurredAt: Date;
 }
 
+/** Detalle de un movimiento (GET /me/transactions/:id, COPAYNI-78). */
+export interface TransactionDetail extends Transaction {
+  /** Pozo del círculo: lo identifica y, en un payout, es el monto bruto. */
+  circlePayout: Money;
+  /** Turno del usuario en ese círculo. */
+  position: number;
+  /** En un payout, lo descontado del pozo (retención y cuotas descontadas); si no, `null`. */
+  deductions: Money | null;
+}
+
 export interface TransactionsPage {
   items: Transaction[];
   /** `null` si no hay más páginas. */

@@ -41,6 +41,8 @@ import type {
   GetPaymentSummaryUseCase,
   GetPayoutEligibilityUseCase,
   ListTransactionsUseCase,
+  GetTransactionUseCase,
+  CopyOperationNumberUseCase,
   UpdatePaymentSettingsUseCase,
 } from '@/application/payments/usecases/paymentUseCases';
 import type {
@@ -126,6 +128,8 @@ export interface AppContainer {
   payments: {
     getSummary: GetPaymentSummaryUseCase;
     listTransactions: ListTransactionsUseCase;
+    getTransaction: GetTransactionUseCase;
+    copyOperationNumber: CopyOperationNumberUseCase;
     getPayoutEligibility: GetPayoutEligibilityUseCase;
     getSettings: GetPaymentSettingsUseCase;
     updateSettings: UpdatePaymentSettingsUseCase;

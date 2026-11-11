@@ -42,6 +42,8 @@ import {
   GetPaymentSummaryUseCase,
   GetPayoutEligibilityUseCase,
   ListTransactionsUseCase,
+  GetTransactionUseCase,
+  CopyOperationNumberUseCase,
   UpdatePaymentSettingsUseCase,
 } from '@/application/payments/usecases/paymentUseCases';
 import {
@@ -355,6 +357,8 @@ export function createContainer(
     payments: {
       getSummary: new GetPaymentSummaryUseCase(adapters.payments),
       listTransactions: new ListTransactionsUseCase(adapters.payments),
+      getTransaction: new GetTransactionUseCase(adapters.payments),
+      copyOperationNumber: new CopyOperationNumberUseCase(adapters.clipboard),
       getPayoutEligibility: new GetPayoutEligibilityUseCase(adapters.payments),
       getSettings: new GetPaymentSettingsUseCase(adapters.payments),
       updateSettings: new UpdatePaymentSettingsUseCase(adapters.payments),

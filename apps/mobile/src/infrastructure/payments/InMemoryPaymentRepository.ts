@@ -3,7 +3,12 @@ import type { InstallmentPaymentResult } from '@/domain/payments/InstallmentPaym
 import type { PaymentSettings } from '@/domain/payments/PaymentSettings';
 import type { PaymentSummary } from '@/domain/payments/PaymentSummary';
 import type { PayoutEligibility } from '@/domain/payments/PayoutEligibility';
-import type { Transaction, TransactionsPage, TransactionType } from '@/domain/payments/Transaction';
+import type {
+  Transaction,
+  TransactionDetail,
+  TransactionsPage,
+  TransactionType,
+} from '@/domain/payments/Transaction';
 import { AppError } from '@/domain/shared/errors/AppError';
 import { Money } from '@/domain/shared/value-objects/Money';
 import { simulateLatency } from '@/infrastructure/fake/simulateLatency';
@@ -118,6 +123,29 @@ export class InMemoryPaymentRepository implements PaymentRepositoryPort {
     return {
       items: all.slice(start, end),
       nextCursor: end < all.length ? String(end) : null,
+    };
+  }
+
+  async getTransaction(
+    type: TransactionType,
+    id: string,
+    signal?: AbortSignal,
+  ): Promise<TransactionDetail> {
+    await simulateLatency(this.latencyMs, signal);
+    const found = this.transactions().find((item) => item.type === type && item.id === id);
+    if (!found) {
+      throw new AppError('not_found', 'Transaction not found', { code: 'TRANSACTION_NOT_FOUND' });
+    }
+    const circlePayout = Money.fromMajor(30_000, this.currency);
+    return {
+      ...found,
+      circlePayout,
+      position: found.kind === 'payout' ? 1 : 6,
+      // El pozo del ejemplo es igual a lo recibido: sin retención ni cuotas descontadas.
+      deductions:
+        found.kind === 'payout'
+          ? Money.of(circlePayout.amount - found.amount.amount, this.currency)
+          : null,
     };
   }
 

@@ -2,7 +2,12 @@ import type { PaymentRepositoryPort } from '@/domain/payments/ports/PaymentRepos
 import type { PaymentSettings } from '@/domain/payments/PaymentSettings';
 import type { PaymentSummary } from '@/domain/payments/PaymentSummary';
 import type { PayoutEligibility } from '@/domain/payments/PayoutEligibility';
-import type { TransactionsPage, TransactionType } from '@/domain/payments/Transaction';
+import type {
+  TransactionDetail,
+  TransactionsPage,
+  TransactionType,
+} from '@/domain/payments/Transaction';
+import type { ClipboardPort } from '@/domain/referrals/ports/DevicePorts';
 
 /** Resumen de pagos de la pestaña Payment (COPAYNI-35). */
 export class GetPaymentSummaryUseCase {
@@ -23,6 +28,24 @@ export class ListTransactionsUseCase {
     signal?: AbortSignal,
   ): Promise<TransactionsPage> {
     return this.repository.listTransactions(type, cursor, signal);
+  }
+}
+
+/** Detalle de un movimiento del historial (COPAYNI-78). */
+export class GetTransactionUseCase {
+  constructor(private readonly repository: PaymentRepositoryPort) {}
+
+  execute(type: TransactionType, id: string, signal?: AbortSignal): Promise<TransactionDetail> {
+    return this.repository.getTransaction(type, id, signal);
+  }
+}
+
+/** Copia el número de operación de un movimiento (COPAYNI-78). */
+export class CopyOperationNumberUseCase {
+  constructor(private readonly clipboard: ClipboardPort) {}
+
+  execute(operation: string): Promise<void> {
+    return this.clipboard.copy(operation);
   }
 }
 

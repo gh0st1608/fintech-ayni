@@ -39,6 +39,10 @@ export default function PrivateLayout() {
         <Stack.Screen name="join/saving-program" options={joinOptions.savingProgram} />
         <Stack.Screen name="circles/[circleId]" options={circleOptions.detail} />
         <Stack.Screen name="payment/history" options={paymentOptions.history} />
+        <Stack.Screen
+          name="payment/transaction/[transactionId]"
+          options={paymentOptions.transaction}
+        />
         <Stack.Screen name="payment/eligibility" options={paymentOptions.eligibility} />
         <Stack.Screen name="payment/settings" options={paymentOptions.settings} />
         <Stack.Screen name="payment/payout-method" options={paymentOptions.payoutMethod} />

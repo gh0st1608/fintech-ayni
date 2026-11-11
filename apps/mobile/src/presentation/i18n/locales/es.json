@@ -631,6 +631,23 @@
       "max_attempts": "Superaste los intentos permitidos. Prueba con otro método.",
       "invalid_token": "El código ya no es válido. Genera uno nuevo en Yape.",
       "processing_error": "No se pudo procesar el pago. Vuelve a intentarlo en unos minutos."
+    },
+    "transaction": {
+      "title": "Detalle",
+      "openA11y": "Ver el detalle del movimiento de {{amount}} del {{date}}",
+      "status": "Estado",
+      "completed": "Completado",
+      "circle": "Junta",
+      "circleValue": "Junta de {{payout}}",
+      "month": "Mes",
+      "turn": "Turno",
+      "date": "Fecha",
+      "pot": "Pozo",
+      "deductions": "Retención y descuentos",
+      "received": "Recibido",
+      "operation": "N.º de operación  {{id}}",
+      "copy": "Copiar el número de operación",
+      "copied": "Número de operación copiado."
     }
   },
   "documents": {

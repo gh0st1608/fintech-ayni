@@ -21,6 +21,8 @@ import { useTransactions } from '../usePayments';
 interface PaymentHistoryScreenProps {
   /** Estado vacío: "Explore Circles" abre la pestaña Circles. */
   onExploreCircles: () => void;
+  /** Abre el detalle de un movimiento (COPAYNI-78). */
+  onOpenTransaction?: (type: TransactionType, transactionId: string) => void;
 }
 
 /** Primer día del mes `YYYY-MM`. */
@@ -34,7 +36,10 @@ function periodDate(period: string): Date {
  * el mes del círculo. Sin el contexto de diseño (límite de Figma): se armó con el inventario y los
  * componentes existentes. El detalle de una transacción no tiene diseño (D8).
  */
-export function PaymentHistoryScreen({ onExploreCircles }: PaymentHistoryScreenProps) {
+export function PaymentHistoryScreen({
+  onExploreCircles,
+  onOpenTransaction,
+}: PaymentHistoryScreenProps) {
   const { t } = useTranslation();
   const [type, setType] = useState<TransactionType>('payment');
 
@@ -49,7 +54,12 @@ export function PaymentHistoryScreen({ onExploreCircles }: PaymentHistoryScreenP
         onChange={setType}
         testID="history-tabs"
       />
-      <TransactionList key={type} type={type} onExploreCircles={onExploreCircles} />
+      <TransactionList
+        key={type}
+        type={type}
+        onExploreCircles={onExploreCircles}
+        onOpenTransaction={onOpenTransaction}
+      />
     </Screen>
   );
 }
@@ -57,6 +67,7 @@ export function PaymentHistoryScreen({ onExploreCircles }: PaymentHistoryScreenP
 function TransactionList({
   type,
   onExploreCircles,
+  onOpenTransaction,
 }: { type: TransactionType } & PaymentHistoryScreenProps) {
   const { t } = useTranslation();
   const transactions = useTransactions(type);
@@ -86,7 +97,12 @@ function TransactionList({
     <FlatList
       data={items}
       keyExtractor={(item) => item.id}
-      renderItem={({ item }) => <TransactionRow transaction={item} />}
+      renderItem={({ item }) => (
+        <TransactionRow
+          transaction={item}
+          onPress={onOpenTransaction ? () => onOpenTransaction(item.type, item.id) : undefined}
+        />
+      )}
       contentContainerStyle={styles.list}
       testID="transactions-list"
       ListHeaderComponent={
@@ -140,14 +156,32 @@ const KIND_ICON = {
 } as const satisfies Record<Transaction['kind'], { name: string; color: string }>;
 
 /** Fila del Figma: monto y fecha arriba; debajo, qué fue con el mes del círculo resaltado. */
-function TransactionRow({ transaction }: { transaction: Transaction }) {
+function TransactionRow({
+  transaction,
+  onPress,
+}: {
+  transaction: Transaction;
+  onPress?: () => void;
+}) {
   const { t } = useTranslation();
   const formatMoney = useFormatMoney();
   const formatDate = useFormatDate();
   const occurredAt = formatDate(transaction.occurredAt, 'dateTime');
   const icon = KIND_ICON[transaction.kind];
   return (
-    <Card style={styles.row} testID={`transaction-${transaction.id}`}>
+    <Card
+      style={styles.row}
+      onPress={onPress}
+      accessibilityLabel={
+        onPress
+          ? t('payment.transaction.openA11y', {
+              amount: formatMoney(transaction.amount),
+              date: occurredAt,
+            })
+          : undefined
+      }
+      testID={`transaction-${transaction.id}`}
+    >
       <View style={styles.rowText}>
         <View style={styles.rowHeader}>
           <Ionicons name={icon.name} size={20} color={icon.color} />

@@ -6,9 +6,10 @@ import type { PaymentSettings } from '@/domain/payments/PaymentSettings';
 import type { PaymentSummary } from '@/domain/payments/PaymentSummary';
 import type { PayoutEligibility, PayoutRequirement } from '@/domain/payments/PayoutEligibility';
 import type {
+  TransactionDetail,
   TransactionKind,
-  TransactionsPage,
   TransactionType,
+  TransactionsPage,
 } from '@/domain/payments/Transaction';
 import type { HttpClientPort } from '@/domain/shared/ports/HttpClientPort';
 import { moneyDto, toMoney } from '@/infrastructure/circles/moneyDto';
@@ -45,19 +46,26 @@ const KIND_BY_DTO = {
 } as const satisfies Record<string, TransactionKind>;
 
 /** DTO de GET /me/transactions (docs/api/payments.md). */
+const transactionDto = z.object({
+  id: z.string().min(1),
+  type: z.enum(['payment', 'payout']),
+  kind: z.enum(['installment', 'debt_settlement', 'payout', 'refund']),
+  circleId: z.string().min(1),
+  period: z.string().regex(PERIOD).nullable(),
+  amount: moneyDto,
+  occurredAt: z.iso.datetime({ offset: true }),
+});
+
 const transactionsDto = z.object({
-  items: z.array(
-    z.object({
-      id: z.string().min(1),
-      type: z.enum(['payment', 'payout']),
-      kind: z.enum(['installment', 'debt_settlement', 'payout', 'refund']),
-      circleId: z.string().min(1),
-      period: z.string().regex(PERIOD).nullable(),
-      amount: moneyDto,
-      occurredAt: z.iso.datetime({ offset: true }),
-    }),
-  ),
+  items: z.array(transactionDto),
   nextCursor: z.string().min(1).nullable(),
+});
+
+/** DTO de GET /me/transactions/:id (COPAYNI-78). */
+const transactionDetailDto = transactionDto.extend({
+  circlePayout: moneyDto,
+  position: z.number().int().positive(),
+  deductions: moneyDto.nullable(),
 });
 
 const REQUIREMENT_BY_DTO = {
@@ -114,6 +122,26 @@ export class PaymentApiRepository implements PaymentRepositoryPort {
         amount: toMoney(due.amount),
         payout: toMoney(due.payout),
       })),
+    };
+  }
+
+  async getTransaction(
+    type: TransactionType,
+    id: string,
+    signal?: AbortSignal,
+  ): Promise<TransactionDetail> {
+    const dto = await this.http.get(`/me/transactions/${encodeURIComponent(id)}`, {
+      query: { type },
+      signal,
+      parse: (data) => transactionDetailDto.parse(data),
+    });
+    return {
+      ...dto,
+      kind: KIND_BY_DTO[dto.kind],
+      amount: toMoney(dto.amount),
+      occurredAt: new Date(dto.occurredAt),
+      circlePayout: toMoney(dto.circlePayout),
+      deductions: dto.deductions ? toMoney(dto.deductions) : null,
     };
   }
 

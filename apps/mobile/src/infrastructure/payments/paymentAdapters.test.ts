@@ -176,3 +176,33 @@ describe('CardApiRepository', () => {
     expect(remove.calls[0]!.path).toBe('/me/cards/card-1');
   });
 });
+
+describe('PaymentApiRepository.getTransaction (COPAYNI-78)', () => {
+  it('pide el detalle con el tipo y mapea montos, tipo de movimiento y descuentos', async () => {
+    const { http, calls } = httpReturning({
+      id: 't 1',
+      type: 'payout',
+      kind: 'payout',
+      circleId: 'c-1',
+      period: '2027-02',
+      amount: { amount: 2_400_000, currency: 'PEN' },
+      occurredAt: '2027-02-02T14:15:00.000Z',
+      circlePayout: { amount: 3_000_000, currency: 'PEN' },
+      position: 4,
+      deductions: { amount: 600_000, currency: 'PEN' },
+    });
+    const detail = await new PaymentApiRepository(http).getTransaction('payout', 't 1');
+    expect(calls[0]).toMatchObject({
+      path: '/me/transactions/t%201',
+      options: { query: { type: 'payout' } },
+    });
+    expect(detail).toMatchObject({
+      kind: 'payout',
+      amount: Money.of(2_400_000, 'PEN'),
+      circlePayout: Money.of(3_000_000, 'PEN'),
+      deductions: Money.of(600_000, 'PEN'),
+      occurredAt: new Date('2027-02-02T14:15:00.000Z'),
+      position: 4,
+    });
+  });
+});

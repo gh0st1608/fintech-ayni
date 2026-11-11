@@ -36,6 +36,10 @@ export function usePaymentScreenOptions() {
   const { t } = useTranslation();
   return {
     history: { title: t('payment.history.title'), headerBackButtonDisplayMode: 'minimal' },
+    transaction: {
+      title: t('payment.transaction.title'),
+      headerBackButtonDisplayMode: 'minimal',
+    },
     eligibility: {
       title: t('payment.eligibility.title'),
       headerBackButtonDisplayMode: 'minimal',
