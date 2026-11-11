@@ -48,6 +48,12 @@ describe('Descuento de referidos en la cuota (COPAYNI-53)', () => {
     await expect(setup(0).discounts.quote('u-1', pen(1_000))).resolves.toEqual(pen(0));
   });
 
+  it('no usa el saldo (en PEN) en una cuota en otra moneda (supuesto de M2)', async () => {
+    await expect(setup(150).discounts.quote('u-1', Money.of(1_000_00, 'USD'))).resolves.toEqual(
+      Money.of(0, 'USD'),
+    );
+  });
+
   it('canjea una vez por cuota y registra que la cooperativa paga el descuento', async () => {
     const { referrals, ledger, discounts } = setup(150);
     await discounts.apply(INSTALLMENT, pen(150));

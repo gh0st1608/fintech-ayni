@@ -19,9 +19,22 @@ Usa el contrato común de respuestas descrito en [auth.md](auth.md). Requiere `A
 - `amount`: entero en **unidades menores** (céntimos). 300000 = 3.000,00.
 - `currency`: código ISO 4217. La app nunca asume la moneda.
 
+## Monedas (pending-scope M1, M2 y M6)
+
+- **Oficial:** PEN (`DEFAULT_CURRENCY`). Los montos de la configuración (`JOIN_PAYOUT_*`, `SAVING_PROGRAM_MAX`, límites) están en PEN.
+- **Otras habilitadas:** `SUPPORTED_CURRENCIES` (p. ej. `PEN,USD`). Vacía, solo PEN. USD se habilita cuando Mercado Pago confirme que cobra en USD en Perú (T3).
+- **Tipo de cambio fijo:** `EXCHANGE_RATES` (p. ej. `USD:3.75` = 1 USD vale S/ 3,75), que actualiza el equipo. Cada moneda habilitada necesita el suyo: sin él la API no arranca.
+- **Montos equivalentes:** el rango de payout en USD se deriva del de PEN. El salto se redondea a 1, 2 o 5 × 10ⁿ dólares, el mínimo sube al salto siguiente y el máximo baja al anterior. Con 3,75: de USD 800 a 32.000 en saltos de 100. El máximo de ahorro se convierte hacia abajo, en dólares enteros.
+- **Un Game'ya, una moneda:** cada círculo guarda la suya; sus cuotas, su pozo y su parte del fondo de garantía van en ella. `slots` solo ofrece círculos de la moneda pedida.
+- **Límites:** el límite mensual de pay-in y el del método de cobro siguen en PEN; para un Game'ya en USD se convierten hacia abajo con el tipo de cambio fijo.
+- **Deuda por impago en varias monedas:** `MEMBER_BLOCKED` informa el total en PEN, convertido hacia arriba.
+- **Supuestos de esta iteración:** el saldo de referidos solo se descuenta de cuotas en PEN; el programa de ahorro y la tarjeta prepago siguen en PEN.
+
 ## `GET /v1/circles/join-config`
 
 Montos permitidos para unirse a un Game'ya o al programa de ahorro.
+
+- `?currency=` (opcional): una de `currencies`. Sin ella, la moneda oficial. Una moneda no habilitada responde **400** `VALIDATION_ERROR` con `details: { currency: "not_supported" }`.
 
 **200**:
 
@@ -34,6 +47,10 @@ Montos permitidos para unirse a un Game'ya o al programa de ahorro.
   },
   "userPayoutLimit": { "amount": 2000000, "currency": "PEN" },
   "savingProgramMax": { "amount": 100000000, "currency": "PEN" },
+  "currencies": [
+    { "code": "PEN", "official": true, "rateToOfficial": "1" },
+    { "code": "USD", "official": false, "rateToOfficial": "3.75" }
+  ],
   "termsVersion": "2026-11"
 }
 ```
@@ -43,6 +60,7 @@ Montos permitidos para unirse a un Game'ya o al programa de ahorro.
 | `payout`           | Rango general del slider de Payout Amount. Los saltos se cuentan desde `min`; los tres montos en la misma moneda. |
 | `userPayoutLimit`  | Payout máximo según el límite mensual del usuario (R5), o `null` si no lo restringe.                              |
 | `savingProgramMax` | Máximo del programa de ahorro, para la descripción de "Elige un servicio".                                        |
+| `currencies`       | Monedas habilitadas; la oficial va primero. `rateToOfficial`: unidades de PEN por unidad de esa moneda.           |
 | `termsVersion`     | Versión vigente de los términos del círculo (`CIRCLE_TERMS_VERSION`). La app la envía al unirse (COPAYNI-86).     |
 
 Comportamiento de la app:
@@ -50,12 +68,14 @@ Comportamiento de la app:
 - Si `userPayoutLimit` es menor que `payout.max`, el slider se corta en ese monto (ajustado al salto) y se explica cómo aumentarlo.
 - Si es menor que `payout.min`, no se ofrece el slider: el usuario aún no puede unirse.
 - Una respuesta que no cumple el esquema se rechaza (`INVALID_RESPONSE`).
+- Con más de una moneda, Payout Amount muestra arriba las pestañas de moneda (el estilo de "Choose turn", Figma 55:9444) y, en una moneda que no es la oficial, el tipo de cambio fijo. `installment-options`, `slots` y `join` reciben la moneda elegida (`currency`).
 
 ## `GET /v1/circles/installment-options?payoutAmount=<entero>`
 
 Cuotas y duraciones posibles para el payout elegido (Monthly Pay-in, COPAYNI-29). Implementado en el backend (COPAYNI-24).
 
 - `payoutAmount`: en unidades menores. Tiene que estar en el rango de `join-config`, caer en un salto del slider y no superar `userPayoutLimit`.
+- `currency` (opcional): la moneda del Game'ya; sin ella, la oficial. Lo mismo vale para `slots` (query) y `join` (cuerpo).
 - Las duraciones salen de la configuración (`CIRCLE_DURATION_OPTIONS`; provisional: 6, 10 y 12 meses, como en el Figma).
 - Solo se ofrecen las duraciones que dan cuotas exactas en céntimos.
 

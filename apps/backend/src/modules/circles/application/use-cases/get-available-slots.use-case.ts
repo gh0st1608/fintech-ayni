@@ -86,9 +86,10 @@ export class GetAvailableSlotsUseCase {
     payoutAmount: number,
     months: number,
     circleId?: string,
+    currency?: string,
   ): Promise<AvailableSlotsResult> {
     const [joinConfig, profile] = await Promise.all([
-      this.joinConfigs.getForUser(principal.userId),
+      this.joinConfigs.getForUser(principal.userId, currency),
       trustProfileOf(principal.userId, this.eligibility, this.history),
     ]);
     const payout = offeredPayout(joinConfig, payoutAmount, months);

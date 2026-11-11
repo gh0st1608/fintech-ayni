@@ -222,7 +222,10 @@ export function createContainer(
       env.authApi === 'fake' ? new InMemoryPasscodeRepository() : new PasscodeApiRepository(http),
     joinConfig:
       env.circlesApi === 'fake'
-        ? new InMemoryJoinConfigRepository(env.defaultCurrency)
+        ? // Simula que el backend también habilita dólares a un tipo de cambio fijo (M2).
+          new InMemoryJoinConfigRepository(env.defaultCurrency, {
+            secondCurrency: { code: 'USD', rateToOfficial: '3.75' },
+          })
         : new JoinConfigApiRepository(http),
     circleQuote:
       env.circlesApi === 'fake'

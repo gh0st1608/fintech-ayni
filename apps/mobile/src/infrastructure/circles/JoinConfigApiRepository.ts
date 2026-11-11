@@ -12,6 +12,15 @@ const joinConfigDto = z.object({
   payout: z.object({ min: moneyDto, max: moneyDto, step: moneyDto }),
   userPayoutLimit: moneyDto.nullable(),
   savingProgramMax: moneyDto,
+  currencies: z
+    .array(
+      z.object({
+        code: z.string().regex(/^[A-Z]{3}$/),
+        official: z.boolean(),
+        rateToOfficial: z.string().regex(/^\d+(\.\d+)?$/),
+      }),
+    )
+    .min(1),
   termsVersion: z.string().min(1),
 });
 
@@ -19,8 +28,9 @@ const joinConfigDto = z.object({
 export class JoinConfigApiRepository implements JoinConfigRepositoryPort {
   constructor(private readonly http: HttpClientPort) {}
 
-  async get(signal?: AbortSignal): Promise<JoinConfig> {
+  async get(signal?: AbortSignal, currency?: string): Promise<JoinConfig> {
     const dto = await this.http.get('/circles/join-config', {
+      query: { currency },
       signal,
       parse: (data) => joinConfigDto.parse(data),
     });
@@ -32,6 +42,7 @@ export class JoinConfigApiRepository implements JoinConfigRepositoryPort {
       }),
       userPayoutLimit: dto.userPayoutLimit ? toMoney(dto.userPayoutLimit) : undefined,
       savingProgramMax: toMoney(dto.savingProgramMax),
+      currencies: dto.currencies,
       termsVersion: dto.termsVersion,
     };
   }

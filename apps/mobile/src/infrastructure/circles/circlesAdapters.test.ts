@@ -12,6 +12,10 @@ const CONFIG = {
   payout: { min: money(300_000), max: money(12_000_000), step: money(50_000) },
   userPayoutLimit: money(2_000_000),
   savingProgramMax: money(100_000_000),
+  currencies: [
+    { code: 'PEN', official: true, rateToOfficial: '1' },
+    { code: 'USD', official: false, rateToOfficial: '3.75' },
+  ],
   termsVersion: '2026-11',
 };
 
@@ -41,6 +45,15 @@ describe('JoinConfigApiRepository', () => {
     expect(config.payoutRange.step.amount).toBe(50_000);
     expect(config.userPayoutLimit?.equals(Money.of(2_000_000, 'PEN'))).toBe(true);
     expect(config.savingProgramMax.amount).toBe(100_000_000);
+    expect(config.currencies.map(({ code }) => code)).toEqual(['PEN', 'USD']);
+  });
+
+  it('pide la configuración en la moneda elegida (pending-scope M2)', async () => {
+    const { fetchImpl, repository } = setup(CONFIG);
+    await new GetJoinConfigUseCase(repository).execute(undefined, 'USD');
+    expect(fetchImpl.mock.calls[0]?.[0]).toBe(
+      'https://api.test/v1/circles/join-config?currency=USD',
+    );
   });
 
   it('un límite nulo significa que el usuario no está restringido', async () => {
@@ -52,6 +65,8 @@ describe('JoinConfigApiRepository', () => {
     [{ ...CONFIG, payout: { ...CONFIG.payout, step: money(0.5) } }],
     [{ ...CONFIG, savingProgramMax: money(1, 'soles') }],
     [{ ...CONFIG, payout: undefined }],
+    [{ ...CONFIG, currencies: [] }],
+    [{ ...CONFIG, currencies: [{ code: 'USD', official: false, rateToOfficial: '3,75' }] }],
   ])('rechaza una respuesta que no cumple el contrato', async (body) => {
     const { repository } = setup(body);
     await expect(repository.get()).rejects.toMatchObject({ code: 'INVALID_RESPONSE' });
@@ -72,6 +87,18 @@ describe('InMemoryJoinConfigRepository', () => {
       userPayoutLimit: 20000,
     });
     expect((await repository.get()).userPayoutLimit?.toMajor()).toBe(20000);
+  });
+
+  it('con una segunda moneda, la ofrece y devuelve sus montos equivalentes', async () => {
+    const repository = new InMemoryJoinConfigRepository('PEN', {
+      latencyMs: 0,
+      secondCurrency: { code: 'USD', rateToOfficial: '3.75' },
+    });
+    const config = await repository.get(undefined, 'USD');
+    expect(config.payoutRange.min.equals(Money.fromMajor(800, 'USD'))).toBe(true);
+    expect(config.payoutRange.step.equals(Money.fromMajor(100, 'USD'))).toBe(true);
+    expect(config.currencies.map(({ code }) => code)).toEqual(['PEN', 'USD']);
+    await expect(repository.get(undefined, 'EUR')).rejects.toMatchObject({ kind: 'validation' });
   });
 
   it('respeta la cancelación', async () => {

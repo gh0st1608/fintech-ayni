@@ -18,6 +18,8 @@ import {
   validateSync,
 } from 'class-validator';
 
+import { currencySettingsFrom } from '../shared/infrastructure/currency/currency-settings';
+
 /** Identidad del personal del back-office (docs/backoffice-plan.md, BO2). */
 export const STAFF_AUTH_PROVIDERS = ['unconfigured', 'oidc', 'dev'] as const;
 
@@ -181,6 +183,28 @@ export class EnvironmentVariables {
   /** Moneda de operación (pending-scope M1). Sin valor por defecto: se decide por ambiente. */
   @Matches(/^[A-Z]{3}$/, { message: 'DEFAULT_CURRENCY debe ser un código ISO 4217' })
   DEFAULT_CURRENCY!: string;
+
+  /**
+   * Monedas en las que se puede abrir un Game'ya (pending-scope M2), separadas por comas. Vacía:
+   * solo `DEFAULT_CURRENCY`. Otra moneda se habilita cuando la pasarela confirme que cobra en ella.
+   */
+  @Transform(toList)
+  @ArrayUnique()
+  @Matches(/^[A-Z]{3}$/, { each: true, message: 'SUPPORTED_CURRENCIES admite códigos ISO 4217' })
+  SUPPORTED_CURRENCIES: string[] = [];
+
+  /**
+   * Tipos de cambio fijos que actualiza el equipo (pending-scope M2 y M6): `USD:3.75` = 1 USD vale
+   * 3,75 de `DEFAULT_CURRENCY`. Hasta 6 decimales. Cada moneda admitida distinta de la oficial
+   * necesita el suyo: con él se derivan sus montos equivalentes.
+   */
+  @Transform(toList)
+  @ArrayUnique()
+  @Matches(/^[A-Z]{3}:\d{1,9}(\.\d{1,6})?$/, {
+    each: true,
+    message: 'EXCHANGE_RATES admite entradas MONEDA:tasa, p. ej. USD:3.75',
+  })
+  EXCHANGE_RATES: string[] = [];
 
   @IsInt()
   JOIN_PAYOUT_MIN!: number;
@@ -731,6 +755,17 @@ export function exportsTelemetry(
  * Valida y tipa las variables de entorno. El mensaje de error nombra cada variable
  * inválida y su regla, nunca su valor (puede ser un secreto).
  */
+/** Monedas admitidas con su tipo de cambio (pending-scope M2): la API no inicia sin él. */
+function assertCurrencies(env: EnvironmentVariables): void {
+  try {
+    currencySettingsFrom(env);
+  } catch (error) {
+    throw new Error(`Configuración inválida:\n- EXCHANGE_RATES: ${(error as Error).message}`, {
+      cause: error,
+    });
+  }
+}
+
 export function validateEnvironment(config: Record<string, unknown>): EnvironmentVariables {
   const env = plainToInstance(EnvironmentVariables, config, {
     enableImplicitConversion: true,
@@ -776,6 +811,7 @@ export function validateEnvironment(config: Record<string, unknown>): Environmen
       'Configuración inválida:\n- KYC_PROVIDER: simulated no se admite en production',
     );
   }
+  if (errors.length === 0) assertCurrencies(env);
   if (errors.length > 0) {
     const problems = errors.map(
       ({ property, constraints }) =>

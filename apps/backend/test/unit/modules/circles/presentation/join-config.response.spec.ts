@@ -6,15 +6,19 @@ import { Money } from '@src/shared/domain/value-objects/money';
 const usd = (amount: number) => Money.of(amount, 'USD');
 
 describe('JoinConfigResponse', () => {
-  it('serializa el límite del usuario con la moneda del dominio', () => {
+  it('serializa el límite del usuario con la moneda del dominio y las monedas habilitadas', () => {
     const config = JoinConfig.create({
       payoutRange: PayoutRange.create({ min: usd(1_000), max: usd(5_000), step: usd(1_000) }),
       savingProgramMax: usd(9_000),
       userPayoutLimit: usd(3_000),
       durationOptions: [6, 12],
     });
+    const currencies = [
+      { code: 'PEN', official: true, rateToOfficial: '1' },
+      { code: 'USD', official: false, rateToOfficial: '3.75' },
+    ];
 
-    expect(JoinConfigResponse.from(config, '2026-11')).toEqual({
+    expect(JoinConfigResponse.from({ config, currencies }, '2026-11')).toEqual({
       payout: {
         min: { amount: 1_000, currency: 'USD' },
         max: { amount: 5_000, currency: 'USD' },
@@ -22,6 +26,7 @@ describe('JoinConfigResponse', () => {
       },
       userPayoutLimit: { amount: 3_000, currency: 'USD' },
       savingProgramMax: { amount: 9_000, currency: 'USD' },
+      currencies,
       termsVersion: '2026-11',
     });
   });

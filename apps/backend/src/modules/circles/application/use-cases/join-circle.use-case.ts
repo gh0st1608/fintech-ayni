@@ -3,6 +3,10 @@ import { randomUUID } from 'node:crypto';
 import { Inject, Injectable, Logger } from '@nestjs/common';
 
 import { CLOCK, type ClockPort } from '../../../../shared/application/ports/clock.port';
+import {
+  CURRENCIES,
+  type CurrencySettings,
+} from '../../../../shared/application/ports/currencies.port';
 import { LocalDate } from '../../../../shared/domain/value-objects/local-date';
 import { Money } from '../../../../shared/domain/value-objects/money';
 import { Period } from '../../../../shared/domain/value-objects/period';
@@ -13,7 +17,7 @@ import {
   IdempotencyKeyReusedError,
   type Membership,
 } from '../../domain/entities/circle';
-import { assertCanJoin } from '../../domain/services/join-eligibility';
+import { applicantIn, assertCanJoin } from '../../domain/services/join-eligibility';
 import { assertSlotAllowed } from '../../domain/services/trust-policy';
 import { priceOf, type SlotPricing, type SlotQuote } from '../../domain/services/slot-pricing';
 import { joinQuote } from '../../domain/services/vacancy';
@@ -58,6 +62,8 @@ export interface JoinCircleCommand {
   /** Círculo que ofreció `slots`, o `null` para abrir uno nuevo con esas condiciones. */
   circleId: string | null;
   payoutAmount: number;
+  /** Moneda del Game'ya (pending-scope M2); la oficial si no se indica. */
+  currency?: string;
   months: number;
   position: number;
   idempotencyKey: string;
@@ -80,7 +86,8 @@ export interface JoinCircleResult {
  *   elegibilidad pudo cambiar desde entonces, pero la unión ya existe.
  * - Rechaza al expulsado por impago con deuda abierta (MEMBER_BLOCKED, COPAYNI-57).
  * - Valida las condiciones como `slots` (COPAYNI-30) y la elegibilidad del usuario: National ID,
- *   límite mensual y método de cobro (`assertCanJoin`).
+ *   límite mensual y método de cobro (`assertCanJoin`). En un Game'ya en otra moneda, los límites
+ *   se convierten con el tipo de cambio fijo (pending-scope M2).
  * - Con `circleId: null` abre el círculo nuevo que ofreció `slots`, con el mismo inicio.
  * - Rechaza un tipo de turno que la regla de confianza no le permite (SLOT_NOT_ALLOWED,
  *   COPAYNI-60).
@@ -106,6 +113,7 @@ export class JoinCircleUseCase {
     @Inject(CIRCLE_CYCLE) private readonly cycle: Pick<CircleCycleSettings, 'dueDay'>,
     @Inject(MEMBER_HISTORY) private readonly history: MemberHistoryPort,
     @Inject(TRUST_SETTINGS) private readonly trust: TrustSettings,
+    @Inject(CURRENCIES) private readonly currencies: CurrencySettings,
     @Inject(CLOCK) private readonly clock: ClockPort,
     @Inject(CIRCLE_TERMS) private readonly termsSettings: CircleTermsSettings,
   ) {}
@@ -121,12 +129,17 @@ export class JoinCircleUseCase {
     }
     await this.assertNotBlocked(command.userId);
 
-    const joinConfig = await this.joinConfigs.getForUser(command.userId);
+    const joinConfig = await this.joinConfigs.getForUser(command.userId, command.currency);
     const payout = offeredPayout(joinConfig, command.payoutAmount, command.months);
     const { circle, isNew } = await this.target(command, payout);
     const today = LocalDate.fromDate(this.clock.now(), this.assignment.timeZone);
     const quote = joinQuote(this.pricing, circle, command.position, today, this.cycle.dueDay);
-    assertCanJoin(await this.eligibility.applicantFor(command.userId), payout, quote.installments);
+    const applicant = await this.eligibility.applicantFor(command.userId);
+    assertCanJoin(
+      applicantIn(applicant, payout.currency, this.currencies.rates),
+      payout,
+      quote.installments,
+    );
     const profile = await trustProfileOf(command.userId, this.eligibility, this.history);
     assertSlotAllowed(quote.type, profile, this.trust);
 
@@ -162,14 +175,23 @@ export class JoinCircleUseCase {
   }
 
   private async assertNotBlocked(userId: string): Promise<void> {
-    const [first, ...rest] = await this.debts.openDebtsOf(userId);
+    const debts = await this.debts.openDebtsOf(userId);
+    const [first] = debts;
     if (!first) return;
-    // Un solo país y una sola moneda en el MVP: sumar monedas distintas falla (InvalidMoneyError).
-    const amountDue = rest.reduce(
-      (total, { overdue, lateFee }) => total.add(overdue).add(lateFee),
-      first.overdue.add(first.lateFee),
+    // Con deudas en varias monedas, el total va en la oficial, redondeado hacia arriba para no
+    // quedarse corto (pending-scope M2).
+    const currency = debts.every(({ overdue }) => overdue.currency === first.overdue.currency)
+      ? first.overdue.currency
+      : this.currencies.official;
+    const { rates } = this.currencies;
+    const amountDue = debts.reduce(
+      (total, { overdue, lateFee }) =>
+        total
+          .add(rates.convert(overdue, currency, 'up'))
+          .add(rates.convert(lateFee, currency, 'up')),
+      Money.zero(currency),
     );
-    throw new MemberBlockedError(Money.of(amountDue.amount, amountDue.currency));
+    throw new MemberBlockedError(amountDue);
   }
 
   private async previousJoin(command: JoinCircleCommand): Promise<JoinCircleResult | null> {
@@ -183,6 +205,7 @@ export class JoinCircleUseCase {
     const sameCircle =
       command.circleId === null
         ? circle.terms.payout.amount === command.payoutAmount &&
+          circle.terms.payout.currency === (command.currency ?? this.currencies.official) &&
           circle.terms.months === command.months
         : command.circleId === circle.id;
     if (!sameCircle || membership.position !== command.position) {

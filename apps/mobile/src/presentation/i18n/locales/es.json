@@ -216,6 +216,10 @@
       "retention": "Se retendrán {{amount}} de tu pozo para pagar automáticamente tus últimas {{count}} cuotas.",
       "acceptTerms": "Acepto los Términos del círculo, la política de pagos y la política de mora.",
       "netPayout": "Recibes en {{month}}"
+    },
+    "currency": {
+      "label": "Moneda",
+      "rate": "Tipo de cambio fijo: {{from}} = {{to}}"
     }
   },
   "circles": {

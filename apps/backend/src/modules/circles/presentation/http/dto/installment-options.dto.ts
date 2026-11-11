@@ -1,6 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { IsInt, Max, Min } from 'class-validator';
+import { IsInt, IsOptional, Matches, Max, Min } from 'class-validator';
 
 import { type InstallmentOptionsResult } from '../../../application/use-cases/get-installment-options.use-case';
 import { MoneyResponse } from './join-config.response';
@@ -12,6 +12,16 @@ export class InstallmentOptionsQuery {
   @Min(1)
   @Max(Number.MAX_SAFE_INTEGER)
   payoutAmount!: number;
+
+  @ApiProperty({
+    required: false,
+    example: 'PEN',
+    description:
+      "Moneda del Game'ya (ISO 4217), una de join-config.currencies; la oficial si falta",
+  })
+  @IsOptional()
+  @Matches(/^[A-Z]{3}$/)
+  currency?: string;
 }
 
 export class InstallmentOptionResponse {

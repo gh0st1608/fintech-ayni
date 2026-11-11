@@ -34,8 +34,12 @@ export class GetInstallmentOptionsUseCase {
     private readonly joinConfigs: JoinConfigRepositoryPort,
   ) {}
 
-  async execute(principal: Principal, payoutAmount: number): Promise<InstallmentOptionsResult> {
-    const joinConfig = await this.joinConfigs.getForUser(principal.userId);
+  async execute(
+    principal: Principal,
+    payoutAmount: number,
+    currency?: string,
+  ): Promise<InstallmentOptionsResult> {
+    const joinConfig = await this.joinConfigs.getForUser(principal.userId, currency);
     const payout = Money.of(payoutAmount, joinConfig.payoutRange.currency);
     if (!joinConfig.allowsPayout(payout)) throw new PayoutNotAllowedError();
     return { payout, options: installmentOptions(payout, joinConfig.durationOptions) };

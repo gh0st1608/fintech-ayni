@@ -95,6 +95,7 @@ export class CircleMembershipApiRepository implements CircleMembershipRepository
       body: {
         circleId: request.circleId,
         payoutAmount: request.payout.amount,
+        currency: request.payout.currency,
         months: request.months,
         position: request.position,
         termsVersion: request.termsVersion,

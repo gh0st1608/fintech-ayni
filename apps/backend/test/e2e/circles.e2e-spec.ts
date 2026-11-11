@@ -28,10 +28,46 @@ describe('GET /v1/circles/join-config', () => {
         },
         userPayoutLimit: null,
         savingProgramMax: { amount: 100000000, currency: 'PEN' },
+        currencies: [
+          { code: 'PEN', official: true, rateToOfficial: '1' },
+          { code: 'USD', official: false, rateToOfficial: '3.75' },
+        ],
         termsVersion: '2026-11',
       },
       traceId: response.headers['x-trace-id'],
     });
+  });
+
+  it('en USD devuelve los montos equivalentes (pending-scope M6)', async () => {
+    app = await createTestApp();
+
+    const response = await request(app.getHttpServer())
+      .get('/v1/circles/join-config?currency=USD')
+      .set('Authorization', `Bearer ${VALID_TOKEN}`)
+      .expect(200);
+
+    expect(response.body.data).toMatchObject({
+      payout: {
+        min: { amount: 80000, currency: 'USD' },
+        max: { amount: 3200000, currency: 'USD' },
+        step: { amount: 10000, currency: 'USD' },
+      },
+      savingProgramMax: { amount: 26666600, currency: 'USD' },
+    });
+  });
+
+  it.each([
+    ['no habilitada', 'EUR', 'not_supported'],
+    ['mal escrita', 'usd', undefined],
+  ])('rechaza una moneda %s con 400', async (_case, currency, reason) => {
+    app = await createTestApp();
+
+    const response = await request(app.getHttpServer())
+      .get(`/v1/circles/join-config?currency=${currency}`)
+      .set('Authorization', `Bearer ${VALID_TOKEN}`)
+      .expect(400);
+    expect(response.body).toMatchObject({ success: false, error: { code: 'VALIDATION_ERROR' } });
+    if (reason) expect(response.body.error.details).toEqual({ currency: reason });
   });
 
   it.each([
@@ -82,6 +118,17 @@ describe('GET /v1/circles/installment-options', () => {
         { months: 12, installment: { amount: 250000, currency: 'PEN' } },
       ],
     });
+  });
+
+  it('en USD usa el rango en USD: el máximo de PEN (120.000) lo supera', async () => {
+    const response = await get('?payoutAmount=840000&currency=USD').expect(200);
+    expect(response.body.data.payout).toEqual({ amount: 840000, currency: 'USD' });
+    expect(response.body.data.options).toContainEqual({
+      months: 6,
+      installment: { amount: 140000, currency: 'USD' },
+    });
+
+    await get('?payoutAmount=12000000&currency=USD').expect(422);
   });
 
   it('omite las duraciones que no dan cuotas exactas', async () => {

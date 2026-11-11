@@ -216,6 +216,10 @@
       "retention": "{{amount}} of your payout will be withheld to pay your last {{count}} installments automatically.",
       "acceptTerms": "I accept the circle Terms, the payment policy and the late payment policy.",
       "netPayout": "You receive in {{month}}"
+    },
+    "currency": {
+      "label": "Currency",
+      "rate": "Fixed exchange rate: {{from}} = {{to}}"
     }
   },
   "circles": {

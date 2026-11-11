@@ -32,3 +32,22 @@ export function useFormatMoney() {
     [i18n.language],
   );
 }
+
+/**
+ * Nombre de la moneda en el idioma activo ("Soles peruanos", "Dólares estadounidenses"), con
+ * Intl: los JSON de idioma no llevan códigos de moneda. Si el motor no lo resuelve, el código.
+ */
+export function currencyName(currency: string, locale: string): string {
+  try {
+    const name = new Intl.NumberFormat(locale, {
+      style: 'currency',
+      currency,
+      currencyDisplay: 'name',
+    })
+      .formatToParts(2)
+      .find((part) => part.type === 'currency')?.value;
+    return name ? name.charAt(0).toLocaleUpperCase(locale) + name.slice(1) : currency;
+  } catch {
+    return currency;
+  }
+}

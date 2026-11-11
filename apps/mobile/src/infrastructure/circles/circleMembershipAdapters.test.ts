@@ -56,6 +56,7 @@ describe('CircleMembershipApiRepository', () => {
     expect(JSON.parse(init?.body as string)).toEqual({
       circleId: null,
       payoutAmount: 3_000_000,
+      currency: 'PEN',
       months: 10,
       position: 3,
       termsVersion: '2026-11',

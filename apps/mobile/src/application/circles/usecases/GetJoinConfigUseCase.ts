@@ -5,7 +5,8 @@ import type { JoinConfigRepositoryPort } from '@/domain/circles/ports/JoinConfig
 export class GetJoinConfigUseCase {
   constructor(private readonly repository: JoinConfigRepositoryPort) {}
 
-  execute(signal?: AbortSignal): Promise<JoinConfig> {
-    return this.repository.get(signal);
+  /** En `currency` o, sin ella, en la moneda oficial (pending-scope M2). */
+  execute(signal?: AbortSignal, currency?: string): Promise<JoinConfig> {
+    return this.repository.get(signal, currency);
   }
 }

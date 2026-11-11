@@ -13,6 +13,7 @@ import { SavingsModule } from './modules/savings/savings.module';
 import { ReferralsModule } from './modules/referrals/referrals.module';
 import { PayoutsModule } from './modules/payouts/payouts.module';
 import { ClockModule } from './shared/infrastructure/clock/clock.module';
+import { CurrencyModule } from './shared/infrastructure/currency/currency.module';
 import { DatabaseModule } from './shared/infrastructure/persistence/database.module';
 import { StaffAccessModule } from './shared/staff-access.module';
 import { TelemetryShutdown } from './shared/infrastructure/observability/telemetry-shutdown';
@@ -37,6 +38,7 @@ import { createValidationPipe } from './shared/presentation/pipes/validation.pip
       ],
     }),
     ClockModule,
+    CurrencyModule,
     DatabaseModule,
     StaffAccessModule,
     HealthModule,

@@ -2,10 +2,15 @@ import { Inject, Injectable } from '@nestjs/common';
 
 import { type Principal } from '../../../../shared/application/ports/access-token-verifier.port';
 import { CLOCK, type ClockPort } from '../../../../shared/application/ports/clock.port';
+import {
+  CURRENCIES,
+  type CurrencySettings,
+} from '../../../../shared/application/ports/currencies.port';
 import { LocalDate } from '../../../../shared/domain/value-objects/local-date';
 import { type Money } from '../../../../shared/domain/value-objects/money';
 import { Period } from '../../../../shared/domain/value-objects/period';
 import { type Circle } from '../../domain/entities/circle';
+import { type JoinConfig } from '../../domain/entities/join-config';
 import { installmentOptions } from '../../domain/services/installment-options';
 import { type SlotPricing } from '../../domain/services/slot-pricing';
 import { openVacancies } from '../../domain/services/vacancy';
@@ -61,13 +66,18 @@ export class ListRecommendedCirclesUseCase {
     @Inject(CIRCLE_ASSIGNMENT) private readonly assignment: CircleAssignmentSettings,
     @Inject(RECOMMENDATIONS) private readonly settings: RecommendationSettings,
     @Inject(CIRCLE_CYCLE) private readonly cycle: Pick<CircleCycleSettings, 'dueDay'>,
+    @Inject(CURRENCIES) private readonly currencies: CurrencySettings,
     @Inject(CLOCK) private readonly clock: ClockPort,
   ) {}
 
   async execute(principal: Principal): Promise<RecommendedCircle[]> {
     const today = LocalDate.fromDate(this.clock.now(), this.assignment.timeZone);
-    const [joinConfig, candidates] = await Promise.all([
-      this.joinConfigs.getForUser(principal.userId),
+    const [joinConfigs, candidates] = await Promise.all([
+      Promise.all(
+        this.currencies.supported.map((currency) =>
+          this.joinConfigs.getForUser(principal.userId, currency),
+        ),
+      ),
       this.circles.listJoinable({
         startsAfter: today.period,
         userId: principal.userId,
@@ -78,11 +88,7 @@ export class ListRecommendedCirclesUseCase {
       .map((circle) => ({ circle, vacancies: this.vacanciesOf(circle, today) }))
       .filter(
         ({ circle: { terms }, vacancies }) =>
-          (vacancies === null || vacancies.length > 0) &&
-          joinConfig.allowsPayout(terms.payout) &&
-          installmentOptions(terms.payout, joinConfig.durationOptions).some(
-            (option) => option.months === terms.months,
-          ),
+          (vacancies === null || vacancies.length > 0) && this.offers(joinConfigs, terms),
       )
       .slice(0, this.settings.limit)
       .map(({ circle, vacancies }) => ({
@@ -92,6 +98,18 @@ export class ListRecommendedCirclesUseCase {
         availableSlots: vacancies?.length ?? circle.availablePositions().length,
         vacancies: vacancies ?? [],
       }));
+  }
+
+  /** Si el usuario puede elegir hoy esas condiciones, con la configuración de su moneda. */
+  private offers(joinConfigs: readonly JoinConfig[], terms: CircleTerms): boolean {
+    const joinConfig = joinConfigs.find(({ currency }) => currency === terms.currency);
+    return (
+      joinConfig !== undefined &&
+      joinConfig.allowsPayout(terms.payout) &&
+      installmentOptions(terms.payout, joinConfig.durationOptions).some(
+        (option) => option.months === terms.months,
+      )
+    );
   }
 
   /** Las vacantes que hoy se pueden tomar; `null` si el círculo no empezó. */

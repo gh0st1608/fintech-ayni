@@ -15,6 +15,7 @@ import { InMemoryCircleRepository } from '@test/support/in-memory-circle.reposit
 import {
   createJoinCircleUseCase,
   ELIGIBLE,
+  TEST_CURRENCIES,
   historyWith,
   TEST_DUE_DAY,
   TEST_JOIN_CONFIG,
@@ -228,6 +229,7 @@ describe('Vacantes en slots y recomendados', () => {
         assignment,
         { limit: 5 },
         cycle,
+        TEST_CURRENCIES,
         clock,
       ),
     };
