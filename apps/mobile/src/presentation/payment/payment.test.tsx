@@ -54,6 +54,9 @@ describe('PaymentScreen (COPAYNI-35)', () => {
           dueOn: '2026-12-05',
           amount: pen(5_600),
           status: 'overdue',
+          position: 6,
+          slots: 10,
+          payout: pen(56_000),
         },
       ],
     });

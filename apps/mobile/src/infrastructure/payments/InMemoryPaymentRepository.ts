@@ -64,7 +64,7 @@ export class InMemoryPaymentRepository implements PaymentRepositoryPort {
       throw new AppError('conflict', 'Already paid', { code: 'INSTALLMENT_NOT_PAYABLE' });
     }
     this.paid.add(installmentId);
-    return { status: 'paid', paymentId: `pay-${installmentId}` };
+    return { status: 'paid', paymentId: `pay-${installmentId}`, paidAt: new Date().toISOString() };
   }
 
   async updateSettings(settings: PaymentSettings): Promise<PaymentSettings> {
@@ -98,6 +98,9 @@ export class InMemoryPaymentRepository implements PaymentRepositoryPort {
           dueOn: '2026-12-05',
           amount,
           status: 'pending',
+          position: 6,
+          slots: 10,
+          payout: Money.fromMajor(56_000, this.currency),
         },
       ],
     };

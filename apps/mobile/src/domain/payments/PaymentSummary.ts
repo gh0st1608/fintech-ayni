@@ -14,6 +14,11 @@ export interface DuePayment {
   dueOn: string;
   amount: Money;
   status: DuePaymentStatus;
+  /** Turno del usuario y turnos del círculo ("Turno 6 de 10", D1). */
+  position: number;
+  slots: number;
+  /** Pozo del círculo: lo identifica en la app (los círculos no tienen nombre). */
+  payout: Money;
 }
 
 /** Resumen de la pestaña Payment (GET /me/payments/summary, COPAYNI-35). */
