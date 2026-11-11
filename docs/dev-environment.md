@@ -114,6 +114,27 @@ npx expo start                     # escanear el QR con Expo Go
 | Documentos                            | Se aprueban al enviarlos (`KYC_SIMULATED_RESULT=approved`; `rejected` o `in_review` para los otros estados) |
 | Ciclo mensual (cobros, payouts, mora) | No corre solo: `cd apps/backend && node dist/jobs/circle-cycle.js`                                          |
 
+### Con el sandbox de Mercado Pago
+
+Para probar los cobros de verdad (sin dinero real), con las **credenciales de prueba** de la misma aplicación del [panel de Mercado Pago](https://www.mercadopago.com.pe/developers/panel/app):
+
+- `apps/backend/.env`: `PAYMENT_GATEWAY=mercadopago`, `MERCADOPAGO_ACCESS_TOKEN=TEST-…` y `MERCADOPAGO_WEBHOOK_SECRET=…`.
+- `apps/mobile/.env.local`: `EXPO_PUBLIC_PAYMENT_TOKENIZER=mercadopago` y `EXPO_PUBLIC_MERCADOPAGO_PUBLIC_KEY=TEST-…`.
+
+Nunca credenciales de producción (`APP_USR-…`) en desarrollo. Con una public key `TEST-` la app acepta los celulares de prueba de Yape, todos con el código `123456`:
+
+| Celular                   | Resultado                                |
+| ------------------------- | ---------------------------------------- |
+| `111111111`               | Aprobado                                 |
+| `111111112`               | Rechazado: `required_call_for_authorize` |
+| `111111113`               | Rechazado: `insufficient_amount`         |
+| `111111114`               | Rechazado: `processing_error`            |
+| `111111115`               | Rechazado: `invalid_card_token`          |
+| `111111116`               | Rechazado: `max_attempts_exceeded`       |
+| `111111117` y `111111118` | Rechazado: `bad_filled_card_data`        |
+
+La búsqueda de órdenes de Mercado Pago no funciona con credenciales de prueba: el backend lo avisa en el log (`payments.gateway.orders_search_unavailable`) y sigue solo con los pagos.
+
 ## Development build
 
 Instala en el teléfono una app propia que carga el código desde Metro, como Expo Go, pero con el esquema `ayni://` y los módulos nativos del proyecto. Se compila en EAS, con el perfil `development` de `apps/mobile/eas.json`. Se recompila solo si cambian las dependencias nativas o `app.json`.

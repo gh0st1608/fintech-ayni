@@ -87,6 +87,8 @@ export interface AppContainer {
     defaultCurrency: string;
     /** Enlaces legales del login; sin URL configurada el texto no es pulsable (pending-scope L4). */
     legal: { termsUrl?: string; privacyUrl?: string };
+    /** Pagos de prueba (sandbox de Mercado Pago o pasarela simulada): admite datos de prueba. */
+    paymentsSandbox?: boolean;
   };
   /** Claves de idempotencia de los formularios (una por formulario). */
   ids: IdGeneratorPort;

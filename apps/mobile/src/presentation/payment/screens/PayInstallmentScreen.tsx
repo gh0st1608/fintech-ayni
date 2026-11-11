@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, ScrollView, StyleSheet, View } from 'react-native';
 
+import { isValidYapePhone } from '@/domain/payments/yapePhone';
 import type { DuePayment } from '@/domain/payments/PaymentSummary';
 import { useFormatMoney } from '@/presentation/formatters/formatMoney';
 import { errorMessage } from '@/presentation/i18n/errorMessageKey';
@@ -82,7 +83,7 @@ function PayForm({
 }) {
   const { t } = useTranslation();
   const formatMoney = useFormatMoney();
-  const { ids } = useContainer();
+  const { ids, config } = useContainer();
   const cards = useCards();
   const [idempotencyKey] = useState(() => ids.next());
   const [choice, setChoice] = useState<Choice>({ kind: 'yape' });
@@ -90,7 +91,9 @@ function PayForm({
   const [otp, setOtp] = useState('');
   const [touched, setTouched] = useState(false);
 
-  const phoneValid = /^9\d{8}$/.test(phoneNumber);
+  const phoneValid = isValidYapePhone(phoneNumber, {
+    sandbox: config.paymentsSandbox ?? false,
+  });
   const otpValid = /^\d{6}$/.test(otp);
 
   const submit = () => {
