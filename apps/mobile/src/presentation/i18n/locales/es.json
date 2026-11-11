@@ -40,6 +40,23 @@
       "title": "Todavía no hay juntas abiertas para ti",
       "description": "Elige tu monto y tu mes de cobro: armaremos una junta nueva para ti.",
       "join": "Unirme a una junta"
+    },
+    "streak": {
+      "buttonA11y_one": "Racha de {{count}} mes pagando a tiempo",
+      "buttonA11y_other": "Racha de {{count}} meses pagando a tiempo",
+      "emptyA11y": "Racha de pagos a tiempo",
+      "title_one": "¡Racha de {{count}} mes!",
+      "title_other": "¡Racha de {{count}} meses!",
+      "emptyTitle": "Tu racha de pagos",
+      "description": "Son los meses seguidos en que pagaste todas tus cuotas a tiempo. Pagar dentro de los días de gracia no la rompe; la mora, sí.",
+      "emptyDescription": "Cuando pagues tus cuotas a tiempo, aquí verás cuántos meses seguidos llevas.",
+      "ok": "Entendido",
+      "close": "Cerrar",
+      "monthA11y": {
+        "onTime": "{{month}}: a tiempo",
+        "late": "{{month}}: con atraso",
+        "pending": "{{month}}: por pagar"
+      }
     }
   },
   "join": {

@@ -40,6 +40,23 @@
       "title": "There are no open circles for you yet",
       "description": "Choose your amount and payout month: we'll open a new circle for you.",
       "join": "Join a circle"
+    },
+    "streak": {
+      "buttonA11y_one": "{{count}}-month on-time payment streak",
+      "buttonA11y_other": "{{count}}-month on-time payment streak",
+      "emptyA11y": "On-time payment streak",
+      "title_one": "{{count}}-month streak!",
+      "title_other": "{{count}}-month streak!",
+      "emptyTitle": "Your payment streak",
+      "description": "It's the number of months in a row you paid all your installments on time. Paying within the grace days doesn't break it; a late payment does.",
+      "emptyDescription": "Once you pay your installments on time, you'll see how many months in a row you've kept it up.",
+      "ok": "Got it",
+      "close": "Close",
+      "monthA11y": {
+        "onTime": "{{month}}: on time",
+        "late": "{{month}}: late",
+        "pending": "{{month}}: still to pay"
+      }
     }
   },
   "join": {

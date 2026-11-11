@@ -206,3 +206,27 @@ describe('PaymentApiRepository.getTransaction (COPAYNI-78)', () => {
     });
   });
 });
+
+describe('PaymentApiRepository.getPaymentStreak (COPAYNI-82)', () => {
+  it('pide la racha y traduce el estado de cada mes', async () => {
+    const { http, calls } = httpReturning({
+      months: 2,
+      lastMonths: [
+        { period: '2026-10', status: 'late' },
+        { period: '2026-11', status: 'on_time' },
+        { period: '2026-12', status: 'on_time' },
+        { period: '2027-01', status: 'pending' },
+      ],
+    });
+    await expect(new PaymentApiRepository(http).getPaymentStreak()).resolves.toEqual({
+      months: 2,
+      lastMonths: [
+        { period: '2026-10', status: 'late' },
+        { period: '2026-11', status: 'onTime' },
+        { period: '2026-12', status: 'onTime' },
+        { period: '2027-01', status: 'pending' },
+      ],
+    });
+    expect(calls[0]?.path).toBe('/me/payment-streak');
+  });
+});

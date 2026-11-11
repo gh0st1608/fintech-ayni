@@ -1,5 +1,6 @@
 import type { PaymentRepositoryPort } from '@/domain/payments/ports/PaymentRepositoryPort';
 import type { PaymentSettings } from '@/domain/payments/PaymentSettings';
+import type { PaymentStreak } from '@/domain/payments/PaymentStreak';
 import type { PaymentSummary } from '@/domain/payments/PaymentSummary';
 import type { PayoutEligibility } from '@/domain/payments/PayoutEligibility';
 import type {
@@ -28,6 +29,15 @@ export class ListTransactionsUseCase {
     signal?: AbortSignal,
   ): Promise<TransactionsPage> {
     return this.repository.listTransactions(type, cursor, signal);
+  }
+}
+
+/** Racha de pagos a tiempo del icono de fuego (COPAYNI-82). */
+export class GetPaymentStreakUseCase {
+  constructor(private readonly repository: PaymentRepositoryPort) {}
+
+  execute(signal?: AbortSignal): Promise<PaymentStreak> {
+    return this.repository.getPaymentStreak(signal);
   }
 }
 

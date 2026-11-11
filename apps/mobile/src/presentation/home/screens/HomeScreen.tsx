@@ -8,6 +8,10 @@ import { RecommendedCircles } from '@/presentation/circles/components/Recommende
 import { ReferralBanner } from '@/presentation/referrals/components/ReferralBanner';
 import { myReferralQueryKey } from '@/presentation/referrals/useReferrals';
 import { recommendedCirclesQueryKey } from '@/presentation/circles/useRecommendedCircles';
+import {
+  PaymentStreakButton,
+  paymentStreakQueryKey,
+} from '@/presentation/home/components/PaymentStreakButton';
 import { BrandHeader } from '@/presentation/shared/components/BrandHeader';
 import { EmptyState } from '@/presentation/shared/components/EmptyState';
 import { Screen } from '@/presentation/shared/components/Screen';
@@ -39,6 +43,7 @@ export function HomeScreen({ onJoinCircle, onJoin, onOpenReferral }: HomeScreenP
       await Promise.all([
         queryClient.refetchQueries({ queryKey: recommendedCirclesQueryKey }),
         queryClient.refetchQueries({ queryKey: myReferralQueryKey }),
+        queryClient.refetchQueries({ queryKey: paymentStreakQueryKey }),
       ]);
     } finally {
       setRefreshing(false);
@@ -47,7 +52,7 @@ export function HomeScreen({ onJoinCircle, onJoin, onOpenReferral }: HomeScreenP
 
   return (
     <Screen>
-      <BrandHeader />
+      <BrandHeader actions={<PaymentStreakButton />} />
       <ScrollView
         contentContainerStyle={styles.content}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} />}

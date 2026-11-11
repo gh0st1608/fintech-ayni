@@ -19,6 +19,9 @@ export const colors = {
   borderNormal: '#A1A1AA',
   textSecondary: '#3F3F46',
   success: '#15B097',
+  /** Fuego de la racha de pagos (D11) y su fondo. */
+  streak: '#F05A28',
+  streak100: '#FFEDE5',
   error: '#C03744',
   textPrimary: '#0E0E0F',
   black: '#0A0A0B',
