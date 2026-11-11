@@ -6,10 +6,10 @@ import { CircleTerms } from '@src/modules/circles/domain/value-objects/circle-te
 import { Money } from '@src/shared/domain/value-objects/money';
 import { Period } from '@src/shared/domain/value-objects/period';
 import { InMemoryCircleRepository } from '@test/support/in-memory-circle.repository';
-import { createJoinCircleUseCase } from '@test/support/join-circle.fixture';
+import { createJoinCircleUseCase, TEST_TERMS_VERSION } from '@test/support/join-circle.fixture';
 
 const MONTHS = 12;
-const TERMS = { payoutAmount: 2_400_000, months: MONTHS };
+const TERMS = { payoutAmount: 2_400_000, months: MONTHS, termsVersion: TEST_TERMS_VERSION };
 
 /**
  * Concurrencia de la reserva de slots: las solicitudes se intercalan entre la lectura y la
@@ -70,7 +70,13 @@ describe('JoinCircleUseCase: solicitudes simultáneas', () => {
     expect([first.created, second.created].sort()).toEqual([false, true]);
     expect(first.membership).toEqual(second.membership);
     expect(repository.membershipsOf('c-1')).toEqual([
-      { userId: 'ana', position: 3, idempotencyKey: 'key-ana', price: priceOf(first.quote) },
+      {
+        userId: 'ana',
+        position: 3,
+        idempotencyKey: 'key-ana',
+        price: priceOf(first.quote),
+        termsVersion: TEST_TERMS_VERSION,
+      },
     ]);
   });
 

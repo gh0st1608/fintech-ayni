@@ -546,6 +546,14 @@ export class EnvironmentVariables {
   @Min(1)
   CIRCLE_START_APPROVAL_DAYS: number = 7;
 
+  /**
+   * Versión vigente de los términos del círculo (COPAYNI-86). Al cambiar el texto se sube la
+   * versión: la app la muestra y la unión exige aceptar la vigente.
+   */
+  @IsString()
+  @Matches(/^[\w.-]{1,32}$/)
+  CIRCLE_TERMS_VERSION: string = '2026-11';
+
   /** Fallos seguidos con el passcode antes de bloquearlo (COPAYNI-23, supuesto de D9). */
   @IsInt()
   @Min(1)

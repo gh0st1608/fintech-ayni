@@ -28,6 +28,7 @@ describe('GET /v1/circles/join-config', () => {
         },
         userPayoutLimit: null,
         savingProgramMax: { amount: 100000000, currency: 'PEN' },
+        termsVersion: '2026-11',
       },
       traceId: response.headers['x-trace-id'],
     });

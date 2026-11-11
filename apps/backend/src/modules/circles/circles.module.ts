@@ -81,6 +81,7 @@ import {
   type CircleCycleSettings,
 } from './application/use-cases/advance-circle-cycles.use-case';
 import { GetInstallmentOptionsUseCase } from './application/use-cases/get-installment-options.use-case';
+import { CIRCLE_TERMS, type CircleTermsSettings } from './application/use-cases/circle-terms';
 import { GetJoinConfigUseCase } from './application/use-cases/get-join-config.use-case';
 import { JoinCircleUseCase } from './application/use-cases/join-circle.use-case';
 import { ListMyCirclesUseCase } from './application/use-cases/list-my-circles.use-case';
@@ -144,6 +145,13 @@ import { MyCirclesController } from './presentation/http/controllers/my-circles.
     RespondStartProposalUseCase,
     SqlStartProposalsRepository,
     { provide: CIRCLE_START_PROPOSALS, useExisting: SqlStartProposalsRepository },
+    {
+      provide: CIRCLE_TERMS,
+      inject: [ConfigService],
+      useFactory: (config: AppConfigService): CircleTermsSettings => ({
+        version: config.get('CIRCLE_TERMS_VERSION', { infer: true }),
+      }),
+    },
     {
       provide: CIRCLE_CYCLE,
       inject: [ConfigService],

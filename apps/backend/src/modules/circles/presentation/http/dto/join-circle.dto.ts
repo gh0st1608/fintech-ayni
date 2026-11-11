@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsInt, IsUUID, Max, Min, ValidateIf } from 'class-validator';
+import { IsInt, IsString, IsUUID, Matches, Max, Min, ValidateIf } from 'class-validator';
 
 import { type JoinCircleResult } from '../../../application/use-cases/join-circle.use-case';
 import { catchUpTotal, SLOT_TYPES, type SlotType } from '../../../domain/services/slot-pricing';
@@ -33,6 +33,15 @@ export class JoinCircleRequest {
   @Min(1)
   @Max(120)
   position!: number;
+
+  @ApiProperty({
+    example: '2026-11',
+    description:
+      'Versión de los términos aceptada en la confirmación (termsVersion de join-config)',
+  })
+  @IsString()
+  @Matches(/^[\w.-]{1,32}$/)
+  termsVersion!: string;
 }
 
 /** Contrato `POST /v1/circles/join` (docs/api/circles.md). */

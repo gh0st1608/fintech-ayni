@@ -37,6 +37,8 @@ export const TEST_DELINQUENCY: DelinquencyPolicy = {
 
 /** Día de vencimiento de las cuotas en las pruebas de unión a una vacante (COPAYNI-59). */
 export const TEST_DUE_DAY = 5;
+/** Versión vigente de los términos del círculo en las pruebas (COPAYNI-86). */
+export const TEST_TERMS_VERSION = '2026-11';
 
 /** 25 % de las Admin Fees al fondo de garantía, el valor por defecto (R18). */
 export const TEST_FUND_SHARE_BPS = 2_500;
@@ -115,5 +117,6 @@ export function createJoinCircleUseCase(
     historyWith(options.completedCircles ?? 1),
     TEST_TRUST,
     new TestClock(options.now ?? JOIN_NOW),
+    { version: TEST_TERMS_VERSION },
   );
 }

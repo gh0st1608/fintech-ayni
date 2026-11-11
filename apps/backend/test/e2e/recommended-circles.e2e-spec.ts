@@ -50,7 +50,13 @@ describe('GET /v1/circles/recommended', () => {
       .post('/v1/circles/join')
       .set('Authorization', `Bearer ${ana}`)
       .set('Idempotency-Key', randomUUID())
-      .send({ circleId: null, payoutAmount: 7_800_000, months: 6, position: 4 })
+      .send({
+        circleId: null,
+        payoutAmount: 7_800_000,
+        months: 6,
+        position: 4,
+        termsVersion: '2026-11',
+      })
       .expect(201);
 
     const forAna = await recommended(ana);
