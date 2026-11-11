@@ -280,20 +280,32 @@ export class MercadoPagoGateway implements PaymentGatewayPort {
    */
   private async ordersFor(externalReference: string): Promise<OrderBody[]> {
     const now = this.now().getTime();
+    const pageSize = 100;
     const query = new URLSearchParams({
       external_reference: externalReference,
       begin_date: new Date(now - ORDER_SEARCH_DAYS * DAY_MS).toISOString(),
       end_date: new Date(now + DAY_MS).toISOString(),
-      page_size: '100',
+      page_size: String(pageSize),
     });
     try {
-      const found = await this.request<{ data?: unknown[] | null }>(
-        'GET',
-        `/v1/orders?${query.toString()}`,
-      );
-      return (found.data ?? [])
-        .filter(isOrderBody)
-        .filter((order) => order.external_reference === externalReference);
+      const orders: OrderBody[] = [];
+      let offset = 0;
+      let total: number | undefined;
+      while (true) {
+        query.set('offset', String(offset));
+        const found = await this.request<{
+          data?: unknown[] | null;
+          paging?: { total?: number };
+        }>('GET', `/v1/orders?${query.toString()}`);
+        const page = found.data ?? [];
+        orders.push(...page.filter(isOrderBody));
+        if (page.length === 0) break;
+
+        offset += page.length;
+        total = found.paging?.total;
+        if (total === undefined ? page.length < pageSize : offset >= total) break;
+      }
+      return orders.filter((order) => order.external_reference === externalReference);
     } catch (error) {
       if (error instanceof PaymentGatewayError && (error.status === 401 || error.status === 403)) {
         this.logger.warn({

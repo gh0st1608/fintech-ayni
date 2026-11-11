@@ -265,7 +265,32 @@ describe('MercadoPagoGateway (COPAYNI-34)', () => {
       begin_date: '2026-08-12T15:00:00.000Z',
       end_date: '2026-11-11T15:00:00.000Z',
       page_size: '100',
+      offset: '0',
     });
+  });
+
+  it('continúa la búsqueda de órdenes para encontrar resultados en la página siguiente', async () => {
+    const firstPage = Array.from({ length: 100 }, (_, index) => ({
+      ...ORDER,
+      id: `ORD-${index}`,
+      external_reference: 'otra-cuota',
+    }));
+    const { http, mp } = gateway(
+      json({ results: [] }),
+      json({ data: firstPage, paging: { total: 101, offset: 0, limit: 100 } }),
+      json({ data: [ORDER], paging: { total: 101, offset: 100, limit: 100 } }),
+    );
+
+    await expect(mp.paymentsFor('inst-1')).resolves.toEqual([
+      {
+        id: ORDER.id,
+        status: 'approved',
+        statusDetail: 'accredited',
+        externalReference: 'inst-1',
+        amount: Money.of(1000, 'PEN'),
+      },
+    ]);
+    expect(new URL(callOf(http, 2).url).searchParams.get('offset')).toBe('100');
   });
 
   it('si la búsqueda de órdenes no está permitida, sigue solo con los pagos', async () => {
