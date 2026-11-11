@@ -41,6 +41,14 @@ export interface Transaction {
   occurredAt: Date;
 }
 
+/** Un movimiento con lo necesario para su detalle (COPAYNI-78). */
+export interface TransactionDetail extends Transaction {
+  /** Pozo del círculo: lo identifica y, en un payout, es el monto bruto. */
+  circlePayout: Money;
+  /** Turno del usuario en ese círculo. */
+  position: number;
+}
+
 export interface TransactionPage {
   items: Transaction[];
   /** `null` si no hay más páginas. */
@@ -75,4 +83,10 @@ export interface PaymentsQueryPort {
     limit: number;
     cursor: string | null;
   }): Promise<TransactionPage>;
+  /** Un pago o un cobro del usuario por su id, o `null` si no existe o es de otro usuario. */
+  transactionOf(query: {
+    userId: string;
+    type: TransactionType;
+    id: string;
+  }): Promise<TransactionDetail | null>;
 }

@@ -18,6 +18,7 @@ import { JOIN_ELIGIBILITY } from './application/ports/join-eligibility.port';
 import { MEMBER_HISTORY } from './application/ports/member-history.port';
 import { PAYMENTS_QUERY } from './application/ports/payments-query.port';
 import { GetPaymentSummaryUseCase } from './application/use-cases/get-payment-summary.use-case';
+import { GetTransactionUseCase } from './application/use-cases/get-transaction.use-case';
 import { ListTransactionsUseCase } from './application/use-cases/list-transactions.use-case';
 import { GetPayoutEligibilityUseCase } from './application/use-cases/get-payout-eligibility.use-case';
 import { PAYMENT_SETTINGS } from './application/ports/payment-settings.port';
@@ -229,6 +230,7 @@ import { MyCirclesController } from './presentation/http/controllers/my-circles.
     // Sección Payment de la app (COPAYNI-35).
     GetPaymentSummaryUseCase,
     ListTransactionsUseCase,
+    GetTransactionUseCase,
     GetPayoutEligibilityUseCase,
     GetPaymentSettingsUseCase,
     UpdatePaymentSettingsUseCase,

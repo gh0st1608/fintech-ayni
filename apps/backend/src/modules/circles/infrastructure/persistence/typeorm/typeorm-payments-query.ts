@@ -11,6 +11,7 @@ import {
   type DueInstallment,
   type InstallmentRef,
   type PaymentsQueryPort,
+  type TransactionDetail,
   type TransactionKind,
   type TransactionPage,
   type TransactionType,
@@ -156,6 +157,39 @@ export class TypeOrmPaymentsQuery implements PaymentsQueryPort {
       slots: Number(row.slots),
       payout: Money.of(Number(row.payout_amount), row.payout_currency),
     }));
+  }
+
+  async transactionOf(query: {
+    userId: string;
+    type: TransactionType;
+    id: string;
+  }): Promise<TransactionDetail | null> {
+    const { userId, type, id } = query;
+    if (!isUuid(userId) || !isUuid(id)) return null;
+    const [row] = await this.circles.query<
+      (TransactionRow & { payout_amount: string; payout_currency: string; position: number })[]
+    >(
+      `SELECT t.id, t.kind, t.circle_id, t.period, t.amount::text AS amount, t.currency,
+              t.occurred_at::text AS occurred_at, c.payout_amount::text AS payout_amount,
+              c.currency AS payout_currency, m.position
+         FROM (${SOURCES[type]}) t
+         JOIN circles c ON c.id = t.circle_id
+         JOIN circle_memberships m ON m.circle_id = t.circle_id AND m.user_id = $1
+        WHERE t.id = $2`,
+      [userId, id],
+    );
+    if (!row) return null;
+    return {
+      id: row.id,
+      type,
+      kind: row.kind,
+      circleId: row.circle_id,
+      period: row.period ? Period.parse(row.period) : null,
+      amount: Money.of(Number(row.amount), row.currency),
+      occurredAt: new Date(row.occurred_at),
+      circlePayout: Money.of(Number(row.payout_amount), row.payout_currency.trim()),
+      position: Number(row.position),
+    };
   }
 
   async transactionsOf(query: {

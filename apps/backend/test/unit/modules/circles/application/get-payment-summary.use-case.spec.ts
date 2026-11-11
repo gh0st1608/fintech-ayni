@@ -24,6 +24,7 @@ function useCase(dues: DueInstallment[], debts = NO_DEBTS) {
     {
       dueInstallmentsOf: () => Promise.resolve(dues),
       transactionsOf: jest.fn(),
+      transactionOf: jest.fn(),
       installment: jest.fn(),
     },
     debts,

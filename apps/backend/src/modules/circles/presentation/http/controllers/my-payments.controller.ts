@@ -15,6 +15,7 @@ import {
 import {
   ApiBadRequestResponse,
   ApiBearerAuth,
+  ApiNotFoundResponse,
   ApiOkResponse,
   ApiTags,
   ApiUnauthorizedResponse,
@@ -24,6 +25,7 @@ import { type Principal } from '../../../../../shared/application/ports/access-t
 import { CurrentPrincipal } from '../../../../../shared/presentation/decorators/current-principal.decorator';
 import { GetPaymentSummaryUseCase } from '../../../application/use-cases/get-payment-summary.use-case';
 import { GetPayoutEligibilityUseCase } from '../../../application/use-cases/get-payout-eligibility.use-case';
+import { GetTransactionUseCase } from '../../../application/use-cases/get-transaction.use-case';
 import { ListTransactionsUseCase } from '../../../application/use-cases/list-transactions.use-case';
 import { PayInstallmentUseCase } from '../../../application/use-cases/pay-installment.use-cases';
 import { ValidationError } from '../../../../../shared/errors/app-error';
@@ -35,7 +37,12 @@ import {
 import { PaymentSettingsResponse, UpdatePaymentSettingsRequest } from '../dto/payment-settings.dto';
 import { PaymentSummaryResponse } from '../dto/payment-summary.dto';
 import { PayoutEligibilityResponse } from '../dto/payout-eligibility.dto';
-import { TransactionsQuery, TransactionsResponse } from '../dto/transactions.dto';
+import {
+  TransactionDetailQuery,
+  TransactionDetailResponse,
+  TransactionsQuery,
+  TransactionsResponse,
+} from '../dto/transactions.dto';
 
 const IDEMPOTENCY_KEY = /^[A-Za-z0-9_-]{16,255}$/;
 const INSTALLMENT_ID = new ParseUUIDPipe({
@@ -51,6 +58,7 @@ export class MyPaymentsController {
   constructor(
     @Inject(GetPaymentSummaryUseCase) private readonly getSummary: GetPaymentSummaryUseCase,
     @Inject(ListTransactionsUseCase) private readonly listTransactions: ListTransactionsUseCase,
+    @Inject(GetTransactionUseCase) private readonly getTransaction: GetTransactionUseCase,
     @Inject(GetPayoutEligibilityUseCase)
     private readonly getEligibility: GetPayoutEligibilityUseCase,
     @Inject(GetPaymentSettingsUseCase) private readonly getSettings: GetPaymentSettingsUseCase,
@@ -158,6 +166,24 @@ export class MyPaymentsController {
         cursor: query.cursor ?? null,
         limit: query.limit,
       }),
+    );
+  }
+
+  @Get('transactions/:id')
+  @ApiOkResponse({
+    type: TransactionDetailResponse,
+    description: 'Envuelto en { success, data, traceId }',
+  })
+  @ApiBadRequestResponse({ description: 'type ausente o inválido (VALIDATION_ERROR)' })
+  @ApiNotFoundResponse({ description: 'No existe o es de otro usuario (TRANSACTION_NOT_FOUND)' })
+  @ApiUnauthorizedResponse({ description: 'Sin token o token inválido (UNAUTHORIZED)' })
+  async transaction(
+    @CurrentPrincipal() principal: Principal,
+    @Param('id') id: string,
+    @Query() query: TransactionDetailQuery,
+  ): Promise<TransactionDetailResponse> {
+    return TransactionDetailResponse.fromDetail(
+      await this.getTransaction.execute(principal, { type: query.type, id }),
     );
   }
 

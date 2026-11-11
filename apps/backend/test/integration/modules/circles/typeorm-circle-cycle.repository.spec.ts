@@ -540,6 +540,41 @@ describe('TypeOrmCircleCycleRepository', () => {
         amount: second!.price.netPayout,
       }),
     ]);
+    // Detalle de un movimiento (COPAYNI-78): el del usuario, con el pozo y su turno.
+    const [payoutItem] = payouts.items;
+    const detail = await payments.transactionOf({
+      userId: second!.userId,
+      type: 'payout',
+      id: payoutItem!.id,
+    });
+    expect(detail).toMatchObject({
+      id: payoutItem!.id,
+      kind: 'payout',
+      amount: second!.price.netPayout,
+      circlePayout: Money.of(
+        Number(
+          (
+            await dataSource.query<{ payout_amount: string }[]>(
+              'SELECT payout_amount::text AS payout_amount FROM circles WHERE id = $1',
+              [id],
+            )
+          )[0]!.payout_amount,
+        ),
+        'PEN',
+      ),
+      position: 2,
+    });
+    // Otro usuario, otro tipo o un id que no es uuid: no existe.
+    const [first0] = members;
+    await expect(
+      payments.transactionOf({ userId: first0!.userId, type: 'payout', id: payoutItem!.id }),
+    ).resolves.toBeNull();
+    await expect(
+      payments.transactionOf({ userId: second!.userId, type: 'payment', id: payoutItem!.id }),
+    ).resolves.toBeNull();
+    await expect(
+      payments.transactionOf({ userId: second!.userId, type: 'payout', id: 'x' }),
+    ).resolves.toBeNull();
     await expect(page('no-es-un-cursor')).rejects.toMatchObject({ code: 'VALIDATION_ERROR' });
     await expect(
       payments.transactionsOf({ userId: 'no-es-uuid', type: 'payment', limit: 4, cursor: null }),

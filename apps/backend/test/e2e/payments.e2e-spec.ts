@@ -52,6 +52,21 @@ describe('Sección Payment', () => {
     },
   );
 
+  it('el detalle de un movimiento ajeno o inexistente es TRANSACTION_NOT_FOUND (COPAYNI-78)', async () => {
+    const detail = (id: string, query: Record<string, string>) =>
+      request(app.getHttpServer())
+        .get(`/v1/me/transactions/${id}`)
+        .query(query)
+        .set('Authorization', `Bearer ${VALID_TOKEN}`);
+    const missing = await detail('3f8a1c52-7d1e-4b8a-9f2c-0e6d5b4a3c21', { type: 'payout' }).expect(
+      404,
+    );
+    expect(missing.body.error.code).toBe('TRANSACTION_NOT_FOUND');
+    await detail('no-es-uuid', { type: 'payment' }).expect(404);
+    const invalid = await detail('3f8a1c52-7d1e-4b8a-9f2c-0e6d5b4a3c21', {}).expect(400);
+    expect(invalid.body.error.code).toBe('VALIDATION_ERROR');
+  });
+
   it('la elegibilidad del payout lista el checklist (COPAYNI-36)', async () => {
     const response = await request(app.getHttpServer())
       .get('/v1/me/payout-eligibility')

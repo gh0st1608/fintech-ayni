@@ -82,6 +82,34 @@ Historial de pagos y cobros (COPAYNI-41), del más reciente al más antiguo, pag
 
 Errores: `VALIDATION_ERROR` (400: `type` ausente o inválido, `limit` fuera de rango o cursor inválido) y `UNAUTHORIZED` (401).
 
+## `GET /v1/me/transactions/:id?type=payment|payout`
+
+**Estado:** implementado (COPAYNI-78, diseño D8 aprobado). El detalle de un movimiento del historial. `type` es el del historial de donde viene (el mismo id puede ser una deuda saldada en pagos y una devolución en cobros).
+
+```json
+{
+  "id": "9b1e…",
+  "type": "payout",
+  "kind": "payout",
+  "circleId": "6f1c…",
+  "period": "2027-02",
+  "amount": { "amount": 2400000, "currency": "PEN" },
+  "occurredAt": "2027-02-02T14:15:00.000Z",
+  "circlePayout": { "amount": 3000000, "currency": "PEN" },
+  "position": 4,
+  "deductions": { "amount": 600000, "currency": "PEN" }
+}
+```
+
+| Campo               | Notas                                                                                                                                   |
+| ------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| `id` … `occurredAt` | Como en el historial. `id` es el número de operación de Ayni que muestra el comprobante (el id de Mercado Pago no se guarda por cuota). |
+| `circlePayout`      | Pozo del círculo: lo identifica en la app y, en un payout, es el monto bruto.                                                           |
+| `position`          | Turno del usuario en ese círculo.                                                                                                       |
+| `deductions`        | Solo en un payout: lo que se descontó del pozo (retención de COPAYNI-60 y cuotas descontadas de COPAYNI-38). `null` en los demás.       |
+
+Errores: **404** `TRANSACTION_NOT_FOUND` si no existe, es de otro usuario o no es de ese `type`. **400** `VALIDATION_ERROR` sin `type` o con uno inválido. **401** sin token.
+
 ## `GET /v1/me/payout-eligibility`
 
 Checklist de Payout Eligibility (COPAYNI-36, Figma 55:9892). El backend calcula cada requisito; la app no lo infiere.
