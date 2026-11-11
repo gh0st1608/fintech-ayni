@@ -23,6 +23,14 @@ export function useCatalogScreenOptions() {
   return { title: t('catalog.title'), headerBackButtonDisplayMode: 'minimal' } as const;
 }
 
+/** Pantallas de Circles apiladas sobre las pestañas. */
+export function useCircleScreenOptions() {
+  const { t } = useTranslation();
+  return {
+    detail: { title: t('circles.detail.title'), headerBackButtonDisplayMode: 'minimal' },
+  } as const;
+}
+
 /** Pantallas de la sección Payment apiladas sobre las pestañas. */
 export function usePaymentScreenOptions() {
   const { t } = useTranslation();

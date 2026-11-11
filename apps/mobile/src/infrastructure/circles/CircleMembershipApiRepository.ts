@@ -2,6 +2,7 @@ import { z } from 'zod';
 
 import type { JoinCircleRequest, JoinedCircle } from '@/domain/circles/JoinedCircle';
 import type { MyCirclesPage, MyCircleStatus } from '@/domain/circles/MyCircle';
+import type { MyCircleDetail } from '@/domain/circles/MyCircleDetail';
 import type { CircleMembershipRepositoryPort } from '@/domain/circles/ports/CircleMembershipRepositoryPort';
 import type { StartDecision, StartProposal } from '@/domain/circles/StartProposal';
 import type { HttpClientPort } from '@/domain/shared/ports/HttpClientPort';
@@ -13,6 +14,44 @@ import { moneyDto, toMoney } from './moneyDto';
 
 const PERIOD = /^\d{4}-(0[1-9]|1[0-2])$/;
 const slotTypeDto = z.enum(['fastest_payout', 'lowest_fees', 'highest_return']);
+
+const DATE = /^\d{4}-\d{2}-\d{2}$/;
+
+/** DTO de GET /me/circles/:id (docs/api/circles.md, COPAYNI-88). */
+const myCircleDetailDto = z.object({
+  circleId: z.string().min(1),
+  state: z.enum(['collecting', 'approving', 'contributing', 'paused', 'cancelled', 'finished']),
+  payout: moneyDto,
+  months: z.number().int().positive(),
+  startsOn: z.string().regex(PERIOD),
+  endsOn: z.string().regex(PERIOD),
+  currentPeriod: z.string().regex(PERIOD).nullable(),
+  currentMonth: z.number().int().positive().nullable(),
+  position: z.number().int().positive(),
+  payoutPeriod: z.string().regex(PERIOD),
+  type: slotTypeDto,
+  installments: z.array(moneyDto).min(1),
+  netPayout: moneyDto,
+  retention: moneyDto,
+  nextDue: z
+    .object({
+      installmentId: z.string().min(1),
+      period: z.string().regex(PERIOD),
+      dueOn: z.string().regex(DATE),
+      amount: moneyDto,
+      status: z.enum(['pending', 'overdue']),
+    })
+    .nullable(),
+  turns: z.array(
+    z.object({
+      position: z.number().int().positive(),
+      period: z.string().regex(PERIOD),
+      memberName: z.string().nullable(),
+      isMe: z.boolean(),
+      status: z.enum(['paid', 'current', 'upcoming', 'vacant']),
+    }),
+  ),
+});
 
 /** DTO de POST /circles/join (docs/api/circles.md). */
 const joinedCircleDto = z.object({
@@ -134,6 +173,22 @@ export class CircleMembershipApiRepository implements CircleMembershipRepository
         joinedAt: new Date(item.joinedAt),
       })),
       nextCursor: dto.nextCursor,
+    };
+  }
+
+  async getMine(circleId: string, signal?: AbortSignal): Promise<MyCircleDetail> {
+    const dto = await this.http.get(`/me/circles/${encodeURIComponent(circleId)}`, {
+      signal,
+      parse: (data) => myCircleDetailDto.parse(data),
+    });
+    return {
+      ...dto,
+      payout: toMoney(dto.payout),
+      type: SLOT_TYPE_BY_DTO[dto.type],
+      installments: dto.installments.map(toMoney),
+      netPayout: toMoney(dto.netPayout),
+      retention: toMoney(dto.retention),
+      nextDue: dto.nextDue && { ...dto.nextDue, amount: toMoney(dto.nextDue.amount) },
     };
   }
 

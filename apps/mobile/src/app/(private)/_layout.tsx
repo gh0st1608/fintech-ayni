@@ -6,6 +6,7 @@ import { useClaimPendingReferral } from '@/presentation/referrals/useReferrals';
 
 import {
   useCatalogScreenOptions,
+  useCircleScreenOptions,
   useIsDevEnvironment,
   useJoinScreenOptions,
   usePaymentScreenOptions,
@@ -16,6 +17,7 @@ export default function PrivateLayout() {
   const joinOptions = useJoinScreenOptions();
   const catalogOptions = useCatalogScreenOptions();
   const paymentOptions = usePaymentScreenOptions();
+  const circleOptions = useCircleScreenOptions();
   const profileOptions = useProfileScreenOptions();
   const isDev = useIsDevEnvironment();
   // El perfil del backend exige sesión: el idioma pendiente se reintenta al entrar a la zona privada.
@@ -35,6 +37,7 @@ export default function PrivateLayout() {
         <Stack.Screen name="join/payout-method" options={joinOptions.payoutMethod} />
         <Stack.Screen name="join/confirm" options={joinOptions.confirm} />
         <Stack.Screen name="join/saving-program" options={joinOptions.savingProgram} />
+        <Stack.Screen name="circles/[circleId]" options={circleOptions.detail} />
         <Stack.Screen name="payment/history" options={paymentOptions.history} />
         <Stack.Screen name="payment/eligibility" options={paymentOptions.eligibility} />
         <Stack.Screen name="payment/settings" options={paymentOptions.settings} />

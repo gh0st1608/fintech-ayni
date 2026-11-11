@@ -233,7 +233,8 @@
       "duration": "{{months}} Months",
       "adminFees": "Admin Fees:",
       "joined": "Joined",
-      "expelled": "Removed"
+      "expelled": "Removed",
+      "viewDetailA11y": "View the details of the {{amount}} circle"
     },
     "empty": {
       "active": "Your active circles will appear here!",
@@ -267,6 +268,38 @@
       },
       "loadError": "We couldn't load the start proposals: {{reason}}",
       "changed": "The terms changed because someone left the circle. Review the new proposal."
+    },
+    "detail": {
+      "title": "My circle",
+      "pot": "Monthly pot",
+      "states": {
+        "collecting": "Not started",
+        "approving": "Awaiting approval",
+        "contributing": "Active",
+        "paused": "Paused",
+        "cancelled": "Cancelled",
+        "finished": "Finished"
+      },
+      "progressA11y": "Circle progress",
+      "progress": "Month {{current}} of {{total}} · ends in {{end}}",
+      "startsOn": "Starts in {{month}}",
+      "yourTurn": "Your turn",
+      "turnValue": "{{month}} (#{{position}})",
+      "yourInstallment": "Your installment",
+      "retention": "Payout withholding",
+      "nextDue": "Next due date",
+      "nothingDue": "You're up to date",
+      "pay": "Pay {{amount}}",
+      "turns": "Turns",
+      "turnRow": "{{month}} · {{name}}",
+      "you": "You",
+      "member": "Member",
+      "vacant": "Vacant turn",
+      "turnStatus": {
+        "paid": "Paid out",
+        "current": "This month",
+        "vacant": "Vacant"
+      }
     }
   },
   "saving": {

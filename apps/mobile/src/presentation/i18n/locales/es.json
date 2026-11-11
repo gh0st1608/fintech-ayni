@@ -233,7 +233,8 @@
       "duration": "{{months}} meses",
       "adminFees": "Gastos de administración:",
       "joined": "Unido",
-      "expelled": "Expulsado"
+      "expelled": "Expulsado",
+      "viewDetailA11y": "Ver el detalle de la junta de {{amount}}"
     },
     "empty": {
       "active": "¡Tus juntas activas aparecerán aquí!",
@@ -267,6 +268,38 @@
       },
       "loadError": "No pudimos cargar las propuestas de inicio: {{reason}}",
       "changed": "Las condiciones cambiaron porque alguien salió de la junta. Revisa la propuesta nueva."
+    },
+    "detail": {
+      "title": "Mi junta",
+      "pot": "Pozo mensual",
+      "states": {
+        "collecting": "Por empezar",
+        "approving": "Esperando aprobación",
+        "contributing": "Activa",
+        "paused": "Pausada",
+        "cancelled": "Cancelada",
+        "finished": "Finalizada"
+      },
+      "progressA11y": "Avance de la junta",
+      "progress": "Mes {{current}} de {{total}} · termina en {{end}}",
+      "startsOn": "Empieza en {{month}}",
+      "yourTurn": "Tu turno",
+      "turnValue": "{{month}} ({{position}}.º)",
+      "yourInstallment": "Tu cuota",
+      "retention": "Retención de tu payout",
+      "nextDue": "Próximo vencimiento",
+      "nothingDue": "Estás al día",
+      "pay": "Pagar {{amount}}",
+      "turns": "Turnos",
+      "turnRow": "{{month}} · {{name}}",
+      "you": "Tú",
+      "member": "Miembro",
+      "vacant": "Turno vacante",
+      "turnStatus": {
+        "paid": "Cobrado",
+        "current": "Este mes",
+        "vacant": "Vacante"
+      }
     }
   },
   "saving": {

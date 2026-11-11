@@ -32,6 +32,8 @@ import type { JoinTarget } from '@/domain/circles/RecommendedCircle';
 interface CirclesScreenProps {
   /** Estado vacío de Active: empieza el flujo de unión. */
   onJoin: () => void;
+  /** Abre el detalle de uno de mis círculos (COPAYNI-88). */
+  onOpenCircle?: (circleId: string) => void;
   /** "Únete ahora" de un recomendado: el flujo de unión con ese payout precargado. */
   onJoinCircle: (payout: Money, target?: JoinTarget) => void;
 }
@@ -52,7 +54,7 @@ function currentPeriod(): string {
  * se pudo leer por el límite de Figma; se armó con el inventario y los componentes existentes.
  * El estado vacío de Active muestra los recomendados debajo (COPAYNI-25).
  */
-export function CirclesScreen({ onJoin, onJoinCircle }: CirclesScreenProps) {
+export function CirclesScreen({ onJoin, onJoinCircle, onOpenCircle }: CirclesScreenProps) {
   const { t } = useTranslation();
   const [status, setStatus] = useState<MyCircleStatus>('active');
 
@@ -76,7 +78,13 @@ export function CirclesScreen({ onJoin, onJoinCircle }: CirclesScreenProps) {
         testID="circles-tabs"
       />
       {/* Una lista por pestaña: cada una conserva su caché y su página. */}
-      <MyCirclesList key={status} status={status} onJoin={onJoin} onJoinCircle={onJoinCircle} />
+      <MyCirclesList
+        key={status}
+        status={status}
+        onJoin={onJoin}
+        onJoinCircle={onJoinCircle}
+        onOpenCircle={onOpenCircle}
+      />
     </Screen>
   );
 }
@@ -85,6 +93,7 @@ function MyCirclesList({
   status,
   onJoin,
   onJoinCircle,
+  onOpenCircle,
 }: { status: MyCircleStatus } & CirclesScreenProps) {
   const { t } = useTranslation();
   const circles = useMyCircles(status);
@@ -122,7 +131,7 @@ function MyCirclesList({
     <FlatList
       data={items}
       keyExtractor={(circle) => circle.circleId}
-      renderItem={({ item }) => <JoinedCircleCard circle={item} />}
+      renderItem={({ item }) => <JoinedCircleCard circle={item} onOpen={onOpenCircle} />}
       contentContainerStyle={styles.list}
       testID="my-circles-list"
       ListHeaderComponent={
@@ -173,7 +182,13 @@ function MyCirclesList({
   );
 }
 
-function JoinedCircleCard({ circle }: { circle: MyCircle }) {
+function JoinedCircleCard({
+  circle,
+  onOpen,
+}: {
+  circle: MyCircle;
+  onOpen?: (circleId: string) => void;
+}) {
   const { t } = useTranslation();
   const formatMoney = useFormatMoney();
   const formatDate = useFormatDate();
@@ -194,6 +209,12 @@ function JoinedCircleCard({ circle }: { circle: MyCircle }) {
       feesLabel={t('circles.card.adminFees')}
       feesAmount={money(circle.adminFee)}
       badge={t(circle.expelled ? 'circles.card.expelled' : 'circles.card.joined')}
+      onPress={onOpen && !circle.expelled ? () => onOpen(circle.circleId) : undefined}
+      accessibilityLabel={
+        onOpen && !circle.expelled
+          ? t('circles.card.viewDetailA11y', { amount: money(circle.payout) })
+          : undefined
+      }
       testID={`my-circle-${circle.circleId}`}
     />
   );

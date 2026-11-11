@@ -225,3 +225,53 @@ describe('InMemoryCircleMembershipRepository.listMine', () => {
     ]);
   });
 });
+
+describe('CircleMembershipApiRepository.getMine (COPAYNI-88)', () => {
+  it('pide el detalle del círculo y mapea montos, tipo, cuota pendiente y turnos', async () => {
+    const { fetchImpl, repository } = setup({
+      status: 200,
+      body: {
+        success: true,
+        data: {
+          circleId: 'c 1',
+          state: 'contributing',
+          payout: money(3_000_000),
+          months: 2,
+          startsOn: '2026-11',
+          endsOn: '2026-12',
+          currentPeriod: '2026-12',
+          currentMonth: 2,
+          position: 2,
+          payoutPeriod: '2026-12',
+          type: 'highest_return',
+          installments: [money(1_500_000), money(1_400_000)],
+          netPayout: money(3_000_000),
+          retention: money(0),
+          nextDue: {
+            installmentId: 'i-1',
+            period: '2026-12',
+            dueOn: '2026-12-05',
+            amount: money(1_400_000),
+            status: 'overdue',
+          },
+          turns: [
+            { position: 1, period: '2026-11', memberName: 'María R.', isMe: false, status: 'paid' },
+            { position: 2, period: '2026-12', memberName: 'Ana P.', isMe: true, status: 'current' },
+          ],
+        },
+      },
+    });
+    const detail = await repository.getMine('c 1');
+    expect(fetchImpl.mock.calls[0]![0]).toBe('https://api.test/v1/me/circles/c%201');
+    expect(detail).toMatchObject({
+      type: 'highestReturn',
+      payout: pen(30_000),
+      installments: [pen(15_000), pen(14_000)],
+      nextDue: { installmentId: 'i-1', amount: pen(14_000), status: 'overdue' },
+      turns: [
+        { memberName: 'María R.', status: 'paid' },
+        { isMe: true, status: 'current' },
+      ],
+    });
+  });
+});
