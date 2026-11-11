@@ -121,11 +121,18 @@ describe('PaymentApiRepository', () => {
   it('paga una cuota con la clave de idempotencia y el método', async () => {
     const { http, calls } = httpReturning({ status: 'pending', paymentId: 'mp-1' });
     await expect(
-      new PaymentApiRepository(http).payInstallment('i 1', { method: 'yape', token: 't' }, 'key'),
+      new PaymentApiRepository(http).payInstallment(
+        'i 1',
+        { method: 'yape', token: 't', phoneNumber: '987654321' },
+        'key',
+      ),
     ).resolves.toEqual({ status: 'pending', paymentId: 'mp-1' });
     expect(calls[0]).toMatchObject({
       path: '/me/installments/i%201/pay',
-      options: { idempotencyKey: 'key', body: { method: 'yape', token: 't' } },
+      options: {
+        idempotencyKey: 'key',
+        body: { method: 'yape', token: 't', phoneNumber: '987654321' },
+      },
     });
   });
 });

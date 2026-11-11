@@ -161,7 +161,8 @@ export class PaymentApiRepository implements PaymentRepositoryPort {
 
   payInstallment(
     installmentId: string,
-    payment: { method: 'yape'; token: string } | { method: 'card'; cardId: string },
+    payment:
+      { method: 'yape'; token: string; phoneNumber: string } | { method: 'card'; cardId: string },
     idempotencyKey: string,
   ): Promise<InstallmentPaymentResult> {
     return this.http.post(`/me/installments/${encodeURIComponent(installmentId)}/pay`, {

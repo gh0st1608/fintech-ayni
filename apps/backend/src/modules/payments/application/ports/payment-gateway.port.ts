@@ -17,11 +17,13 @@ export interface GatewayCard {
 /**
  * Con qué se cobra:
  * - `card`: una tarjeta guardada del cliente (débito automático, COPAYNI-40).
- * - `yape`: un token de un solo uso que la app genera con el SDK y el OTP de Yape.
+ * - `yape`: un token de un solo uso que la app genera con el celular y el OTP de Yape. El OTP
+ *   nunca llega al backend. La orden de Mercado Pago pide el celular (9 dígitos, sin el 51) y, si
+ *   se conoce, el DNI del pagador.
  */
 export type ChargeSource =
   | { type: 'card'; customerId: string; cardId: string; brand: string }
-  | { type: 'yape'; token: string };
+  | { type: 'yape'; token: string; phone: string; documentNumber: string | null };
 
 export interface ChargeRequest {
   /** Repetir la misma clave no cobra dos veces (`X-Idempotency-Key`). */
@@ -38,6 +40,7 @@ export interface ChargeRequest {
 export type GatewayPaymentStatus = 'approved' | 'rejected' | 'pending';
 
 export interface GatewayPayment {
+  /** Id del pago (tarjeta, numérico) o de la orden (Yape, p. ej. `ORDPE01…`) en la pasarela. */
   id: string;
   status: GatewayPaymentStatus;
   /** El motivo de la pasarela, p. ej. `cc_rejected_insufficient_amount`. */
@@ -68,6 +71,7 @@ export interface PaymentGatewayPort {
   saveCard(customerId: string, cardToken: string): Promise<GatewayCard>;
   deleteCard(customerId: string, cardId: string): Promise<void>;
   charge(request: ChargeRequest): Promise<GatewayPayment>;
+  /** Un pago o una orden por su id (el `data.id` de los webhooks `payment` y `order`). */
   getPayment(paymentId: string): Promise<GatewayPayment>;
   /** Los pagos con esa referencia externa (p. ej. todos los intentos de una cuota). */
   paymentsFor(externalReference: string): Promise<GatewayPayment[]>;

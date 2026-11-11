@@ -185,33 +185,46 @@ Con `CIRCLE_PAYMENTS_ADAPTER=gateway`, el ciclo mensual cobra cada cuota con la 
 Pago manual de una cuota `pending` u `overdue` (en gracia) con **Yape** o con una **tarjeta guardada** (COPAYNI-63, flujo D1 sin diseño). Requiere `Idempotency-Key`.
 
 ```json
-{ "method": "yape", "token": "token-del-sdk" }
+{
+  "method": "yape",
+  "token": "token-de-yape",
+  "phoneNumber": "987654321",
+  "documentNumber": "12345678"
+}
 ```
 
 ```json
 { "method": "card", "cardId": "0b9e…" }
 ```
 
-- **Yape:** la app genera el token con el SDK de Mercado Pago, el celular y el OTP de la app de Yape. El token es de un solo uso.
+- **Yape (Checkout API con Orders):**
+  - **Token:** la app genera el token directamente con Mercado Pago, con la public key, el celular y el OTP de la app de Yape (`POST https://api.mercadopago.com/platforms/pci/yape/v1/payment?public_key=…`, o `mp.yape(...)` en MercadoPago.js). El token es de un solo uso. **El OTP nunca llega al backend.**
+  - **Cobro:** el backend crea una orden en `POST /v1/orders`, en modo `automatic`, y la respuesta trae el resultado final. `paymentId` es el id de la orden (p. ej. `ORDPE01…`).
+  - **`phoneNumber`:** el celular con el que se generó el token, en 9 dígitos (acepta `+51`). Si falta, se usa el del perfil. Si no hay ninguno, responde `VALIDATION_ERROR` con `details.phoneNumber: "required"`.
+  - **`documentNumber`:** opcional. Es el DNI del pagador (8 dígitos), que la orden manda como `payer.identification`. **Supuesto [?]:** confirmar en sandbox si Mercado Pago lo exige.
+  - **Solo soles.** Una cuota en otra moneda responde `VALIDATION_ERROR` con `details.method: "currency_not_supported"`.
+  - **Rechazo:** Mercado Pago responde 402 con la orden fallida, y la API responde `PAYMENT_REJECTED` con el motivo del pago (p. ej. `insufficient_amount`).
+  - **Idempotencia:** la `X-Idempotency-Key` de la orden se deriva de la cuota y de la `Idempotency-Key`, así que un reintento con la misma clave no crea otra orden.
 - **200** `{ "status": "paid" | "pending", "paymentId": "…" }`. Con `paid`, la cuota ya está pagada en el ciclo y el débito automático no la vuelve a cobrar. Con `pending`, la confirma el webhook.
 - Antes de cobrar busca los pagos de la cuota en Mercado Pago: si ya hay uno aprobado (p. ej. del débito automático) no cobra de nuevo, y si hay uno pendiente responde `PAYMENT_PENDING`.
 - **Supuesto [?]:** se puede pagar desde que se abre el mes de la cuota, antes del vencimiento.
 
-| Error                     | HTTP | Cuándo                                                                       |
-| ------------------------- | ---- | ---------------------------------------------------------------------------- |
-| `VALIDATION_ERROR`        | 400  | Método inválido, falta el token o el `cardId`, o falta la `Idempotency-Key`. |
-| `INSTALLMENT_NOT_FOUND`   | 404  | La cuota no existe o no es del usuario.                                      |
-| `CARD_NOT_FOUND`          | 404  | La tarjeta no es del usuario.                                                |
-| `INSTALLMENT_NOT_PAYABLE` | 409  | Ya está pagada, la paga la retención o la deducción, o fue expulsado.        |
-| `PAYMENT_PENDING`         | 409  | Ya hay un pago de la cuota en proceso.                                       |
-| `PAYMENT_REJECTED`        | 422  | Mercado Pago lo rechazó; `details.detail` trae el motivo de la pasarela.     |
-| `EMAIL_REQUIRED`          | 422  | El usuario no tiene email (Mercado Pago lo pide como pagador).               |
+| Error                     | HTTP | Cuándo                                                                                                                                                                                 |
+| ------------------------- | ---- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `VALIDATION_ERROR`        | 400  | Método inválido, falta el token o el `cardId`, o falta la `Idempotency-Key`. Con Yape: falta el celular, el celular o el DNI no tienen el formato pedido, o la cuota no está en soles. |
+| `INSTALLMENT_NOT_FOUND`   | 404  | La cuota no existe o no es del usuario.                                                                                                                                                |
+| `CARD_NOT_FOUND`          | 404  | La tarjeta no es del usuario.                                                                                                                                                          |
+| `INSTALLMENT_NOT_PAYABLE` | 409  | Ya está pagada, la paga la retención o la deducción, o fue expulsado.                                                                                                                  |
+| `PAYMENT_PENDING`         | 409  | Ya hay un pago de la cuota en proceso.                                                                                                                                                 |
+| `PAYMENT_REJECTED`        | 422  | Mercado Pago lo rechazó; `details.detail` trae el motivo de la pasarela.                                                                                                               |
+| `EMAIL_REQUIRED`          | 422  | El usuario no tiene email (Mercado Pago lo pide como pagador).                                                                                                                         |
 
 ## Webhook de Mercado Pago: `POST /v1/webhooks/mercadopago`
 
-Lo llama Mercado Pago, no la app (COPAYNI-63). Se configura en el panel de la aplicación de Mercado Pago, con el evento de pagos.
+Lo llama Mercado Pago, no la app (COPAYNI-63). Se configura en el panel de la aplicación de Mercado Pago, con los eventos de **pagos** (tarjeta) y de **órdenes** (Yape, Checkout API con Orders).
 
 - **Autenticación:** la firma `x-signature` con `MERCADOPAGO_WEBHOOK_SECRET`. Sin firma válida, o sin la clave configurada, responde 401.
+- **Concilia `type: payment` y `type: order`.** El `data.id` es el id del pago (numérico) o de la orden (`GET /v1/orders/{id}`). Una orden `processed` cuenta como pagada.
 - **Nunca confía en el cuerpo:** consulta el pago en Mercado Pago y, si está aprobado, marca pagada la cuota de su `external_reference`, con el círculo bloqueado. Es idempotente: los reintentos no cambian nada.
 - Responde 200 a todo webhook firmado, también a los de otros tipos, para que Mercado Pago no reintente. Un pago aprobado de una cuota que ya no se cobra (expulsado, mes cerrado) queda en el log `circles.cycle.payment_unmatched` para revisarlo a mano.
 - En desarrollo y pruebas la pasarela es la simulada (`PAYMENT_GATEWAY=fake`); la cuenta sandbox de Mercado Pago se conecta cuando haya credenciales.
