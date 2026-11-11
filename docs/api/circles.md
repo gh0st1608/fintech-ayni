@@ -367,6 +367,62 @@ Mis círculos, de la unión más reciente a la más antigua, paginados por curso
 | ------------------ | ---- | ----------------------------------------------------------------------------------------------------- |
 | `VALIDATION_ERROR` | 400  | `status` ausente o inválido, `limit` fuera de rango, o `cursor` inválido (`details.cursor: invalid`). |
 
+## `GET /v1/me/circles/:circleId`
+
+**Estado:** implementado (COPAYNI-88, diseño D8 aprobado). El detalle de un círculo para uno de sus **miembros vigentes**: pozo, progreso, su turno y su cuota, la próxima cuota que debe y los turnos.
+
+```json
+{
+  "circleId": "6f1c…",
+  "state": "contributing",
+  "payout": { "amount": 3000000, "currency": "PEN" },
+  "months": 10,
+  "startsOn": "2026-11",
+  "endsOn": "2027-08",
+  "currentPeriod": "2027-01",
+  "currentMonth": 3,
+  "position": 4,
+  "payoutPeriod": "2027-02",
+  "type": "lowest_fees",
+  "installments": [{ "amount": 336000, "currency": "PEN" }],
+  "netPayout": { "amount": 3000000, "currency": "PEN" },
+  "retention": { "amount": 600000, "currency": "PEN" },
+  "nextDue": {
+    "installmentId": "a3d2…",
+    "period": "2027-01",
+    "dueOn": "2027-01-01",
+    "amount": { "amount": 336000, "currency": "PEN" },
+    "status": "pending"
+  },
+  "turns": [
+    {
+      "position": 1,
+      "period": "2026-11",
+      "memberName": "María R.",
+      "isMe": false,
+      "status": "paid"
+    },
+    {
+      "position": 4,
+      "period": "2027-02",
+      "memberName": "Ana P.",
+      "isMe": true,
+      "status": "upcoming"
+    }
+  ]
+}
+```
+
+| Campo                            | Notas                                                                                                                                                                                                                                                                                                                        |
+| -------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `state`                          | Estado del ciclo: `collecting`, `approving`, `contributing`, `paused`, `cancelled` o `finished`.                                                                                                                                                                                                                             |
+| `currentPeriod` / `currentMonth` | Mes en curso (`YYYY-MM`) y su número (1 a `months`); `null` si el círculo no empezó.                                                                                                                                                                                                                                         |
+| `position` … `retention`         | El precio del turno del usuario, como en `GET /v1/me/circles`.                                                                                                                                                                                                                                                               |
+| `nextDue`                        | La próxima cuota que debe **en este círculo** (para pagarla con `POST /v1/me/installments/:id/pay`); `null` si no debe.                                                                                                                                                                                                      |
+| `turns`                          | Un turno por mes. `memberName` es el nombre abreviado ("María R.") por privacidad (L3): nunca el email ni el teléfono; `null` si el turno está vacante o el miembro no registró su nombre. `status`: `paid` (ya cobró), `current` (cobra este mes), `upcoming` o `vacant` (sin miembro: un expulsado o un turno sin llenar). |
+
+Errores: **404** `CIRCLE_NOT_FOUND` si no existe o el usuario no es miembro vigente (un expulsado tampoco lo ve). **401** sin token.
+
 ## Ciclo mensual (COPAYNI-56)
 
 No es un endpoint: lo ejecuta la tarea diaria `node dist/jobs/circle-cycle.js` (docs/architecture.md, sección 6). Sigue el workflow ROSCA del PO (pending-scope §3.1):
