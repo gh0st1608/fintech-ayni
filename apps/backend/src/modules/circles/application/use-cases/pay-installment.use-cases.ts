@@ -1,6 +1,7 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 
 import { type Principal } from '../../../../shared/application/ports/access-token-verifier.port';
+import { CLOCK, type ClockPort } from '../../../../shared/application/ports/clock.port';
 import { ConflictError, NotFoundError } from '../../../../shared/errors/app-error';
 import {
   type GatewayPayment,
@@ -87,7 +88,10 @@ export class InstallmentSettlement {
 export interface PayInstallmentResult {
   /** `pending`: la pasarela lo procesa; la cuota se marca pagada cuando llegue el webhook. */
   status: 'paid' | 'pending';
+  /** Número de operación del recibo: id del pago o de la orden en Mercado Pago, o `referral`. */
   paymentId: string;
+  /** Cuándo quedó pagada (para el recibo, D1); `null` mientras está en proceso. */
+  paidAt: Date | null;
 }
 
 /**
@@ -101,6 +105,7 @@ export class PayInstallmentUseCase {
     @Inject(ChargeInstallmentUseCase) private readonly charge: ChargeInstallmentUseCase,
     @Inject(InstallmentSettlement) private readonly settlement: InstallmentSettlement,
     @Inject(ReferralDiscounts) private readonly discounts: ReferralDiscounts,
+    @Inject(CLOCK) private readonly clock: ClockPort,
   ) {}
 
   async execute(
@@ -119,7 +124,7 @@ export class PayInstallmentUseCase {
     if (discount.equals(installment.amount)) {
       await this.discounts.apply(installment, discount);
       await this.settlement.markPaid(installment.circleId, installment.id, 'referral');
-      return { status: 'paid', paymentId: 'referral' };
+      return { status: 'paid', paymentId: 'referral', paidAt: this.clock.now() };
     }
     const payment = await this.charge.execute({
       installmentId: installment.id,
@@ -130,10 +135,12 @@ export class PayInstallmentUseCase {
       method: command.method,
     });
     if (payment.status === 'rejected') throw new PaymentRejectedError(payment.statusDetail);
-    if (payment.status === 'pending') return { status: 'pending', paymentId: payment.id };
+    if (payment.status === 'pending') {
+      return { status: 'pending', paymentId: payment.id, paidAt: null };
+    }
     await this.discounts.apply(installment, discount);
     await this.settlement.markPaid(installment.circleId, installment.id, payment.id);
-    return { status: 'paid', paymentId: payment.id };
+    return { status: 'paid', paymentId: payment.id, paidAt: this.clock.now() };
   }
 }
 

@@ -83,7 +83,11 @@ describe('Pagar una cuota desde la app', () => {
       { method: 'yape', token: 'yape-ok', phoneNumber: PHONE },
       key,
     ).expect(200);
-    expect(paid.body.data).toEqual({ status: 'paid', paymentId: expect.any(String) });
+    expect(paid.body.data).toEqual({
+      status: 'paid',
+      paymentId: expect.any(String),
+      paidAt: expect.stringMatching(/^\d{4}-\d{2}-\d{2}T/),
+    });
     await expect(statusOf(id)).resolves.toBe('paid');
 
     const retry = await pay(id, { method: 'yape', token: 'yape-ok', phoneNumber: PHONE }, key);
