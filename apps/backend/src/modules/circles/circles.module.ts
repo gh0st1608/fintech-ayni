@@ -55,6 +55,14 @@ import {
   ProposeFundMovementUseCase,
 } from './application/use-cases/fund-approvals.use-cases';
 import { SqlStaffApprovals } from './infrastructure/persistence/typeorm/sql-staff-approvals';
+import { SqlDelinquencyQuery } from './infrastructure/persistence/typeorm/sql-delinquency.query';
+import { AdminDelinquencyController } from './presentation/http/controllers/admin-delinquency.controller';
+import {
+  DELINQUENCY_QUERY,
+  DELINQUENCY_SETTINGS,
+  type DelinquencySettings,
+  ListDelinquencyUseCase,
+} from './application/use-cases/admin-delinquency.use-cases';
 import { SqlReceiptDetails } from './infrastructure/persistence/typeorm/sql-receipt-details';
 import { PdfReceiptRenderer } from './infrastructure/pdf-receipt-renderer';
 import { TransactionReceiptController } from './presentation/http/controllers/transaction-receipt.controller';
@@ -156,6 +164,7 @@ import { MyCirclesController } from './presentation/http/controllers/my-circles.
     AdminCirclesController,
     AdminFinanceController,
     AdminFundApprovalsController,
+    AdminDelinquencyController,
     TransactionReceiptController,
     AdminCycleRunsController,
   ],
@@ -301,6 +310,16 @@ import { MyCirclesController } from './presentation/http/controllers/my-circles.
     ListPayoutsUseCase,
     GetGuaranteeFundUseCase,
     { provide: ADMIN_FINANCE_QUERY, useClass: SqlAdminFinanceQuery },
+    ListDelinquencyUseCase,
+    { provide: DELINQUENCY_QUERY, useClass: SqlDelinquencyQuery },
+    {
+      provide: DELINQUENCY_SETTINGS,
+      inject: [ConfigService],
+      useFactory: (config: AppConfigService): DelinquencySettings => ({
+        graceDays: config.get('DELINQUENCY_GRACE_DAYS', { infer: true }),
+        timeZone: config.get('BUSINESS_TIME_ZONE', { infer: true }),
+      }),
+    },
     // Ejecuciones del ciclo mensual: las guarda la tarea diaria y las lee el back-office.
     { provide: CYCLE_RUNS, useClass: SqlCycleRuns },
     // Regla de confianza por tipo de turno (COPAYNI-60, valores propuestos de R18).
