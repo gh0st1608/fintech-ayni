@@ -14,6 +14,7 @@ export default function HomeRoute() {
       }}
       onJoin={() => router.push('/join')}
       onOpenReferral={() => router.push('/profile/referral')}
+      onOpenNotifications={() => router.push('/notifications')}
     />
   );
 }

@@ -850,5 +850,81 @@
   "connectivity": {
     "offline": "You're offline. What you see may be out of date.",
     "retry": "Retry"
+  },
+  "notifications": {
+    "title": "Notifications",
+    "bellA11y": "Notifications",
+    "bellUnreadA11y_one": "Notifications, {{count}} unread",
+    "bellUnreadA11y_other": "Notifications, {{count}} unread",
+    "unreadA11y": "Unread",
+    "markAll": "Mark all as read",
+    "emptyTitle": "You have no notifications",
+    "emptyDescription": "Your due dates, payments, payouts and circle updates will show up here.",
+    "tabs": {
+      "all": "All",
+      "payments": "Payments",
+      "circles": "Circles"
+    },
+    "groups": {
+      "today": "Today",
+      "week": "This week",
+      "earlier": "Earlier"
+    },
+    "documents": {
+      "national_id": "ID",
+      "proof_of_income": "proof of income",
+      "additional": "document",
+      "identity": "identity"
+    },
+    "types": {
+      "installmentDueSoon": {
+        "title": "Your installment is due soon",
+        "body": "Pay {{amount}} before {{date}} to avoid late fees."
+      },
+      "installmentDueToday": {
+        "title": "Your installment is due today",
+        "body": "Pay {{amount}} today to avoid late fees."
+      },
+      "paymentReceived": {
+        "title": "Payment received",
+        "body": "We received your {{amount}} installment."
+      },
+      "paymentFailed": {
+        "title": "We couldn't collect your installment",
+        "body": "Your {{amount}} installment was due on {{date}}. Pay it to avoid late fees."
+      },
+      "payoutTurn": {
+        "title": "It's your payout month!",
+        "body": "Your {{amount}} payout is sent once everyone has paid."
+      },
+      "payoutDisbursed": {
+        "title": "You received your payout",
+        "body": "We sent you {{amount}}."
+      },
+      "documentApproved": {
+        "title": "Document approved",
+        "body": "We verified your {{document}}."
+      },
+      "documentRejected": {
+        "title": "Document rejected",
+        "body": "Check your {{document}} and send it again."
+      },
+      "circleStarted": {
+        "title": "Your circle started",
+        "body": "You can now pay your first installment."
+      },
+      "circlePaused": {
+        "title": "Your circle is paused",
+        "body": "We'll let you know when it resumes."
+      },
+      "circleResumed": {
+        "title": "Your circle resumed",
+        "body": "Payments and payouts are back on."
+      },
+      "circleMemberJoined": {
+        "title": "New member in your circle",
+        "body": "One more slot was taken."
+      }
+    }
   }
 }

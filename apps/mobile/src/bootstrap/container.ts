@@ -1,3 +1,9 @@
+import {
+  CountUnreadNotificationsUseCase,
+  ListNotificationsUseCase,
+  MarkNotificationsReadUseCase,
+} from '@/application/notifications/notificationUseCases';
+import type { NotificationRepositoryPort } from '@/domain/notifications/NotificationRepositoryPort';
 import type { AppContainer } from '@/application/AppContainer';
 import { SessionEvents } from '@/application/auth/SessionEvents';
 import {
@@ -147,6 +153,8 @@ import { MercadoPagoPaymentTokenizer } from '@/infrastructure/payments/MercadoPa
 import { InMemoryCardRepository } from '@/infrastructure/payments/InMemoryCardRepository';
 import { InMemoryPaymentRepository } from '@/infrastructure/payments/InMemoryPaymentRepository';
 import { PaymentApiRepository } from '@/infrastructure/payments/PaymentApiRepository';
+import { InMemoryNotificationRepository } from '@/infrastructure/notifications/InMemoryNotificationRepository';
+import { NotificationApiRepository } from '@/infrastructure/notifications/NotificationApiRepository';
 import { InMemoryPayoutMethodRepository } from '@/infrastructure/payouts/InMemoryPayoutMethodRepository';
 import { PayoutMethodApiRepository } from '@/infrastructure/payouts/PayoutMethodApiRepository';
 import { InMemoryUserProfileRepository } from '@/infrastructure/profile/InMemoryUserProfileRepository';
@@ -183,6 +191,7 @@ export interface ContainerAdapters {
   circleMembership: CircleMembershipRepositoryPort;
   userProfile: UserProfileRepositoryPort;
   payoutMethods: PayoutMethodRepositoryPort;
+  notifications: NotificationRepositoryPort;
   payments: PaymentRepositoryPort;
   cards: CardRepositoryPort;
   paymentTokenizer: PaymentTokenizerPort;
@@ -244,6 +253,10 @@ export function createContainer(
       env.profileApi === 'fake'
         ? new InMemoryUserProfileRepository({ currency: env.defaultCurrency })
         : new UserProfileApiRepository(http),
+    notifications:
+      env.notificationsApi === 'fake'
+        ? new InMemoryNotificationRepository(env.defaultCurrency)
+        : new NotificationApiRepository(http),
     payoutMethods:
       env.payoutsApi === 'fake'
         ? new InMemoryPayoutMethodRepository(env.defaultCurrency)
@@ -394,6 +407,11 @@ export function createContainer(
     savings: {
       listPlans: new ListSavingPlansUseCase(adapters.savings),
       getQuote: new GetSavingQuoteUseCase(adapters.savings),
+    },
+    notifications: {
+      list: new ListNotificationsUseCase(adapters.notifications),
+      countUnread: new CountUnreadNotificationsUseCase(adapters.notifications),
+      markRead: new MarkNotificationsReadUseCase(adapters.notifications),
     },
     payouts: {
       listPayoutMethods: new ListPayoutMethodsUseCase(adapters.payoutMethods),
