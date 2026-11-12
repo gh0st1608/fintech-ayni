@@ -14,6 +14,7 @@ export function useJoinScreenOptions() {
     payoutMethod: options(t('join.payoutMethod.title')),
     confirm: options(t('join.confirm.title')),
     savingProgram: options(t('saving.chooseCircle.title')),
+    savingConfirm: options(t('saving.confirm.title')),
   };
 }
 

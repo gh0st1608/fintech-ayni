@@ -1,5 +1,6 @@
 import type { SavingPlanRepositoryPort } from '@/domain/savings/ports/SavingPlanRepositoryPort';
 import type { SavingCatalog, SavingQuote } from '@/domain/savings/SavingPlan';
+import type { SavingSubscription, SubscribeInput } from '@/domain/savings/SavingSubscription';
 import { AppError } from '@/domain/shared/errors/AppError';
 import { Money } from '@/domain/shared/value-objects/Money';
 import { simulateLatency } from '@/infrastructure/fake/simulateLatency';
@@ -74,7 +75,8 @@ export class InMemorySavingPlanRepository implements SavingPlanRepositoryPort {
     const cashback = this.cashback(target, months);
     const today = this.now();
     const current = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
-    const startsOn = addMonths(current, 1);
+    // El primer aporte se cobra al confirmar (D5): empieza el mes actual.
+    const startsOn = current;
     return {
       planId,
       months,
@@ -94,5 +96,53 @@ export class InMemorySavingPlanRepository implements SavingPlanRepositoryPort {
 
   private money(amount: number): Money {
     return Money.of(amount, this.currency);
+  }
+
+  readonly subscriptions = new Map<string, SavingSubscription>();
+  /** Simula una tarjeta rechazada por la pasarela. */
+  rejectWith: string | null = null;
+
+  async subscribe(input: SubscribeInput, idempotencyKey: string): Promise<SavingSubscription> {
+    await simulateLatency(this.latencyMs);
+    const existing = this.subscriptions.get(idempotencyKey);
+    if (existing) return existing;
+    if (this.rejectWith) {
+      throw new AppError('business', 'Payment rejected', {
+        status: 422,
+        code: 'SAVING_PAYMENT_REJECTED',
+        fieldErrors: { detail: this.rejectWith },
+      });
+    }
+    const quote = await this.quote(input.planId, input.months);
+    const today = this.now();
+    const day = String(today.getDate()).padStart(2, '0');
+    const subscription: SavingSubscription = {
+      id: `sub-${String(this.subscriptions.size + 1)}`,
+      planId: input.planId,
+      months: input.months,
+      status: 'active',
+      target: quote.target,
+      cashback: quote.cashback,
+      saved: quote.installments[0]!,
+      paidContributions: 1,
+      nextContribution:
+        input.months > 1
+          ? {
+              sequence: 2,
+              dueOn: `${addMonths(quote.startsOn, 1)}-${day}`,
+              amount: quote.installments[1]!,
+            }
+          : null,
+      payoutPeriod: quote.payoutPeriod,
+      autoDebit: input.autoDebit,
+      card: 'Visa •••• 4242',
+    };
+    this.subscriptions.set(idempotencyKey, subscription);
+    return subscription;
+  }
+
+  async mine(signal?: AbortSignal): Promise<SavingSubscription[]> {
+    await simulateLatency(this.latencyMs, signal);
+    return [...this.subscriptions.values()].reverse();
   }
 }

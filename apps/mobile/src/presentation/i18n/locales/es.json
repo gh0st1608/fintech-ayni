@@ -347,9 +347,32 @@
       },
       "invalidQuote": "No pudimos calcular este plan. Inténtalo más tarde.",
       "next": "Siguiente",
-      "confirmationPending": "Pronto podrás suscribirte a este plan desde aquí.",
       "monthsLabel_one": "Mes",
       "monthsLabel_other": "Meses"
+    },
+    "confirm": {
+      "title": "Programa de ahorro",
+      "planLabel_one": "{{plan}} · {{count}} mes",
+      "planLabel_other": "{{plan}} · {{count}} meses",
+      "goal": "Meta al final del plan",
+      "monthly": "Aporte mensual",
+      "first": "Primer aporte",
+      "cashback": "Cashback",
+      "payout": "Fecha de cobro",
+      "method": "Método",
+      "autoDebit": "Activar débito automático mensual con mi tarjeta.",
+      "disclaimer": "El cashback se paga al completar todos los aportes. Si retiras antes, recibes lo ahorrado sin cashback.",
+      "pay": "Confirmar y pagar {{amount}}",
+      "rejected": "No pudimos cobrar el primer aporte. Prueba con otra tarjeta.",
+      "noCardTitle": "Agrega una tarjeta",
+      "noCardDescription": "El primer aporte se cobra con una tarjeta guardada.",
+      "addCard": "Agregar tarjeta",
+      "doneTitle": "¡Listo! Ya estás ahorrando",
+      "pendingTitle": "Estamos confirmando tu pago",
+      "nextAuto": "Tu próximo aporte de {{amount}} se cobrará el {{date}}.",
+      "nextManual": "Tu próximo aporte de {{amount}} vence el {{date}}.",
+      "allPaid": "Ya pagaste todos los aportes.",
+      "done": "Entendido"
     }
   },
   "profile": {

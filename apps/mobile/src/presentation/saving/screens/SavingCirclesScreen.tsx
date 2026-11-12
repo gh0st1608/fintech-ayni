@@ -34,7 +34,12 @@ import { useSavingPlans } from '../useSavings';
  * Choose a Saving Circle (COPAYNI-32): los planes con su monto objetivo y el cashback máximo; un
  * plan abre Choose Duration (COPAYNI-33). Sin el contexto de diseño (límite de Figma).
  */
-export function SavingCirclesScreen() {
+export function SavingCirclesScreen({
+  onConfirm,
+}: {
+  /** Abre la confirmación del plan con la duración elegida (COPAYNI-79). */
+  onConfirm: (planId: string, months: number) => void;
+}) {
   const { t } = useTranslation();
   const catalog = useSavingPlans();
   const [selected, setSelected] = useState<SavingPlan | null>(null);
@@ -88,7 +93,16 @@ export function SavingCirclesScreen() {
           />
         }
       />
-      <DurationSheet plan={selected} durations={durations} onClose={() => setSelected(null)} />
+      <DurationSheet
+        plan={selected}
+        durations={durations}
+        onClose={() => setSelected(null)}
+        onNext={(months) => {
+          if (!selected) return;
+          setSelected(null);
+          onConfirm(selected.id, months);
+        }}
+      />
     </Screen>
   );
 }

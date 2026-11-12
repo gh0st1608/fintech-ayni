@@ -347,9 +347,32 @@
       },
       "invalidQuote": "We couldn't calculate this plan. Try again later.",
       "next": "Next",
-      "confirmationPending": "Soon you'll be able to subscribe to this plan from here.",
       "monthsLabel_one": "Month",
       "monthsLabel_other": "Months"
+    },
+    "confirm": {
+      "title": "Saving program",
+      "planLabel_one": "{{plan}} · {{count}} month",
+      "planLabel_other": "{{plan}} · {{count}} months",
+      "goal": "Goal at the end of the plan",
+      "monthly": "Monthly contribution",
+      "first": "First contribution",
+      "cashback": "Cashback",
+      "payout": "Payout date",
+      "method": "Method",
+      "autoDebit": "Turn on monthly automatic debit with my card.",
+      "disclaimer": "Cashback is paid once all contributions are made. If you withdraw early, you get your savings without cashback.",
+      "pay": "Confirm and pay {{amount}}",
+      "rejected": "We couldn't charge the first contribution. Try another card.",
+      "noCardTitle": "Add a card",
+      "noCardDescription": "The first contribution is charged to a saved card.",
+      "addCard": "Add card",
+      "doneTitle": "Done! You're saving now",
+      "pendingTitle": "We're confirming your payment",
+      "nextAuto": "Your next {{amount}} contribution will be charged on {{date}}.",
+      "nextManual": "Your next {{amount}} contribution is due on {{date}}.",
+      "allPaid": "You've paid every contribution.",
+      "done": "Got it"
     }
   },
   "profile": {

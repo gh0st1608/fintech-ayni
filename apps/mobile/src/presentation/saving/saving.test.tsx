@@ -17,7 +17,7 @@ const savings = (options = {}) =>
 
 describe('SavingCirclesScreen (COPAYNI-32)', () => {
   it('lista los planes con nombre traducido, monto y "hasta X extra"', async () => {
-    await renderWithProviders(<SavingCirclesScreen />);
+    await renderWithProviders(<SavingCirclesScreen onConfirm={jest.fn()} />);
     expect(await screen.findByTestId('saving-plan-lite')).toHaveTextContent(
       /Lite.*3\.?000.*Hasta .*600.* extra/,
     );
@@ -26,7 +26,7 @@ describe('SavingCirclesScreen (COPAYNI-32)', () => {
 
   it('un plan sin traducción se muestra con su clave', async () => {
     await renderWithProviders(
-      <SavingCirclesScreen />,
+      <SavingCirclesScreen onConfirm={jest.fn()} />,
       createTestContainer({ savings: savings({ plans: { titanium: 500000 } }) }),
     );
     expect(await screen.findByTestId('saving-plan-titanium')).toHaveTextContent(/titanium/);
@@ -34,7 +34,7 @@ describe('SavingCirclesScreen (COPAYNI-32)', () => {
 
   it('sin planes muestra el estado vacío', async () => {
     await renderWithProviders(
-      <SavingCirclesScreen />,
+      <SavingCirclesScreen onConfirm={jest.fn()} />,
       createTestContainer({ savings: savings({ plans: {} }) }),
     );
     expect(await screen.findByTestId('saving-empty')).toBeTruthy();
@@ -46,7 +46,7 @@ describe('SavingCirclesScreen (COPAYNI-32)', () => {
       .spyOn(repository, 'list')
       .mockRejectedValue(new AppError('network', 'offline'));
     await renderWithProviders(
-      <SavingCirclesScreen />,
+      <SavingCirclesScreen onConfirm={jest.fn()} />,
       createTestContainer({ savings: repository }),
     );
     expect(await screen.findByText(/No hay conexión/, {}, { timeout: 5000 })).toBeTruthy();
@@ -58,7 +58,8 @@ describe('SavingCirclesScreen (COPAYNI-32)', () => {
 
 describe('DurationSheet (COPAYNI-33)', () => {
   it('muestra la cuota de cada duración y el detalle de la elegida', async () => {
-    await renderWithProviders(<SavingCirclesScreen />);
+    const onConfirm = jest.fn();
+    await renderWithProviders(<SavingCirclesScreen onConfirm={onConfirm} />);
     await fireEvent.press(await screen.findByTestId('saving-plan-lite'));
 
     // Figma 55:9220: la primera duración viene elegida, con su detalle a la vista.
@@ -72,18 +73,19 @@ describe('DurationSheet (COPAYNI-33)', () => {
       { timeout: 10_000 },
     );
     expect(screen.getByRole('radio', { name: /^6 Meses/ })).toBeChecked();
-    expect(await screen.findByTestId('quote-startsOn')).toHaveTextContent(/Inicio.*nov.*2026/i);
-    expect(screen.getByTestId('quote-payout')).toHaveTextContent(/may.*2027/i);
+    // El primer aporte se cobra al confirmar (D5): empieza el mes actual.
+    expect(await screen.findByTestId('quote-startsOn')).toHaveTextContent(/Inicio.*oct.*2026/i);
+    expect(screen.getByTestId('quote-payout')).toHaveTextContent(/abr.*2027/i);
     // El total del Figma ya incluye el cashback.
     expect(screen.getByTestId('quote-total')).toHaveTextContent(/Total a recibir.*3\.?150/);
 
     await fireEvent.press(screen.getByTestId('duration-12'));
-    await waitFor(() => expect(screen.getByTestId('quote-payout')).toHaveTextContent(/nov.*2027/i));
+    await waitFor(() => expect(screen.getByTestId('quote-payout')).toHaveTextContent(/oct.*2027/i));
     expect(screen.getByRole('radio', { name: /^12 Meses/ })).toBeChecked();
 
-    // La confirmación espera el diseño (D5): Siguiente lo explica sin cerrar la hoja.
+    // Siguiente abre la confirmación con el primer pago (D5, COPAYNI-79).
     await fireEvent.press(screen.getByRole('button', { name: 'Siguiente' }));
-    expect(screen.getByTestId('saving-pending')).toBeTruthy();
+    expect(onConfirm).toHaveBeenCalledWith('lite', 12);
   });
 
   it('una cotización incoherente no se muestra', async () => {
@@ -95,7 +97,7 @@ describe('DurationSheet (COPAYNI-33)', () => {
       payoutPeriod: '2026-12',
     }));
     await renderWithProviders(
-      <SavingCirclesScreen />,
+      <SavingCirclesScreen onConfirm={jest.fn()} />,
       createTestContainer({ savings: repository }),
     );
     await fireEvent.press(await screen.findByTestId('saving-plan-lite'));
@@ -113,7 +115,7 @@ describe('DurationSheet (COPAYNI-33)', () => {
       .spyOn(repository, 'quote')
       .mockRejectedValue(new AppError('network', 'offline'));
     await renderWithProviders(
-      <SavingCirclesScreen />,
+      <SavingCirclesScreen onConfirm={jest.fn()} />,
       createTestContainer({ savings: repository }),
     );
     await fireEvent.press(await screen.findByTestId('saving-plan-lite'));
