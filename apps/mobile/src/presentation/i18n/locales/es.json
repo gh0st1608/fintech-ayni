@@ -926,5 +926,19 @@
         "body": "Se tomó un turno más."
       }
     }
+  },
+  "help": {
+    "title": "Ayuda",
+    "searchLabel": "Busca tu pregunta",
+    "searchPlaceholder": "Busca tu pregunta",
+    "faqTitle": "Preguntas frecuentes",
+    "noResults": "No encontramos preguntas con ese texto.",
+    "noFaqs": "Todavía no hay preguntas frecuentes.",
+    "policyTitle": "Política de pagos",
+    "policySummary": "Vencimientos, gracia, mora, devoluciones y retención del pozo.",
+    "policyPendingTitle": "Política en preparación",
+    "policyPendingDescription": "Estamos terminando la política de pagos. Mientras tanto, escríbenos si tienes dudas.",
+    "policyUpdated": "Actualizada el {{date}}",
+    "whatsapp": "Escríbenos por WhatsApp"
   }
 }

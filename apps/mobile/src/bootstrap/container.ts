@@ -4,6 +4,8 @@ import {
   MarkNotificationsReadUseCase,
 } from '@/application/notifications/notificationUseCases';
 import type { NotificationRepositoryPort } from '@/domain/notifications/NotificationRepositoryPort';
+import { GetHelpUseCase } from '@/application/help/helpUseCases';
+import type { HelpRepositoryPort } from '@/domain/help/HelpRepositoryPort';
 import type { AppContainer } from '@/application/AppContainer';
 import { SessionEvents } from '@/application/auth/SessionEvents';
 import {
@@ -153,6 +155,8 @@ import { MercadoPagoPaymentTokenizer } from '@/infrastructure/payments/MercadoPa
 import { InMemoryCardRepository } from '@/infrastructure/payments/InMemoryCardRepository';
 import { InMemoryPaymentRepository } from '@/infrastructure/payments/InMemoryPaymentRepository';
 import { PaymentApiRepository } from '@/infrastructure/payments/PaymentApiRepository';
+import { HelpApiRepository } from '@/infrastructure/help/HelpApiRepository';
+import { InMemoryHelpRepository } from '@/infrastructure/help/InMemoryHelpRepository';
 import { InMemoryNotificationRepository } from '@/infrastructure/notifications/InMemoryNotificationRepository';
 import { NotificationApiRepository } from '@/infrastructure/notifications/NotificationApiRepository';
 import { InMemoryPayoutMethodRepository } from '@/infrastructure/payouts/InMemoryPayoutMethodRepository';
@@ -192,6 +196,7 @@ export interface ContainerAdapters {
   userProfile: UserProfileRepositoryPort;
   payoutMethods: PayoutMethodRepositoryPort;
   notifications: NotificationRepositoryPort;
+  help: HelpRepositoryPort;
   payments: PaymentRepositoryPort;
   cards: CardRepositoryPort;
   paymentTokenizer: PaymentTokenizerPort;
@@ -253,6 +258,7 @@ export function createContainer(
       env.profileApi === 'fake'
         ? new InMemoryUserProfileRepository({ currency: env.defaultCurrency })
         : new UserProfileApiRepository(http),
+    help: env.helpApi === 'fake' ? new InMemoryHelpRepository() : new HelpApiRepository(http),
     notifications:
       env.notificationsApi === 'fake'
         ? new InMemoryNotificationRepository(env.defaultCurrency)
@@ -408,6 +414,7 @@ export function createContainer(
       listPlans: new ListSavingPlansUseCase(adapters.savings),
       getQuote: new GetSavingQuoteUseCase(adapters.savings),
     },
+    help: { get: new GetHelpUseCase(adapters.help) },
     notifications: {
       list: new ListNotificationsUseCase(adapters.notifications),
       countUnread: new CountUnreadNotificationsUseCase(adapters.notifications),

@@ -16,6 +16,7 @@ import {
 } from '@/infrastructure/documents/InMemoryDocumentRepository';
 
 import { FakeFilePicker } from './FakeFilePicker';
+import { InMemoryHelpRepository } from '@/infrastructure/help/InMemoryHelpRepository';
 import { InMemoryNotificationRepository } from '@/infrastructure/notifications/InMemoryNotificationRepository';
 import { InMemoryPayoutMethodRepository } from '@/infrastructure/payouts/InMemoryPayoutMethodRepository';
 import { InMemoryUserProfileRepository } from '@/infrastructure/profile/InMemoryUserProfileRepository';
@@ -52,6 +53,7 @@ interface TestAdapters {
   userProfile: InMemoryUserProfileRepository;
   payoutMethods: InMemoryPayoutMethodRepository;
   notifications: InMemoryNotificationRepository;
+  help: InMemoryHelpRepository;
   payments: InMemoryPaymentRepository;
   cards: InMemoryCardRepository;
   paymentTokenizer: FakePaymentTokenizer;
@@ -85,6 +87,7 @@ export function createTestContainer(overrides: Partial<TestAdapters> = {}) {
     userProfile: new InMemoryUserProfileRepository({ latencyMs: 0, currency: 'PEN' }),
     payoutMethods: new InMemoryPayoutMethodRepository('PEN', { latencyMs: 0 }),
     notifications: new InMemoryNotificationRepository('PEN', { latencyMs: 0, items: [] }),
+    help: new InMemoryHelpRepository(undefined, 0),
     payments: new InMemoryPaymentRepository('PEN', { latencyMs: 0 }),
     cards: new InMemoryCardRepository({ latencyMs: 0 }),
     paymentTokenizer: new FakePaymentTokenizer({ latencyMs: 0 }),

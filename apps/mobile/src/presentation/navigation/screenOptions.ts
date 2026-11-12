@@ -58,6 +58,8 @@ export function usePaymentScreenOptions() {
     cards: { title: t('payment.settings.savedCards'), headerBackButtonDisplayMode: 'minimal' },
     addCard: { title: t('payment.addCard.title'), headerBackButtonDisplayMode: 'minimal' },
     pay: { title: t('payment.pay.title'), headerBackButtonDisplayMode: 'minimal' },
+    help: { title: t('help.title'), headerBackButtonDisplayMode: 'minimal' },
+    policy: { title: t('help.policyTitle'), headerBackButtonDisplayMode: 'minimal' },
   } as const;
 }
 

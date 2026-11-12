@@ -46,6 +46,7 @@ import type {
   CopyOperationNumberUseCase,
   UpdatePaymentSettingsUseCase,
 } from '@/application/payments/usecases/paymentUseCases';
+import type { GetHelpUseCase } from '@/application/help/helpUseCases';
 import type {
   CountUnreadNotificationsUseCase,
   ListNotificationsUseCase,
@@ -173,6 +174,9 @@ export interface AppContainer {
   savings: {
     listPlans: ListSavingPlansUseCase;
     getQuote: GetSavingQuoteUseCase;
+  };
+  help: {
+    get: GetHelpUseCase;
   };
   notifications: {
     list: ListNotificationsUseCase;
