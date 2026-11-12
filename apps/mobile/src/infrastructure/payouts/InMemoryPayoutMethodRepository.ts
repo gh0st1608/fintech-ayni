@@ -6,7 +6,6 @@ import {
   type PayoutMethodType,
 } from '@/domain/payouts/value-objects/PayoutMethod';
 import { AppError } from '@/domain/shared/errors/AppError';
-import { Money } from '@/domain/shared/value-objects/Money';
 import { simulateLatency } from '@/infrastructure/fake/simulateLatency';
 
 export interface InMemoryPayoutMethodOptions {
@@ -18,16 +17,10 @@ export interface InMemoryPayoutMethodOptions {
   account?: PayoutAccount | null;
 }
 
-/** Mismo catálogo provisional que el backend por defecto (docs/api/payouts.md). */
-const catalog = (currency: string): PayoutMethod[] => [
-  PayoutMethod.create({ type: 'digitalWallet', available: true }),
-  PayoutMethod.create({
-    type: 'prepaidCard',
-    available: true,
-    badges: ['noCharge'],
-    limit: Money.fromMajor(100_000, currency),
-  }),
-  PayoutMethod.create({ type: 'bankTransfer', available: true, badges: ['noCharge'] }),
+/** Mismo catálogo que el backend por defecto: los métodos de Perú (COPAYNI-95). */
+const catalog = (_currency: string): PayoutMethod[] => [
+  PayoutMethod.create({ type: 'bankAccount', available: true, badges: ['noCharge'] }),
+  PayoutMethod.create({ type: 'wallet', available: true, badges: ['noCharge'] }),
 ];
 
 /** Métodos de cobro falsos (solo dev y pruebas). */

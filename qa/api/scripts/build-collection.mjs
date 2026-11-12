@@ -748,7 +748,7 @@ pm.test('Lista de círculos recomendados', () => pm.expect(data.items || data).t
         method: 'PUT',
         path: '/v1/me/payout-method',
         auth: user,
-        body: { method: 'digital_wallet' },
+        body: { method: 'wallet' },
         requirement: 'COPAYNI-31 · la unión exige método de cobro (PAYOUT_METHOD_REQUIRED)',
         tests: `expectStatus(200);`,
       },
@@ -899,7 +899,7 @@ const payments = folder('04-Payments', 'COPAYNI-35 a 41 y 63 (docs/api/payments.
 pm.test('Métodos válidos', () => {
   pm.expect(data.methods).to.be.an('array').that.is.not.empty;
   data.methods.forEach((m) => {
-    pm.expect(m.type).to.be.oneOf(['digital_wallet', 'prepaid_card', 'bank_transfer', 'fawry']);
+    pm.expect(m.type).to.be.oneOf(['bank_account', 'wallet']);
     pm.expect(m.available).to.be.a('boolean');
     pm.expect(m.limit === null || isMoney(m.limit)).to.eql(true);
   });
@@ -909,10 +909,10 @@ pm.test('Métodos válidos', () => {
     method: 'PUT',
     path: '/v1/me/payout-method',
     auth: 'A',
-    body: { method: 'bank_transfer' },
+    body: { method: 'bank_account' },
     requirement: 'COPAYNI-37',
     tests: `expectStatus(200);
-pm.test('selected = bank_transfer', () => pm.expect(data.selected).to.eql('bank_transfer'));`,
+pm.test('selected = bank_account', () => pm.expect(data.selected).to.eql('bank_account'));`,
   }),
   tc('TC-NEG-PAYOUT-METHOD-003', 'Método fuera del catálogo', {
     method: 'PUT',
@@ -1705,7 +1705,7 @@ save('flowPosition', pick.position);`,
         method: 'PUT',
         path: '/v1/me/payout-method',
         auth: flowUser,
-        body: { method: 'digital_wallet' },
+        body: { method: 'wallet' },
         requirement: 'COPAYNI-37',
         tests: `expectStatus(200);`,
       }),

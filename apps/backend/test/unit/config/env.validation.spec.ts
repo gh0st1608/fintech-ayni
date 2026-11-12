@@ -399,12 +399,11 @@ describe('validateEnvironment', () => {
   });
 
   describe('métodos de cobro', () => {
-    it('trae el catálogo provisional por defecto', () => {
+    it('trae los métodos de Perú por defecto (COPAYNI-95)', () => {
       expect(validateEnvironment({ ...REQUIRED })).toMatchObject({
-        PAYOUT_METHODS: ['digital_wallet', 'prepaid_card', 'bank_transfer'],
+        PAYOUT_METHODS: ['bank_account', 'wallet'],
         PAYOUT_METHODS_UNAVAILABLE: [],
-        PAYOUT_METHODS_NO_CHARGE: ['prepaid_card', 'bank_transfer'],
-        PAYOUT_PREPAID_CARD_LIMIT: 10_000_000,
+        PAYOUT_METHODS_NO_CHARGE: ['bank_account', 'wallet'],
       });
     });
 

@@ -230,7 +230,7 @@ describe('JoinCircleUseCase', () => {
     ['NATIONAL_ID_REQUIRED', { identityVerified: false }],
     ['MONTHLY_LIMIT_EXCEEDED', { monthlyPayInLimit: pen(3_000) }],
     ['PAYOUT_METHOD_REQUIRED', { payoutMethod: null }],
-    ['PAYOUT_METHOD_LIMIT_EXCEEDED', { payoutMethod: { type: 'prepaid_card', limit: pen(1) } }],
+    ['PAYOUT_METHOD_LIMIT_EXCEEDED', { payoutMethod: { type: 'wallet', limit: pen(1) } }],
   ])('sin cumplir un requisito (%s) no reserva nada', async (code, applicant) => {
     const { circles, useCase } = setup(applicant);
     await expect(useCase.execute(NEW_CIRCLE)).rejects.toMatchObject({ code, kind: 'domain' });
@@ -322,7 +322,7 @@ describe('JoinCircleUseCase', () => {
 
     it('compara el payout en USD con el límite del método de cobro en PEN', async () => {
       // Tarjeta prepago de S/ 30.000 = USD 8.000: alcanza justo; USD 8.100 la supera.
-      const { useCase } = setup({ payoutMethod: { type: 'prepaid_card', limit: pen(30_000) } });
+      const { useCase } = setup({ payoutMethod: { type: 'wallet', limit: pen(30_000) } });
       await expect(useCase.execute(USD_CIRCLE)).resolves.toMatchObject({ created: true });
       await expect(
         useCase.execute({

@@ -3604,7 +3604,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"method\": \"digital_wallet\"\n}"
+              "raw": "{\n  \"method\": \"wallet\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/v1/me/payout-method",
@@ -3665,7 +3665,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"method\": \"digital_wallet\"\n}"
+              "raw": "{\n  \"method\": \"wallet\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/v1/me/payout-method",
@@ -4576,7 +4576,7 @@
                   "pm.test('Métodos válidos', () => {",
                   "  pm.expect(data.methods).to.be.an('array').that.is.not.empty;",
                   "  data.methods.forEach((m) => {",
-                  "    pm.expect(m.type).to.be.oneOf(['digital_wallet', 'prepaid_card', 'bank_transfer', 'fawry']);",
+                  "    pm.expect(m.type).to.be.oneOf(['bank_account', 'wallet']);",
                   "    pm.expect(m.available).to.be.a('boolean');",
                   "    pm.expect(m.limit === null || isMoney(m.limit)).to.eql(true);",
                   "  });",
@@ -4634,7 +4634,7 @@
                   "};",
                   "const save = (name, value) => pm.collectionVariables.set(name, value);",
                   "expectStatus(200);",
-                  "pm.test('selected = bank_transfer', () => pm.expect(data.selected).to.eql('bank_transfer'));",
+                  "pm.test('selected = bank_account', () => pm.expect(data.selected).to.eql('bank_account'));",
                   "}"
                 ]
               }
@@ -4654,7 +4654,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"method\": \"bank_transfer\"\n}"
+              "raw": "{\n  \"method\": \"bank_account\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/v1/me/payout-method",
@@ -9779,7 +9779,7 @@
                 ],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"method\": \"digital_wallet\"\n}"
+                  "raw": "{\n  \"method\": \"wallet\"\n}"
                 },
                 "url": {
                   "raw": "{{baseUrl}}/v1/me/payout-method",

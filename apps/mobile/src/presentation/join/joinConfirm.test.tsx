@@ -37,7 +37,7 @@ function Draft({ complete = true, slot = SLOT }: { complete?: boolean; slot?: Sl
     } else if (draft.installment && !draft.slot) {
       setSlot(slot);
     } else if (draft.slot && !draft.payoutMethod) {
-      setPayoutMethod('bankTransfer');
+      setPayoutMethod('bankAccount');
     }
   }, [draft, slot, setInstallment, setSlot, setPayoutMethod]);
   return null;
@@ -124,7 +124,7 @@ describe('JoinConfirmScreen', () => {
     expect(summary).toHaveTextContent(/30\.?000/);
     expect(summary).toHaveTextContent(/3\.?000.* al mes · 10 meses/);
     expect(summary).toHaveTextContent(/ene\.? 2027 · Turno 3 · Menor costo/i);
-    expect(summary).toHaveTextContent(/Transferencia bancaria/);
+    expect(summary).toHaveTextContent(/Cuenta bancaria/);
 
     await fireEvent.press(screen.getByRole('button', { name: 'Editar el turno de cobro' }));
     await fireEvent.press(screen.getByRole('button', { name: 'Editar el método de cobro' }));

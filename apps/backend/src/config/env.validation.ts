@@ -44,13 +44,8 @@ export const LOG_LEVELS = ['debug', 'info', 'warn', 'error', 'fatal'] as const;
 export const CIRCLE_ASSIGNMENT_STRATEGIES = ['fill_oldest', 'always_new'] as const;
 /** Igual que `ADMIN_FEE_MODES` del dominio de círculos (pending-scope R4). */
 export const ADMIN_FEE_MODES = ['added_to_installments', 'deducted_from_payout'] as const;
-/** Igual que `PAYOUT_METHOD_TYPES` del dominio de payouts (Figma 55:9520). */
-export const PAYOUT_METHOD_TYPES = [
-  'digital_wallet',
-  'prepaid_card',
-  'bank_transfer',
-  'fawry',
-] as const;
+/** Igual que `PAYOUT_METHOD_TYPES` del dominio de payouts (COPAYNI-95). */
+export const PAYOUT_METHOD_TYPES = ['bank_account', 'wallet'] as const;
 /** Cómo se trata el National ID al unirse mientras no exista el KYC (COPAYNI-47). */
 export const JOIN_IDENTITY_CHECKS = ['assume_verified', 'assume_unverified'] as const;
 
@@ -585,19 +580,12 @@ export class EnvironmentVariables {
   @IsIn(ADMIN_FEE_MODES)
   ADMIN_FEE_MODE: (typeof ADMIN_FEE_MODES)[number] = 'added_to_installments';
 
-  /**
-   * Métodos de cobro que se muestran, en orden (Payout Method, 55:9520). Provisional hasta definir
-   * los proveedores locales (pending-scope T5): Fawry es egipcio y queda fuera por defecto.
-   */
+  /** Métodos de cobro que se muestran, en orden: cuenta bancaria y Yape/Plin (COPAYNI-95). */
   @Transform(toList)
   @ArrayNotEmpty()
   @ArrayUnique()
   @IsIn(PAYOUT_METHOD_TYPES, { each: true })
-  PAYOUT_METHODS: (typeof PAYOUT_METHOD_TYPES)[number][] = [
-    'digital_wallet',
-    'prepaid_card',
-    'bank_transfer',
-  ];
+  PAYOUT_METHODS: (typeof PAYOUT_METHOD_TYPES)[number][] = ['bank_account', 'wallet'];
 
   /** Métodos que se muestran deshabilitados ("Not available"). */
   @Transform(toList)
@@ -605,19 +593,11 @@ export class EnvironmentVariables {
   @IsIn(PAYOUT_METHOD_TYPES, { each: true })
   PAYOUT_METHODS_UNAVAILABLE: (typeof PAYOUT_METHOD_TYPES)[number][] = [];
 
-  /** Métodos con el badge "No Charge" (en el Figma, la tarjeta prepago y la transferencia). */
+  /** Métodos con el badge "No Charge" (sin costo para la persona). */
   @Transform(toList)
   @ArrayUnique()
   @IsIn(PAYOUT_METHOD_TYPES, { each: true })
-  PAYOUT_METHODS_NO_CHARGE: (typeof PAYOUT_METHOD_TYPES)[number][] = [
-    'prepaid_card',
-    'bank_transfer',
-  ];
-
-  /** Límite de la tarjeta prepago, en unidades menores de DEFAULT_CURRENCY (Figma: 100.000). */
-  @IsInt()
-  @Min(1)
-  PAYOUT_PREPAID_CARD_LIMIT: number = 10_000_000;
+  PAYOUT_METHODS_NO_CHARGE: (typeof PAYOUT_METHOD_TYPES)[number][] = ['bank_account', 'wallet'];
 
   /**
    * National ID al unirse a un Game'ya (COPAYNI-31). Provisional hasta el KYC (COPAYNI-47):

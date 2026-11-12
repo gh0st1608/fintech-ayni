@@ -2,7 +2,6 @@ import { Inject, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 
 import { type AppConfigService } from '../../../config/configuration';
-import { Money } from '../../../shared/domain/value-objects/money';
 import { type PayoutMethodCatalogPort } from '../application/ports/payout.ports';
 import { PayoutMethodCatalog } from '../domain/payout-method';
 
@@ -14,16 +13,13 @@ export class ConfigPayoutMethodCatalog implements PayoutMethodCatalogPort {
   constructor(@Inject(ConfigService) env: AppConfigService) {
     const unavailable = env.get('PAYOUT_METHODS_UNAVAILABLE', { infer: true });
     const noCharge = env.get('PAYOUT_METHODS_NO_CHARGE', { infer: true });
-    const currency = env.get('DEFAULT_CURRENCY', { infer: true });
     this.catalog = PayoutMethodCatalog.create(
       env.get('PAYOUT_METHODS', { infer: true }).map((type) => ({
         type,
         available: !unavailable.includes(type),
         badges: noCharge.includes(type) ? ['no_charge'] : [],
-        limit:
-          type === 'prepaid_card'
-            ? Money.of(env.get('PAYOUT_PREPAID_CARD_LIMIT', { infer: true }), currency)
-            : null,
+        // Ningún método de Perú tiene tope por payout; el campo queda para el contrato.
+        limit: null,
       })),
     );
   }

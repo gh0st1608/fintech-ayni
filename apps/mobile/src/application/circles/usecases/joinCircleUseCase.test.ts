@@ -33,7 +33,7 @@ function draft(position = 3, circleId: string | null = null) {
         circleId,
       }),
     )
-    .withPayoutMethod('bankTransfer');
+    .withPayoutMethod('bankAccount');
 }
 
 function setup() {

@@ -108,7 +108,7 @@ describe('Cuenta de cobro', () => {
       .get('/v1/me/payout-method')
       .set('Authorization', `Bearer ${juana.token}`)
       .expect(200);
-    expect(methods.body.data.selected).toBe('bank_transfer');
+    expect(methods.body.data.selected).toBe('bank_account');
 
     // Reemplazarla deja la anterior en el historial.
     await put(juana.userId, operations, {

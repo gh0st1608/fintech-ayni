@@ -61,15 +61,12 @@ const method = (type: string) => screen.findByTestId(`payout-method-${type}`);
 const cta = () => screen.getByRole('button', { name: 'Continuar' });
 
 describe('PayoutMethodScreen', () => {
-  it('muestra el paso 4 de 4 con los métodos, sus badges y el límite de la tarjeta', async () => {
+  it('muestra el paso 4 de 4 con los métodos de Perú y sus badges (COPAYNI-95)', async () => {
     await renderMethods();
-    expect(await method('digitalWallet')).toHaveAccessibleName(/Billetera digital/);
+    expect(await method('bankAccount')).toHaveAccessibleName(/Cuenta bancaria.*Sin costo.*CCI/);
     expect(screen.getByLabelText('Paso 4 de 4')).toBeTruthy();
-    expect(await method('prepaidCard')).toHaveAccessibleName(
-      /Tarjeta prepago.*Sin costo.*Límite de .*100\.?000.* por cobro/,
-    );
-    expect(await method('bankTransfer')).toHaveAccessibleName(/Transferencia bancaria.*Sin costo/);
-    expect(await method('digitalWallet')).not.toHaveAccessibleName(/Sin costo/);
+    expect(await method('wallet')).toHaveAccessibleName(/Yape o Plin.*Sin costo/);
+    expect(screen.queryByTestId('payout-method-prepaidCard')).toBeNull();
     expect(screen.getByText('Puedes cambiarlo hasta antes de tu mes de cobro.')).toBeTruthy();
     expect(cta()).toBeDisabled();
   });
@@ -78,33 +75,33 @@ describe('PayoutMethodScreen', () => {
     await renderMethods({
       payoutMethods: new InMemoryPayoutMethodRepository('PEN', {
         latencyMs: 0,
-        selected: 'bankTransfer',
+        selected: 'bankAccount',
       }),
     });
-    expect(await method('bankTransfer')).toBeChecked();
+    expect(await method('bankAccount')).toBeChecked();
     expect(cta()).toBeEnabled();
   });
 
   it('al continuar guarda el método en el backend y en el borrador', async () => {
     const { onNext, payoutMethods } = await renderMethods();
-    await fireEvent.press(await method('digitalWallet'));
-    expect(await method('digitalWallet')).toBeChecked();
+    await fireEvent.press(await method('wallet'));
+    expect(await method('wallet')).toBeChecked();
     await fireEvent.press(cta());
 
     await waitFor(() => expect(onNext).toHaveBeenCalledTimes(1));
-    expect(payoutMethods.selected).toBe('digitalWallet');
-    expect(screen.getByTestId('draft')).toHaveTextContent('digitalWallet');
+    expect(payoutMethods.selected).toBe('wallet');
+    expect(screen.getByTestId('draft')).toHaveTextContent('wallet');
   });
 
   it('en el mes de payout explica que no puede cambiarlo', async () => {
     const { onNext } = await renderMethods({
       payoutMethods: new InMemoryPayoutMethodRepository('PEN', {
         latencyMs: 0,
-        selected: 'prepaidCard',
+        selected: 'wallet',
         changeLocked: true,
       }),
     });
-    await fireEvent.press(await method('bankTransfer'));
+    await fireEvent.press(await method('bankAccount'));
     await fireEvent.press(cta());
 
     expect(await screen.findByRole('alert')).toHaveTextContent(
@@ -112,7 +109,7 @@ describe('PayoutMethodScreen', () => {
     );
     expect(onNext).not.toHaveBeenCalled();
     // Elegir otro método borra el aviso.
-    await fireEvent.press(await method('prepaidCard'));
+    await fireEvent.press(await method('wallet'));
     expect(screen.queryByRole('alert')).toBeNull();
   });
 
@@ -131,7 +128,7 @@ describe('PayoutMethodScreen', () => {
     );
     online = true;
     await fireEvent.press(screen.getByRole('button', { name: 'Reintentar' }));
-    expect(await method('bankTransfer')).toBeTruthy();
+    expect(await method('bankAccount')).toBeTruthy();
   }, 10_000);
 
   it('sin los pasos anteriores pide volver al paso 1', async () => {

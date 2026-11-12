@@ -46,20 +46,14 @@ describe('/v1/me/payout-method', () => {
       .set('Authorization', `Bearer ${token}`)
       .send({ method });
 
-  it('lista el catálogo provisional sin método elegido', async () => {
+  it('lista los métodos de Perú sin método elegido (COPAYNI-95)', async () => {
     const { token } = await signIn();
     const response = await get(token).expect(200);
 
     expect(response.body.data).toEqual({
       methods: [
-        { type: 'digital_wallet', available: true, badges: [], limit: null },
-        {
-          type: 'prepaid_card',
-          available: true,
-          badges: ['no_charge'],
-          limit: { amount: 10_000_000, currency: 'PEN' },
-        },
-        { type: 'bank_transfer', available: true, badges: ['no_charge'], limit: null },
+        { type: 'bank_account', available: true, badges: ['no_charge'], limit: null },
+        { type: 'wallet', available: true, badges: ['no_charge'], limit: null },
       ],
       selected: null,
     });
@@ -67,25 +61,28 @@ describe('/v1/me/payout-method', () => {
 
   it('guarda el método y lo devuelve preseleccionado', async () => {
     const { token } = await signIn();
-    await expect(put(token, 'bank_transfer').expect(200)).resolves.toMatchObject({
-      body: { data: { selected: 'bank_transfer' } },
+    await expect(put(token, 'bank_account').expect(200)).resolves.toMatchObject({
+      body: { data: { selected: 'bank_account' } },
     });
     await expect(get(token).expect(200)).resolves.toMatchObject({
-      body: { data: { selected: 'bank_transfer' } },
+      body: { data: { selected: 'bank_account' } },
     });
-    await put(token, 'digital_wallet').expect(200);
+    await put(token, 'wallet').expect(200);
   });
 
   it('rechaza un método fuera del catálogo', async () => {
     const { token } = await signIn();
-    const response = await put(token, 'fawry').expect(422);
-    expect(response.body.error.code).toBe('PAYOUT_METHOD_NOT_AVAILABLE');
+    // Los métodos del Figma de Marruecos ya no existen.
+    for (const method of ['fawry', 'prepaid_card', 'bank_transfer']) {
+      const response = await put(token, method).expect(422);
+      expect(response.body.error.code).toBe('PAYOUT_METHOD_NOT_AVAILABLE');
+    }
     expect((await put(token, '').expect(422)).body.error.code).toBe('PAYOUT_METHOD_NOT_AVAILABLE');
   });
 
   it('no permite cambiarlo en el mes de payout del usuario', async () => {
     const { token, userId } = await signIn();
-    await put(token, 'prepaid_card').expect(200);
+    await put(token, 'wallet').expect(200);
 
     // Un círculo que empezó este mes, con el usuario en el slot 1: cobra este mes.
     const thisMonth = Period.fromDate(new Date(), 'America/Lima').toString();
@@ -102,9 +99,9 @@ describe('/v1/me/payout-method', () => {
       [randomUUID(), circleId, userId],
     );
 
-    const response = await put(token, 'bank_transfer').expect(422);
+    const response = await put(token, 'bank_account').expect(422);
     expect(response.body.error.code).toBe('PAYOUT_METHOD_CHANGE_NOT_ALLOWED');
-    await put(token, 'prepaid_card').expect(200);
+    await put(token, 'wallet').expect(200);
   });
 
   it('exige autenticación', async () => {

@@ -24,7 +24,7 @@ describe('POST /v1/circles/join', () => {
 
   afterAll(() => app.close());
 
-  async function signIn(method: string | null = 'bank_transfer'): Promise<string> {
+  async function signIn(method: string | null = 'bank_account'): Promise<string> {
     const started = await request(app.getHttpServer())
       .post('/v1/auth/start')
       .send({ identifier: `${randomUUID()}@mail.com`, type: 'email' })
@@ -177,7 +177,7 @@ describe('POST /v1/circles/join', () => {
     await request(app.getHttpServer())
       .put('/v1/me/payout-method')
       .set('Authorization', `Bearer ${token}`)
-      .send({ method: 'digital_wallet' })
+      .send({ method: 'wallet' })
       .expect(200);
     // La misma clave sirve después de elegir el método: el intento anterior no guardó nada.
     await join(token, { ...NEW_CIRCLE, payoutAmount: 9_000_000 }, key).expect(201);
@@ -197,13 +197,6 @@ describe('POST /v1/circles/join', () => {
       netPayout: { amount: 9_500_000 - 2 * 950_000, currency: 'PEN' },
       retention: { amount: 2 * 950_000, currency: 'PEN' },
     });
-  });
-
-  it('con la tarjeta prepago, un payout sobre su límite responde PAYOUT_METHOD_LIMIT_EXCEEDED', async () => {
-    const token = await signIn('prepaid_card');
-    await join(token, { ...NEW_CIRCLE, payoutAmount: 11_000_000 })
-      .expect(422)
-      .expect(({ body }) => expect(body.error.code).toBe('PAYOUT_METHOD_LIMIT_EXCEEDED'));
   });
 
   it('valida la Idempotency-Key, el cuerpo y que el círculo exista', async () => {

@@ -31,7 +31,7 @@ describe('GET /v1/me/circles', () => {
     await request(app.getHttpServer())
       .put('/v1/me/payout-method')
       .set('Authorization', `Bearer ${token}`)
-      .send({ method: 'bank_transfer' })
+      .send({ method: 'bank_account' })
       .expect(200);
     return token;
   }

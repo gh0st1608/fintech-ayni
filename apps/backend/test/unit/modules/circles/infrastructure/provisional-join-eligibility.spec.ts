@@ -6,8 +6,8 @@ import { type GetSelectedPayoutMethodUseCase } from '@src/modules/payouts/applic
 import { type PayoutMethod } from '@src/modules/payouts/domain/payout-method';
 import { Money } from '@src/shared/domain/value-objects/money';
 
-const PREPAID: PayoutMethod = {
-  type: 'prepaid_card',
+const LIMITED_WALLET: PayoutMethod = {
+  type: 'wallet',
   available: true,
   badges: ['no_charge'],
   limit: Money.of(10_000_000, 'PEN'),
@@ -15,7 +15,7 @@ const PREPAID: PayoutMethod = {
 
 function eligibility(
   env: Record<string, unknown>,
-  method: PayoutMethod | null = PREPAID,
+  method: PayoutMethod | null = LIMITED_WALLET,
   kyc: KycStatusPort = {
     identityVerified: () => Promise.resolve(false),
     approvedMonthlyIncome: () => Promise.resolve(null),
@@ -41,7 +41,7 @@ describe('ProvisionalJoinEligibility', () => {
       identityVerified: true,
       monthlyPayInLimit: null,
       incomeDeclared: true,
-      payoutMethod: { type: 'prepaid_card', limit: Money.of(10_000_000, 'PEN') },
+      payoutMethod: { type: 'wallet', limit: Money.of(10_000_000, 'PEN') },
     });
   });
 

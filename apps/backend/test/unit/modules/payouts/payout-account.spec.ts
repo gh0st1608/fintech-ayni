@@ -177,7 +177,7 @@ describe('RegisterPayoutAccountUseCase', () => {
     const account = await register.execute(command());
     expect(account).toMatchObject({ kind: 'bank_account', last4: '4567', bankCode: '002' });
     expect(saved[0]).toMatchObject({
-      method: 'bank_transfer',
+      method: 'bank_account',
       registeredBy: 'staff-1',
       registeredByEmail: 'ops@ayni.pe',
       reason: 'Constancia de CCI enviada por soporte',

@@ -27,10 +27,8 @@ interface PayoutMethodPickerProps {
 }
 
 const ICONS = {
-  digitalWallet: 'wallet-outline',
-  prepaidCard: 'card-outline',
-  bankTransfer: 'business-outline',
-  fawry: 'globe-outline',
+  bankAccount: 'business-outline',
+  wallet: 'phone-portrait-outline',
 } as const satisfies Record<PayoutMethodType, React.ComponentProps<typeof Ionicons>['name']>;
 
 /**

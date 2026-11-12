@@ -1,13 +1,12 @@
 import { type Money } from '../../../shared/domain/value-objects/money';
 import { DomainError } from '../../../shared/errors/app-error';
 
-/** Tipos de método de cobro del Figma (Payout Method, 55:9520). Los proveedores locales están pendientes (T5). */
-export const PAYOUT_METHOD_TYPES = [
-  'digital_wallet',
-  'prepaid_card',
-  'bank_transfer',
-  'fawry',
-] as const;
+/**
+ * Métodos de cobro en Perú (COPAYNI-95): cuenta bancaria (CCI) o billetera (Yape o Plin). Reemplazan
+ * los del Figma de Marruecos (Payout Method, 55:9520). Los datos de la cuenta los registra el
+ * personal (COPAYNI-81); el riel para pagar el payout sigue pendiente (T5).
+ */
+export const PAYOUT_METHOD_TYPES = ['bank_account', 'wallet'] as const;
 export type PayoutMethodType = (typeof PAYOUT_METHOD_TYPES)[number];
 
 export const PAYOUT_METHOD_BADGES = ['no_charge'] as const;
