@@ -318,6 +318,12 @@ export class EnvironmentVariables {
   @Max(3600)
   STAFF_STEP_UP_MAX_AGE_SECONDS: number = 300;
 
+  /** Días antes del vencimiento de una cuota en que se notifica, además del mismo día (COPAYNI-84). */
+  @IsInt()
+  @Min(1)
+  @Max(15)
+  NOTIFICATION_DUE_SOON_DAYS: number = 3;
+
   /** Horas que vive una propuesta de doble aprobación sin decidir (COPAYNI-73, BO6). */
   @IsInt()
   @Min(1)
