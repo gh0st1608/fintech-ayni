@@ -356,6 +356,30 @@ describe('validateEnvironment', () => {
       ).toThrow(/PAYMENT_GATEWAY: fake no se admite/);
     });
 
+    it('VerificaID exige su token de API y el del webhook (COPAYNI-42)', () => {
+      expect(validateEnvironment({ ...REQUIRED })).toMatchObject({
+        VERIFICAID_API_URL: 'https://sandbox-api.verifica.id',
+        VERIFICAID_CALLBACK_URL: 'ayni://identity-verification',
+        VERIFICAID_TIMEOUT_MS: 10000,
+        IDENTITY_CONSENT_VERSION: '2026-11',
+        IDENTITY_MAX_REJECTED_ATTEMPTS: 3,
+        IDENTITY_SESSION_TTL_HOURS: 24,
+      });
+      expect(() => validateEnvironment({ ...REQUIRED, KYC_PROVIDER: 'verificaid' })).toThrow(
+        /VERIFICAID_API_TOKEN[\s\S]*VERIFICAID_WEBHOOK_TOKEN/,
+      );
+      const verificaId = {
+        ...REQUIRED,
+        KYC_PROVIDER: 'verificaid',
+        VERIFICAID_API_TOKEN: 'jwt',
+        VERIFICAID_WEBHOOK_TOKEN: 'w'.repeat(32),
+      };
+      expect(validateEnvironment(verificaId).KYC_PROVIDER).toBe('verificaid');
+      expect(() =>
+        validateEnvironment({ ...verificaId, VERIFICAID_WEBHOOK_TOKEN: 'corto' }),
+      ).toThrow(/VERIFICAID_WEBHOOK_TOKEN/);
+    });
+
     it('pide una autenticación reciente del personal para pausar (COPAYNI-61)', () => {
       expect(validateEnvironment({ ...REQUIRED })).toMatchObject({
         STAFF_STEP_UP_MAX_AGE_SECONDS: 300,

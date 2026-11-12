@@ -148,9 +148,13 @@ export class SqlDocumentsRepository implements DocumentRepositoryPort, KycStatus
 
   async identityVerified(userId: string): Promise<boolean> {
     if (!isUuid(userId)) return false;
+    // Aprobado por la revisión del DNI subido o por la verificación en línea (COPAYNI-42).
     const [row] = await this.dataSource.query<unknown[]>(
       `SELECT 1 FROM kyc_documents
-        WHERE user_id = $1 AND type = 'national_id' AND status = 'approved' LIMIT 1`,
+        WHERE user_id = $1 AND type = 'national_id' AND status = 'approved'
+       UNION ALL
+       SELECT 1 FROM identity_verifications WHERE user_id = $1 AND status = 'approved'
+       LIMIT 1`,
       [userId],
     );
     return row !== undefined;

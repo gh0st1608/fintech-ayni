@@ -1,8 +1,23 @@
 import { Module } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { getDataSourceToken } from '@nestjs/typeorm';
+import { type DataSource } from 'typeorm';
 
 import { type AppConfigService } from '../../config/configuration';
 import { CLOCK, type ClockPort } from '../../shared/application/ports/clock.port';
+import {
+  IDENTITY_PROVIDER,
+  IDENTITY_SETTINGS,
+  IDENTITY_VERIFICATIONS,
+  type IdentityProviderPort,
+  type IdentitySettings,
+} from './application/identity-verification.ports';
+import {
+  GetIdentityVerificationUseCase,
+  HandleIdentityWebhookUseCase,
+  RefreshIdentityVerificationUseCase,
+  StartIdentityVerificationUseCase,
+} from './application/identity-verification.use-cases';
 import { KycPayInLimit } from './application/kyc-pay-in-limit';
 import { KYC_REVIEWS } from './application/kyc-review.ports';
 import {
@@ -32,19 +47,37 @@ import {
   SimulatedKycProvider,
 } from './infrastructure/simulated-kyc';
 import { S3DocumentStorage } from './infrastructure/s3-document-storage';
+import {
+  SimulatedIdentityProvider,
+  UnavailableIdentityProvider,
+} from './infrastructure/simulated-identity-provider';
+import { SqlIdentityVerificationsRepository } from './infrastructure/sql-identity-verifications.repository';
+import { VerificaIdIdentityProvider } from './infrastructure/verificaid/verificaid-identity-provider';
 import { SqlDocumentsRepository } from './infrastructure/sql-documents.repository';
 import { SqlKycReviewsRepository } from './infrastructure/sql-kyc-reviews.repository';
 import { AdminKycController } from './presentation/admin-kyc.controller';
 import { DOCUMENT_CURRENCY, DocumentsController } from './presentation/documents.controller';
+import { IdentityVerificationController } from './presentation/identity-verification.controller';
+import {
+  VERIFICAID_WEBHOOK_SETTINGS,
+  VerificaIdWebhookController,
+  type VerificaIdWebhookSettings,
+} from './presentation/verificaid-webhook.controller';
 
 /**
  * Documentos y KYC (COPAYNI-42, 43, 46 a 49). El almacenamiento es S3 (`DOCUMENT_STORAGE=s3`,
- * floci en dev) o simulado; el proveedor de verificación es simulado o manual hasta cerrar el
- * spike COPAYNI-42.
+ * floci en dev) o simulado. La identidad se verifica con VerificaID (`KYC_PROVIDER=verificaid`:
+ * Consulta y CheckMatch), simulada o, sin proveedor (`manual`), con la subida del DNI que revisa
+ * operaciones.
  * Exporta el estado del KYC para la elegibilidad y el límite mensual.
  */
 @Module({
-  controllers: [DocumentsController, AdminKycController],
+  controllers: [
+    DocumentsController,
+    AdminKycController,
+    IdentityVerificationController,
+    VerificaIdWebhookController,
+  ],
   providers: [
     RequestUploadUseCase,
     SubmitDocumentUseCase,
@@ -82,6 +115,57 @@ import { DOCUMENT_CURRENCY, DocumentsController } from './presentation/documents
           : new ManualKycReview(),
     },
     { provide: INCOME_REVIEWER, useExisting: IDENTITY_VERIFIER },
+    // Verificación de identidad en línea (COPAYNI-42): Consulta y CheckMatch de VerificaID.
+    StartIdentityVerificationUseCase,
+    GetIdentityVerificationUseCase,
+    RefreshIdentityVerificationUseCase,
+    HandleIdentityWebhookUseCase,
+    {
+      provide: IDENTITY_VERIFICATIONS,
+      inject: [getDataSourceToken(), ConfigService],
+      useFactory: (dataSource: DataSource, config: AppConfigService) =>
+        new SqlIdentityVerificationsRepository(
+          dataSource,
+          config.get('KYC_PROVIDER', { infer: true }),
+        ),
+    },
+    {
+      provide: IDENTITY_PROVIDER,
+      inject: [ConfigService],
+      useFactory: (config: AppConfigService): IdentityProviderPort => {
+        switch (config.get('KYC_PROVIDER', { infer: true })) {
+          case 'verificaid':
+            return new VerificaIdIdentityProvider({
+              apiUrl: config.get('VERIFICAID_API_URL', { infer: true }).replace(/\/+$/, ''),
+              apiToken: config.get('VERIFICAID_API_TOKEN', { infer: true }),
+              timeoutMs: config.get('VERIFICAID_TIMEOUT_MS', { infer: true }),
+            });
+          case 'simulated':
+            return new SimulatedIdentityProvider(
+              config.get('KYC_SIMULATED_RESULT', { infer: true }),
+            );
+          case 'manual':
+            return new UnavailableIdentityProvider();
+        }
+      },
+    },
+    {
+      provide: IDENTITY_SETTINGS,
+      inject: [ConfigService],
+      useFactory: (config: AppConfigService): IdentitySettings => ({
+        consentVersion: config.get('IDENTITY_CONSENT_VERSION', { infer: true }),
+        callbackUrl: config.get('VERIFICAID_CALLBACK_URL', { infer: true }),
+        maxRejectedAttempts: config.get('IDENTITY_MAX_REJECTED_ATTEMPTS', { infer: true }),
+        sessionTtlHours: config.get('IDENTITY_SESSION_TTL_HOURS', { infer: true }),
+      }),
+    },
+    {
+      provide: VERIFICAID_WEBHOOK_SETTINGS,
+      inject: [ConfigService],
+      useFactory: (config: AppConfigService): VerificaIdWebhookSettings => ({
+        token: config.get('VERIFICAID_WEBHOOK_TOKEN', { infer: true }) ?? null,
+      }),
+    },
     {
       provide: DOCUMENT_SETTINGS,
       inject: [ConfigService],
