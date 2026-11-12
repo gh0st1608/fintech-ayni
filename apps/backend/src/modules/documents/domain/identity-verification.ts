@@ -1,3 +1,4 @@
+import { containsAllTokens, nameTokens } from '../../../shared/domain/person-name';
 import { ConflictError, DomainError, ValidationError } from '../../../shared/errors/app-error';
 
 /**
@@ -111,20 +112,9 @@ export const isValidDni = (value: string): boolean => /^\d{8}$/.test(value);
 export const maskDocument = (value: string): string =>
   `${'•'.repeat(Math.max(0, value.length - 3))}${value.slice(-3)}`;
 
-/** Palabras de un nombre sin tildes, mayúsculas ni signos: "María-José" → ["MARIA", "JOSE"]. */
-export function nameTokens(value: string): string[] {
-  return value
-    .normalize('NFD')
-    .replace(/\p{Diacritic}/gu, '')
-    .toUpperCase()
-    .replace(/[^A-Z]+/g, ' ')
-    .trim()
-    .split(' ')
-    .filter(Boolean);
-}
+export { nameTokens };
 
-const containsAll = (haystack: string[], needles: string[]): boolean =>
-  needles.length > 0 && needles.every((needle) => haystack.includes(needle));
+const containsAll = containsAllTokens;
 
 /** Los datos del DNI según RENIEC. */
 export interface PersonRecord {

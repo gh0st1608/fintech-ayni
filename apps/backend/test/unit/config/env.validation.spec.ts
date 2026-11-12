@@ -167,6 +167,7 @@ describe('validateEnvironment', () => {
       DOCUMENTS_BUCKET: 'ayni-prd-documents',
       JWT_PRIVATE_KEY: '-----BEGIN PRIVATE KEY-----\nabc\n-----END PRIVATE KEY-----',
       OTP_PEPPER: 'p'.repeat(32),
+      FIELD_ENCRYPTION_KEY: Buffer.alloc(32, 1).toString('base64'),
     };
 
     it('fuera de production no exige la clave JWT ni el secreto de los OTP', () => {
@@ -208,6 +209,13 @@ describe('validateEnvironment', () => {
       );
       expect(() => validateEnvironment({ ...PRODUCTION, OTP_PEPPER: 'corto' })).toThrow(
         /OTP_PEPPER/,
+      );
+      // El cifrado del CCI (COPAYNI-81) no admite una clave de desarrollo en production.
+      expect(() => validateEnvironment({ ...PRODUCTION, FIELD_ENCRYPTION_KEY: undefined })).toThrow(
+        /FIELD_ENCRYPTION_KEY/,
+      );
+      expect(() => validateEnvironment({ ...PRODUCTION, FIELD_ENCRYPTION_KEY: 'corta' })).toThrow(
+        /FIELD_ENCRYPTION_KEY/,
       );
     });
 

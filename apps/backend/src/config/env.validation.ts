@@ -720,6 +720,19 @@ export class EnvironmentVariables {
   @MinLength(32)
   OTP_PEPPER?: string;
 
+  /**
+   * Clave AES-256 (32 bytes en base64) con la que se cifran los datos sensibles guardados, como el
+   * CCI de la cuenta de cobro (COPAYNI-81). Es un secreto de Secrets Manager. Obligatoria en
+   * production; en desarrollo y pruebas, sin valor se usa una clave fija de desarrollo.
+   */
+  @ValidateIf(
+    (env: EnvironmentVariables) => env.NODE_ENV === 'production' || !!env.FIELD_ENCRYPTION_KEY,
+  )
+  @Matches(/^[A-Za-z0-9+/]{43}=$/, {
+    message: 'FIELD_ENCRYPTION_KEY debe ser una clave de 32 bytes en base64',
+  })
+  FIELD_ENCRYPTION_KEY?: string;
+
   /** Política de OTP provisional (pending-scope R10), igual que el adaptador falso de mobile. */
   @IsInt()
   @Min(60)
