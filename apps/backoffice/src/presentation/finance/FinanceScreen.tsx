@@ -20,12 +20,14 @@ import {
 } from '../components/ui';
 import { formatDateTime, formatDay, formatMoney, formatPeriod } from '../format';
 import { useStaff } from '../providers/AppProviders';
+import { ApprovalsView } from './ApprovalsView';
 import { useGuaranteeFund, useInstallments, usePayouts } from './useFinance';
 
 const VIEWS = {
   installments: 'Cuotas',
   payouts: 'Pozos entregados',
   fund: 'Fondo de garantía',
+  approvals: 'Movimientos del fondo',
 } as const;
 type View = keyof typeof VIEWS;
 
@@ -43,9 +45,9 @@ const STATUS_TONE: Record<InstallmentStatus, 'neutral' | 'warning' | 'success' |
 };
 
 /**
- * Finanzas (docs/backoffice-plan.md, fase 3), solo lectura: cuotas, pozos entregados y el fondo de
- * garantía. Registrar movimientos espera la doble aprobación (BO6). La vista y los filtros viven
- * en la URL.
+ * Finanzas (docs/backoffice-plan.md, fase 3): cuotas, pozos entregados y el fondo de garantía, de
+ * solo lectura, y los movimientos manuales del fondo con doble aprobación (COPAYNI-73). La vista y
+ * los filtros viven en la URL.
  */
 export function FinanceScreen() {
   const [params, setParams] = useSearchParams();
@@ -57,7 +59,8 @@ export function FinanceScreen() {
       <header className="flex flex-col gap-3">
         <h1 className="text-2xl font-semibold">Finanzas</h1>
         <p className="text-sm text-ink-soft">
-          Solo lectura. Los movimientos manuales llegan con la doble aprobación.
+          Las cifras son de solo lectura. El dinero del fondo solo se mueve con la aprobación de una
+          segunda persona.
         </p>
         <nav aria-label="Vistas de finanzas" className="flex flex-wrap gap-1">
           {(Object.keys(VIEWS) as View[]).map((key) => (
@@ -78,6 +81,7 @@ export function FinanceScreen() {
       {view === 'installments' && <InstallmentsView />}
       {view === 'payouts' && <PayoutsView />}
       {view === 'fund' && <FundView />}
+      {view === 'approvals' && <ApprovalsView />}
     </section>
   );
 }

@@ -19,7 +19,15 @@ import type {
   InstallmentsFilter,
   PageFilter,
   CycleRunsRepositoryPort,
+  ApprovalsFilter,
 } from '@/domain/ports';
+import {
+  type Approval,
+  type ApprovalsPage,
+  type FundMovementProposal,
+  MAX_MOVEMENT_MINOR,
+  parseAmount,
+} from '@/domain/finance/Approval';
 import { AppError } from '@/domain/shared/AppError';
 import { can, type StaffMember } from '@/domain/staff/Staff';
 import {
@@ -266,7 +274,7 @@ function cleanReason(reason: string): string {
 
 function assertCan(
   staff: StaffMember,
-  permission: 'users.support' | 'users.reveal' | 'payouts.register',
+  permission: 'users.support' | 'users.reveal' | 'payouts.register' | 'finance.operate',
 ): void {
   if (!can(staff, permission)) throw new AppError('forbidden', 'Tu rol no permite esta acción');
 }
@@ -382,6 +390,58 @@ export class RegisterPayoutAccountUseCase {
       { ...form, phone: onlyDigits(form.phone), holderName },
       cleanReason(reason),
     );
+  }
+}
+
+export class ListApprovalsUseCase {
+  constructor(private readonly finance: FinanceRepositoryPort) {}
+
+  execute(filter: ApprovalsFilter, signal?: AbortSignal): Promise<ApprovalsPage> {
+    return this.finance.approvals(filter, signal);
+  }
+}
+
+/**
+ * Propone un movimiento del fondo (COPAYNI-73). El monto llega como lo escribe la persona
+ * ("1500.50") y se envía en unidades menores; el capital semilla siempre es positivo.
+ */
+export class ProposeFundMovementUseCase {
+  constructor(private readonly finance: FinanceRepositoryPort) {}
+
+  execute(
+    staff: StaffMember,
+    input: Omit<FundMovementProposal, 'amount'> & { amount: string },
+  ): Promise<Approval> {
+    assertCan(staff, 'finance.operate');
+    const amount = parseAmount(input.amount);
+    if (amount === null || amount === 0 || Math.abs(amount) > MAX_MOVEMENT_MINOR) {
+      throw new AppError('validation', 'Escribe un monto válido, con hasta 2 decimales');
+    }
+    if (input.kind === 'seed_capital' && amount < 0) {
+      throw new AppError('validation', 'El capital semilla siempre entra al fondo');
+    }
+    return this.finance.proposeFundMovement({
+      kind: input.kind,
+      amount,
+      currency: input.currency,
+      reason: cleanReason(input.reason),
+    });
+  }
+}
+
+/** Aprueba o rechaza una propuesta de otra persona. Rechazar exige motivo. */
+export class DecideApprovalUseCase {
+  constructor(private readonly finance: FinanceRepositoryPort) {}
+
+  execute(
+    staff: StaffMember,
+    approvalId: string,
+    decision: { action: 'approve' } | { action: 'reject'; reason: string },
+  ): Promise<Approval> {
+    assertCan(staff, 'finance.operate');
+    return decision.action === 'approve'
+      ? this.finance.approve(approvalId)
+      : this.finance.reject(approvalId, cleanReason(decision.reason));
   }
 }
 

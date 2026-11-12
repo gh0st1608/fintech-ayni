@@ -318,6 +318,12 @@ export class EnvironmentVariables {
   @Max(3600)
   STAFF_STEP_UP_MAX_AGE_SECONDS: number = 300;
 
+  /** Horas que vive una propuesta de doble aprobación sin decidir (COPAYNI-73, BO6). */
+  @IsInt()
+  @Min(1)
+  @Max(720)
+  STAFF_APPROVAL_TTL_HOURS: number = 72;
+
   /**
    * Identidad del personal: `unconfigured` rechaza toda la API de administración; `oidc` valida
    * los tokens de un proveedor OIDC con MFA (recomendado: Cognito); `dev` emite tokens locales con

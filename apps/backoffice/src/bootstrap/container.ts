@@ -7,6 +7,9 @@ import {
   GetUserUseCase,
   AddSupportNoteUseCase,
   GetPayoutAccountsUseCase,
+  ListApprovalsUseCase,
+  ProposeFundMovementUseCase,
+  DecideApprovalUseCase,
   RegisterPayoutAccountUseCase,
   ListCycleRunsUseCase,
   ListSupportNotesUseCase,
@@ -81,6 +84,9 @@ export interface AppContainer {
     installments: ListInstallmentsUseCase;
     payouts: ListPayoutsUseCase;
     guaranteeFund: GetGuaranteeFundUseCase;
+    approvals: ListApprovalsUseCase;
+    proposeMovement: ProposeFundMovementUseCase;
+    decide: DecideApprovalUseCase;
   };
 }
 
@@ -131,6 +137,9 @@ export function createContainer(adapters: ContainerAdapters): AppContainer {
       installments: new ListInstallmentsUseCase(adapters.finance),
       payouts: new ListPayoutsUseCase(adapters.finance),
       guaranteeFund: new GetGuaranteeFundUseCase(adapters.finance),
+      approvals: new ListApprovalsUseCase(adapters.finance),
+      proposeMovement: new ProposeFundMovementUseCase(adapters.finance),
+      decide: new DecideApprovalUseCase(adapters.finance),
     },
   };
 }
