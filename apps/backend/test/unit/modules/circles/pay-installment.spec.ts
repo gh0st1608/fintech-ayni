@@ -55,6 +55,30 @@ describe('Cobro de una cuota desde la app (COPAYNI-63)', () => {
     method: { type: 'yape' as const, token: 'yape-ok', phoneNumber: '987654321' },
   };
 
+  it('guarda con qué se cobró, enmascarado, para el comprobante (COPAYNI-80)', async () => {
+    const methods = { record: jest.fn(() => Promise.resolve()) };
+    const charge = new ChargeInstallmentUseCase(
+      new FakePaymentGateway(),
+      new InMemoryCards(),
+      users('ana@mail.com'),
+      methods,
+    );
+    await charge.execute(request);
+    expect(methods.record).toHaveBeenCalledWith('inst-1', 'Yape •••• 4321');
+
+    // Si no se puede guardar, el cobro igual vale.
+    const failing = { record: jest.fn(() => Promise.reject(new Error('base caída'))) };
+    jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
+    await expect(
+      new ChargeInstallmentUseCase(
+        new FakePaymentGateway(),
+        new InMemoryCards(),
+        users('ana@mail.com'),
+        failing,
+      ).execute({ ...request, installmentId: 'inst-2' }),
+    ).resolves.toMatchObject({ status: 'approved' });
+  });
+
   it('no vuelve a cobrar una cuota ya aprobada y rechaza si hay un pago pendiente', async () => {
     const gateway = new FakePaymentGateway();
     const charge = new ChargeInstallmentUseCase(

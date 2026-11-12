@@ -1,4 +1,4 @@
-import { Inject, Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable, Logger, Optional } from '@nestjs/common';
 
 import { CLOCK, type ClockPort } from '../../../../shared/application/ports/clock.port';
 import { LocalDate } from '../../../../shared/domain/value-objects/local-date';
@@ -8,6 +8,11 @@ import {
   type UserRepositoryPort,
 } from '../../../users/application/ports/user-repository.port';
 import { PAYMENT_GATEWAY, type PaymentGatewayPort } from '../ports/payment-gateway.port';
+import {
+  cardLabel,
+  PAYMENT_METHOD_LOG,
+  type PaymentMethodLogPort,
+} from '../ports/payment-method-log.port';
 import { SAVED_CARDS, type SavedCardRepositoryPort } from '../ports/saved-card-repository.port';
 
 export const AUTO_DEBIT_SETTINGS = Symbol('AUTO_DEBIT_SETTINGS');
@@ -43,6 +48,9 @@ export class CollectInstallmentUseCase {
     @Inject(USER_REPOSITORY) private readonly users: UserRepositoryPort,
     @Inject(AUTO_DEBIT_SETTINGS) private readonly settings: AutoDebitSettings,
     @Inject(CLOCK) private readonly clock: ClockPort,
+    @Optional()
+    @Inject(PAYMENT_METHOD_LOG)
+    private readonly methods?: PaymentMethodLogPort,
   ) {}
 
   async execute(request: AutoDebitRequest): Promise<boolean> {
@@ -75,6 +83,21 @@ export class CollectInstallmentUseCase {
       status: payment.status,
       statusDetail: payment.statusDetail,
     });
+    await this.recordMethod(installmentId, cardLabel(card.brand, card.lastFour), payment.status);
     return payment.status === 'approved';
+  }
+
+  /** Guarda con qué se cobró, para el comprobante. Si falla, el cobro sigue siendo válido. */
+  private async recordMethod(installmentId: string, label: string, status: string) {
+    if (!this.methods || (status !== 'approved' && status !== 'pending')) return;
+    try {
+      await this.methods.record(installmentId, label);
+    } catch (error) {
+      this.logger.warn({
+        event: 'payments.method_log_failed',
+        installmentId,
+        reason: error instanceof Error ? error.message : String(error),
+      });
+    }
   }
 }

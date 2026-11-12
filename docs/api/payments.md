@@ -110,6 +110,19 @@ Errores: `VALIDATION_ERROR` (400: `type` ausente o inválido, `limit` fuera de r
 
 Errores: **404** `TRANSACTION_NOT_FOUND` si no existe, es de otro usuario o no es de ese `type`. **400** `VALIDATION_ERROR` sin `type` o con uno inválido. **401** sin token.
 
+## `GET /v1/me/transactions/:id/receipt?type=payment|payout&lang=es|en`
+
+COPAYNI-80 (D8, botón "Descargar comprobante"). Responde el **PDF** directamente, sin el envoltorio JSON: `Content-Type: application/pdf`, `Content-Disposition: attachment; filename="ayni-comprobante-<8 primeros del id>.pdf"` y `Cache-Control: private, no-store`.
+
+- **Contenido:** monto, concepto (cuota del mes, deuda saldada, pozo del mes o devolución), junta (pozo y turno), lo descontado del pozo si hubo, fecha y hora en `BUSINESS_TIME_ZONE`, método enmascarado y número de operación (el id del movimiento). `lang` por defecto `es`.
+- **Método enmascarado:**
+  - Pagos de cuota: el método con que se cobró ("Visa •••• 4242", "Yape •••• 4321"). Se guarda en `installment_payment_methods` al cobrar desde la app o por débito automático, solo con la marca y 4 dígitos. Los cobros anteriores a este cambio dicen "No registrado".
+  - Cobros: la cuenta de cobro vigente cuando se pagó el pozo ("BCP •••• 1234", COPAYNI-81).
+- **Nunca** incluye el número completo de la tarjeta, de la cuenta ni del celular.
+- **Errores:** los mismos que el detalle, en JSON: `TRANSACTION_NOT_FOUND` (404) si no existe o es de otra persona, `VALIDATION_ERROR` (400) por `type` o `lang`.
+- **PDF sin dependencias:** lo arma un escritor propio (A4, Helvetica, WinAnsi).
+- **[?] Legal:** confirmar si el comprobante necesita algún texto legal o si debe ser un comprobante electrónico de la SUNAT; hoy es una constancia de la operación.
+
 ## `GET /v1/me/payment-streak`
 
 **Estado:** implementado (COPAYNI-82, diseño D11 aprobado). La racha de pagos a tiempo que muestra el icono de fuego de Home.

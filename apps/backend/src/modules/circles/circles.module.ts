@@ -55,6 +55,16 @@ import {
   ProposeFundMovementUseCase,
 } from './application/use-cases/fund-approvals.use-cases';
 import { SqlStaffApprovals } from './infrastructure/persistence/typeorm/sql-staff-approvals';
+import { SqlReceiptDetails } from './infrastructure/persistence/typeorm/sql-receipt-details';
+import { PdfReceiptRenderer } from './infrastructure/pdf-receipt-renderer';
+import { TransactionReceiptController } from './presentation/http/controllers/transaction-receipt.controller';
+import {
+  GetTransactionReceiptUseCase,
+  RECEIPT_DETAILS,
+  RECEIPT_RENDERER,
+  RECEIPT_SETTINGS,
+  type ReceiptSettings,
+} from './application/use-cases/transaction-receipt.use-case';
 import { AdminCycleRunsController } from './presentation/http/controllers/admin-cycle-runs.controller';
 import { CYCLE_RUNS } from './application/ports/cycle-runs.port';
 import { SqlCycleRuns } from './infrastructure/persistence/typeorm/sql-cycle-runs';
@@ -146,6 +156,7 @@ import { MyCirclesController } from './presentation/http/controllers/my-circles.
     AdminCirclesController,
     AdminFinanceController,
     AdminFundApprovalsController,
+    TransactionReceiptController,
     AdminCycleRunsController,
   ],
   providers: [
@@ -256,6 +267,16 @@ import { MyCirclesController } from './presentation/http/controllers/my-circles.
     GetPaymentSummaryUseCase,
     ListTransactionsUseCase,
     GetTransactionUseCase,
+    GetTransactionReceiptUseCase,
+    { provide: RECEIPT_DETAILS, useClass: SqlReceiptDetails },
+    { provide: RECEIPT_RENDERER, useClass: PdfReceiptRenderer },
+    {
+      provide: RECEIPT_SETTINGS,
+      inject: [ConfigService],
+      useFactory: (config: AppConfigService): ReceiptSettings => ({
+        timeZone: config.get('BUSINESS_TIME_ZONE', { infer: true }),
+      }),
+    },
     GetPaymentStreakUseCase,
     GetPayoutEligibilityUseCase,
     GetPaymentSettingsUseCase,
