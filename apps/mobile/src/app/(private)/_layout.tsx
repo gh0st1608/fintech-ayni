@@ -9,6 +9,7 @@ import {
   useCircleScreenOptions,
   useIsDevEnvironment,
   useJoinScreenOptions,
+  useNotificationScreenOptions,
   usePaymentScreenOptions,
   useProfileScreenOptions,
 } from '@/presentation/navigation/screenOptions';
@@ -19,6 +20,7 @@ export default function PrivateLayout() {
   const paymentOptions = usePaymentScreenOptions();
   const circleOptions = useCircleScreenOptions();
   const profileOptions = useProfileScreenOptions();
+  const notificationOptions = useNotificationScreenOptions();
   const isDev = useIsDevEnvironment();
   // El perfil del backend exige sesión: el idioma pendiente se reintenta al entrar a la zona privada.
   useRetryPendingLanguageSync();
@@ -38,6 +40,7 @@ export default function PrivateLayout() {
         <Stack.Screen name="join/confirm" options={joinOptions.confirm} />
         <Stack.Screen name="join/saving-program" options={joinOptions.savingProgram} />
         <Stack.Screen name="circles/[circleId]" options={circleOptions.detail} />
+        <Stack.Screen name="notifications" options={notificationOptions} />
         <Stack.Screen name="payment/history" options={paymentOptions.history} />
         <Stack.Screen
           name="payment/transaction/[transactionId]"

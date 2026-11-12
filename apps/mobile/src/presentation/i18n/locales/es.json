@@ -850,5 +850,81 @@
   "connectivity": {
     "offline": "Sin conexión. Lo que ves puede no estar al día.",
     "retry": "Reintentar"
+  },
+  "notifications": {
+    "title": "Notificaciones",
+    "bellA11y": "Notificaciones",
+    "bellUnreadA11y_one": "Notificaciones, tienes {{count}} sin leer",
+    "bellUnreadA11y_other": "Notificaciones, tienes {{count}} sin leer",
+    "unreadA11y": "Sin leer",
+    "markAll": "Marcar todas como leídas",
+    "emptyTitle": "No tienes notificaciones",
+    "emptyDescription": "Aquí verás tus vencimientos, pagos, cobros y novedades de tus juntas.",
+    "tabs": {
+      "all": "Todas",
+      "payments": "Pagos",
+      "circles": "Círculos"
+    },
+    "groups": {
+      "today": "Hoy",
+      "week": "Esta semana",
+      "earlier": "Anteriores"
+    },
+    "documents": {
+      "national_id": "DNI",
+      "proof_of_income": "sustento de ingresos",
+      "additional": "documento",
+      "identity": "identidad"
+    },
+    "types": {
+      "installmentDueSoon": {
+        "title": "Tu cuota vence pronto",
+        "body": "Paga {{amount}} antes del {{date}} para evitar la mora."
+      },
+      "installmentDueToday": {
+        "title": "Tu cuota vence hoy",
+        "body": "Paga {{amount}} hoy para evitar la mora."
+      },
+      "paymentReceived": {
+        "title": "Pago recibido",
+        "body": "Recibimos tu cuota de {{amount}}."
+      },
+      "paymentFailed": {
+        "title": "No pudimos cobrar tu cuota",
+        "body": "Tu cuota de {{amount}} venció el {{date}}. Págala para evitar la mora."
+      },
+      "payoutTurn": {
+        "title": "¡Este mes cobras!",
+        "body": "Tu pozo de {{amount}} se paga cuando todos hayan pagado."
+      },
+      "payoutDisbursed": {
+        "title": "Recibiste tu pozo",
+        "body": "Te enviamos {{amount}}."
+      },
+      "documentApproved": {
+        "title": "Documento aprobado",
+        "body": "Verificamos tu {{document}}."
+      },
+      "documentRejected": {
+        "title": "Documento rechazado",
+        "body": "Revisa tu {{document}} y vuelve a enviarlo."
+      },
+      "circleStarted": {
+        "title": "Tu junta empezó",
+        "body": "Ya puedes pagar tu primera cuota."
+      },
+      "circlePaused": {
+        "title": "Tu junta está en pausa",
+        "body": "Te avisaremos cuando continúe."
+      },
+      "circleResumed": {
+        "title": "Tu junta continúa",
+        "body": "Se reanudaron los pagos y los cobros."
+      },
+      "circleMemberJoined": {
+        "title": "Nuevo miembro en tu junta",
+        "body": "Se tomó un turno más."
+      }
+    }
   }
 }

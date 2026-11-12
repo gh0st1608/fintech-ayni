@@ -47,6 +47,11 @@ import type {
   UpdatePaymentSettingsUseCase,
 } from '@/application/payments/usecases/paymentUseCases';
 import type {
+  CountUnreadNotificationsUseCase,
+  ListNotificationsUseCase,
+  MarkNotificationsReadUseCase,
+} from '@/application/notifications/notificationUseCases';
+import type {
   GetPayoutAccountUseCase,
   ListPayoutMethodsUseCase,
   SelectPayoutMethodUseCase,
@@ -168,6 +173,11 @@ export interface AppContainer {
   savings: {
     listPlans: ListSavingPlansUseCase;
     getQuote: GetSavingQuoteUseCase;
+  };
+  notifications: {
+    list: ListNotificationsUseCase;
+    countUnread: CountUnreadNotificationsUseCase;
+    markRead: MarkNotificationsReadUseCase;
   };
   payouts: {
     listPayoutMethods: ListPayoutMethodsUseCase;
