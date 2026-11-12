@@ -9,6 +9,7 @@ import {
   GetPayoutAccountsUseCase,
   ListApprovalsUseCase,
   GetHelpUseCase,
+  ListDelinquencyUseCase,
   SaveHelpUseCase,
   ProposeFundMovementUseCase,
   DecideApprovalUseCase,
@@ -95,6 +96,7 @@ export interface AppContainer {
     approvals: ListApprovalsUseCase;
     proposeMovement: ProposeFundMovementUseCase;
     decide: DecideApprovalUseCase;
+    delinquency: ListDelinquencyUseCase;
   };
 }
 
@@ -153,6 +155,7 @@ export function createContainer(adapters: ContainerAdapters): AppContainer {
       approvals: new ListApprovalsUseCase(adapters.finance),
       proposeMovement: new ProposeFundMovementUseCase(adapters.finance),
       decide: new DecideApprovalUseCase(adapters.finance),
+      delinquency: new ListDelinquencyUseCase(adapters.finance),
     },
   };
 }

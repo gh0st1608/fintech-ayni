@@ -25,6 +25,7 @@ import type {
   InstallmentsFilter,
   ApprovalsFilter,
   HelpRepositoryPort,
+  DelinquencyFilter,
   CycleRunsRepositoryPort,
 } from '@/domain/ports';
 import type { Approval, ApprovalsPage, FundMovementProposal } from '@/domain/finance/Approval';
@@ -34,6 +35,7 @@ import type {
   PayoutAccounts,
 } from '@/domain/payouts/PayoutAccount';
 import type { HelpContent, HelpInput, HelpLanguage } from '@/domain/help/Help';
+import type { DelinquencyPage } from '@/domain/finance/Delinquency';
 import { AppError } from '@/domain/shared/AppError';
 import type { StaffMember } from '@/domain/staff/Staff';
 import type {
@@ -504,6 +506,18 @@ export class InMemoryFinance implements FinanceRepositoryPort {
   approve(approvalId: string): Promise<Approval> {
     this.decisions.push({ approvalId, action: 'approve' });
     return this.settle(approvalId, 'approved', null);
+  }
+
+  delinquencyPages: Partial<Record<string, DelinquencyPage>> = {};
+  readonly delinquencyRequests: DelinquencyFilter[] = [];
+
+  delinquency(filter: DelinquencyFilter): Promise<DelinquencyPage> {
+    this.delinquencyRequests.push(filter);
+    return Promise.resolve(
+      structuredClone(
+        this.delinquencyPages[filter.view] ?? { items: [], nextCursor: null, pending: [] },
+      ),
+    );
   }
 
   reject(approvalId: string, reason: string): Promise<Approval> {

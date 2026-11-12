@@ -21,7 +21,9 @@ import type {
   CycleRunsRepositoryPort,
   ApprovalsFilter,
   HelpRepositoryPort,
+  DelinquencyFilter,
 } from '@/domain/ports';
+import type { DelinquencyPage } from '@/domain/finance/Delinquency';
 import {
   type HelpContent,
   type HelpInput,
@@ -453,6 +455,15 @@ export class DecideApprovalUseCase {
     return decision.action === 'approve'
       ? this.finance.approve(approvalId)
       : this.finance.reject(approvalId, cleanReason(decision.reason));
+  }
+}
+
+/** Mora, solo lectura (COPAYNI-94). */
+export class ListDelinquencyUseCase {
+  constructor(private readonly finance: FinanceRepositoryPort) {}
+
+  execute(filter: DelinquencyFilter, signal?: AbortSignal): Promise<DelinquencyPage> {
+    return this.finance.delinquency(filter, signal);
   }
 }
 

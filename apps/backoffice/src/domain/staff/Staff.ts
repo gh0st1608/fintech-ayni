@@ -22,6 +22,8 @@ export const PERMISSIONS = {
   'finance.read': ['finance', 'super_admin'],
   /** Proponer y decidir movimientos del fondo; nunca la misma persona (COPAYNI-73). */
   'finance.operate': ['finance', 'super_admin'],
+  /** La mora la siguen finanzas y operaciones (COPAYNI-94). */
+  'delinquency.read': ['finance', 'operations', 'super_admin'],
   'users.support': ['support', 'operations', 'super_admin'],
   'users.reveal': ['operations', 'super_admin'],
   'payouts.read': ['support', 'operations', 'finance', 'super_admin'],

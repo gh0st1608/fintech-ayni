@@ -19,6 +19,7 @@ import type { BlockResult, SupportNote, UserContact, UserDetail, UserSummary } f
 import type { CycleRunsPage } from './circles/CycleRun';
 import type { PayoutAccount, PayoutAccountForm, PayoutAccounts } from './payouts/PayoutAccount';
 import type { HelpContent, HelpInput, HelpLanguage } from './help/Help';
+import type { DelinquencyPage, DelinquencyView } from './finance/Delinquency';
 import type {
   Approval,
   ApprovalsPage,
@@ -118,6 +119,12 @@ export interface FinanceRepositoryPort {
   /** El backend exige autenticación reciente y que decida otra persona. */
   approve(approvalId: string): Promise<Approval>;
   reject(approvalId: string, reason: string): Promise<Approval>;
+  /** Mora, solo lectura (COPAYNI-94). */
+  delinquency(filter: DelinquencyFilter, signal?: AbortSignal): Promise<DelinquencyPage>;
+}
+
+export interface DelinquencyFilter extends PageFilter {
+  view: DelinquencyView;
 }
 
 export interface ApprovalsFilter extends PageFilter {
