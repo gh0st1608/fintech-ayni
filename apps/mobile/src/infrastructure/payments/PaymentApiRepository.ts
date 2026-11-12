@@ -12,6 +12,7 @@ import type {
   TransactionType,
   TransactionsPage,
 } from '@/domain/payments/Transaction';
+import type { DownloadedFile } from '@/domain/payments/ports/FileSharePort';
 import type { HttpClientPort } from '@/domain/shared/ports/HttpClientPort';
 import { moneyDto, toMoney } from '@/infrastructure/circles/moneyDto';
 
@@ -149,6 +150,17 @@ export class PaymentApiRepository implements PaymentRepositoryPort {
         period,
         status: STREAK_STATUS_BY_DTO[status],
       })),
+    };
+  }
+
+  async getReceipt(type: TransactionType, id: string, language: string): Promise<DownloadedFile> {
+    const bytes = await this.http.getBinary(`/me/transactions/${encodeURIComponent(id)}/receipt`, {
+      query: { type, lang: language === 'en' ? 'en' : 'es' },
+    });
+    return {
+      filename: `ayni-comprobante-${id.slice(0, 8)}.pdf`,
+      mimeType: 'application/pdf',
+      bytes,
     };
   }
 

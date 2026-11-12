@@ -671,7 +671,10 @@
       "received": "Received",
       "operation": "Transaction no.  {{id}}",
       "copy": "Copy the transaction number",
-      "copied": "Transaction number copied."
+      "copied": "Transaction number copied.",
+      "receipt": "Download receipt",
+      "receiptTitle": "Ayni receipt",
+      "receiptError": "We couldn't download the receipt. Please try again."
     }
   },
   "documents": {

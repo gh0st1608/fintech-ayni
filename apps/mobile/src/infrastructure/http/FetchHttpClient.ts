@@ -106,6 +106,34 @@ export class FetchHttpClient implements HttpClientPort {
     return this.request('DELETE', path, options);
   }
 
+  async getBinary(
+    path: string,
+    options: HttpRequestOptions<never> = {},
+    isRetry = false,
+  ): Promise<Uint8Array> {
+    if (options.signal?.aborted) throw new AppError('cancelled', 'Request cancelled');
+    const response = await this.send('GET', path, { ...options, accept: '*/*' });
+    if (response.ok) return new Uint8Array(await response.arrayBuffer());
+    if (response.status === 401 && !options.skipSessionRefresh) {
+      if (!isRetry && this.config.renewSession) {
+        if (await this.config.renewSession()) return this.getBinary(path, options, true);
+      } else {
+        this.config.onUnauthorized?.();
+      }
+    }
+    const envelope = await readEnvelope(response);
+    throw new AppError(
+      httpStatusToErrorKind(response.status),
+      envelope?.error?.message ?? `HTTP ${response.status}`,
+      {
+        status: response.status,
+        code: envelope?.error?.code,
+        traceId: envelope?.traceId ?? response.headers.get('x-trace-id') ?? undefined,
+        retryAfterSeconds: parseRetryAfter(response.headers),
+      },
+    );
+  }
+
   private async request<T>(
     method: HttpMethod,
     path: string,
@@ -156,7 +184,7 @@ export class FetchHttpClient implements HttpClientPort {
   private async send<T>(
     method: HttpMethod,
     path: string,
-    options: HttpBodyRequestOptions<T>,
+    options: HttpBodyRequestOptions<T> & { accept?: string },
   ): Promise<Response> {
     const controller = new AbortController();
     let timedOut = false;
@@ -185,10 +213,10 @@ export class FetchHttpClient implements HttpClientPort {
   }
 
   private async buildHeaders<T>(
-    options: HttpBodyRequestOptions<T>,
+    options: HttpBodyRequestOptions<T> & { accept?: string },
   ): Promise<Record<string, string>> {
     const headers: Record<string, string> = {
-      Accept: 'application/json',
+      Accept: options.accept ?? 'application/json',
       'X-Request-Id': this.generateRequestId(),
       ...options.headers,
     };

@@ -4,6 +4,7 @@ import type { PaymentStreak } from '../PaymentStreak';
 import type { PaymentSummary } from '../PaymentSummary';
 import type { PayoutEligibility } from '../PayoutEligibility';
 import type { TransactionDetail, TransactionsPage, TransactionType } from '../Transaction';
+import type { DownloadedFile } from './FileSharePort';
 
 /** Sección Payment del backend (docs/api/payments.md). */
 export interface PaymentRepositoryPort {
@@ -17,6 +18,8 @@ export interface PaymentRepositoryPort {
     id: string,
     signal?: AbortSignal,
   ): Promise<TransactionDetail>;
+  /** El comprobante en PDF de un movimiento (COPAYNI-80), en el idioma pedido. */
+  getReceipt(type: TransactionType, id: string, language: string): Promise<DownloadedFile>;
   listTransactions(
     type: TransactionType,
     cursor: string | null,

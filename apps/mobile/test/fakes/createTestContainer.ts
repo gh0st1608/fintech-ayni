@@ -26,6 +26,7 @@ import { InMemorySavingPlanRepository } from '@/infrastructure/savings/InMemoryS
 import {
   FakeBiometricAuth,
   FakeClipboard,
+  FakeFileShare,
   FakeDeviceLocale,
   FakeIdGenerator,
   FakeLayoutDirection,
@@ -64,6 +65,7 @@ interface TestAdapters {
   referrals: InMemoryReferralRepository;
   sharer: FakeShare;
   clipboard: FakeClipboard;
+  fileShare: FakeFileShare;
   pendingReferral: InMemoryPendingReferral;
   savings: InMemorySavingPlanRepository;
   ids: FakeIdGenerator;
@@ -98,6 +100,7 @@ export function createTestContainer(overrides: Partial<TestAdapters> = {}) {
     referrals: new InMemoryReferralRepository({ latencyMs: 0, currency: 'PEN' }),
     sharer: new FakeShare(),
     clipboard: new FakeClipboard(),
+    fileShare: new FakeFileShare(),
     pendingReferral: new InMemoryPendingReferral(),
     savings: new InMemorySavingPlanRepository({
       latencyMs: 0,

@@ -63,12 +63,21 @@ export function TransactionDetailScreen({
 }
 
 function Detail({ transaction }: { transaction: TransactionDetail }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { payments } = useContainer();
   const formatMoney = useFormatMoney();
   const formatDate = useFormatDate();
   const copy = useMutation({
     mutationFn: (operation: string) => payments.copyOperationNumber.execute(operation),
+  });
+  // Comprobante en PDF (COPAYNI-80): se descarga y se abre la hoja para guardarlo o enviarlo.
+  const receipt = useMutation({
+    mutationFn: () =>
+      payments.shareReceipt.execute(
+        { type: transaction.type, id: transaction.id },
+        i18n.language,
+        t('payment.transaction.receiptTitle'),
+      ),
   });
   const incoming = transaction.type === 'payout';
   const tint = incoming ? colors.success : colors.textPrimary;
@@ -153,6 +162,18 @@ function Detail({ transaction }: { transaction: TransactionDetail }) {
       {copy.isSuccess && (
         <AppText variant="caption" color={colors.success} accessibilityLiveRegion="polite">
           {t('payment.transaction.copied')}
+        </AppText>
+      )}
+      <Button
+        label={t('payment.transaction.receipt')}
+        variant="secondary"
+        loading={receipt.isPending}
+        onPress={() => receipt.mutate()}
+        testID="transaction-receipt"
+      />
+      {receipt.isError && (
+        <AppText accessibilityRole="alert" color={colors.error}>
+          {t('payment.transaction.receiptError')}
         </AppText>
       )}
     </ScrollView>

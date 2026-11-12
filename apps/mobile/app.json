@@ -62,7 +62,8 @@
           "cameraPermission": "Ayni usa la cámara para escanear tus documentos de verificación.",
           "microphonePermission": false
         }
-      ]
+      ],
+      "expo-sharing"
     ],
     "experiments": {
       "typedRoutes": true

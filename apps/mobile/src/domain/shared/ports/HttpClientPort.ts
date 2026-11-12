@@ -26,4 +26,6 @@ export interface HttpClientPort {
   put<T>(path: string, options?: HttpBodyRequestOptions<T>): Promise<T>;
   patch<T>(path: string, options?: HttpBodyRequestOptions<T>): Promise<T>;
   delete<T>(path: string, options?: HttpBodyRequestOptions<T>): Promise<T>;
+  /** Un archivo (p. ej. el PDF de un comprobante): los errores llegan como en el resto. */
+  getBinary(path: string, options?: HttpRequestOptions<never>): Promise<Uint8Array>;
 }

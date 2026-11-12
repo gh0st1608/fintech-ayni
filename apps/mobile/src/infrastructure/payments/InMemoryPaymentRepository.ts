@@ -1,3 +1,4 @@
+import type { DownloadedFile } from '@/domain/payments/ports/FileSharePort';
 import type { PaymentRepositoryPort } from '@/domain/payments/ports/PaymentRepositoryPort';
 import type { InstallmentPaymentResult } from '@/domain/payments/InstallmentPayment';
 import type { PaymentSettings } from '@/domain/payments/PaymentSettings';
@@ -139,6 +140,15 @@ export class InMemoryPaymentRepository implements PaymentRepositoryPort {
         { period: '2026-11', status: 'onTime' },
         { period: '2026-12', status: 'pending' },
       ],
+    };
+  }
+
+  async getReceipt(type: TransactionType, id: string): Promise<DownloadedFile> {
+    await this.getTransaction(type, id);
+    return {
+      filename: `ayni-comprobante-${id.slice(0, 8)}.pdf`,
+      mimeType: 'application/pdf',
+      bytes: new TextEncoder().encode('%PDF-1.4 comprobante simulado'),
     };
   }
 
