@@ -149,7 +149,7 @@ El código ya define 5 roles. Propuesta para el MVP, sin agregar roles hasta que
 
 - **[H] Implementado, solo lectura:** `GET /admin/v1/finance/installments`, `/payouts` y `/guarantee-fund` ([admin.md](api/admin.md#finanzas-solo-lectura)). Lo que mueve dinero sigue pendiente de BO6
 - **[H] Implementado:** `POST /admin/v1/guarantee-fund/movements` (propone), `GET /admin/v1/approvals` y `POST /admin/v1/approvals/:id/approve` y `/reject` ([admin.md](api/admin.md#doble-aprobación-del-fondo-de-garantía)). Regla provisional: `finance` y `super_admin`, nunca la misma persona (BO6)
-- `GET /admin/v1/delinquency` (en gracia, expulsados, deudas y devoluciones)
+- **[H] Implementado:** `GET /admin/v1/delinquency` (en gracia, expulsados, deudas y devoluciones; COPAYNI-94)
 
 ## 8. Estimación preliminar
 

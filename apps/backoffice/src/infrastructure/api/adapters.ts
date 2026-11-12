@@ -20,7 +20,9 @@ import type {
   CycleRunsRepositoryPort,
   ApprovalsFilter,
   HelpRepositoryPort,
+  DelinquencyFilter,
 } from '@/domain/ports';
+import type { DelinquencyPage } from '@/domain/finance/Delinquency';
 import type { HelpContent, HelpInput, HelpLanguage } from '@/domain/help/Help';
 import { AppError } from '@/domain/shared/AppError';
 import type { StaffMember } from '@/domain/staff/Staff';
@@ -67,6 +69,7 @@ import {
   approvalSchema,
   approvalsPageSchema,
   helpContentSchema,
+  delinquencyPageSchema,
 } from './schemas';
 
 /**
@@ -305,6 +308,13 @@ export class FinanceApiRepository implements FinanceRepositoryPort {
     return this.http.post(`/admin/v1/approvals/${encodeURIComponent(approvalId)}/approve`, {
       schema: approvalSchema,
       body: {},
+    });
+  }
+
+  delinquency(filter: DelinquencyFilter, signal?: AbortSignal): Promise<DelinquencyPage> {
+    return this.http.get(`/admin/v1/delinquency${pageQuery(filter, { view: filter.view })}`, {
+      schema: delinquencyPageSchema,
+      signal,
     });
   }
 

@@ -261,6 +261,24 @@ export const approvalsPageSchema = z.object({
   nextCursor: z.string().nullable(),
 });
 
+export const delinquencyPageSchema = z.object({
+  items: z.array(
+    z.object({
+      id: z.uuid(),
+      circleId: z.uuid(),
+      member: z.object({ userId: z.uuid(), name: z.string().nullable() }),
+      period: z.string().regex(/^\d{4}-\d{2}$/),
+      date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+      amount: money,
+      lateFee: money.nullable(),
+      settledAt: isoDate.nullable(),
+      graceEndsOn: z.string().nullable(),
+    }),
+  ),
+  nextCursor: z.string().nullable(),
+  pending: z.array(money),
+});
+
 export const helpContentSchema = z.object({
   language: z.enum(HELP_LANGUAGES),
   faqs: z.array(z.object({ id: z.string().min(1), question: z.string(), answer: z.string() })),

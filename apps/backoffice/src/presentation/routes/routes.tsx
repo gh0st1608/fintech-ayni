@@ -35,6 +35,7 @@ const USERS = () => import('../users/UsersScreen').then((m) => m.UsersScreen);
 const USER_DETAIL = () => import('../users/UserDetailScreen').then((m) => m.UserDetailScreen);
 const FINANCE = () => import('../finance/FinanceScreen').then((m) => m.FinanceScreen);
 const HELP = () => import('../help/HelpEditorScreen').then((m) => m.HelpEditorScreen);
+const DELINQUENCY = () => import('../finance/DelinquencyScreen').then((m) => m.DelinquencyScreen);
 
 /** Mientras se descarga la primera pantalla de la sesión. */
 function LoadingScreen() {
@@ -95,6 +96,11 @@ function Layout() {
               {can(staff, 'finance.read') && (
                 <NavLink to="/finance" className={navClass}>
                   Finanzas
+                </NavLink>
+              )}
+              {can(staff, 'delinquency.read') && (
+                <NavLink to="/delinquency" className={navClass}>
+                  Mora
                 </NavLink>
               )}
               {can(staff, 'kyc.review') && (
@@ -180,6 +186,10 @@ export const routes: RouteObject[] = [
       {
         element: <RequirePermission permission="finance.read" />,
         children: [{ path: '/finance', ...screen(FINANCE) }],
+      },
+      {
+        element: <RequirePermission permission="delinquency.read" />,
+        children: [{ path: '/delinquency', ...screen(DELINQUENCY) }],
       },
       {
         element: <RequirePermission permission="help.read" />,

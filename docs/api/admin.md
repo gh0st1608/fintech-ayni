@@ -156,6 +156,21 @@ COPAYNI-73. Una persona propone el capital semilla o una corrección y **otra** 
 
 Errores: `VALIDATION_ERROR` (400), `APPROVAL_SELF_DECISION` o `FORBIDDEN` (403), `APPROVAL_NOT_FOUND` (404), `APPROVAL_NOT_PENDING` (409, `details.status` dice si ya se aprobó, se rechazó o venció).
 
+## Mora
+
+COPAYNI-94. `GET /admin/v1/delinquency?view=grace|expelled|debts|refunds&limit=&cursor=`, de solo lectura, para `finance`, `operations` y `super_admin`. Responde `{ items, nextCursor, pending }`; `pending` suma lo pendiente (monto más cargo) por moneda en toda la vista.
+
+| Vista      | Qué lista                                                                                | `amount`   | `lateFee`      | `settledAt`                |
+| ---------- | ---------------------------------------------------------------------------------------- | ---------- | -------------- | -------------------------- |
+| `grace`    | Cuotas vencidas sin pagar dentro de la gracia (`DELINQUENCY_GRACE_DAYS`), sin expulsados | La cuota   | `null`         | `null`; trae `graceEndsOn` |
+| `expelled` | Todas las expulsiones                                                                    | Lo vencido | Cargo por mora | Deuda saldada              |
+| `debts`    | Expulsiones con deuda (vencido más cargo mayor que cero)                                 | Lo vencido | Cargo por mora | Deuda saldada              |
+| `refunds`  | Expulsiones con cuotas a devolver (salieron antes de su turno)                           | A devolver | `null`         | Devolución pagada          |
+
+- Cada ítem trae `id` (cuota o expulsión), `circleId`, `member` (`userId` y el nombre enmascarado), `period` y `date` (vencimiento o expulsión).
+- De lo más reciente a lo más antiguo; `limit` entre 1 y 100 (25 por defecto).
+- Back-office: sección "Mora" con las cuatro vistas y enlaces a la persona y a la junta.
+
 ## Ejecuciones del ciclo mensual
 
 `GET /admin/v1/cycle-runs?limit=&cursor=` (`support`, `operations`, `finance` y `super_admin`): cada ejecución de la tarea diaria, de la más reciente a la más antigua, con `businessDate` (día del negocio en America/Lima), `advanced`, `locked`, `failed` y `failures` (`circleId` y el mensaje del error, recortado a 300 caracteres). La tarea guarda el resumen al terminar; si no puede guardarlo, la ejecución igual termina y queda el error `circles.cycle.run_record_failed` en el log.
