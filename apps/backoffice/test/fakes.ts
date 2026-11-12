@@ -23,8 +23,10 @@ import type {
   UsersRepositoryPort,
   FinanceRepositoryPort,
   InstallmentsFilter,
+  ApprovalsFilter,
   CycleRunsRepositoryPort,
 } from '@/domain/ports';
+import type { Approval, ApprovalsPage, FundMovementProposal } from '@/domain/finance/Approval';
 import type {
   PayoutAccount,
   PayoutAccountForm,
@@ -447,5 +449,63 @@ export class InMemoryFinance implements FinanceRepositoryPort {
 
   guaranteeFund(): Promise<GuaranteeFund> {
     return Promise.resolve(structuredClone(this.fund));
+  }
+
+  approvalItems: Approval[] = [];
+  readonly proposals: FundMovementProposal[] = [];
+  readonly decisions: { approvalId: string; action: string; reason?: string }[] = [];
+  /** Quién propone en el fake; por defecto, otra persona del equipo. */
+  proposer = { staffId: 'dev:ana@ayni.local', email: 'ana@ayni.local' };
+
+  approvals(filter: ApprovalsFilter): Promise<ApprovalsPage> {
+    return Promise.resolve(
+      structuredClone({
+        items: this.approvalItems.filter((item) => !filter.status || item.status === filter.status),
+        nextCursor: null,
+      }),
+    );
+  }
+
+  proposeFundMovement(proposal: FundMovementProposal): Promise<Approval> {
+    this.proposals.push(proposal);
+    const approval: Approval = {
+      id: `00000000-0000-4000-f000-${String(this.approvalItems.length + 1).padStart(12, '0')}`,
+      movement: {
+        kind: proposal.kind,
+        amount: { amount: proposal.amount, currency: proposal.currency },
+        reason: proposal.reason,
+      },
+      status: 'pending',
+      proposedBy: this.proposer,
+      proposedAt: NOW,
+      expiresAt: new Date(NOW.getTime() + 72 * 3_600_000),
+      decidedBy: null,
+      decidedAt: null,
+      decisionReason: null,
+    };
+    this.approvalItems = [approval, ...this.approvalItems];
+    return Promise.resolve(structuredClone(approval));
+  }
+
+  private settle(approvalId: string, status: 'approved' | 'rejected', reason: string | null) {
+    const found = this.approvalItems.find((item) => item.id === approvalId);
+    if (!found) return Promise.reject(new AppError('not_found', 'No existe', 'APPROVAL_NOT_FOUND'));
+    Object.assign(found, {
+      status,
+      decidedBy: { staffId: 'dev:luis@ayni.local', email: 'luis@ayni.local' },
+      decidedAt: NOW,
+      decisionReason: reason,
+    });
+    return Promise.resolve(structuredClone(found));
+  }
+
+  approve(approvalId: string): Promise<Approval> {
+    this.decisions.push({ approvalId, action: 'approve' });
+    return this.settle(approvalId, 'approved', null);
+  }
+
+  reject(approvalId: string, reason: string): Promise<Approval> {
+    this.decisions.push({ approvalId, action: 'reject', reason });
+    return this.settle(approvalId, 'rejected', reason);
   }
 }

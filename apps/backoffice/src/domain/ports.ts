@@ -19,6 +19,12 @@ import type { BlockResult, SupportNote, UserContact, UserDetail, UserSummary } f
 import type { CycleRunsPage } from './circles/CycleRun';
 import type { PayoutAccount, PayoutAccountForm, PayoutAccounts } from './payouts/PayoutAccount';
 import type {
+  Approval,
+  ApprovalsPage,
+  ApprovalStatus,
+  FundMovementProposal,
+} from './finance/Approval';
+import type {
   GuaranteeFund,
   InstallmentsPage,
   InstallmentStatus,
@@ -105,6 +111,16 @@ export interface FinanceRepositoryPort {
   installments(filter: InstallmentsFilter, signal?: AbortSignal): Promise<InstallmentsPage>;
   payouts(filter: PageFilter, signal?: AbortSignal): Promise<PayoutsPage>;
   guaranteeFund(filter: PageFilter, signal?: AbortSignal): Promise<GuaranteeFund>;
+  /** Propuestas de doble aprobación (COPAYNI-73). */
+  approvals(filter: ApprovalsFilter, signal?: AbortSignal): Promise<ApprovalsPage>;
+  proposeFundMovement(proposal: FundMovementProposal): Promise<Approval>;
+  /** El backend exige autenticación reciente y que decida otra persona. */
+  approve(approvalId: string): Promise<Approval>;
+  reject(approvalId: string, reason: string): Promise<Approval>;
+}
+
+export interface ApprovalsFilter extends PageFilter {
+  status?: ApprovalStatus;
 }
 
 /** Ejecuciones de la tarea diaria del ciclo mensual (docs/api/admin.md). */

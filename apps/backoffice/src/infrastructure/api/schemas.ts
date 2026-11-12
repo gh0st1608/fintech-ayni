@@ -5,6 +5,7 @@ import { KYC_STATUSES, KYC_TYPES } from '@/domain/kyc/Kyc';
 import { STAFF_ROLES } from '@/domain/staff/Staff';
 import { KYC_DOCUMENT_STATES, USER_STATUSES } from '@/domain/users/User';
 import { INSTALLMENT_STATUSES } from '@/domain/finance/Finance';
+import { APPROVAL_STATUSES, FUND_MOVEMENT_KINDS } from '@/domain/finance/Approval';
 import {
   BANK_ACCOUNT_TYPES,
   PAYOUT_ACCOUNT_KINDS,
@@ -235,6 +236,29 @@ export const supportNoteSchema = z.object({
 });
 
 export const supportNotesSchema = z.object({ items: z.array(supportNoteSchema) });
+
+const staffRef = z.object({ staffId: z.string().min(1), email: z.string().nullable() });
+
+export const approvalSchema = z.object({
+  id: z.uuid(),
+  movement: z.object({
+    kind: z.enum(FUND_MOVEMENT_KINDS),
+    amount: money,
+    reason: z.string(),
+  }),
+  status: z.enum(APPROVAL_STATUSES),
+  proposedBy: staffRef,
+  proposedAt: isoDate,
+  expiresAt: isoDate,
+  decidedBy: staffRef.nullable(),
+  decidedAt: isoDate.nullable(),
+  decisionReason: z.string().nullable(),
+});
+
+export const approvalsPageSchema = z.object({
+  items: z.array(approvalSchema),
+  nextCursor: z.string().nullable(),
+});
 
 export const payoutAccountSchema = z.object({
   id: z.uuid(),
