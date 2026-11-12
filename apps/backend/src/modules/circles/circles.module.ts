@@ -43,6 +43,18 @@ import {
 import { SetCirclePauseUseCase } from './application/use-cases/set-circle-pause.use-case';
 import { AdminCirclesController } from './presentation/http/controllers/admin-circles.controller';
 import { AdminFinanceController } from './presentation/http/controllers/admin-finance.controller';
+import { AdminFundApprovalsController } from './presentation/http/controllers/admin-fund-approvals.controller';
+import {
+  STAFF_APPROVAL_SETTINGS,
+  STAFF_APPROVALS,
+  type StaffApprovalSettings,
+} from './application/ports/staff-approvals.port';
+import {
+  DecideApprovalUseCase,
+  ListApprovalsUseCase,
+  ProposeFundMovementUseCase,
+} from './application/use-cases/fund-approvals.use-cases';
+import { SqlStaffApprovals } from './infrastructure/persistence/typeorm/sql-staff-approvals';
 import { AdminCycleRunsController } from './presentation/http/controllers/admin-cycle-runs.controller';
 import { CYCLE_RUNS } from './application/ports/cycle-runs.port';
 import { SqlCycleRuns } from './infrastructure/persistence/typeorm/sql-cycle-runs';
@@ -133,6 +145,7 @@ import { MyCirclesController } from './presentation/http/controllers/my-circles.
     MercadoPagoWebhookController,
     AdminCirclesController,
     AdminFinanceController,
+    AdminFundApprovalsController,
     AdminCycleRunsController,
   ],
   providers: [
@@ -176,6 +189,17 @@ import { MyCirclesController } from './presentation/http/controllers/my-circles.
     // Fondo de garantía (COPAYNI-58, R16): alerta de saldo y movimientos manuales del back-office.
     CheckGuaranteeFundUseCase,
     RecordFundMovementUseCase,
+    ProposeFundMovementUseCase,
+    ListApprovalsUseCase,
+    DecideApprovalUseCase,
+    { provide: STAFF_APPROVALS, useClass: SqlStaffApprovals },
+    {
+      provide: STAFF_APPROVAL_SETTINGS,
+      inject: [ConfigService],
+      useFactory: (config: AppConfigService): StaffApprovalSettings => ({
+        ttlHours: config.get('STAFF_APPROVAL_TTL_HOURS', { infer: true }),
+      }),
+    },
     TypeOrmGuaranteeFund,
     { provide: GUARANTEE_FUND, useExisting: TypeOrmGuaranteeFund },
     { provide: FUND_METRICS, useClass: OtelFundMetrics },

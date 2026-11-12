@@ -24,6 +24,7 @@ import { AddBackofficeSupport1763553600000 } from './1763553600000-add-backoffic
 import { AddMembershipTermsAcceptance1763640000000 } from './1763640000000-add-membership-terms-acceptance';
 import { CreateIdentityVerifications1763726400000 } from './1763726400000-create-identity-verifications';
 import { CreatePayoutAccounts1763812800000 } from './1763812800000-create-payout-accounts';
+import { CreateStaffApprovals1763899200000 } from './1763899200000-create-staff-approvals';
 
 /** Migraciones en orden. Se listan explícitamente: el build no depende de globs. */
 export const MIGRATIONS = [
@@ -53,4 +54,5 @@ export const MIGRATIONS = [
   AddMembershipTermsAcceptance1763640000000,
   CreateIdentityVerifications1763726400000,
   CreatePayoutAccounts1763812800000,
+  CreateStaffApprovals1763899200000,
 ];

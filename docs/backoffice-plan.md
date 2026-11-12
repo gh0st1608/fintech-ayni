@@ -132,7 +132,7 @@ El código ya define 5 roles. Propuesta para el MVP, sin agregar roles hasta que
 | 0    | Decidido BO9 (React, Vite y TanStack Query en `apps/backoffice`). Siguen abiertas BO1–BO8                                                                                                                                                                | —                    |
 | 1    | **Parcial.** Hecho: `apps/backoffice` con CI, lint, pruebas y carga por sección; `staff_audit_log` de solo inserción; puerto de identidad con `oidc` y `dev`. Falta: el user pool y el login con MFA (BO2), y publicar el front y exponer `/admin` (BO8) | COPAYNI-65 · 72 y 74 |
 | 2    | **Hecha.** Juntas con pausa y reanudación, cola y revisión de KYC, búsqueda de personas, acciones de soporte (sesiones, bloqueo, PII y notas) y ejecuciones del ciclo                                                                                    | COPAYNI-66 a 69 y 71 |
-| 3    | **Parcial.** Hecha la lectura de cuotas, pozos y fondo de garantía. Falta lo que mueve dinero (movimientos del fondo con `staff_approvals`), mora y devoluciones, y la conciliación con la pasarela (BO6 y T3)                                           | COPAYNI-70 · 73      |
+| 3    | **Parcial.** Hecha la lectura de cuotas, pozos y fondo de garantía, y los movimientos del fondo con doble aprobación (`staff_approvals`, regla provisional hasta BO6). Falta mora y devoluciones, y la conciliación con la pasarela (T3)                 | COPAYNI-70 · 73      |
 | 4–6  | Sin empezar                                                                                                                                                                                                                                              | —                    |
 
 **Endpoints de la fase 2 [I]** (nombres provisionales):
@@ -148,7 +148,7 @@ El código ya define 5 roles. Propuesta para el MVP, sin agregar roles hasta que
 **Endpoints de la fase 3 [I]:**
 
 - **[H] Implementado, solo lectura:** `GET /admin/v1/finance/installments`, `/payouts` y `/guarantee-fund` ([admin.md](api/admin.md#finanzas-solo-lectura)). Lo que mueve dinero sigue pendiente de BO6
-- `POST /admin/v1/guarantee-fund/movements` (propone) y `POST /admin/v1/approvals/:id/approve`
+- **[H] Implementado:** `POST /admin/v1/guarantee-fund/movements` (propone), `GET /admin/v1/approvals` y `POST /admin/v1/approvals/:id/approve` y `/reject` ([admin.md](api/admin.md#doble-aprobación-del-fondo-de-garantía)). Regla provisional: `finance` y `super_admin`, nunca la misma persona (BO6)
 - `GET /admin/v1/delinquency` (en gracia, expulsados, deudas y devoluciones)
 
 ## 8. Estimación preliminar
