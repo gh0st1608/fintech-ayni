@@ -11,7 +11,7 @@ import {
 } from '../../../domain/payout-method';
 
 export class SelectPayoutMethodRequest {
-  @ApiProperty({ enum: PAYOUT_METHOD_TYPES, example: 'bank_transfer' })
+  @ApiProperty({ enum: PAYOUT_METHOD_TYPES, example: 'bank_account' })
   @IsString()
   @MaxLength(32)
   method!: string;

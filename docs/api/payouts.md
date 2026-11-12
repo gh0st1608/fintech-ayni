@@ -10,19 +10,13 @@ Usa el contrato común de respuestas descrito en [auth.md](auth.md). Requiere `A
 {
   "methods": [
     {
-      "type": "digital_wallet",
+      "type": "bank_account",
       "available": true,
-      "badges": [],
+      "badges": ["no_charge"],
       "limit": null
     },
     {
-      "type": "prepaid_card",
-      "available": true,
-      "badges": ["no_charge"],
-      "limit": { "amount": 10000000, "currency": "PEN" }
-    },
-    {
-      "type": "bank_transfer",
+      "type": "wallet",
       "available": true,
       "badges": ["no_charge"],
       "limit": null
@@ -34,10 +28,10 @@ Usa el contrato común de respuestas descrito en [auth.md](auth.md). Requiere `A
 
 | Campo                 | Notas                                                                               |
 | --------------------- | ----------------------------------------------------------------------------------- |
-| `methods[].type`      | `digital_wallet`, `prepaid_card`, `bank_transfer` o `fawry`, en el orden a mostrar. |
+| `methods[].type`      | `bank_account` (cuenta bancaria, CCI) o `wallet` (Yape o Plin), en el orden a mostrar. |
 | `methods[].available` | `false`: la app lo muestra deshabilitado con "No disponible" y no se puede elegir.  |
 | `methods[].badges`    | Por ahora solo `no_charge` ("Sin costo").                                           |
-| `methods[].limit`     | Máximo por payout (la tarjeta prepago), o `null`.                                   |
+| `methods[].limit`     | Máximo por payout, o `null` (hoy ningún método tiene tope).                         |
 | `selected`            | Método elegido, o `null`. La app lo preselecciona.                                  |
 
 ## `GET /v1/me/payout-method`
@@ -47,7 +41,7 @@ Usa el contrato común de respuestas descrito en [auth.md](auth.md). Requiere `A
 ## `PUT /v1/me/payout-method`
 
 ```json
-{ "method": "bank_transfer" }
+{ "method": "bank_account" }
 ```
 
 **200** → `PayoutMethods` con el nuevo `selected`.
@@ -60,9 +54,9 @@ Usa el contrato común de respuestas descrito en [auth.md](auth.md). Requiere `A
 
 ## Supuestos provisionales
 
-- **Catálogo (pending-scope T5):** los tipos del Figma (Payout Method, 55:9520), configurables con `PAYOUT_METHODS`, `PAYOUT_METHODS_UNAVAILABLE`, `PAYOUT_METHODS_NO_CHARGE` y `PAYOUT_PREPAID_CARD_LIMIT`. Fawry es un medio egipcio y queda fuera por defecto; los proveedores locales (bancos, wallets como Yape o Plin) están por definir.
+- **Catálogo (COPAYNI-95):** los métodos de Perú, cuenta bancaria y Yape/Plin, configurables con `PAYOUT_METHODS`, `PAYOUT_METHODS_UNAVAILABLE` y `PAYOUT_METHODS_NO_CHARGE`. Reemplazan los del Figma de Marruecos (tarjeta prepago, Fawry): la migración `PeruPayoutMethods1764417600000` pasa `bank_transfer` a `bank_account` y `digital_wallet` a `wallet`, y deja sin método a quien eligió los otros (vuelve a elegir antes de unirse). El riel para pagar el payout sigue pendiente (T5).
 - **Cambio de método (R8):** el Figma dice "solo antes del mes de payout". Se rechaza el cambio durante un mes en que el usuario cobra, porque ese payout ya se procesa con el método anterior. Elegir el mismo método siempre se acepta.
-- **Datos de la cuenta (D4):** desde COPAYNI-81 los registra el personal en el back-office (ver abajo). Registrar una cuenta fija el método: `bank_transfer` para una cuenta bancaria y `digital_wallet` para Yape o Plin.
+- **Datos de la cuenta (D4):** desde COPAYNI-81 los registra el personal en el back-office (ver abajo). Registrar una cuenta fija el método: `bank_account` para una cuenta bancaria y `wallet` para Yape o Plin.
 
 ## Cuenta de cobro (COPAYNI-81)
 
@@ -123,4 +117,4 @@ Usa el contrato común de respuestas descrito en [auth.md](auth.md). Requiere `A
 
 - **[verificar] Lista de bancos** con Finanzas, y el algoritmo del dígito de control del CCI contra constancias reales antes de producción.
 - **Regla del titular** (provisional): el nombre del perfil tiene que estar contenido en el titular. La valida Legal junto con la de VerificaID.
-- **Tipos de Marruecos:** el catálogo de métodos sigue con `prepaid_card` y `fawry`. Reemplazarlos por los de Perú queda pendiente porque toca la unión y la app.
+- **Tipos de Marruecos:** reemplazados por los de Perú en COPAYNI-95.

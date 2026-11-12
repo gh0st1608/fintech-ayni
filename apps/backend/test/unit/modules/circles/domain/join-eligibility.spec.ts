@@ -11,7 +11,7 @@ const ELIGIBLE: JoinApplicant = {
   identityVerified: true,
   monthlyPayInLimit: null,
   incomeDeclared: true,
-  payoutMethod: { type: 'bank_transfer', limit: null },
+  payoutMethod: { type: 'bank_account', limit: null },
 };
 const PAYOUT = pen(30_000);
 const INSTALLMENTS = [pen(3_400), pen(3_000), pen(2_900)];
@@ -23,7 +23,7 @@ describe('assertCanJoin', () => {
   it('acepta a un usuario verificado, dentro del límite y con método de cobro', () => {
     expect(check({})).not.toThrow();
     expect(check({ monthlyPayInLimit: pen(3_400) })).not.toThrow();
-    expect(check({ payoutMethod: { type: 'prepaid_card', limit: pen(30_000) } })).not.toThrow();
+    expect(check({ payoutMethod: { type: 'wallet', limit: pen(30_000) } })).not.toThrow();
   });
 
   it('exige el National ID antes que todo lo demás', () => {
@@ -45,7 +45,7 @@ describe('assertCanJoin', () => {
   });
 
   it('rechaza un payout mayor que el límite del método', () => {
-    expect(check({ payoutMethod: { type: 'prepaid_card', limit: pen(29_999) } })).toThrow(
+    expect(check({ payoutMethod: { type: 'wallet', limit: pen(29_999) } })).toThrow(
       expect.objectContaining({ code: 'PAYOUT_METHOD_LIMIT_EXCEEDED' }),
     );
   });
@@ -59,7 +59,7 @@ describe('applicantIn (pending-scope M2)', () => {
       {
         ...ELIGIBLE,
         monthlyPayInLimit: pen(1),
-        payoutMethod: { type: 'prepaid_card', limit: pen(30_000) },
+        payoutMethod: { type: 'wallet', limit: pen(30_000) },
       },
       'USD',
       rates,
@@ -67,7 +67,7 @@ describe('applicantIn (pending-scope M2)', () => {
     // S/ 1,00 = USD 0,2666… → USD 0,26.
     expect(converted.monthlyPayInLimit).toEqual(Money.of(26, 'USD'));
     expect(converted.payoutMethod).toEqual({
-      type: 'prepaid_card',
+      type: 'wallet',
       limit: Money.of(8_000_00, 'USD'),
     });
   });

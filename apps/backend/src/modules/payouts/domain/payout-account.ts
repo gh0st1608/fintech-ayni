@@ -36,8 +36,8 @@ export const WALLET_LABELS: Record<WalletProvider, string> = { yape: 'Yape', pli
 
 /** Tipo de método de cobro (COPAYNI-37) que corresponde a cada clase de cuenta. */
 export const METHOD_OF_KIND: Record<PayoutAccountKind, PayoutMethodType> = {
-  bank_account: 'bank_transfer',
-  wallet: 'digital_wallet',
+  bank_account: 'bank_account',
+  wallet: 'wallet',
 };
 
 /**

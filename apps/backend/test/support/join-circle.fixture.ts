@@ -110,7 +110,7 @@ export const ELIGIBLE: JoinApplicant = {
   identityVerified: true,
   monthlyPayInLimit: null,
   incomeDeclared: true,
-  payoutMethod: { type: 'bank_transfer', limit: null },
+  payoutMethod: { type: 'bank_account', limit: null },
 };
 
 /** 15 de octubre de 2026 en Lima: los círculos que empiezan en noviembre todavía admiten miembros. */
