@@ -46,6 +46,8 @@ const envSchema = z
     referralsApi: z.enum(['http', 'fake']).default('http'),
     /** Igual que authApi, para el programa de ahorro (/savings/plans). */
     savingsApi: z.enum(['http', 'fake']).default('http'),
+    /** Igual que authApi, para la bandeja de notificaciones (/me/notifications). */
+    notificationsApi: z.enum(['http', 'fake']).default('http'),
     termsUrl: optionalHttpsUrl,
     privacyUrl: optionalHttpsUrl,
   })
@@ -59,6 +61,10 @@ const envSchema = z
   })
   .refine((env) => env.profileApi === 'http' || env.appEnv === 'dev', {
     path: ['profileApi'],
+    message: 'fake is only allowed in dev',
+  })
+  .refine((env) => env.notificationsApi === 'http' || env.appEnv === 'dev', {
+    path: ['notificationsApi'],
     message: 'fake is only allowed in dev',
   })
   .refine((env) => env.payoutsApi === 'http' || env.appEnv === 'dev', {
@@ -126,6 +132,7 @@ export function loadEnv(): Env {
     documentsApi: process.env.EXPO_PUBLIC_DOCUMENTS_API,
     referralsApi: process.env.EXPO_PUBLIC_REFERRALS_API,
     savingsApi: process.env.EXPO_PUBLIC_SAVINGS_API,
+    notificationsApi: process.env.EXPO_PUBLIC_NOTIFICATIONS_API,
     termsUrl: process.env.EXPO_PUBLIC_TERMS_URL,
     privacyUrl: process.env.EXPO_PUBLIC_PRIVACY_URL,
   });

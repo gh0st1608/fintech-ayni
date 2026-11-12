@@ -18,6 +18,7 @@ import type {
   InstallmentsFilter,
   PageFilter,
   CycleRunsRepositoryPort,
+  ApprovalsFilter,
 } from '@/domain/ports';
 import { AppError } from '@/domain/shared/AppError';
 import type { StaffMember } from '@/domain/staff/Staff';
@@ -30,6 +31,7 @@ import type {
 } from '@/domain/users/User';
 import type { CycleRunsPage } from '@/domain/circles/CycleRun';
 import type { GuaranteeFund, InstallmentsPage, PayoutsPage } from '@/domain/finance/Finance';
+import type { Approval, ApprovalsPage, FundMovementProposal } from '@/domain/finance/Approval';
 import type {
   PayoutAccount,
   PayoutAccountForm,
@@ -60,6 +62,8 @@ import {
   payoutsPageSchema,
   payoutAccountSchema,
   payoutAccountsSchema,
+  approvalSchema,
+  approvalsPageSchema,
 } from './schemas';
 
 /**
@@ -277,6 +281,34 @@ export class FinanceApiRepository implements FinanceRepositoryPort {
     return this.http.get(`/admin/v1/finance/guarantee-fund${pageQuery(filter)}`, {
       schema: guaranteeFundSchema,
       signal,
+    });
+  }
+
+  approvals(filter: ApprovalsFilter, signal?: AbortSignal): Promise<ApprovalsPage> {
+    return this.http.get(`/admin/v1/approvals${pageQuery(filter, { status: filter.status })}`, {
+      schema: approvalsPageSchema,
+      signal,
+    });
+  }
+
+  proposeFundMovement(proposal: FundMovementProposal): Promise<Approval> {
+    return this.http.post('/admin/v1/guarantee-fund/movements', {
+      schema: approvalSchema,
+      body: proposal,
+    });
+  }
+
+  approve(approvalId: string): Promise<Approval> {
+    return this.http.post(`/admin/v1/approvals/${encodeURIComponent(approvalId)}/approve`, {
+      schema: approvalSchema,
+      body: {},
+    });
+  }
+
+  reject(approvalId: string, reason: string): Promise<Approval> {
+    return this.http.post(`/admin/v1/approvals/${encodeURIComponent(approvalId)}/reject`, {
+      schema: approvalSchema,
+      body: { reason },
     });
   }
 }

@@ -12,6 +12,8 @@ import {
   PaymentStreakButton,
   paymentStreakQueryKey,
 } from '@/presentation/home/components/PaymentStreakButton';
+import { NotificationBell } from '@/presentation/notifications/NotificationBell';
+import { unreadNotificationsQueryKey } from '@/presentation/notifications/useNotifications';
 import { BrandHeader } from '@/presentation/shared/components/BrandHeader';
 import { EmptyState } from '@/presentation/shared/components/EmptyState';
 import { Screen } from '@/presentation/shared/components/Screen';
@@ -25,6 +27,8 @@ interface HomeScreenProps {
   onJoin: () => void;
   /** Banner de invitación: abre "Invita a un amigo". */
   onOpenReferral?: () => void;
+  /** La campana del header: abre la bandeja (COPAYNI-84). */
+  onOpenNotifications?: () => void;
 }
 
 /**
@@ -32,7 +36,12 @@ interface HomeScreenProps {
  * (COPAYNI-25). Las ofertas y las metas populares no tienen de dónde salir (CMS o back-office,
  * D13). Cada sección tiene su query, para que un error no bloquee las demás.
  */
-export function HomeScreen({ onJoinCircle, onJoin, onOpenReferral }: HomeScreenProps) {
+export function HomeScreen({
+  onJoinCircle,
+  onJoin,
+  onOpenReferral,
+  onOpenNotifications,
+}: HomeScreenProps) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const [refreshing, setRefreshing] = useState(false);
@@ -44,6 +53,7 @@ export function HomeScreen({ onJoinCircle, onJoin, onOpenReferral }: HomeScreenP
         queryClient.refetchQueries({ queryKey: recommendedCirclesQueryKey }),
         queryClient.refetchQueries({ queryKey: myReferralQueryKey }),
         queryClient.refetchQueries({ queryKey: paymentStreakQueryKey }),
+        queryClient.refetchQueries({ queryKey: unreadNotificationsQueryKey }),
       ]);
     } finally {
       setRefreshing(false);
@@ -52,7 +62,14 @@ export function HomeScreen({ onJoinCircle, onJoin, onOpenReferral }: HomeScreenP
 
   return (
     <Screen>
-      <BrandHeader actions={<PaymentStreakButton />} />
+      <BrandHeader
+        actions={
+          <>
+            <PaymentStreakButton />
+            {onOpenNotifications && <NotificationBell onPress={onOpenNotifications} />}
+          </>
+        }
+      />
       <ScrollView
         contentContainerStyle={styles.content}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} />}

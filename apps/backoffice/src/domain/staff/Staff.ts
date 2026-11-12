@@ -20,6 +20,8 @@ export const PERMISSIONS = {
   'kyc.review': ['operations', 'super_admin'],
   'users.read': ['support', 'operations', 'finance', 'super_admin'],
   'finance.read': ['finance', 'super_admin'],
+  /** Proponer y decidir movimientos del fondo; nunca la misma persona (COPAYNI-73). */
+  'finance.operate': ['finance', 'super_admin'],
   'users.support': ['support', 'operations', 'super_admin'],
   'users.reveal': ['operations', 'super_admin'],
   'payouts.read': ['support', 'operations', 'finance', 'super_admin'],

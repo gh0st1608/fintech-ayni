@@ -21,6 +21,7 @@ describe('parseEnv', () => {
       documentsApi: 'http',
       referralsApi: 'http',
       savingsApi: 'http',
+      notificationsApi: 'http',
     });
   });
 
@@ -33,6 +34,7 @@ describe('parseEnv', () => {
     'documentsApi',
     'referralsApi',
     'savingsApi',
+    'notificationsApi',
   ] as const)('solo admite %s falsa en dev', (key) => {
     const base = { apiUrl: 'https://api.example.com/v1', [key]: 'fake' };
     expect(parseEnv({ ...base, appEnv: 'dev' })[key]).toBe('fake');

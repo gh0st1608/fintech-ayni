@@ -121,7 +121,7 @@ COPAYNI-81: la cuenta donde la persona recibe su pozo la registra el personal ([
 
 ## Finanzas (solo lectura)
 
-Fase 3 de [backoffice-plan.md](../backoffice-plan.md). Roles: `finance` y `super_admin`. **Ninguno mueve dinero:** registrar el capital semilla o una corrección espera la doble aprobación (BO6).
+Fase 3 de [backoffice-plan.md](../backoffice-plan.md). Roles: `finance` y `super_admin`. **Ninguno mueve dinero:** el capital semilla y las correcciones pasan por la [doble aprobación](#doble-aprobación-del-fondo-de-garantía).
 
 | Endpoint                                                            | Qué hace                                                                                                                      |
 | ------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
@@ -134,6 +134,27 @@ Fase 3 de [backoffice-plan.md](../backoffice-plan.md). Roles: `finance` y `super
 - **Mínimo del fondo:** `GUARANTEE_FUND_MIN_INSTALLMENTS_PER_CIRCLE` cuotas base por círculo en curso (R18), la misma regla que la alerta del backend.
 - **Movimientos:** importe positivo entra al fondo y negativo sale. `reason` solo viene en los movimientos manuales (`seed_capital`, `adjustment`).
 - **Datos simulados:** mientras el ciclo use `CIRCLE_PAYMENTS_ADAPTER=fake` y la tarea diaria siga apagada en prd, estas vistas muestran lo que haya en la base, sin conciliar contra la pasarela.
+
+## Doble aprobación del fondo de garantía
+
+COPAYNI-73. Una persona propone el capital semilla o una corrección y **otra** la aprueba; recién entonces se registra en el libro contable del fondo. **Regla provisional hasta cerrar BO6:** proponen y deciden `finance` y `super_admin`, y nunca la misma persona.
+
+| Endpoint                                         | Roles                       | Qué hace                                                                                               |
+| ------------------------------------------------ | --------------------------- | ------------------------------------------------------------------------------------------------------ |
+| `POST /admin/v1/guarantee-fund/movements`        | `finance`, `super_admin`    | `{ kind, amount, currency, reason }`. Crea la propuesta **pendiente** (201). No mueve dinero           |
+| `GET /admin/v1/approvals?status=&limit=&cursor=` | `finance`, `super_admin`    | Propuestas de la más reciente a la más antigua. `status`: `pending`, `approved`, `rejected`, `expired` |
+| `POST /admin/v1/approvals/:approvalId/approve`   | Los mismos, **con step-up** | Cierra la propuesta y registra el movimiento                                                           |
+| `POST /admin/v1/approvals/:approvalId/reject`    | Los mismos                  | `{ reason }`. Cierra la propuesta sin mover dinero                                                     |
+
+- **Propuesta:** `kind` es `seed_capital` (monto positivo) o `adjustment` (positivo entra, negativo sale). `amount` en unidades menores, entero, distinto de cero y hasta 1.000.000.000. `currency` debe ser una moneda operada.
+- **Respuesta:** `{ id, action, movement: { kind, amount: { amount, currency }, reason }, status, proposedBy, proposedAt, expiresAt, decidedBy, decidedAt, decisionReason }`. `proposedBy` y `decidedBy` traen `{ staffId, email }`.
+- **Vencimiento:** una propuesta sin decidir vence a las `STAFF_APPROVAL_TTL_HOURS` (72 por defecto) y se lista como `expired`; no se puede aprobar.
+- **Cuatro ojos:** quien propuso no puede aprobar ni rechazar (`403 APPROVAL_SELF_DECISION`). Se compara el id del personal y, si ambos lo traen, el email. La base lo refuerza con una restricción sobre el id.
+- **Idempotencia y atomicidad:** primero se cierra la propuesta (solo si sigue pendiente y vigente) y después se registra el movimiento con la clave `kind:approvalId`. Si el registro falla, la propuesta vuelve a pendiente para reintentar; dos aprobaciones simultáneas no duplican el movimiento.
+- **Nunca se edita ni se borra:** un error se corrige con otra propuesta de `adjustment`.
+- **Auditoría:** `guarantee_fund.movement.propose` (con tipo, monto, moneda y motivo), `approval.approve` y `approval.reject` (con el motivo), cada intento con su resultado.
+
+Errores: `VALIDATION_ERROR` (400), `APPROVAL_SELF_DECISION` o `FORBIDDEN` (403), `APPROVAL_NOT_FOUND` (404), `APPROVAL_NOT_PENDING` (409, `details.status` dice si ya se aprobó, se rechazó o venció).
 
 ## Ejecuciones del ciclo mensual
 
