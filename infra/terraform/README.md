@@ -32,12 +32,14 @@ infra/
     │   ├── newrelic-aws-integration/ cuenta AWS ↔ New Relic: metric streams y logs por Firehose
     │   ├── newrelic-observability/   alertas, SLO, monitor sintético y dashboard en New Relic
     │   ├── log-forwarding/           suscripción de grupos de logs al Firehose de New Relic
-    │   └── observability/            alarmas de CloudWatch (respaldo)
+    │   ├── observability/            alarmas de CloudWatch (respaldo)
+    │   └── identity-center/          grupos y permission sets de IAM Identity Center
     ├── live/
     │   ├── dev/us-east-1/account/    auditoría en floci, secreto de New Relic de dev
     │   ├── dev/us-east-1/api/        la API en floci (estado local)
     │   ├── prd/us-east-1/account/    auditoría e integración con New Relic (una vez por cuenta)
-    │   └── prd/us-east-1/api/        la API, el dominio y su observabilidad (estado en S3)
+    │   ├── prd/us-east-1/api/        la API, el dominio y su observabilidad (estado en S3)
+    │   └── prd/us-east-1/identity/   acceso humano por Identity Center (lo aplica un administrador)
     ├── bootstrap/                    una vez por cuenta: bucket del estado y roles OIDC
     ├── .tflint.hcl                   reglas de tflint
     └── .checkov.yaml                 escaneo de seguridad y excepciones con su motivo
@@ -153,7 +155,15 @@ terraform destroy && (cd ../account && terraform destroy) && docker compose -f i
 
 Antes del primer despliegue hay que completar los valores marcados `CAMBIAR`: la cuenta AWS dedicada, la cuenta de New Relic, el owner y el centro de costos. Con los valores de ejemplo, el plan falla a propósito.
 
-**Orden de aplicación:** `bootstrap` → `account` → `api`.
+**Orden de aplicación:** Identity Center (paso 0) → `bootstrap` → `identity` → `account` → `api`.
+
+**0. Organización e Identity Center.** Una sola vez, en la consola y con el usuario raíz de la cuenta nueva. Es el único uso del usuario raíz; después se le activa MFA y se guarda.
+
+1. Crear la organización: `aws organizations create-organization --feature-set ALL`. La cuenta pasa a ser la de gestión.
+2. Habilitar IAM Identity Center en `us-east-1` como instancia **de organización**. Una instancia de cuenta no permite asignar permisos sobre cuentas AWS, y no se puede habilitar con Terraform.
+3. En la configuración de Identity Center, exigir MFA en cada inicio de sesión.
+4. Crear tu usuario en Identity Center y, mientras no exista el stack `identity`, asignarle a mano `AdministratorAccess` sobre la cuenta. Con ese acceso se aplican `bootstrap` e `identity`; después se reemplaza por el grupo `ayni-prd-administradores` y se borra la asignación manual.
+5. Configurar el perfil local con `aws configure sso`. Con él se aplican `bootstrap` e `identity`.
 
 **1. Bootstrap.** Lo aplica un administrador, una vez y con credenciales de la cuenta dedicada; nunca con el perfil por defecto de una laptop.
 
@@ -175,7 +185,26 @@ terraform init -migrate-state \
   - `AWS_APPLY_ROLE_ARN`, en el environment `prd`;
   - `NEW_RELIC_API_KEY`, una User API key de la cuenta de prd, en el environment `prd`.
   - Los dos roles salen de los outputs de bootstrap.
-- Poner el bucket real en los `backend.hcl` de `account` y `api`.
+- Poner el bucket real en los `backend.hcl` de `account`, `api` e `identity`.
+- Correr a mano el workflow **Infra OIDC**: asume el rol de plan, comprueba que no puede escribir y, con la aprobación del environment `prd`, asume el rol de apply. No crea nada.
+
+**2b. Stack identity.** Lo aplica un administrador con su sesión de Identity Center, porque el rol de apply de CI no administra Identity Center:
+
+```bash
+cd infra/terraform/live/prd/us-east-1/identity
+terraform init -backend-config=backend.hcl && terraform apply
+```
+
+Crea cuatro grupos, cada uno con su permission set asignado a la cuenta:
+
+| Grupo | Permisos | Sesión |
+| --- | --- | --- |
+| `ayni-prd-administradores` | `AdministratorAccess` | 4 h |
+| `ayni-prd-solo-lectura` | `ViewOnlyAccess`: configuración, sin leer datos. No se usa `ReadOnlyAccess` porque lee los documentos KYC en S3 | 8 h |
+| `ayni-prd-facturacion` | `Billing` | 4 h |
+| `ayni-prd-soporte` | `ViewOnlyAccess`, más logs, métricas y reinicio de la API (`ecs:UpdateService` y `ecs:StopTask` en `ayni-prd-*`) | 8 h |
+
+Las personas se agregan a los grupos en la consola: sus datos no pasan por Terraform.
 
 **3. Stack account.** El primer apply se hace en dos pasos, porque Firehose necesita la license key ya cargada:
 

@@ -1,0 +1,52 @@
+# Verificación del acceso de GitHub Actions a AWS por OIDC (COPAYNI-12), sin claves permanentes.
+# Solo identifica la sesión: no planifica ni aplica nada. Se corre a mano después del bootstrap.
+name: Infra OIDC
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  # Rol de plan: lo asumen los PR y main (solo lectura).
+  plan-role:
+    name: rol de plan
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
+        with:
+          role-to-assume: ${{ secrets.AWS_PLAN_ROLE_ARN }}
+          aws-region: us-east-1
+          role-session-name: oidc-check-plan
+      - name: Sesión asumida
+        run: aws sts get-caller-identity --query Arn --output text
+      - name: El rol de plan no puede escribir
+        run: |
+          if aws s3api create-bucket --bucket "ayni-oidc-check-${GITHUB_RUN_ID}" 2>/dev/null; then
+            echo "::error::El rol de plan pudo crear un bucket" && exit 1
+          fi
+          echo "Escritura denegada, como se espera."
+
+  # Rol de apply: solo desde el environment protegido prd (con aprobación).
+  apply-role:
+    name: rol de apply
+    needs: plan-role
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    environment: prd
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
+        with:
+          role-to-assume: ${{ secrets.AWS_APPLY_ROLE_ARN }}
+          aws-region: us-east-1
+          role-session-name: oidc-check-apply
+      - name: Sesión asumida
+        run: aws sts get-caller-identity --query Arn --output text
