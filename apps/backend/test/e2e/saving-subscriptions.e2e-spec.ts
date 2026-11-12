@@ -118,6 +118,48 @@ describe('Suscripción al ahorro', () => {
     expect(after.paidContributions).toBe(2);
   });
 
+  it('sin débito automático paga el aporte vencido desde la app, una sola vez (COPAYNI-93)', async () => {
+    const ana = await saver();
+    const subscription = (
+      await subscribe(ana.token, randomUUID(), {
+        planId: 'lite',
+        months: 6,
+        cardId: ana.cardId,
+        autoDebit: false,
+      }).expect(200)
+    ).body.data;
+    const pay = (key: string, token = ana.token) =>
+      http()
+        .post(`/v1/me/savings/${subscription.id}/contributions/pay`)
+        .set('Authorization', `Bearer ${token}`)
+        .set('Idempotency-Key', key)
+        .send({ cardId: ana.cardId });
+
+    // El segundo aporte vence el mes que viene: no se paga por adelantado.
+    const early = await pay(randomUUID()).expect(422);
+    expect(early.body.error.code).toBe('CONTRIBUTION_NOT_DUE');
+
+    const today = LocalDate.fromDate(new Date(), 'America/Lima').toString();
+    await database.query(
+      `UPDATE saving_contributions SET due_on = $2 WHERE subscription_id = $1 AND sequence = 2`,
+      [subscription.id, today],
+    );
+    const key = randomUUID();
+    const paid = (await pay(key).expect(200)).body.data;
+    expect(paid).toMatchObject({ paidContributions: 2, nextContribution: { sequence: 3 } });
+    // Repetir con la misma clave devuelve el plan sin cobrar el aporte siguiente.
+    const again = (await pay(key).expect(200)).body.data;
+    expect(again.paidContributions).toBe(2);
+
+    const other = await saver();
+    await pay(randomUUID(), other.token).expect(404);
+    await http()
+      .post(`/v1/me/savings/${subscription.id}/contributions/pay`)
+      .set('Authorization', `Bearer ${ana.token}`)
+      .send({ cardId: ana.cardId })
+      .expect(400);
+  });
+
   it('valida la clave, el plan y la tarjeta', async () => {
     const ana = await saver();
     const body = { planId: 'lite', months: 6, cardId: ana.cardId, autoDebit: false };

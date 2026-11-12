@@ -7,6 +7,7 @@ import {
 import {
   CollectSavingContributionsUseCase,
   type DueContribution,
+  PayContributionUseCase,
   type SavingSubscriptionsPort,
   SubscribeToSavingPlanUseCase,
 } from '@src/modules/savings/application/subscription.use-cases';
@@ -60,6 +61,10 @@ class InMemorySubscriptions implements SavingSubscriptionsPort {
       }
     }
     return Promise.resolve();
+  }
+
+  paidWithKey() {
+    return Promise.resolve(false);
   }
 
   reject(subscriptionId: string, detail: string | null) {
@@ -147,6 +152,7 @@ async function setup(status: GatewayPayment['status']) {
   const settings = { timeZone: 'America/Lima', startOffsetMonths: 0 };
   return {
     subscriptions,
+    cards,
     gateway,
     cardId: card.id,
     subscribe: new SubscribeToSavingPlanUseCase(
@@ -158,6 +164,7 @@ async function setup(status: GatewayPayment['status']) {
       users,
       clock,
     ),
+    pay: new PayContributionUseCase(subscriptions, settings, gateway, cards, users, clock),
     collect: new CollectSavingContributionsUseCase(
       subscriptions,
       settings,
@@ -224,5 +231,41 @@ describe('SubscribeToSavingPlanUseCase', () => {
     await expect(
       subscribe.execute({ userId: 'u-1' }, { ...input, cardId: 'otra' }, ATTEMPT),
     ).rejects.toMatchObject({ code: 'CARD_NOT_FOUND' });
+  });
+});
+
+describe('PayContributionUseCase (COPAYNI-93)', () => {
+  beforeEach(() => jest.spyOn(Logger.prototype, 'log').mockImplementation(() => undefined));
+  afterEach(() => jest.restoreAllMocks());
+
+  it('un aporte que no vence no se paga; uno rechazado sigue pendiente y devuelve el motivo', async () => {
+    const approved = await setup('approved');
+    const input = { planId: 'lite', months: 6, cardId: approved.cardId, autoDebit: false };
+    const subscription = await approved.subscribe.execute({ userId: 'u-1' }, input, ATTEMPT);
+    await expect(
+      approved.pay.execute(
+        { userId: 'u-1' },
+        subscription.id,
+        approved.cardId,
+        'pago-mensual-0001',
+      ),
+    ).rejects.toMatchObject({ code: 'CONTRIBUTION_NOT_DUE', details: { dueOn: '2027-01-15' } });
+
+    // El segundo aporte vence hoy y la pasarela lo rechaza.
+    const row = approved.subscriptions.rows[0]!.subscription;
+    row.contributions[1]!.dueOn = '2026-12-15';
+    const rejecting = gatewayWith('rejected');
+    const pay = new PayContributionUseCase(
+      approved.subscriptions,
+      { timeZone: 'America/Lima', startOffsetMonths: 0 },
+      rejecting,
+      approved.cards,
+      users,
+      new TestClock(new Date('2026-12-15T15:00:00Z')),
+    );
+    await expect(
+      pay.execute({ userId: 'u-1' }, subscription.id, approved.cardId, 'pago-mensual-0002'),
+    ).rejects.toMatchObject({ code: 'SAVING_PAYMENT_REJECTED' });
+    expect(row.contributions[1]!.status).toBe('pending');
   });
 });

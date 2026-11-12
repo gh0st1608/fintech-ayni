@@ -80,7 +80,15 @@ Crea la suscripción, arma el calendario de aportes y **cobra el primer aporte**
 
 - **Idempotencia:** repetir con la misma clave devuelve la misma suscripción (o el mismo rechazo) sin crear otra ni cobrar de nuevo. Tras un rechazo, la app reintenta con una clave nueva.
 - **Débito automático:** con `autoDebit`, la tarea diaria (`dist/jobs/circle-cycle.js`) cobra el aporte vencido más antiguo de cada suscripción activa con la misma tarjeta (clave por aporte y día: un rechazo se reintenta al día siguiente, nunca se cobra dos veces). Al pagar el último aporte, la suscripción queda `completed`.
-- **Sin débito automático:** el pago mensual desde la app queda pendiente (no está en el alcance de COPAYNI-79).
+- **Sin débito automático:** el aporte se paga desde la app (ver abajo, COPAYNI-93).
+
+## `POST /v1/me/savings/:id/contributions/pay`
+
+COPAYNI-93. Header `Idempotency-Key` obligatorio y `{ "cardId": "<tarjeta guardada>" }`. Paga el aporte pendiente **más antiguo** de un plan activo, si ya venció o vence hoy (zona `BUSINESS_TIME_ZONE`). Responde el plan actualizado; con el último aporte pagado queda `completed`.
+
+- **Idempotencia:** la clave queda guardada en el aporte pagado (`saving_contributions.payment_key`). Repetir con la misma clave devuelve el plan sin cobrar el aporte siguiente.
+- Errores: `CONTRIBUTION_NOT_DUE` (422, `details.dueOn`) si el próximo aporte todavía no vence; `SAVING_PAYMENT_REJECTED` (422) si se rechaza (el aporte sigue pendiente); `SAVING_SUBSCRIPTION_NOT_FOUND` o `CARD_NOT_FOUND` (404); `VALIDATION_ERROR` (400).
+- La app lo ofrece en "Mis planes de ahorro" cuando el plan no tiene débito automático y el aporte ya venció.
 
 ## `GET /v1/me/savings`
 

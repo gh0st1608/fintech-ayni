@@ -12,6 +12,7 @@ import {
 import {
   CollectSavingContributionsUseCase,
   ListMySavingsUseCase,
+  PayContributionUseCase,
   SAVING_SUBSCRIPTIONS,
   SubscribeToSavingPlanUseCase,
 } from './application/subscription.use-cases';
@@ -35,6 +36,7 @@ import { UsersModule } from '../users/users.module';
     QuoteSavingPlanUseCase,
     SubscribeToSavingPlanUseCase,
     ListMySavingsUseCase,
+    PayContributionUseCase,
     CollectSavingContributionsUseCase,
     { provide: SAVING_SUBSCRIPTIONS, useClass: SqlSavingSubscriptions },
     {
