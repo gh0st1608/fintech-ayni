@@ -13,6 +13,7 @@ import {
 import { Badge, EmptyState, ErrorAlert, Spinner } from '../components/ui';
 import { formatDateTime, formatMoney, STATE_LABELS } from '../format';
 import { useStaff } from '../providers/AppProviders';
+import { PayoutAccountPanel } from '../payouts/PayoutAccountPanel';
 import { SupportActions, SupportNotes } from './SupportPanel';
 import { useUser } from './useUsers';
 
@@ -110,6 +111,8 @@ function UserView({ user }: { user: UserDetail }) {
       </section>
 
       <SupportActions user={user} />
+
+      <PayoutAccountPanel userId={user.userId} />
 
       <section aria-labelledby="circles" className="flex flex-col gap-2">
         <h2 id="circles" className="text-lg font-semibold">

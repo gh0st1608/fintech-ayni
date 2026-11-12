@@ -5,6 +5,11 @@ import { KYC_STATUSES, KYC_TYPES } from '@/domain/kyc/Kyc';
 import { STAFF_ROLES } from '@/domain/staff/Staff';
 import { KYC_DOCUMENT_STATES, USER_STATUSES } from '@/domain/users/User';
 import { INSTALLMENT_STATUSES } from '@/domain/finance/Finance';
+import {
+  BANK_ACCOUNT_TYPES,
+  PAYOUT_ACCOUNT_KINDS,
+  WALLET_PROVIDERS,
+} from '@/domain/payouts/PayoutAccount';
 
 /** Contratos de docs/api/admin.md en fintech-ayni. Se validan en runtime: TypeScript no basta. */
 const money = z.object({ amount: z.number().int(), currency: z.string().length(3) });
@@ -230,6 +235,28 @@ export const supportNoteSchema = z.object({
 });
 
 export const supportNotesSchema = z.object({ items: z.array(supportNoteSchema) });
+
+export const payoutAccountSchema = z.object({
+  id: z.uuid(),
+  kind: z.enum(PAYOUT_ACCOUNT_KINDS),
+  label: z.string().min(1),
+  bankCode: z.string().nullable(),
+  bankName: z.string().nullable(),
+  accountType: z.enum(BANK_ACCOUNT_TYPES).nullable(),
+  walletProvider: z.enum(WALLET_PROVIDERS).nullable(),
+  last4: z.string().regex(/^\d{4}$/),
+  holderName: z.string(),
+  registeredAt: isoDate,
+  registeredBy: z.string(),
+  registeredByEmail: z.string().nullable(),
+  replacedAt: isoDate.nullable(),
+});
+
+export const payoutAccountsSchema = z.object({
+  current: payoutAccountSchema.nullable(),
+  history: z.array(payoutAccountSchema),
+  banks: z.record(z.string(), z.string()),
+});
 
 export const cycleRunsPageSchema = z.object({
   items: z.array(
