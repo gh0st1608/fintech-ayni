@@ -1,3 +1,4 @@
+import type { FileSharePort } from '@/domain/payments/ports/FileSharePort';
 import type { PaymentRepositoryPort } from '@/domain/payments/ports/PaymentRepositoryPort';
 import type { PaymentSettings } from '@/domain/payments/PaymentSettings';
 import type { PaymentStreak } from '@/domain/payments/PaymentStreak';
@@ -47,6 +48,23 @@ export class GetTransactionUseCase {
 
   execute(type: TransactionType, id: string, signal?: AbortSignal): Promise<TransactionDetail> {
     return this.repository.getTransaction(type, id, signal);
+  }
+}
+
+/** Descarga el comprobante en PDF y abre la hoja del sistema para guardarlo o compartirlo. */
+export class ShareReceiptUseCase {
+  constructor(
+    private readonly repository: PaymentRepositoryPort,
+    private readonly files: FileSharePort,
+  ) {}
+
+  async execute(
+    transaction: { type: TransactionType; id: string },
+    language: string,
+    dialogTitle: string,
+  ): Promise<void> {
+    const file = await this.repository.getReceipt(transaction.type, transaction.id, language);
+    await this.files.share(file, dialogTitle);
   }
 }
 

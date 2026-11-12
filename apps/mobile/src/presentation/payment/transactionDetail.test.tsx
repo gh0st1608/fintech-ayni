@@ -82,3 +82,26 @@ describe('Detalle de un movimiento (D8, COPAYNI-78)', () => {
     await waitFor(() => expect(onOpenTransaction).toHaveBeenCalledWith('payment', 't-2'));
   });
 });
+
+describe('Comprobante de un movimiento (COPAYNI-80)', () => {
+  it('descarga el PDF y abre la hoja para guardarlo o compartirlo', async () => {
+    const setup = await renderDetail('payment', 't-2');
+    await fireEvent.press(await screen.findByTestId('transaction-receipt'));
+    await waitFor(() => expect(setup.adapters.fileShare.shared).toHaveLength(1));
+    expect(setup.adapters.fileShare.shared[0]).toMatchObject({
+      file: { filename: 'ayni-comprobante-t-2.pdf', mimeType: 'application/pdf' },
+      dialogTitle: 'Comprobante de Ayni',
+    });
+  });
+
+  it('si no se puede descargar, avisa sin salir del detalle', async () => {
+    const payments = repository();
+    jest.spyOn(payments, 'getReceipt').mockRejectedValue(new AppError('network', 'offline'));
+    await renderDetail('payment', 't-2', payments);
+    await fireEvent.press(await screen.findByTestId('transaction-receipt'));
+    expect(
+      await screen.findByText('No pudimos descargar el comprobante. Inténtalo de nuevo.'),
+    ).toBeTruthy();
+    expect(screen.getByTestId('transaction-amount')).toBeTruthy();
+  });
+});

@@ -4,7 +4,9 @@ import { ConfigService } from '@nestjs/config';
 import { type AppConfigService } from '../../config/configuration';
 import { UsersModule } from '../users/users.module';
 import { PAYMENT_GATEWAY } from './application/ports/payment-gateway.port';
+import { PAYMENT_METHOD_LOG } from './application/ports/payment-method-log.port';
 import { SAVED_CARDS } from './application/ports/saved-card-repository.port';
+import { SqlPaymentMethodLog } from './infrastructure/sql-payment-method-log';
 import { AddCardUseCase, ListCardsUseCase } from './application/use-cases/add-card.use-case';
 import { ChargeInstallmentUseCase } from './application/use-cases/charge-installment.use-case';
 import {
@@ -45,6 +47,7 @@ import { CardsController } from './presentation/http/controllers/cards.controlle
     },
     SqlSavedCardRepository,
     { provide: SAVED_CARDS, useExisting: SqlSavedCardRepository },
+    { provide: PAYMENT_METHOD_LOG, useClass: SqlPaymentMethodLog },
     {
       provide: PAYMENT_GATEWAY,
       inject: [ConfigService],

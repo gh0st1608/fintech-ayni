@@ -53,6 +53,7 @@ import {
   GetTransactionUseCase,
   GetPaymentStreakUseCase,
   CopyOperationNumberUseCase,
+  ShareReceiptUseCase,
   UpdatePaymentSettingsUseCase,
 } from '@/application/payments/usecases/paymentUseCases';
 import {
@@ -111,6 +112,8 @@ import type { LayoutDirectionPort } from '@/domain/i18n/ports/LayoutDirectionPor
 import type { CardRepositoryPort } from '@/domain/payments/ports/CardRepositoryPort';
 import type { PaymentTokenizerPort } from '@/domain/payments/ports/CardTokenizerPort';
 import type { PaymentRepositoryPort } from '@/domain/payments/ports/PaymentRepositoryPort';
+import type { FileSharePort } from '@/domain/payments/ports/FileSharePort';
+import { ExpoFileShare } from '@/infrastructure/payments/ExpoFileShare';
 import type { PayoutMethodRepositoryPort } from '@/domain/payouts/ports/PayoutMethodRepositoryPort';
 import type {
   ClipboardPort,
@@ -207,6 +210,7 @@ export interface ContainerAdapters {
   referrals: ReferralRepositoryPort;
   sharer: SharePort;
   clipboard: ClipboardPort;
+  fileShare: FileSharePort;
   pendingReferral: PendingReferralPort;
   savings: SavingPlanRepositoryPort;
   ids: IdGeneratorPort;
@@ -295,6 +299,7 @@ export function createContainer(
         : new ReferralApiRepository(http),
     sharer: new ReactNativeShare(),
     clipboard: new ExpoClipboard(),
+    fileShare: new ExpoFileShare(),
     pendingReferral: new AsyncStoragePendingReferral(),
     savings:
       env.savingsApi === 'fake'
@@ -381,6 +386,7 @@ export function createContainer(
       getTransaction: new GetTransactionUseCase(adapters.payments),
       getPaymentStreak: new GetPaymentStreakUseCase(adapters.payments),
       copyOperationNumber: new CopyOperationNumberUseCase(adapters.clipboard),
+      shareReceipt: new ShareReceiptUseCase(adapters.payments, adapters.fileShare),
       getPayoutEligibility: new GetPayoutEligibilityUseCase(adapters.payments),
       getSettings: new GetPaymentSettingsUseCase(adapters.payments),
       updateSettings: new UpdatePaymentSettingsUseCase(adapters.payments),

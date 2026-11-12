@@ -1,3 +1,4 @@
+import type { DownloadedFile, FileSharePort } from '@/domain/payments/ports/FileSharePort';
 import type {
   BiometricAuthPort,
   BiometricAvailability,
@@ -170,5 +171,17 @@ export class InMemoryPendingReferral implements PendingReferralPort {
 
   async clear() {
     this.stored = null;
+  }
+}
+
+/** Hoja de compartir en memoria: guarda lo que se compartió (COPAYNI-80). */
+export class FakeFileShare implements FileSharePort {
+  readonly shared: { file: DownloadedFile; dialogTitle: string }[] = [];
+  failWith: Error | null = null;
+
+  share(file: DownloadedFile, dialogTitle: string): Promise<void> {
+    if (this.failWith) return Promise.reject(this.failWith);
+    this.shared.push({ file, dialogTitle });
+    return Promise.resolve();
   }
 }

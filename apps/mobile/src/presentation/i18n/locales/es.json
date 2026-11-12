@@ -671,7 +671,10 @@
       "received": "Recibido",
       "operation": "N.º de operación  {{id}}",
       "copy": "Copiar el número de operación",
-      "copied": "Número de operación copiado."
+      "copied": "Número de operación copiado.",
+      "receipt": "Descargar comprobante",
+      "receiptTitle": "Comprobante de Ayni",
+      "receiptError": "No pudimos descargar el comprobante. Inténtalo de nuevo."
     }
   },
   "documents": {
