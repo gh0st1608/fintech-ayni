@@ -105,7 +105,8 @@ const users = {
   findByIdentifier: jest.fn(),
   save: jest.fn(),
 };
-const KEY = 'clave-de-prueba-0001';
+/** Clave de idempotencia de prueba (no es un secreto). */
+const ATTEMPT = 'intento-de-prueba-uno';
 
 function gatewayWith(status: GatewayPayment['status']): PaymentGatewayPort & { charges: number } {
   const payments: GatewayPayment[] = [];
@@ -175,7 +176,7 @@ describe('SubscribeToSavingPlanUseCase', () => {
   it('con el cobro aprobado queda activa; repetir con la misma clave no cobra de nuevo', async () => {
     const { subscribe, gateway, cardId } = await setup('approved');
     const input = { planId: 'lite', months: 6, cardId, autoDebit: true };
-    const subscription = await subscribe.execute({ userId: 'u-1' }, input, KEY);
+    const subscription = await subscribe.execute({ userId: 'u-1' }, input, ATTEMPT);
     expect(subscription).toMatchObject({
       status: 'active',
       payoutPeriod: '2027-06',
@@ -184,7 +185,7 @@ describe('SubscribeToSavingPlanUseCase', () => {
         expect.objectContaining({ sequence: 6, dueOn: '2027-05-15', status: 'pending' }),
       ]),
     });
-    await subscribe.execute({ userId: 'u-1' }, input, KEY);
+    await subscribe.execute({ userId: 'u-1' }, input, ATTEMPT);
     expect(gateway.charges).toBe(1);
   });
 
@@ -195,15 +196,15 @@ describe('SubscribeToSavingPlanUseCase', () => {
       code: 'SAVING_PAYMENT_REJECTED',
       details: { detail: 'cc_rejected_insufficient_amount' },
     });
-    await expect(subscribe.execute({ userId: 'u-1' }, input, KEY)).rejects.toEqual(rejected);
-    await expect(subscribe.execute({ userId: 'u-1' }, input, KEY)).rejects.toEqual(rejected);
+    await expect(subscribe.execute({ userId: 'u-1' }, input, ATTEMPT)).rejects.toEqual(rejected);
+    await expect(subscribe.execute({ userId: 'u-1' }, input, ATTEMPT)).rejects.toEqual(rejected);
     expect(subscriptions.rows[0]!.subscription.status).toBe('rejected');
   });
 
   it('un cobro pendiente queda pendiente y la tarea diaria lo resuelve', async () => {
     const { subscribe, collect, cardId, subscriptions, gateway } = await setup('pending');
     const input = { planId: 'lite', months: 6, cardId, autoDebit: true };
-    await expect(subscribe.execute({ userId: 'u-1' }, input, KEY)).resolves.toMatchObject({
+    await expect(subscribe.execute({ userId: 'u-1' }, input, ATTEMPT)).resolves.toMatchObject({
       status: 'pending',
     });
     // La pasarela lo aprueba después.
@@ -221,7 +222,7 @@ describe('SubscribeToSavingPlanUseCase', () => {
       details: { idempotencyKey: 'invalid' },
     });
     await expect(
-      subscribe.execute({ userId: 'u-1' }, { ...input, cardId: 'otra' }, KEY),
+      subscribe.execute({ userId: 'u-1' }, { ...input, cardId: 'otra' }, ATTEMPT),
     ).rejects.toMatchObject({ code: 'CARD_NOT_FOUND' });
   });
 });

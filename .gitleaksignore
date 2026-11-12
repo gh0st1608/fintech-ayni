@@ -9,3 +9,7 @@
 # la API debe rechazarlo. No da acceso a nada.
 ef079a6382201e9537dc199ee30ee62f3af17ca6:qa/api/scripts/build-collection.mjs:jwt:435
 ef079a6382201e9537dc199ee30ee62f3af17ca6:qa/api/collections/ayni-api.postman_collection.json:jwt:1783
+
+# Clave de idempotencia ficticia de una prueba unitaria del ahorro (COPAYNI-79). En HEAD la
+# constante se renombró para que no parezca una API key.
+da21cc0afe14c4fc7bd9401239882a057008882c:apps/backend/test/unit/modules/savings/saving-subscription.spec.ts:generic-api-key:108

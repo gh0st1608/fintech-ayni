@@ -71,12 +71,12 @@ describe('Suscripción al ahorro', () => {
 
     const again = (await subscribe(ana.token, key, body).expect(200)).body.data;
     expect(again.id).toBe(first.id);
-    const [{ count }] = await database.query<{ count: number }[]>(
+    const [row] = await database.query<{ count: number }[]>(
       `SELECT count(*)::int AS count FROM saving_subscriptions s
          JOIN saving_subscriptions f ON f.user_id = s.user_id WHERE f.id = $1`,
       [first.id],
     );
-    expect(count).toBe(1);
+    expect(row?.count).toBe(1);
 
     const reused = await subscribe(ana.token, key, { ...body, months: 12 }).expect(409);
     expect(reused.body.error.code).toBe('IDEMPOTENCY_KEY_REUSED');
