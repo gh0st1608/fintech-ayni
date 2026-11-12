@@ -6,6 +6,7 @@ import { STAFF_ROLES } from '@/domain/staff/Staff';
 import { KYC_DOCUMENT_STATES, USER_STATUSES } from '@/domain/users/User';
 import { INSTALLMENT_STATUSES } from '@/domain/finance/Finance';
 import { APPROVAL_STATUSES, FUND_MOVEMENT_KINDS } from '@/domain/finance/Approval';
+import { HELP_LANGUAGES } from '@/domain/help/Help';
 import {
   BANK_ACCOUNT_TYPES,
   PAYOUT_ACCOUNT_KINDS,
@@ -258,6 +259,14 @@ export const approvalSchema = z.object({
 export const approvalsPageSchema = z.object({
   items: z.array(approvalSchema),
   nextCursor: z.string().nullable(),
+});
+
+export const helpContentSchema = z.object({
+  language: z.enum(HELP_LANGUAGES),
+  faqs: z.array(z.object({ id: z.string().min(1), question: z.string(), answer: z.string() })),
+  paymentPolicy: z.string().nullable(),
+  updatedAt: isoDate.nullable(),
+  updatedBy: z.string().nullable(),
 });
 
 export const payoutAccountSchema = z.object({

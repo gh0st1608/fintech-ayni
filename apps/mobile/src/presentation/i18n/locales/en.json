@@ -926,5 +926,19 @@
         "body": "One more slot was taken."
       }
     }
+  },
+  "help": {
+    "title": "Help",
+    "searchLabel": "Search your question",
+    "searchPlaceholder": "Search your question",
+    "faqTitle": "Frequently asked questions",
+    "noResults": "No questions match that text.",
+    "noFaqs": "There are no frequently asked questions yet.",
+    "policyTitle": "Payment policy",
+    "policySummary": "Due dates, grace period, late fees, refunds and payout retention.",
+    "policyPendingTitle": "Policy in progress",
+    "policyPendingDescription": "We are finishing the payment policy. Meanwhile, write to us if you have questions.",
+    "policyUpdated": "Updated on {{date}}",
+    "whatsapp": "Message us on WhatsApp"
   }
 }

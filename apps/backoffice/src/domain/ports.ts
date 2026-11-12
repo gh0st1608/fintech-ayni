@@ -18,6 +18,7 @@ import type { StaffMember, StaffRole } from './staff/Staff';
 import type { BlockResult, SupportNote, UserContact, UserDetail, UserSummary } from './users/User';
 import type { CycleRunsPage } from './circles/CycleRun';
 import type { PayoutAccount, PayoutAccountForm, PayoutAccounts } from './payouts/PayoutAccount';
+import type { HelpContent, HelpInput, HelpLanguage } from './help/Help';
 import type {
   Approval,
   ApprovalsPage,
@@ -121,6 +122,13 @@ export interface FinanceRepositoryPort {
 
 export interface ApprovalsFilter extends PageFilter {
   status?: ApprovalStatus;
+}
+
+/** Ayuda de la app (docs/api/admin.md, "Ayuda"). */
+export interface HelpRepositoryPort {
+  get(language: HelpLanguage, signal?: AbortSignal): Promise<HelpContent>;
+  /** Reemplaza todo el contenido del idioma; se publica al instante. */
+  save(language: HelpLanguage, input: HelpInput): Promise<HelpContent>;
 }
 
 /** Ejecuciones de la tarea diaria del ciclo mensual (docs/api/admin.md). */

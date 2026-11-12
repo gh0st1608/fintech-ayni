@@ -20,7 +20,17 @@ import type {
   PageFilter,
   CycleRunsRepositoryPort,
   ApprovalsFilter,
+  HelpRepositoryPort,
 } from '@/domain/ports';
+import {
+  type HelpContent,
+  type HelpInput,
+  type HelpLanguage,
+  MAX_ANSWER,
+  MAX_FAQS,
+  MAX_POLICY,
+  MAX_QUESTION,
+} from '@/domain/help/Help';
 import {
   type Approval,
   type ApprovalsPage,
@@ -274,7 +284,8 @@ function cleanReason(reason: string): string {
 
 function assertCan(
   staff: StaffMember,
-  permission: 'users.support' | 'users.reveal' | 'payouts.register' | 'finance.operate',
+  permission:
+    'users.support' | 'users.reveal' | 'payouts.register' | 'finance.operate' | 'help.edit',
 ): void {
   if (!can(staff, permission)) throw new AppError('forbidden', 'Tu rol no permite esta acción');
 }
@@ -442,6 +453,50 @@ export class DecideApprovalUseCase {
     return decision.action === 'approve'
       ? this.finance.approve(approvalId)
       : this.finance.reject(approvalId, cleanReason(decision.reason));
+  }
+}
+
+export class GetHelpUseCase {
+  constructor(private readonly help: HelpRepositoryPort) {}
+
+  execute(language: HelpLanguage, signal?: AbortSignal): Promise<HelpContent> {
+    return this.help.get(language, signal);
+  }
+}
+
+/**
+ * Guarda la ayuda de un idioma (COPAYNI-83). Descarta las preguntas vacías del formulario y exige
+ * respuesta a las demás; una política en blanco queda sin publicar.
+ */
+export class SaveHelpUseCase {
+  constructor(private readonly help: HelpRepositoryPort) {}
+
+  execute(staff: StaffMember, language: HelpLanguage, input: HelpInput): Promise<HelpContent> {
+    assertCan(staff, 'help.edit');
+    const faqs = input.faqs
+      .map(({ question, answer }) => ({ question: question.trim(), answer: answer.trim() }))
+      .filter(({ question, answer }) => question || answer);
+    if (faqs.some(({ question, answer }) => !question || !answer)) {
+      throw new AppError('validation', 'Cada pregunta necesita su respuesta');
+    }
+    if (faqs.length > MAX_FAQS) {
+      throw new AppError('validation', `Admite hasta ${MAX_FAQS} preguntas`);
+    }
+    if (
+      faqs.some(
+        ({ question, answer }) => question.length > MAX_QUESTION || answer.length > MAX_ANSWER,
+      )
+    ) {
+      throw new AppError(
+        'validation',
+        `Las preguntas admiten ${MAX_QUESTION} caracteres y las respuestas ${MAX_ANSWER}`,
+      );
+    }
+    const policy = input.paymentPolicy?.trim() || null;
+    if (policy && policy.length > MAX_POLICY) {
+      throw new AppError('validation', `La política admite hasta ${MAX_POLICY} caracteres`);
+    }
+    return this.help.save(language, { faqs, paymentPolicy: policy });
   }
 }
 

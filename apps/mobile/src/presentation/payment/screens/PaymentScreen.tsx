@@ -26,6 +26,9 @@ interface PaymentScreenProps {
   /** Sin pantalla todavía (COPAYNI-36 y 38): el acceso queda deshabilitado. */
   onOpenEligibility?: () => void;
   onOpenSettings?: () => void;
+  /** Ayuda y política de pagos (COPAYNI-83). */
+  onOpenHelp?: () => void;
+  onOpenPolicy?: () => void;
   /** Pagar una cuota desde la app (COPAYNI-63). */
   onPay?: (installmentId: string) => void;
 }
@@ -47,6 +50,8 @@ export function PaymentScreen({
   onOpenHistory,
   onOpenEligibility,
   onOpenSettings,
+  onOpenHelp,
+  onOpenPolicy,
   onPay,
 }: PaymentScreenProps) {
   const { t } = useTranslation();
@@ -111,9 +116,16 @@ export function PaymentScreen({
             label={t('payment.others.history')}
             onPress={onOpenHistory}
           />
-          {/* Payment Policy y Help no tienen diseño (D7). */}
-          <Shortcut icon="document-text-outline" label={t('payment.others.policy')} />
-          <Shortcut icon="help-circle-outline" label={t('payment.others.help')} />
+          <Shortcut
+            icon="document-text-outline"
+            label={t('payment.others.policy')}
+            onPress={onOpenPolicy}
+          />
+          <Shortcut
+            icon="help-circle-outline"
+            label={t('payment.others.help')}
+            onPress={onOpenHelp}
+          />
         </View>
       </ScrollView>
     </Screen>

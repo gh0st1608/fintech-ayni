@@ -24,6 +24,7 @@ import type {
   FinanceRepositoryPort,
   InstallmentsFilter,
   ApprovalsFilter,
+  HelpRepositoryPort,
   CycleRunsRepositoryPort,
 } from '@/domain/ports';
 import type { Approval, ApprovalsPage, FundMovementProposal } from '@/domain/finance/Approval';
@@ -32,6 +33,7 @@ import type {
   PayoutAccountForm,
   PayoutAccounts,
 } from '@/domain/payouts/PayoutAccount';
+import type { HelpContent, HelpInput, HelpLanguage } from '@/domain/help/Help';
 import { AppError } from '@/domain/shared/AppError';
 import type { StaffMember } from '@/domain/staff/Staff';
 import type {
@@ -507,5 +509,41 @@ export class InMemoryFinance implements FinanceRepositoryPort {
   reject(approvalId: string, reason: string): Promise<Approval> {
     this.decisions.push({ approvalId, action: 'reject', reason });
     return this.settle(approvalId, 'rejected', reason);
+  }
+}
+
+export class InMemoryHelp implements HelpRepositoryPort {
+  readonly saves: { language: HelpLanguage; input: HelpInput }[] = [];
+  content: Record<HelpLanguage, HelpContent> = {
+    es: {
+      language: 'es',
+      faqs: [
+        {
+          id: 'f-1',
+          question: '¿Qué pasa si no pago a tiempo?',
+          answer: 'Tienes 3 días de gracia.',
+        },
+      ],
+      paymentPolicy: null,
+      updatedAt: NOW,
+      updatedBy: 'migration',
+    },
+    en: { language: 'en', faqs: [], paymentPolicy: null, updatedAt: null, updatedBy: null },
+  };
+
+  get(language: HelpLanguage): Promise<HelpContent> {
+    return Promise.resolve(structuredClone(this.content[language]));
+  }
+
+  save(language: HelpLanguage, input: HelpInput): Promise<HelpContent> {
+    this.saves.push({ language, input });
+    this.content[language] = {
+      language,
+      faqs: input.faqs.map((faq, index) => ({ id: `s-${String(index + 1)}`, ...faq })),
+      paymentPolicy: input.paymentPolicy,
+      updatedAt: NOW,
+      updatedBy: 'ops@ayni.local',
+    };
+    return this.get(language);
   }
 }

@@ -8,6 +8,8 @@ import {
   AddSupportNoteUseCase,
   GetPayoutAccountsUseCase,
   ListApprovalsUseCase,
+  GetHelpUseCase,
+  SaveHelpUseCase,
   ProposeFundMovementUseCase,
   DecideApprovalUseCase,
   RegisterPayoutAccountUseCase,
@@ -34,6 +36,7 @@ import type {
   UsersRepositoryPort,
   FinanceRepositoryPort,
   CycleRunsRepositoryPort,
+  HelpRepositoryPort,
 } from '@/domain/ports';
 import {
   CirclesApiRepository,
@@ -42,6 +45,7 @@ import {
   UsersApiRepository,
   FinanceApiRepository,
   CycleRunsApiRepository,
+  HelpApiRepository,
 } from '@/infrastructure/api/adapters';
 import { FetchHttpClient } from '@/infrastructure/http/FetchHttpClient';
 import { TokenStore } from '@/infrastructure/http/TokenStore';
@@ -80,6 +84,10 @@ export interface AppContainer {
   cycleRuns: {
     list: ListCycleRunsUseCase;
   };
+  help: {
+    get: GetHelpUseCase;
+    save: SaveHelpUseCase;
+  };
   finance: {
     installments: ListInstallmentsUseCase;
     payouts: ListPayoutsUseCase;
@@ -97,6 +105,7 @@ export interface ContainerAdapters {
   users: UsersRepositoryPort;
   finance: FinanceRepositoryPort;
   cycleRuns: CycleRunsRepositoryPort;
+  help: HelpRepositoryPort;
 }
 
 /** Casos de uso sobre los adaptadores dados; las pruebas pasan dobles. */
@@ -133,6 +142,10 @@ export function createContainer(adapters: ContainerAdapters): AppContainer {
     cycleRuns: {
       list: new ListCycleRunsUseCase(adapters.cycleRuns),
     },
+    help: {
+      get: new GetHelpUseCase(adapters.help),
+      save: new SaveHelpUseCase(adapters.help),
+    },
     finance: {
       installments: new ListInstallmentsUseCase(adapters.finance),
       payouts: new ListPayoutsUseCase(adapters.finance),
@@ -155,5 +168,6 @@ export function createAppContainer(config: AppConfig): AppContainer {
     users: new UsersApiRepository(http),
     finance: new FinanceApiRepository(http),
     cycleRuns: new CycleRunsApiRepository(http),
+    help: new HelpApiRepository(http),
   });
 }
