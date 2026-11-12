@@ -33,6 +33,14 @@ import {
 } from '@/domain/users/User';
 import type { CycleRunsPage } from '@/domain/circles/CycleRun';
 import {
+  isValidCci,
+  isValidWalletPhone,
+  onlyDigits,
+  type PayoutAccount,
+  type PayoutAccountForm,
+  type PayoutAccounts,
+} from '@/domain/payouts/PayoutAccount';
+import {
   type GuaranteeFund,
   type InstallmentsPage,
   isPeriod,
@@ -256,7 +264,10 @@ function cleanReason(reason: string): string {
   return trimmed;
 }
 
-function assertCan(staff: StaffMember, permission: 'users.support' | 'users.reveal'): void {
+function assertCan(
+  staff: StaffMember,
+  permission: 'users.support' | 'users.reveal' | 'payouts.register',
+): void {
   if (!can(staff, permission)) throw new AppError('forbidden', 'Tu rol no permite esta acción');
 }
 
@@ -319,6 +330,58 @@ export class AddSupportNoteUseCase {
       throw new AppError('validation', `La nota admite hasta ${MAX_NOTE_LENGTH} caracteres`);
     }
     return this.users.addNote(userId, trimmed);
+  }
+}
+
+export class GetPayoutAccountsUseCase {
+  constructor(private readonly users: UsersRepositoryPort) {}
+
+  execute(userId: string, signal?: AbortSignal): Promise<PayoutAccounts> {
+    return this.users.payoutAccounts(userId, signal);
+  }
+}
+
+/**
+ * Registra la cuenta de cobro (COPAYNI-81): solo Operaciones y el admin general, con motivo. Valida
+ * el CCI o el celular antes de enviar; el backend comprueba además el titular y el mes de cobro.
+ */
+export class RegisterPayoutAccountUseCase {
+  constructor(private readonly users: UsersRepositoryPort) {}
+
+  execute(
+    staff: StaffMember,
+    userId: string,
+    form: PayoutAccountForm,
+    reason: string,
+  ): Promise<PayoutAccount> {
+    assertCan(staff, 'payouts.register');
+    const holderName = form.holderName.trim().replace(/\s+/g, ' ');
+    if (holderName.split(' ').length < 2) {
+      throw new AppError('validation', 'Escribe el nombre completo del titular');
+    }
+    if (form.kind === 'bank_account') {
+      if (!form.bankCode) throw new AppError('validation', 'Elige el banco');
+      const cci = onlyDigits(form.cci);
+      if (!isValidCci(cci)) {
+        throw new AppError('validation', 'El CCI no es válido: revisa los 20 dígitos');
+      }
+      if (!cci.startsWith(form.bankCode)) {
+        throw new AppError('validation', 'El CCI no es del banco elegido');
+      }
+      return this.users.registerPayoutAccount(
+        userId,
+        { ...form, cci, holderName },
+        cleanReason(reason),
+      );
+    }
+    if (!isValidWalletPhone(form.phone)) {
+      throw new AppError('validation', 'El celular debe tener 9 dígitos y empezar con 9');
+    }
+    return this.users.registerPayoutAccount(
+      userId,
+      { ...form, phone: onlyDigits(form.phone), holderName },
+      cleanReason(reason),
+    );
   }
 }
 

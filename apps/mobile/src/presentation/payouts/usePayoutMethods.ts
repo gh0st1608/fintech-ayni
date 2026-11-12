@@ -28,3 +28,12 @@ export function useSelectPayoutMethod() {
     },
   });
 }
+
+/** Cuenta de cobro registrada por el equipo, enmascarada (GET /me/payout-account). */
+export function usePayoutAccount() {
+  const { payouts } = useContainer();
+  return useQuery({
+    queryKey: ['payouts', 'account'] as const,
+    queryFn: ({ signal }) => payouts.getPayoutAccount.execute(signal),
+  });
+}

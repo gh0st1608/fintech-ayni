@@ -25,6 +25,11 @@ import type {
   InstallmentsFilter,
   CycleRunsRepositoryPort,
 } from '@/domain/ports';
+import type {
+  PayoutAccount,
+  PayoutAccountForm,
+  PayoutAccounts,
+} from '@/domain/payouts/PayoutAccount';
 import { AppError } from '@/domain/shared/AppError';
 import type { StaffMember } from '@/domain/staff/Staff';
 import type {
@@ -322,6 +327,55 @@ export class InMemoryUsers implements UsersRepositoryPort {
     };
     this.noteBook[userId] = [note, ...(this.noteBook[userId] ?? [])];
     return Promise.resolve(structuredClone(note));
+  }
+
+  readonly accounts: Record<string, PayoutAccount[]> = {};
+  readonly registrations: { userId: string; form: PayoutAccountForm; reason: string }[] = [];
+  banks: Record<string, string> = { '002': 'BCP', '011': 'BBVA' };
+
+  payoutAccounts(userId: string): Promise<PayoutAccounts> {
+    const history = this.accounts[userId] ?? [];
+    return Promise.resolve(
+      structuredClone({
+        current: history.find((account) => account.replacedAt === null) ?? null,
+        history,
+        banks: this.banks,
+      }),
+    );
+  }
+
+  registerPayoutAccount(
+    userId: string,
+    form: PayoutAccountForm,
+    reason: string,
+  ): Promise<PayoutAccount> {
+    this.registrations.push({ userId, form, reason });
+    const previous = this.accounts[userId] ?? [];
+    for (const account of previous) account.replacedAt ??= NOW;
+    const number = form.kind === 'bank_account' ? form.cci.slice(14, 18) : form.phone.slice(-4);
+    const name =
+      form.kind === 'bank_account'
+        ? (this.banks[form.bankCode] ?? form.bankCode)
+        : form.provider === 'yape'
+          ? 'Yape'
+          : 'Plin';
+    const account: PayoutAccount = {
+      id: `00000000-0000-4000-e000-${String(previous.length + 1).padStart(12, '0')}`,
+      kind: form.kind,
+      label: `${name} •••• ${number}`,
+      bankCode: form.kind === 'bank_account' ? form.bankCode : null,
+      bankName: form.kind === 'bank_account' ? name : null,
+      accountType: form.kind === 'bank_account' ? form.accountType : null,
+      walletProvider: form.kind === 'wallet' ? form.provider : null,
+      last4: number,
+      holderName: form.holderName,
+      registeredAt: NOW,
+      registeredBy: 'dev:ops@ayni.local',
+      registeredByEmail: 'ops@ayni.local',
+      replacedAt: null,
+    };
+    this.accounts[userId] = [account, ...previous];
+    return Promise.resolve(structuredClone(account));
   }
 }
 

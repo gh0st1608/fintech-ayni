@@ -1,5 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
+import type { PayoutAccountForm } from '@/domain/payouts/PayoutAccount';
+
 import { useContainer, useStaff } from '../providers/AppProviders';
 
 export const usersKeys = {
@@ -77,5 +79,25 @@ export function useAddSupportNote(userId: string) {
   return useMutation({
     mutationFn: (body: string) => users.addNote.execute(staff, userId, body),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['users', 'notes', userId] }),
+  });
+}
+
+export function usePayoutAccounts(userId: string) {
+  const { users } = useContainer();
+  return useQuery({
+    queryKey: ['users', 'payout-account', userId],
+    queryFn: ({ signal }) => users.payoutAccounts.execute(userId, signal),
+  });
+}
+
+export function useRegisterPayoutAccount(userId: string) {
+  const { users } = useContainer();
+  const staff = useStaff();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ form, reason }: { form: PayoutAccountForm; reason: string }) =>
+      users.registerPayoutAccount.execute(staff, userId, form, reason),
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: ['users', 'payout-account', userId] }),
   });
 }

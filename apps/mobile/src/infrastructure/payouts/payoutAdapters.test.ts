@@ -95,6 +95,38 @@ describe('PayoutMethodApiRepository', () => {
   });
 });
 
+describe('PayoutMethodApiRepository: cuenta de cobro (COPAYNI-81)', () => {
+  it('lee la cuenta enmascarada y mapea el tipo', async () => {
+    const { fetchImpl, repository } = setup({
+      body: {
+        success: true,
+        data: {
+          account: {
+            id: 'a1',
+            kind: 'bank_account',
+            label: 'BCP •••• 4567',
+            holderName: 'Juana Torres',
+            registeredAt: '2026-11-12T15:00:00.000Z',
+            last4: '4567',
+          },
+        },
+      },
+    });
+    await expect(repository.account()).resolves.toEqual({
+      kind: 'bankAccount',
+      label: 'BCP •••• 4567',
+      holderName: 'Juana Torres',
+      registeredAt: new Date('2026-11-12T15:00:00.000Z'),
+    });
+    expect(String(fetchImpl.mock.calls[0]![0])).toBe('https://api.test/v1/me/payout-account');
+  });
+
+  it('devuelve null si todavía no hay cuenta', async () => {
+    const { repository } = setup({ body: { success: true, data: { account: null } } });
+    await expect(repository.account()).resolves.toBeNull();
+  });
+});
+
 describe('InMemoryPayoutMethodRepository', () => {
   it('ofrece el mismo catálogo provisional que el backend en la moneda configurada', async () => {
     const { methods, selected } = await new InMemoryPayoutMethodRepository('PEN', {

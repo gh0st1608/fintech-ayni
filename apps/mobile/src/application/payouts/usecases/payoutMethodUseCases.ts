@@ -1,4 +1,5 @@
 import type { PayoutMethodRepositoryPort } from '@/domain/payouts/ports/PayoutMethodRepositoryPort';
+import type { PayoutAccount } from '@/domain/payouts/value-objects/PayoutAccount';
 import {
   PayoutMethodChangeNotAllowedError,
   PayoutMethodNotAvailableError,
@@ -13,6 +14,15 @@ export class ListPayoutMethodsUseCase {
 
   execute(signal?: AbortSignal): Promise<PayoutMethods> {
     return this.repository.list(signal);
+  }
+}
+
+/** Cuenta de cobro registrada por el equipo de Ayni, enmascarada (COPAYNI-81). */
+export class GetPayoutAccountUseCase {
+  constructor(private readonly repository: PayoutMethodRepositoryPort) {}
+
+  execute(signal?: AbortSignal): Promise<PayoutAccount | null> {
+    return this.repository.account(signal);
   }
 }
 

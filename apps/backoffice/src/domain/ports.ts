@@ -17,6 +17,7 @@ import type {
 import type { StaffMember, StaffRole } from './staff/Staff';
 import type { BlockResult, SupportNote, UserContact, UserDetail, UserSummary } from './users/User';
 import type { CycleRunsPage } from './circles/CycleRun';
+import type { PayoutAccount, PayoutAccountForm, PayoutAccounts } from './payouts/PayoutAccount';
 import type {
   GuaranteeFund,
   InstallmentsPage,
@@ -78,6 +79,14 @@ export interface UsersRepositoryPort {
   revealContact(userId: string, reason: string): Promise<UserContact>;
   notes(userId: string, signal?: AbortSignal): Promise<SupportNote[]>;
   addNote(userId: string, body: string): Promise<SupportNote>;
+  /** La cuenta de cobro vigente y las anteriores, enmascaradas (COPAYNI-81). */
+  payoutAccounts(userId: string, signal?: AbortSignal): Promise<PayoutAccounts>;
+  /** Registra la cuenta: el backend exige motivo, autenticación reciente y lo audita. */
+  registerPayoutAccount(
+    userId: string,
+    form: PayoutAccountForm,
+    reason: string,
+  ): Promise<PayoutAccount>;
 }
 
 export interface PageFilter {

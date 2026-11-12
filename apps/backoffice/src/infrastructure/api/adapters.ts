@@ -30,6 +30,11 @@ import type {
 } from '@/domain/users/User';
 import type { CycleRunsPage } from '@/domain/circles/CycleRun';
 import type { GuaranteeFund, InstallmentsPage, PayoutsPage } from '@/domain/finance/Finance';
+import type {
+  PayoutAccount,
+  PayoutAccountForm,
+  PayoutAccounts,
+} from '@/domain/payouts/PayoutAccount';
 
 import type { HttpClientPort } from '../http/FetchHttpClient';
 import type { TokenStore } from '../http/TokenStore';
@@ -53,6 +58,8 @@ import {
   guaranteeFundSchema,
   installmentsPageSchema,
   payoutsPageSchema,
+  payoutAccountSchema,
+  payoutAccountsSchema,
 } from './schemas';
 
 /**
@@ -218,6 +225,24 @@ export class UsersApiRepository implements UsersRepositoryPort {
     return this.http.post(`/admin/v1/users/${encodeURIComponent(userId)}/notes`, {
       schema: supportNoteSchema,
       body: { body },
+    });
+  }
+
+  payoutAccounts(userId: string, signal?: AbortSignal): Promise<PayoutAccounts> {
+    return this.http.get(`/admin/v1/users/${encodeURIComponent(userId)}/payout-account`, {
+      schema: payoutAccountsSchema,
+      signal,
+    });
+  }
+
+  registerPayoutAccount(
+    userId: string,
+    form: PayoutAccountForm,
+    reason: string,
+  ): Promise<PayoutAccount> {
+    return this.http.put(`/admin/v1/users/${encodeURIComponent(userId)}/payout-account`, {
+      schema: payoutAccountSchema,
+      body: { ...form, reason },
     });
   }
 }

@@ -110,6 +110,15 @@ Errores: `USER_NOT_FOUND` (404), además de los comunes.
 - **Access token vigente:** bloquear o revocar no invalida el access token que la persona ya tiene; vence solo (`ACCESS_TOKEN_TTL_SECONDS`, 15 minutos por defecto). Lo que se corta es la renovación.
 - **Supuesto:** las notas de soporte no están en la matriz del plan. Las leen todos los que ven a la persona y las escriben quienes atienden (`support`, `operations` y `super_admin`).
 
+## Cuenta de cobro
+
+COPAYNI-81: la cuenta donde la persona recibe su pozo la registra el personal ([payouts.md](payouts.md#cuenta-de-cobro-copayni-81)).
+
+| Endpoint                                     | Roles                                             | Qué hace                                                                                                     |
+| -------------------------------------------- | ------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| `GET /admin/v1/users/:userId/payout-account` | `support`, `operations`, `finance`, `super_admin` | `{ current, history, banks }`: la vigente, todas las anteriores y los bancos admitidos, enmascaradas         |
+| `PUT /admin/v1/users/:userId/payout-account` | `operations`, `super_admin`, **con step-up**      | Registra o reemplaza la cuenta. Cada elemento trae además `registeredBy`, `registeredByEmail` y `replacedAt` |
+
 ## Finanzas (solo lectura)
 
 Fase 3 de [backoffice-plan.md](../backoffice-plan.md). Roles: `finance` y `super_admin`. **Ninguno mueve dinero:** registrar el capital semilla o una corrección espera la doble aprobación (BO6).

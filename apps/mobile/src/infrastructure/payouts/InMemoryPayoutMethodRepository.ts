@@ -1,4 +1,5 @@
 import type { PayoutMethodRepositoryPort } from '@/domain/payouts/ports/PayoutMethodRepositoryPort';
+import type { PayoutAccount } from '@/domain/payouts/value-objects/PayoutAccount';
 import {
   PayoutMethod,
   type PayoutMethods,
@@ -13,6 +14,8 @@ export interface InMemoryPayoutMethodOptions {
   selected?: PayoutMethodType | null;
   /** Simula el mes de payout: cualquier cambio de método se rechaza. */
   changeLocked?: boolean;
+  /** Cuenta de cobro registrada por el equipo (COPAYNI-81); sin valor, no hay. */
+  account?: PayoutAccount | null;
 }
 
 /** Mismo catálogo provisional que el backend por defecto (docs/api/payouts.md). */
@@ -32,6 +35,7 @@ export class InMemoryPayoutMethodRepository implements PayoutMethodRepositoryPor
   selected: PayoutMethodType | null;
   private readonly latencyMs: number;
   private readonly changeLocked: boolean;
+  payoutAccount: PayoutAccount | null;
 
   constructor(
     private readonly currency: string,
@@ -40,6 +44,12 @@ export class InMemoryPayoutMethodRepository implements PayoutMethodRepositoryPor
     this.latencyMs = options.latencyMs ?? 300;
     this.selected = options.selected ?? null;
     this.changeLocked = options.changeLocked ?? false;
+    this.payoutAccount = options.account ?? null;
+  }
+
+  async account(signal?: AbortSignal): Promise<PayoutAccount | null> {
+    await simulateLatency(this.latencyMs, signal);
+    return this.payoutAccount;
   }
 
   async list(signal?: AbortSignal): Promise<PayoutMethods> {

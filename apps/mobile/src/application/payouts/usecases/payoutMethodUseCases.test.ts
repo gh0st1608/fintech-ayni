@@ -53,6 +53,7 @@ describe('SelectPayoutMethodUseCase', () => {
     const failing = (error: Error): PayoutMethodRepositoryPort => ({
       list: () => Promise.resolve(catalog),
       select: () => Promise.reject(error),
+      account: () => Promise.resolve(null),
     });
     const notAvailable = new AppError('validation', 'no', { code: 'PAYOUT_METHOD_NOT_AVAILABLE' });
     await expect(

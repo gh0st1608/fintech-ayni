@@ -6,6 +6,8 @@ import {
   GetKycReviewUseCase,
   GetUserUseCase,
   AddSupportNoteUseCase,
+  GetPayoutAccountsUseCase,
+  RegisterPayoutAccountUseCase,
   ListCycleRunsUseCase,
   ListSupportNotesUseCase,
   RevealUserContactUseCase,
@@ -69,6 +71,8 @@ export interface AppContainer {
     revealContact: RevealUserContactUseCase;
     notes: ListSupportNotesUseCase;
     addNote: AddSupportNoteUseCase;
+    payoutAccounts: GetPayoutAccountsUseCase;
+    registerPayoutAccount: RegisterPayoutAccountUseCase;
   };
   cycleRuns: {
     list: ListCycleRunsUseCase;
@@ -117,6 +121,8 @@ export function createContainer(adapters: ContainerAdapters): AppContainer {
       revealContact: new RevealUserContactUseCase(adapters.users),
       notes: new ListSupportNotesUseCase(adapters.users),
       addNote: new AddSupportNoteUseCase(adapters.users),
+      payoutAccounts: new GetPayoutAccountsUseCase(adapters.users),
+      registerPayoutAccount: new RegisterPayoutAccountUseCase(adapters.users),
     },
     cycleRuns: {
       list: new ListCycleRunsUseCase(adapters.cycleRuns),

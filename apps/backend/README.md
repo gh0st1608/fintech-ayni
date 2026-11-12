@@ -246,6 +246,7 @@ Se validan al arrancar ([src/config/env.validation.ts](src/config/env.validation
 | `ACCESS_TOKEN_TTL_SECONDS`                                | `900`                                       | Vida del access token.                                                                                                                                                           |
 | `REFRESH_TOKEN_TTL_DAYS`                                  | `30`                                        | Vida del refresh token.                                                                                                                                                          |
 | `OTP_PEPPER`                                              | efímero fuera de prd                        | **Secreto** (32+ caracteres) para el hash de los OTP. Obligatorio en production.                                                                                                 |
+| `FIELD_ENCRYPTION_KEY`                                    | clave fija de desarrollo fuera de prd       | **Secreto** (32 bytes en base64) para cifrar datos guardados, como el CCI de la cuenta de cobro (COPAYNI-81). Obligatoria en production.                                         |
 | `OTP_CODE_TTL_SECONDS` … `OTP_MAX_RESENDS`                | `300`, `30`, `5`, `3`                       | Vigencia, plazo de reenvío, intentos y reenvíos (R10, provisionales).                                                                                                            |
 | `OTP_START_MAX_PER_WINDOW` / `WINDOW_SECONDS`             | `5` / `900`                                 | Inicios por identificador en la ventana.                                                                                                                                         |
 | `OTP_DEV_CODE`                                            | vacío                                       | Solo desarrollo: código fijo y sin envío. Prohibido en production y con `OTP_DELIVERY=aws`.                                                                                      |
@@ -416,7 +417,7 @@ Módulo [auth](src/modules/auth), sobre el módulo [users](src/modules/users). C
 - Los logs registran eventos (`auth.challenge_issued`, `auth.otp_verified`, `auth.otp_rejected`, `auth.refresh_reuse_detected`) con el id del usuario, nunca el identificador, el código ni los tokens.
 - `RATE_LIMITED` lleva `Retry-After` en segundos; el límite por identificador vive en la base, no en memoria.
 
-**Secretos:** `JWT_PRIVATE_KEY` (PEM P-256) y `OTP_PEPPER` son obligatorios en production y llegan de Secrets Manager. Fuera de production, si faltan, se generan al arrancar y dejan de valer al reiniciar. Para fijar una clave local:
+**Secretos:** `JWT_PRIVATE_KEY` (PEM P-256), `OTP_PEPPER` y `FIELD_ENCRYPTION_KEY` son obligatorios en production y llegan de Secrets Manager. Fuera de production, si faltan, se generan al arrancar y dejan de valer al reiniciar. Para fijar una clave local:
 
 ```bash
 openssl ecparam -name prime256v1 -genkey -noout | openssl pkcs8 -topk8 -nocrypt
