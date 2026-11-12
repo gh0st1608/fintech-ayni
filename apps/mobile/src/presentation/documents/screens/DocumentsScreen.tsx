@@ -1,3 +1,4 @@
+import { useIdentityVerification } from '@/presentation/documents/screens/IdentityVerificationScreen';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
@@ -14,6 +15,8 @@ import { useDocuments } from '../useDocuments';
 
 interface DocumentsScreenProps {
   onOpen: Partial<Record<DocumentType, () => void>>;
+  /** Verificación en línea con selfie (COPAYNI-92); sin valor, no se ofrece. */
+  onVerifyIdentity?: () => void;
 }
 
 const STATUS_ICON = {
@@ -41,9 +44,10 @@ const ICONS = {
  * acceso para enviarlo o reenviarlo. Los documentos adicionales del Figma (recibo de servicios,
  * licencia, carnés) se agrupan en una fila hasta tener su historia (COPAYNI-49).
  */
-export function DocumentsScreen({ onOpen }: DocumentsScreenProps) {
+export function DocumentsScreen({ onOpen, onVerifyIdentity }: DocumentsScreenProps) {
   const { t } = useTranslation();
   const documents = useDocuments();
+  const identity = useIdentityVerification();
 
   if (documents.isPending) {
     return (
@@ -80,6 +84,29 @@ export function DocumentsScreen({ onOpen }: DocumentsScreenProps) {
         }
       >
         <AppText color={colors.neutral500}>{t('documents.list.intro')}</AppText>
+        {onVerifyIdentity && identity.data && (
+          <ListItem
+            title={t('identity.listTitle')}
+            description={t('identity.listDescription')}
+            extra={
+              <AppText
+                variant="caption"
+                weight="semibold"
+                color={identity.data.status === 'approved' ? colors.success : colors.primary}
+              >
+                {t(`identity.status.${identity.data.status}`)}
+              </AppText>
+            }
+            icon="scan-outline"
+            onPress={identity.data.status === 'approved' ? undefined : onVerifyIdentity}
+            trailing={
+              identity.data.status === 'approved' ? (
+                <Ionicons name="checkmark-circle" size={24} color={colors.success} />
+              ) : undefined
+            }
+            testID="document-identity"
+          />
+        )}
         {(Object.keys(ICONS) as DocumentType[]).map((type) => {
           const status = summary[type];
           // Un aprobado no se reenvía; un adicional no tiene pantalla todavía (COPAYNI-49).

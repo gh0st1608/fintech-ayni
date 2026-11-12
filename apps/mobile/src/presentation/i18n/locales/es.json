@@ -966,5 +966,54 @@
     "policyPendingDescription": "Estamos terminando la política de pagos. Mientras tanto, escríbenos si tienes dudas.",
     "policyUpdated": "Actualizada el {{date}}",
     "whatsapp": "Escríbenos por WhatsApp"
+  },
+  "identity": {
+    "headerTitle": "Verificar identidad",
+    "listTitle": "Verificación con selfie",
+    "listDescription": "Valida tu DNI y tu rostro en minutos, sin subir fotos.",
+    "status": {
+      "notStarted": "Pendiente",
+      "inProgress": "En curso",
+      "inReview": "En revisión",
+      "approved": "Verificada",
+      "rejected": "Rechazada"
+    },
+    "title": "Verifica tu identidad",
+    "intro": "Lo hacemos con VerificaID: valida tu DNI con RENIEC y compara tu rostro con el de tu documento.",
+    "steps": {
+      "dni": "Ingresa tu DNI.",
+      "selfie": "Toma una foto de tu DNI y una selfie en la página de VerificaID.",
+      "result": "Vuelve a la app para ver el resultado."
+    },
+    "dniLabel": "Número de DNI",
+    "invalidDni": "El DNI debe tener 8 dígitos.",
+    "consent": "Acepto que VerificaID trate mis datos biométricos para verificar mi identidad.",
+    "privacy": "Ayni no guarda tus fotos: solo el resultado de la verificación.",
+    "consentRequired": "Acepta el tratamiento de tus datos biométricos para continuar.",
+    "profileIncomplete": "Completa tu nombre y apellido en Datos personales antes de verificarte.",
+    "tooManyAttempts": "Superaste los intentos de verificación en línea. Sube tu DNI y lo revisaremos.",
+    "manualUpload": "Subir mi DNI",
+    "completeProfile": "Completar mis datos",
+    "start": "Continuar",
+    "rejectedTitle": "No pudimos verificar tu identidad",
+    "reasons": {
+      "documentNotFound": "No encontramos ese DNI en RENIEC. Revisa el número.",
+      "dataMismatch": "Los datos de tu DNI no coinciden con tu nombre en Ayni.",
+      "documentInUse": "Ese DNI ya está verificado en otra cuenta.",
+      "biometricDeclined": "No pudimos confirmar que eres la persona del DNI.",
+      "documentExpired": "Tu DNI está vencido.",
+      "sessionExpired": "La verificación venció antes de terminar. Inténtalo de nuevo.",
+      "abandoned": "La verificación quedó sin terminar. Inténtalo de nuevo.",
+      "providerError": "Hubo un problema con la verificación. Inténtalo de nuevo."
+    },
+    "progressTitle": "Termina tu verificación",
+    "progressBody": "Continúa en la página de VerificaID para tomar la foto de tu DNI y tu selfie.",
+    "resume": "Continuar verificación",
+    "refresh": "Actualizar estado",
+    "reviewTitle": "Estamos revisando tu verificación",
+    "reviewBody": "Te avisaremos cuando tengamos el resultado.",
+    "approvedTitle": "Identidad verificada",
+    "approvedBody": "Tu DNI {{document}} quedó verificado.",
+    "done": "Listo"
   }
 }

@@ -110,6 +110,8 @@ Usa el contrato común de respuestas descrito en [auth.md](auth.md) y el modelo 
 
 ## Verificación de identidad en línea: VerificaID (COPAYNI-42)
 
+**App (COPAYNI-92):** Documentos ofrece "Verificación con selfie" con su estado. La pantalla pide el consentimiento y el DNI, abre `verificationUrl` con el navegador del sistema (`expo-web-browser`, `openAuthSessionAsync` con retorno `ayni://identity-verification`) y, al volver, consulta `GET /v1/me/identity-verification`: el retorno no prueba nada, el estado lo decide el backend. Si se agotan los intentos lleva a subir el DNI (revisión manual) y, si falta el nombre, a Datos personales. Solo abre enlaces `https`. `expo-web-browser` requiere un nuevo build nativo.
+
 **Decidido por negocio el 2026-11-11:** el proveedor es [VerificaID](https://developers.verifica.id/introduction), con tres validaciones y los dos servicios que distinguen sus términos:
 
 | Validación                | Qué comprueba                                                                | Servicio de VerificaID                                                        |

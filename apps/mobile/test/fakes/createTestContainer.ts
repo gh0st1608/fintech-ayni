@@ -1,3 +1,7 @@
+import {
+  FakeWebAuthSession,
+  InMemoryIdentityVerificationRepository,
+} from '@/infrastructure/documents/IdentityVerificationAdapters';
 import { createContainer } from '@/bootstrap/container';
 import { parseEnv } from '@/bootstrap/env';
 
@@ -61,6 +65,8 @@ interface TestAdapters {
   documents: InMemoryDocumentRepository;
   filePicker: FakeFilePicker;
   fileUploader: FakeFileUploader;
+  identityVerification: InMemoryIdentityVerificationRepository;
+  webAuthSession: FakeWebAuthSession;
   fileCleaner: FakeLocalFileCleaner;
   referrals: InMemoryReferralRepository;
   sharer: FakeShare;
@@ -96,6 +102,8 @@ export function createTestContainer(overrides: Partial<TestAdapters> = {}) {
     documents: new InMemoryDocumentRepository({ latencyMs: 0 }),
     filePicker: new FakeFilePicker(),
     fileUploader: new FakeFileUploader(),
+    identityVerification: new InMemoryIdentityVerificationRepository(0),
+    webAuthSession: new FakeWebAuthSession(),
     fileCleaner: new FakeLocalFileCleaner(),
     referrals: new InMemoryReferralRepository({ latencyMs: 0, currency: 'PEN' }),
     sharer: new FakeShare(),

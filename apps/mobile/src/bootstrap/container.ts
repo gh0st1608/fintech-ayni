@@ -1,4 +1,19 @@
 import {
+  GetIdentityVerificationUseCase,
+  ResumeIdentityVerificationUseCase,
+  StartIdentityVerificationUseCase,
+} from '@/application/documents/usecases/identityVerificationUseCases';
+import type {
+  IdentityVerificationRepositoryPort,
+  WebAuthSessionPort,
+} from '@/domain/documents/ports/IdentityVerificationPorts';
+import {
+  ExpoWebAuthSession,
+  FakeWebAuthSession,
+  IdentityVerificationApiRepository,
+  InMemoryIdentityVerificationRepository,
+} from '@/infrastructure/documents/IdentityVerificationAdapters';
+import {
   CountUnreadNotificationsUseCase,
   ListNotificationsUseCase,
   MarkNotificationsReadUseCase,
@@ -208,6 +223,8 @@ export interface ContainerAdapters {
   documents: DocumentRepositoryPort;
   filePicker: FilePickerPort;
   fileUploader: FileUploaderPort;
+  identityVerification: IdentityVerificationRepositoryPort;
+  webAuthSession: WebAuthSessionPort;
   fileCleaner: LocalFileCleanerPort;
   referrals: ReferralRepositoryPort;
   sharer: SharePort;
@@ -295,6 +312,13 @@ export function createContainer(
     // Con documentos falsos no hay URL real a la que subir.
     fileUploader: env.documentsApi === 'fake' ? new FakeFileUploader() : new FetchFileUploader(),
     fileCleaner: new ExpoLocalFileCleaner(),
+    identityVerification:
+      env.documentsApi === 'fake'
+        ? new InMemoryIdentityVerificationRepository()
+        : new IdentityVerificationApiRepository(http),
+    // Con la verificación falsa no hay flujo web que abrir.
+    webAuthSession:
+      env.documentsApi === 'fake' ? new FakeWebAuthSession() : new ExpoWebAuthSession(),
     referrals:
       env.referralsApi === 'fake'
         ? new InMemoryReferralRepository({ currency: env.defaultCurrency })
@@ -409,6 +433,15 @@ export function createContainer(
       submitNationalId: new SubmitNationalIdUseCase(adapters.documents, documentUploader),
       submitProofOfIncome: new SubmitProofOfIncomeUseCase(adapters.documents, documentUploader),
       picker: adapters.filePicker,
+      getIdentityVerification: new GetIdentityVerificationUseCase(adapters.identityVerification),
+      startIdentityVerification: new StartIdentityVerificationUseCase(
+        adapters.identityVerification,
+        adapters.webAuthSession,
+      ),
+      resumeIdentityVerification: new ResumeIdentityVerificationUseCase(
+        adapters.identityVerification,
+        adapters.webAuthSession,
+      ),
     },
     referrals: {
       getMine: new GetMyReferralUseCase(adapters.referrals),
