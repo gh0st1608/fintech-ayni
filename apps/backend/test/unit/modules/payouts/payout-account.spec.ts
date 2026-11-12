@@ -1,3 +1,4 @@
+import { RegisterPayoutAccountRequest } from '@src/modules/payouts/presentation/http/dto/payout-account.dto';
 import {
   type NewPayoutAccount,
   type PayoutAccountOwner,
@@ -226,6 +227,35 @@ describe('GetAdminPayoutAccountsUseCase', () => {
     });
     await expect(setup({ owner: null }).get.execute('u1')).rejects.toMatchObject({
       code: 'USER_NOT_FOUND',
+    });
+  });
+});
+
+describe('RegisterPayoutAccountRequest', () => {
+  it('arma la entrada del dominio según el tipo, con los campos faltantes vacíos', () => {
+    const bank = Object.assign(new RegisterPayoutAccountRequest(), {
+      kind: 'bank_account',
+      holderName: 'Juana Torres',
+      reason: 'Constancia',
+    });
+    expect(bank.toInput()).toEqual({
+      kind: 'bank_account',
+      bankCode: '',
+      accountType: '',
+      cci: '',
+      holderName: 'Juana Torres',
+    });
+    const wallet = Object.assign(new RegisterPayoutAccountRequest(), {
+      kind: 'wallet',
+      provider: 'plin',
+      holderName: 'Juana Torres',
+      reason: 'Constancia',
+    });
+    expect(wallet.toInput()).toEqual({
+      kind: 'wallet',
+      provider: 'plin',
+      phone: '',
+      holderName: 'Juana Torres',
     });
   });
 });
