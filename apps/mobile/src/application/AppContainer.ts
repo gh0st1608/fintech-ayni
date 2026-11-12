@@ -1,3 +1,8 @@
+import type {
+  GetIdentityVerificationUseCase,
+  ResumeIdentityVerificationUseCase,
+  StartIdentityVerificationUseCase,
+} from '@/application/documents/usecases/identityVerificationUseCases';
 import type { SessionEvents } from '@/application/auth/SessionEvents';
 import type {
   DisableBiometricUnlockUseCase,
@@ -162,6 +167,10 @@ export interface AppContainer {
     list: ListDocumentsUseCase;
     submitNationalId: SubmitNationalIdUseCase;
     submitProofOfIncome: SubmitProofOfIncomeUseCase;
+    /** Verificación en línea con VerificaID (COPAYNI-92). */
+    getIdentityVerification: GetIdentityVerificationUseCase;
+    startIdentityVerification: StartIdentityVerificationUseCase;
+    resumeIdentityVerification: ResumeIdentityVerificationUseCase;
     /** Cámara, galería y archivos del dispositivo. */
     picker: FilePickerPort;
   };

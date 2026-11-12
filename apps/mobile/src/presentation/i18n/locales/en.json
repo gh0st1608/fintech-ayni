@@ -966,5 +966,54 @@
     "policyPendingDescription": "We are finishing the payment policy. Meanwhile, write to us if you have questions.",
     "policyUpdated": "Updated on {{date}}",
     "whatsapp": "Message us on WhatsApp"
+  },
+  "identity": {
+    "headerTitle": "Verify identity",
+    "listTitle": "Selfie verification",
+    "listDescription": "Verify your ID and your face in minutes, without uploading photos.",
+    "status": {
+      "notStarted": "Pending",
+      "inProgress": "In progress",
+      "inReview": "In review",
+      "approved": "Verified",
+      "rejected": "Rejected"
+    },
+    "title": "Verify your identity",
+    "intro": "We use VerificaID: it checks your ID with RENIEC and compares your face with your document.",
+    "steps": {
+      "dni": "Enter your ID number.",
+      "selfie": "Take a photo of your ID and a selfie on the VerificaID page.",
+      "result": "Come back to the app to see the result."
+    },
+    "dniLabel": "ID number (DNI)",
+    "invalidDni": "The ID must have 8 digits.",
+    "consent": "I agree that VerificaID processes my biometric data to verify my identity.",
+    "privacy": "Ayni doesn't keep your photos: only the verification result.",
+    "consentRequired": "Accept the processing of your biometric data to continue.",
+    "profileIncomplete": "Add your first and last name in Personal info before verifying.",
+    "tooManyAttempts": "You've used all online verification attempts. Upload your ID and we'll review it.",
+    "manualUpload": "Upload my ID",
+    "completeProfile": "Complete my info",
+    "start": "Continue",
+    "rejectedTitle": "We couldn't verify your identity",
+    "reasons": {
+      "documentNotFound": "We couldn't find that ID in RENIEC. Check the number.",
+      "dataMismatch": "Your ID details don't match your name in Ayni.",
+      "documentInUse": "That ID is already verified in another account.",
+      "biometricDeclined": "We couldn't confirm you're the person on the ID.",
+      "documentExpired": "Your ID has expired.",
+      "sessionExpired": "The verification expired before you finished. Try again.",
+      "abandoned": "The verification wasn't finished. Try again.",
+      "providerError": "Something went wrong with the verification. Try again."
+    },
+    "progressTitle": "Finish your verification",
+    "progressBody": "Continue on the VerificaID page to take a photo of your ID and a selfie.",
+    "resume": "Continue verification",
+    "refresh": "Refresh status",
+    "reviewTitle": "We're reviewing your verification",
+    "reviewBody": "We'll let you know when we have the result.",
+    "approvedTitle": "Identity verified",
+    "approvedBody": "Your ID {{document}} is verified.",
+    "done": "Done"
   }
 }

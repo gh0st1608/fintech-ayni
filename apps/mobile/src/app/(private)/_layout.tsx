@@ -60,6 +60,7 @@ export default function PrivateLayout() {
         <Stack.Screen name="profile/passcode" options={profileOptions.passcode} />
         <Stack.Screen name="profile/documents/index" options={profileOptions.documents} />
         <Stack.Screen name="profile/documents/national-id" options={profileOptions.nationalId} />
+        <Stack.Screen name="profile/documents/identity" options={profileOptions.identity} />
         <Stack.Screen
           name="profile/documents/proof-of-income"
           options={profileOptions.proofOfIncome}

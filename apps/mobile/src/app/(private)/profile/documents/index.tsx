@@ -9,6 +9,7 @@ export default function DocumentsRoute() {
         nationalId: () => router.push('/profile/documents/national-id'),
         proofOfIncome: () => router.push('/profile/documents/proof-of-income'),
       }}
+      onVerifyIdentity={() => router.push('/profile/documents/identity')}
     />
   );
 }
