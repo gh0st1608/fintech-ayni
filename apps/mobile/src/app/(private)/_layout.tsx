@@ -39,6 +39,7 @@ export default function PrivateLayout() {
         <Stack.Screen name="join/payout-method" options={joinOptions.payoutMethod} />
         <Stack.Screen name="join/confirm" options={joinOptions.confirm} />
         <Stack.Screen name="join/saving-program" options={joinOptions.savingProgram} />
+        <Stack.Screen name="join/saving-confirm" options={joinOptions.savingConfirm} />
         <Stack.Screen name="circles/[circleId]" options={circleOptions.detail} />
         <Stack.Screen name="notifications" options={notificationOptions} />
         <Stack.Screen name="payment/history" options={paymentOptions.history} />

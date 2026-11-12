@@ -13,7 +13,6 @@ import { errorMessage } from '@/presentation/i18n/errorMessageKey';
 import { AppText } from '@/presentation/shared/components/AppText';
 import { BottomSheet } from '@/presentation/shared/components/BottomSheet';
 import { Button } from '@/presentation/shared/components/Button';
-import { InfoBanner } from '@/presentation/shared/components/InfoBanner';
 import { colors, radius, spacing } from '@/presentation/theme/tokens';
 
 import { useSavingQuotes } from '../useSavings';
@@ -23,6 +22,8 @@ interface DurationSheetProps {
   plan: SavingPlan | null;
   durations: number[];
   onClose: () => void;
+  /** "Siguiente": la confirmación con el primer pago (COPAYNI-79). */
+  onNext: (months: number) => void;
 }
 
 /** "2026-12" → primer día del mes en hora local, para formatearlo sin desfase de zona horaria. */
@@ -32,7 +33,7 @@ function periodDate(period: string): Date {
 }
 
 /** Choose Duration (COPAYNI-33): la cuota de cada duración y el detalle de la elegida. */
-export function DurationSheet({ plan, durations, onClose }: DurationSheetProps) {
+export function DurationSheet({ plan, durations, onClose, onNext }: DurationSheetProps) {
   const { t } = useTranslation();
   return (
     <BottomSheet
@@ -43,17 +44,24 @@ export function DurationSheet({ plan, durations, onClose }: DurationSheetProps) 
       testID="duration-sheet"
     >
       {/* Se monta en cada apertura: siempre parte de la primera duración. */}
-      {plan && <DurationForm plan={plan} durations={durations} />}
+      {plan && <DurationForm plan={plan} durations={durations} onNext={onNext} />}
     </BottomSheet>
   );
 }
 
-function DurationForm({ plan, durations }: { plan: SavingPlan; durations: number[] }) {
+function DurationForm({
+  plan,
+  durations,
+  onNext,
+}: {
+  plan: SavingPlan;
+  durations: number[];
+  onNext: (months: number) => void;
+}) {
   const { t } = useTranslation();
   const quotes = useSavingQuotes(plan.id, durations);
   // Como el Figma 55:9220: la primera duración viene elegida y su detalle a la vista.
   const [months, setMonths] = useState<number | undefined>(durations[0]);
-  const [continued, setContinued] = useState(false);
   const selected = months === undefined ? undefined : quotes[durations.indexOf(months)];
 
   return (
@@ -69,10 +77,7 @@ function DurationForm({ plan, durations }: { plan: SavingPlan; durations: number
             months={option}
             quote={quotes[index]!}
             selected={months === option}
-            onSelect={() => {
-              setMonths(option);
-              setContinued(false);
-            }}
+            onSelect={() => setMonths(option)}
           />
         ))}
       </View>
@@ -92,13 +97,10 @@ function DurationForm({ plan, durations }: { plan: SavingPlan; durations: number
         </View>
       )}
       {selected?.data && <QuoteDetails quote={selected.data} />}
-      {continued && (
-        <InfoBanner message={t('saving.duration.confirmationPending')} testID="saving-pending" />
-      )}
       <Button
         label={t('saving.duration.next')}
-        disabled={!selected?.data}
-        onPress={() => setContinued(true)}
+        disabled={!selected?.data || months === undefined}
+        onPress={() => months !== undefined && onNext(months)}
       />
     </>
   );

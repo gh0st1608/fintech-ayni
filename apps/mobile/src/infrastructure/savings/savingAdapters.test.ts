@@ -87,9 +87,9 @@ describe('InMemorySavingPlanRepository', () => {
     });
   });
 
-  it('cotiza como el backend: empieza el mes siguiente y paga después de la última cuota', async () => {
+  it('cotiza como el backend: empieza el mes actual (D5) y paga después de la última cuota', async () => {
     const quote = await new GetSavingQuoteUseCase(repository).execute('lite', 6);
-    expect(quote).toMatchObject({ startsOn: '2026-11', payoutPeriod: '2027-05' });
+    expect(quote).toMatchObject({ startsOn: '2026-10', payoutPeriod: '2027-04' });
     expect(quote.cashback).toEqual(Money.of(15000, 'PEN'));
     expect(quote.total).toEqual(Money.of(315000, 'PEN'));
   });

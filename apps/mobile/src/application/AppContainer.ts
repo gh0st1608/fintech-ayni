@@ -71,6 +71,8 @@ import type {
 } from '@/application/referrals/usecases/referralUseCases';
 import type {
   GetSavingQuoteUseCase,
+  ListMySavingsUseCase,
+  SubscribeToSavingPlanUseCase,
   ListSavingPlansUseCase,
 } from '@/application/savings/usecases/savingUseCases';
 import type { IdGeneratorPort } from '@/domain/shared/ports/IdGeneratorPort';
@@ -176,6 +178,8 @@ export interface AppContainer {
   savings: {
     listPlans: ListSavingPlansUseCase;
     getQuote: GetSavingQuoteUseCase;
+    subscribe: SubscribeToSavingPlanUseCase;
+    mine: ListMySavingsUseCase;
   };
   help: {
     get: GetHelpUseCase;

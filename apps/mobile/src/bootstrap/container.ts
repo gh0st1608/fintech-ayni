@@ -83,6 +83,8 @@ import {
 } from '@/application/referrals/usecases/referralUseCases';
 import {
   GetSavingQuoteUseCase,
+  ListMySavingsUseCase,
+  SubscribeToSavingPlanUseCase,
   ListSavingPlansUseCase,
 } from '@/application/savings/usecases/savingUseCases';
 import { ChangeLanguageUseCase } from '@/application/i18n/usecases/ChangeLanguageUseCase';
@@ -419,6 +421,8 @@ export function createContainer(
     savings: {
       listPlans: new ListSavingPlansUseCase(adapters.savings),
       getQuote: new GetSavingQuoteUseCase(adapters.savings),
+      subscribe: new SubscribeToSavingPlanUseCase(adapters.savings),
+      mine: new ListMySavingsUseCase(adapters.savings),
     },
     help: { get: new GetHelpUseCase(adapters.help) },
     notifications: {
