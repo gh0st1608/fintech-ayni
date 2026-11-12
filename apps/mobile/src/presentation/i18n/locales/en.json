@@ -176,10 +176,8 @@
       "question": "Choose your preferred payout method for the next circles.",
       "optionsLabel": "Payout methods",
       "types": {
-        "digitalWallet": "Digital Wallets",
-        "prepaidCard": "Prepaid Card",
-        "bankTransfer": "Bank Transfer",
-        "fawry": "Fawry"
+        "bankAccount": "Bank account",
+        "wallet": "Yape or Plin"
       },
       "noCharge": "No Charge",
       "limit": "Limit of {{amount}} per payout",
@@ -190,10 +188,8 @@
       "missingSteps": "Choose the amount, the monthly pay-in and your slot first.",
       "startOver": "Choose the amount",
       "descriptions": {
-        "digitalWallet": "Receive your payout on any digital wallet.",
-        "prepaidCard": "Receive your payout on any Prepaid Card.",
-        "bankTransfer": "Direct your payout to your bank account.",
-        "fawry": "Receive your payout from any of Fawry Plus stores without bank account."
+        "bankAccount": "Receive your payout in your bank account (CCI) in your name.",
+        "wallet": "Receive your payout in your Yape or Plin, with your phone number."
       }
     },
     "confirm": {

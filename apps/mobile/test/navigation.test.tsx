@@ -113,7 +113,7 @@ describe('shell de navegación', () => {
     await waitFor(() => expect(screen).toHavePathname('/join/payout-method'));
 
     await fireEvent.press(
-      await screen.findByTestId('payout-method-bankTransfer', {}, { timeout: 5000 }),
+      await screen.findByTestId('payout-method-bankAccount', {}, { timeout: 5000 }),
     );
     await fireEvent.press(screen.getByRole('button', { name: 'Continuar' }));
     await waitFor(() => expect(screen).toHavePathname('/join/confirm'));

@@ -11,10 +11,8 @@ import type { HttpClientPort } from '@/domain/shared/ports/HttpClientPort';
 import { moneyDto, toMoney } from '@/infrastructure/circles/moneyDto';
 
 const TYPE_BY_DTO = {
-  digital_wallet: 'digitalWallet',
-  prepaid_card: 'prepaidCard',
-  bank_transfer: 'bankTransfer',
-  fawry: 'fawry',
+  bank_account: 'bankAccount',
+  wallet: 'wallet',
 } as const satisfies Record<string, PayoutMethodType>;
 
 type PayoutMethodDtoType = keyof typeof TYPE_BY_DTO;

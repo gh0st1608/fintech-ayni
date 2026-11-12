@@ -1,13 +1,11 @@
 import { DomainError } from '@/domain/shared/errors/DomainError';
 import type { Money } from '@/domain/shared/value-objects/Money';
 
-/** Tipos del Figma (Payout Method, 55:9520). El catálogo real lo decide el backend (T5). */
-export const PAYOUT_METHOD_TYPES = [
-  'digitalWallet',
-  'prepaidCard',
-  'bankTransfer',
-  'fawry',
-] as const;
+/**
+ * Métodos de cobro en Perú (COPAYNI-95): cuenta bancaria (CCI) o billetera (Yape o Plin). El
+ * catálogo lo decide el backend.
+ */
+export const PAYOUT_METHOD_TYPES = ['bankAccount', 'wallet'] as const;
 export type PayoutMethodType = (typeof PAYOUT_METHOD_TYPES)[number];
 
 export type PayoutMethodBadge = 'noCharge';

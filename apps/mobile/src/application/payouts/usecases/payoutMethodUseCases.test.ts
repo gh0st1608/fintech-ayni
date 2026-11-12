@@ -1,5 +1,6 @@
 import type { PayoutMethodRepositoryPort } from '@/domain/payouts/ports/PayoutMethodRepositoryPort';
 import {
+  PayoutMethod,
   PayoutMethodChangeNotAllowedError,
   PayoutMethodNotAvailableError,
 } from '@/domain/payouts/value-objects/PayoutMethod';
@@ -14,9 +15,9 @@ const repository = (options = {}) =>
 describe('ListPayoutMethodsUseCase', () => {
   it('devuelve el catálogo con el método actual', async () => {
     const view = await new ListPayoutMethodsUseCase(
-      repository({ selected: 'bankTransfer' }),
+      repository({ selected: 'bankAccount' }),
     ).execute();
-    expect(view.selected).toBe('bankTransfer');
+    expect(view.selected).toBe('bankAccount');
   });
 });
 
@@ -25,26 +26,33 @@ describe('SelectPayoutMethodUseCase', () => {
     const repo = repository();
     const catalog = await repo.list();
     await expect(
-      new SelectPayoutMethodUseCase(repo).execute('digitalWallet', catalog),
-    ).resolves.toMatchObject({ selected: 'digitalWallet' });
-    expect(repo.selected).toBe('digitalWallet');
+      new SelectPayoutMethodUseCase(repo).execute('wallet', catalog),
+    ).resolves.toMatchObject({ selected: 'wallet' });
+    expect(repo.selected).toBe('wallet');
   });
 
   it('rechaza sin llamar al backend un método que no está disponible en el catálogo', async () => {
     const repo = repository();
     const select = jest.spyOn(repo, 'select');
-    const catalog = await repo.list();
-    await expect(new SelectPayoutMethodUseCase(repo).execute('fawry', catalog)).rejects.toThrow(
+    // La billetera deshabilitada en el catálogo ("No disponible").
+    const catalog = {
+      methods: [
+        PayoutMethod.create({ type: 'bankAccount', available: true }),
+        PayoutMethod.create({ type: 'wallet', available: false }),
+      ],
+      selected: null,
+    };
+    await expect(new SelectPayoutMethodUseCase(repo).execute('wallet', catalog)).rejects.toThrow(
       PayoutMethodNotAvailableError,
     );
     expect(select).not.toHaveBeenCalled();
   });
 
   it('traduce el rechazo del mes de payout a un error tipado', async () => {
-    const repo = repository({ selected: 'prepaidCard', changeLocked: true });
+    const repo = repository({ selected: 'wallet', changeLocked: true });
     const catalog = await repo.list();
     await expect(
-      new SelectPayoutMethodUseCase(repo).execute('bankTransfer', catalog),
+      new SelectPayoutMethodUseCase(repo).execute('bankAccount', catalog),
     ).rejects.toThrow(PayoutMethodChangeNotAllowedError);
   });
 
@@ -57,12 +65,12 @@ describe('SelectPayoutMethodUseCase', () => {
     });
     const notAvailable = new AppError('validation', 'no', { code: 'PAYOUT_METHOD_NOT_AVAILABLE' });
     await expect(
-      new SelectPayoutMethodUseCase(failing(notAvailable)).execute('bankTransfer', catalog),
+      new SelectPayoutMethodUseCase(failing(notAvailable)).execute('bankAccount', catalog),
     ).rejects.toThrow(PayoutMethodNotAvailableError);
 
     const offline = new AppError('network', 'offline');
     await expect(
-      new SelectPayoutMethodUseCase(failing(offline)).execute('bankTransfer', catalog),
+      new SelectPayoutMethodUseCase(failing(offline)).execute('bankAccount', catalog),
     ).rejects.toBe(offline);
   });
 });

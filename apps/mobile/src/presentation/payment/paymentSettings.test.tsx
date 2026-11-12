@@ -133,18 +133,18 @@ describe('ChangePayoutMethodScreen', () => {
   it('guarda el método elegido y vuelve', async () => {
     const payoutMethods = new InMemoryPayoutMethodRepository('PEN', {
       latencyMs: 0,
-      selected: 'digitalWallet',
+      selected: 'wallet',
     });
     const onSaved = jest.fn();
     await renderWithProviders(
       <ChangePayoutMethodScreen onSaved={onSaved} />,
       createTestContainer({ payoutMethods }),
     );
-    await fireEvent.press(await screen.findByTestId('payout-method-bankTransfer'));
+    await fireEvent.press(await screen.findByTestId('payout-method-bankAccount'));
     await fireEvent.press(screen.getByRole('button', { name: 'Guardar' }));
 
-    await waitFor(() => expect(onSaved).toHaveBeenCalledWith('bankTransfer'));
-    expect(payoutMethods.selected).toBe('bankTransfer');
+    await waitFor(() => expect(onSaved).toHaveBeenCalledWith('bankAccount'));
+    expect(payoutMethods.selected).toBe('bankAccount');
   });
 
   it('muestra la cuenta de cobro registrada por el equipo, enmascarada (COPAYNI-81)', async () => {

@@ -153,17 +153,15 @@ describe('JoinCircleDraft', () => {
     const withInstallment = JoinCircleDraft.empty()
       .withPayoutAmount(pen(6000))
       .withInstallment(sixMonths);
-    expect(() => withInstallment.withPayoutMethod('bankTransfer')).toThrow(
-      IncompleteJoinDraftError,
-    );
+    expect(() => withInstallment.withPayoutMethod('bankAccount')).toThrow(IncompleteJoinDraftError);
 
-    const complete = withInstallment.withSlot(slot).withPayoutMethod('bankTransfer');
-    expect(complete.payoutMethod).toBe('bankTransfer');
+    const complete = withInstallment.withSlot(slot).withPayoutMethod('bankAccount');
+    expect(complete.payoutMethod).toBe('bankAccount');
     expect(complete.isComplete()).toBe(true);
     expect(withInstallment.isComplete()).toBe(false);
     // Es una preferencia del usuario: no depende del monto, la cuota ni el turno.
     const otherAmount = complete.withPayoutAmount(pen(7000));
-    expect(otherAmount.payoutMethod).toBe('bankTransfer');
+    expect(otherAmount.payoutMethod).toBe('bankAccount');
     expect(otherAmount.isComplete()).toBe(false);
   });
 
@@ -183,7 +181,7 @@ describe('JoinCircleDraft', () => {
       .withSlot(slot);
     expect(() => incomplete.joinRequest()).toThrow(IncompleteJoinDraftError);
 
-    const request = incomplete.withPayoutMethod('bankTransfer').joinRequest();
+    const request = incomplete.withPayoutMethod('bankAccount').joinRequest();
     expect(request).toEqual({ circleId: 'c-1', payout: pen(6000), months: 6, position: 3 });
     expect(joinRequestFingerprint(request)).toBe('c-1|PEN|600000|6|3');
     expect(joinRequestFingerprint({ ...request, circleId: null })).toBe('new|PEN|600000|6|3');

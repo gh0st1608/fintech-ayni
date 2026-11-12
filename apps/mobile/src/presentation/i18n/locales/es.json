@@ -176,10 +176,8 @@
       "question": "Elige cómo quieres recibir tu pozo en las próximas juntas.",
       "optionsLabel": "Métodos de cobro",
       "types": {
-        "digitalWallet": "Billetera digital",
-        "prepaidCard": "Tarjeta prepago",
-        "bankTransfer": "Transferencia bancaria",
-        "fawry": "Fawry"
+        "bankAccount": "Cuenta bancaria",
+        "wallet": "Yape o Plin"
       },
       "noCharge": "Sin costo",
       "limit": "Límite de {{amount}} por cobro",
@@ -190,10 +188,8 @@
       "missingSteps": "Primero elige el monto, la cuota y tu turno.",
       "startOver": "Elegir el monto",
       "descriptions": {
-        "digitalWallet": "Recibe tu pozo en cualquier billetera digital.",
-        "prepaidCard": "Recibe tu pozo en cualquier tarjeta prepago.",
-        "bankTransfer": "Recibe tu pozo en tu cuenta bancaria.",
-        "fawry": "Recibe tu pozo en cualquier tienda Fawry Plus, sin cuenta bancaria."
+        "bankAccount": "Recibe tu pozo en tu cuenta bancaria (CCI) a tu nombre.",
+        "wallet": "Recibe tu pozo en tu Yape o Plin, con tu celular."
       }
     },
     "confirm": {
