@@ -11,6 +11,7 @@ import { PaymentsModule } from './modules/payments/payments.module';
 import { DocumentsModule } from './modules/documents/documents.module';
 import { SavingsModule } from './modules/savings/savings.module';
 import { ReferralsModule } from './modules/referrals/referrals.module';
+import { HelpModule } from './modules/help/help.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { PayoutsModule } from './modules/payouts/payouts.module';
 import { ClockModule } from './shared/infrastructure/clock/clock.module';
@@ -52,6 +53,7 @@ import { createValidationPipe } from './shared/presentation/pipes/validation.pip
     SavingsModule,
     DocumentsModule,
     NotificationsModule,
+    HelpModule,
   ],
   providers: [
     TelemetryShutdown,

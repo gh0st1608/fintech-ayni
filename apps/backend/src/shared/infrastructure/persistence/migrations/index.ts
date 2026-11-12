@@ -26,6 +26,7 @@ import { CreateIdentityVerifications1763726400000 } from './1763726400000-create
 import { CreatePayoutAccounts1763812800000 } from './1763812800000-create-payout-accounts';
 import { CreateStaffApprovals1763899200000 } from './1763899200000-create-staff-approvals';
 import { CreateNotifications1763985600000 } from './1763985600000-create-notifications';
+import { CreateHelpContent1764072000000 } from './1764072000000-create-help-content';
 
 /** Migraciones en orden. Se listan explícitamente: el build no depende de globs. */
 export const MIGRATIONS = [
@@ -57,4 +58,5 @@ export const MIGRATIONS = [
   CreatePayoutAccounts1763812800000,
   CreateStaffApprovals1763899200000,
   CreateNotifications1763985600000,
+  CreateHelpContent1764072000000,
 ];

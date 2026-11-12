@@ -318,6 +318,16 @@ export class EnvironmentVariables {
   @Max(3600)
   STAFF_STEP_UP_MAX_AGE_SECONDS: number = 300;
 
+  /**
+   * WhatsApp de soporte (COPAYNI-83) en formato internacional, solo dígitos (p. ej. 51999999999).
+   * Sin valor, la app no ofrece el botón de WhatsApp.
+   */
+  @IsOptional()
+  @Matches(/^[1-9]\d{7,14}$/, {
+    message: 'SUPPORT_WHATSAPP_NUMBER: solo dígitos con código de país',
+  })
+  SUPPORT_WHATSAPP_NUMBER?: string;
+
   /** Días antes del vencimiento de una cuota en que se notifica, además del mismo día (COPAYNI-84). */
   @IsInt()
   @Min(1)
