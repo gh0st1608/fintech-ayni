@@ -356,11 +356,16 @@ Fuentes: [Yape en Checkout API](https://www.mercadopago.com.pe/developers/en/doc
 
 ## 11. Verificación de identidad (KYC)
 
-**Estado:** pendiente de elegir proveedor (spike COPAYNI-42, pending-scope T4). El backend ya tiene los puertos y adaptadores simulados ([documents.md](api/documents.md)).
+**Estado:** proveedor decidido por negocio el 2026-11-11: **VerificaID** (spike COPAYNI-42, pending-scope T4). Integrado en el backend con `KYC_PROVIDER=verificaid` ([documents.md](api/documents.md#verificación-de-identidad-en-línea-verificaid-copayni-42)):
+
+- **Validación documental (Consulta):** datos del DNI en RENIEC comparados con el perfil.
+- **Biometría facial y prueba de vida (CheckMatch):** sesión KYC Bravo en el flujo web de VerificaID.
+- **Resultado:** el webhook (sin firma documentada) solo dispara una consulta autenticada a VerificaID.
+- **Sin proveedor:** se mantiene la revisión manual del DNI subido.
 
 - **Puertos:** `DocumentStoragePort` (URL prefirmada y comprobación de la subida), `IdentityVerifierPort` (National ID con anverso y reverso) e `IncomeReviewerPort` (comprobante de ingresos). Cambiar de proveedor es escribir un adaptador.
 - **Almacenamiento:** S3 privado con SSE-KMS por defecto del bucket y URLs prefirmadas de pocos minutos; la app sube directo y el backend solo guarda la clave (`S3DocumentStorage`, probado contra floci en las pruebas y en CI). Las URLs no firman checksum: el SDK v3 firmaría el CRC32 de un cuerpo vacío y S3 rechazaría la subida.
-- **Sin proveedor en production:** `KYC_PROVIDER=manual` deja los documentos en revisión de operaciones; `simulated` está prohibido.
+- **Proveedor en production:** `KYC_PROVIDER=verificaid`. Hasta tener el token de VerificaID, `manual` deja los documentos en revisión de operaciones; `simulated` está prohibido.
 
 Propuesta de documentos obligatorios y de proveedores para Perú: [kyc-peru.md](kyc-peru.md). Criterios para el spike:
 

@@ -1,6 +1,14 @@
 # Propuesta KYC para Perú: documentos obligatorios y proveedor de verificación
 
-**Estado:** propuesta para decidir con el PO, Legal y Cumplimiento (pending-scope R11, T4, L3 y L5). Implementa el spike COPAYNI-42. Nada de esto está aprobado.
+**Estado:** propuesta para decidir con el PO, Legal y Cumplimiento (pending-scope R11, L3 y L5). Implementa el spike COPAYNI-42.
+
+**Decisión de proveedor (T4, negocio, 2026-11-11):** VerificaID, con tres validaciones:
+
+- Identidad documental: **Consulta**.
+- Biometría facial: **CheckMatch**.
+- Prueba de vida: **CheckMatch**.
+
+La integración está en [documents.md](api/documents.md#verificación-de-identidad-en-línea-verificaid-copayni-42). Los niveles de documentos (§2) siguen siendo una propuesta.
 
 **Fuentes y límites:** la investigación se cortó por el límite de búsquedas. Lo marcado con [verificar] se basa en material de proveedores o en conocimiento general y hay que confirmarlo con el proveedor o con Legal. No hay precios: se piden en la PoC.
 
