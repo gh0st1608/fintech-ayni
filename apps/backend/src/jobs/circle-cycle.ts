@@ -20,6 +20,7 @@ import { type AppConfigService } from '../config/configuration';
 import { AdvanceCircleCyclesUseCase } from '../modules/circles/application/use-cases/advance-circle-cycles.use-case';
 import { CheckGuaranteeFundUseCase } from '../modules/circles/application/use-cases/check-guarantee-fund.use-case';
 import { SyncNotificationsUseCase } from '../modules/notifications/application/notifications.use-cases';
+import { CollectSavingContributionsUseCase } from '../modules/savings/application/subscription.use-cases';
 import { createLogger } from '../shared/infrastructure/observability/logger';
 import { PinoNestLogger } from '../shared/infrastructure/observability/pino-nest-logger';
 
@@ -40,6 +41,15 @@ async function run(): Promise<boolean> {
     const result = await app.get(AdvanceCircleCyclesUseCase).execute();
     Logger.log({ event: 'circles.cycle.run', ...result }, 'CircleCycle');
     await app.get(CheckGuaranteeFundUseCase).execute();
+    // Aportes del programa de ahorro con débito automático (COPAYNI-79). No frena el ciclo.
+    try {
+      await app.get(CollectSavingContributionsUseCase).execute();
+    } catch (error) {
+      Logger.error(
+        { event: 'savings.collect_failed', reason: error instanceof Error ? error.message : '' },
+        'CircleCycle',
+      );
+    }
     // Recordatorios de vencimiento y avisos del día (COPAYNI-84). Un fallo aquí no frena el ciclo.
     try {
       await app.get(SyncNotificationsUseCase).execute();
