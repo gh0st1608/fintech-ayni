@@ -77,6 +77,7 @@ import type {
 import type {
   GetSavingQuoteUseCase,
   ListMySavingsUseCase,
+  PaySavingContributionUseCase,
   SubscribeToSavingPlanUseCase,
   ListSavingPlansUseCase,
 } from '@/application/savings/usecases/savingUseCases';
@@ -189,6 +190,7 @@ export interface AppContainer {
     getQuote: GetSavingQuoteUseCase;
     subscribe: SubscribeToSavingPlanUseCase;
     mine: ListMySavingsUseCase;
+    payContribution: PaySavingContributionUseCase;
   };
   help: {
     get: GetHelpUseCase;

@@ -373,6 +373,11 @@
       "nextManual": "Your next {{amount}} contribution is due on {{date}}.",
       "allPaid": "You've paid every contribution.",
       "done": "Got it"
+    },
+    "mine": {
+      "title": "My saving plans",
+      "progress": "You saved {{saved}} of {{target}} ({{paid}} of {{total}} contributions).",
+      "pay": "Pay {{amount}} contribution"
     }
   },
   "profile": {

@@ -39,3 +39,16 @@ export class ListMySavingsUseCase {
     return this.repository.mine(signal);
   }
 }
+
+/** Paga desde la app el aporte que ya venció (COPAYNI-93); la clave la genera la pantalla. */
+export class PaySavingContributionUseCase {
+  constructor(private readonly repository: SavingPlanRepositoryPort) {}
+
+  execute(
+    subscriptionId: string,
+    cardId: string,
+    idempotencyKey: string,
+  ): Promise<SavingSubscription> {
+    return this.repository.payContribution(subscriptionId, cardId, idempotencyKey);
+  }
+}

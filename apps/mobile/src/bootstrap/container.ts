@@ -99,6 +99,7 @@ import {
 import {
   GetSavingQuoteUseCase,
   ListMySavingsUseCase,
+  PaySavingContributionUseCase,
   SubscribeToSavingPlanUseCase,
   ListSavingPlansUseCase,
 } from '@/application/savings/usecases/savingUseCases';
@@ -456,6 +457,7 @@ export function createContainer(
       getQuote: new GetSavingQuoteUseCase(adapters.savings),
       subscribe: new SubscribeToSavingPlanUseCase(adapters.savings),
       mine: new ListMySavingsUseCase(adapters.savings),
+      payContribution: new PaySavingContributionUseCase(adapters.savings),
     },
     help: { get: new GetHelpUseCase(adapters.help) },
     notifications: {
