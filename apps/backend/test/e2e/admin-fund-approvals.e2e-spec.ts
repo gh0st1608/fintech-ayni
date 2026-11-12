@@ -126,4 +126,36 @@ describe('API del back-office: doble aprobación del fondo', () => {
       .expect(403);
     await decide(ana.token, randomUUID(), 'approve').expect(404);
   });
+
+  it('filtra por estado, marca las vencidas y pagina con cursor', async () => {
+    const ana = await staff(['finance']);
+    const luis = await staff(['finance']);
+    const first = (await propose(ana.token, { amount: 1000 }).expect(201)).body.data;
+    const second = (await propose(ana.token, { amount: 2000 }).expect(201)).body.data;
+    // La primera vence: se adelanta su plazo en la base.
+    await database.query(
+      `UPDATE staff_approvals SET proposed_at = now() - interval '4 days',
+                                  expires_at = now() - interval '1 hour' WHERE id = $1`,
+      [first.id],
+    );
+    const list = (query: string) =>
+      http().get(`/admin/v1/approvals?${query}`).set('Authorization', `Bearer ${luis.token}`);
+
+    const expired = (await list('status=expired&limit=100').expect(200)).body.data;
+    expect(expired.items).toContainEqual(
+      expect.objectContaining({ id: first.id, status: 'expired' }),
+    );
+    const pending = (await list('status=pending&limit=100').expect(200)).body.data;
+    const pendingIds = (pending.items as { id: string }[]).map(({ id }) => id);
+    expect(pendingIds).toContain(second.id);
+    expect(pendingIds).not.toContain(first.id);
+    const expiredDecision = await decide(luis.token, first.id, 'approve').expect(409);
+    expect(expiredDecision.body.error.details).toEqual({ status: 'expired' });
+
+    const page = (await list('limit=1').expect(200)).body.data;
+    expect(page.items).toHaveLength(1);
+    const next = (await list(`limit=1&cursor=${page.nextCursor as string}`).expect(200)).body.data;
+    expect(next.items[0].id).not.toBe(page.items[0].id);
+    await list('cursor=no-es-un-cursor').expect(400);
+  });
 });
