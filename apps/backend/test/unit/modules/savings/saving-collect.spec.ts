@@ -64,7 +64,9 @@ function subscription(overrides: Partial<SavingSubscription> = {}): SavingSubscr
 function port(due: DueContribution[], pending: DueContribution[] = []) {
   const paid: string[] = [];
   const rejected: string[] = [];
-  const subscriptions: SavingSubscriptionsPort = {
+  // Con aserción: así compila también con los métodos que agregan otras ramas (paidWithKey).
+  const subscriptions = {
+    paidWithKey: () => Promise.resolve(false),
     findByKey: jest.fn(() => Promise.resolve(null)),
     create: jest.fn((s: SavingSubscription) => Promise.resolve(s)),
     listOf: jest.fn(() => Promise.resolve([])),
@@ -78,7 +80,7 @@ function port(due: DueContribution[], pending: DueContribution[] = []) {
     },
     dueForAutoDebit: () => Promise.resolve(due),
     pendingFirstPayments: () => Promise.resolve(pending),
-  };
+  } as SavingSubscriptionsPort;
   return { subscriptions, paid, rejected };
 }
 
