@@ -34,6 +34,7 @@ const KYC_REVIEW = () => import('../kyc/KycReviewScreen').then((m) => m.KycRevie
 const USERS = () => import('../users/UsersScreen').then((m) => m.UsersScreen);
 const USER_DETAIL = () => import('../users/UserDetailScreen').then((m) => m.UserDetailScreen);
 const FINANCE = () => import('../finance/FinanceScreen').then((m) => m.FinanceScreen);
+const HELP = () => import('../help/HelpEditorScreen').then((m) => m.HelpEditorScreen);
 
 /** Mientras se descarga la primera pantalla de la sesión. */
 function LoadingScreen() {
@@ -99,6 +100,11 @@ function Layout() {
               {can(staff, 'kyc.review') && (
                 <NavLink to="/kyc" className={navClass}>
                   Documentos
+                </NavLink>
+              )}
+              {can(staff, 'help.read') && (
+                <NavLink to="/help" className={navClass}>
+                  Ayuda
                 </NavLink>
               )}
             </nav>
@@ -174,6 +180,10 @@ export const routes: RouteObject[] = [
       {
         element: <RequirePermission permission="finance.read" />,
         children: [{ path: '/finance', ...screen(FINANCE) }],
+      },
+      {
+        element: <RequirePermission permission="help.read" />,
+        children: [{ path: '/help', ...screen(HELP) }],
       },
       { path: '*', element: <EmptyState title="No encontramos esta página" /> },
     ],

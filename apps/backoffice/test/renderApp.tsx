@@ -11,6 +11,7 @@ import type {
   UsersRepositoryPort,
   FinanceRepositoryPort,
   CycleRunsRepositoryPort,
+  HelpRepositoryPort,
 } from '@/domain/ports';
 import { AppProviders } from '@/presentation/providers/AppProviders';
 import { routes } from '@/presentation/routes/routes';
@@ -22,6 +23,7 @@ import {
   InMemoryKyc,
   InMemoryStaffAuth,
   InMemoryUsers,
+  InMemoryHelp,
 } from './fakes';
 
 interface Options {
@@ -32,6 +34,7 @@ interface Options {
   users?: UsersRepositoryPort;
   finance?: FinanceRepositoryPort;
   cycleRuns?: CycleRunsRepositoryPort;
+  help?: HelpRepositoryPort;
 }
 
 /** La app completa con dobles de los puertos y un router en memoria. */
@@ -43,6 +46,7 @@ export function renderApp({
   users = new InMemoryUsers(),
   finance = new InMemoryFinance(),
   cycleRuns = new InMemoryCycleRuns(),
+  help = new InMemoryHelp(),
 }: Options = {}) {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
@@ -51,11 +55,11 @@ export function renderApp({
   const user = userEvent.setup();
   render(
     <AppProviders
-      container={createContainer({ auth, circles, kyc, users, finance, cycleRuns })}
+      container={createContainer({ auth, circles, kyc, users, finance, cycleRuns, help })}
       queryClient={queryClient}
     >
       <RouterProvider router={router} />
     </AppProviders>,
   );
-  return { router, user, auth, circles, kyc, users, finance, cycleRuns };
+  return { router, user, auth, circles, kyc, users, finance, cycleRuns, help };
 }

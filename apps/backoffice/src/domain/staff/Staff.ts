@@ -26,6 +26,9 @@ export const PERMISSIONS = {
   'users.reveal': ['operations', 'super_admin'],
   'payouts.read': ['support', 'operations', 'finance', 'super_admin'],
   'payouts.register': ['operations', 'super_admin'],
+  /** Ayuda y política de pagos de la app (COPAYNI-83). */
+  'help.read': ['support', 'operations', 'super_admin'],
+  'help.edit': ['operations', 'super_admin'],
 } as const satisfies Record<string, readonly StaffRole[]>;
 
 export type Permission = keyof typeof PERMISSIONS;

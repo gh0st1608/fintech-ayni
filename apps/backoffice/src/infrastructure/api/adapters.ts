@@ -19,7 +19,9 @@ import type {
   PageFilter,
   CycleRunsRepositoryPort,
   ApprovalsFilter,
+  HelpRepositoryPort,
 } from '@/domain/ports';
+import type { HelpContent, HelpInput, HelpLanguage } from '@/domain/help/Help';
 import { AppError } from '@/domain/shared/AppError';
 import type { StaffMember } from '@/domain/staff/Staff';
 import type {
@@ -64,6 +66,7 @@ import {
   payoutAccountsSchema,
   approvalSchema,
   approvalsPageSchema,
+  helpContentSchema,
 } from './schemas';
 
 /**
@@ -309,6 +312,21 @@ export class FinanceApiRepository implements FinanceRepositoryPort {
     return this.http.post(`/admin/v1/approvals/${encodeURIComponent(approvalId)}/reject`, {
       schema: approvalSchema,
       body: { reason },
+    });
+  }
+}
+
+export class HelpApiRepository implements HelpRepositoryPort {
+  constructor(private readonly http: HttpClientPort) {}
+
+  get(language: HelpLanguage, signal?: AbortSignal): Promise<HelpContent> {
+    return this.http.get(`/admin/v1/help/${language}`, { schema: helpContentSchema, signal });
+  }
+
+  save(language: HelpLanguage, input: HelpInput): Promise<HelpContent> {
+    return this.http.put(`/admin/v1/help/${language}`, {
+      schema: helpContentSchema,
+      body: input,
     });
   }
 }
