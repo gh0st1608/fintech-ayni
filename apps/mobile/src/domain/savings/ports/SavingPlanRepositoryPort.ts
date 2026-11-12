@@ -14,4 +14,10 @@ export interface SavingPlanRepositoryPort {
   subscribe(input: SubscribeInput, idempotencyKey: string): Promise<SavingSubscription>;
   /** GET /me/savings */
   mine(signal?: AbortSignal): Promise<SavingSubscription[]>;
+  /** POST /me/savings/:id/contributions/pay: paga el aporte vencido (COPAYNI-93). */
+  payContribution(
+    subscriptionId: string,
+    cardId: string,
+    idempotencyKey: string,
+  ): Promise<SavingSubscription>;
 }

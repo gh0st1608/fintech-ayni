@@ -112,4 +112,16 @@ export class SavingPlanApiRepository implements SavingPlanRepositoryPort {
     });
     return dto.items.map(toSubscription);
   }
+
+  async payContribution(
+    subscriptionId: string,
+    cardId: string,
+    idempotencyKey: string,
+  ): Promise<SavingSubscription> {
+    const dto = await this.http.post(
+      `/me/savings/${encodeURIComponent(subscriptionId)}/contributions/pay`,
+      { body: { cardId }, idempotencyKey, parse: (data) => subscriptionDto.parse(data) },
+    );
+    return toSubscription(dto);
+  }
 }

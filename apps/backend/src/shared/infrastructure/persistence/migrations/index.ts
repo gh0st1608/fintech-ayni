@@ -29,6 +29,7 @@ import { CreateNotifications1763985600000 } from './1763985600000-create-notific
 import { CreateHelpContent1764072000000 } from './1764072000000-create-help-content';
 import { CreateInstallmentPaymentMethods1764158400000 } from './1764158400000-create-installment-payment-methods';
 import { CreateSavingSubscriptions1764244800000 } from './1764244800000-create-saving-subscriptions';
+import { AddContributionPaymentKey1764331200000 } from './1764331200000-add-contribution-payment-key';
 
 /** Migraciones en orden. Se listan explícitamente: el build no depende de globs. */
 export const MIGRATIONS = [
@@ -63,4 +64,5 @@ export const MIGRATIONS = [
   CreateHelpContent1764072000000,
   CreateInstallmentPaymentMethods1764158400000,
   CreateSavingSubscriptions1764244800000,
+  AddContributionPaymentKey1764331200000,
 ];

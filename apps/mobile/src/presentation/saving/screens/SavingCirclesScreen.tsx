@@ -27,6 +27,7 @@ import { Screen } from '@/presentation/shared/components/Screen';
 import { colors, spacing } from '@/presentation/theme/tokens';
 
 import { DurationSheet } from '../components/DurationSheet';
+import { MySavingPlans } from '../components/MySavingPlans';
 import { savingPlanName } from '../savingPlanName';
 import { useSavingPlans } from '../useSavings';
 
@@ -80,6 +81,7 @@ export function SavingCirclesScreen({
             {catalog.isError && (
               <InfoBanner message={t('saving.offline')} testID="saving-offline" />
             )}
+            <MySavingPlans />
             <AppText weight="semibold">{t('saving.chooseCircle.intro')}</AppText>
           </View>
         }

@@ -6,7 +6,7 @@ import { type Principal } from '../../../shared/application/ports/access-token-v
 import { CLOCK, type ClockPort } from '../../../shared/application/ports/clock.port';
 import { LocalDate } from '../../../shared/domain/value-objects/local-date';
 import { Period } from '../../../shared/domain/value-objects/period';
-import { NotFoundError, ValidationError } from '../../../shared/errors/app-error';
+import { DomainError, NotFoundError, ValidationError } from '../../../shared/errors/app-error';
 import {
   CardRejectedError,
   PAYMENT_GATEWAY,
@@ -49,7 +49,10 @@ export interface SavingSubscriptionsPort {
   create(subscription: SavingSubscription, idempotencyKey: string): Promise<SavingSubscription>;
   listOf(userId: string): Promise<SavingSubscription[]>;
   /** Marca el aporte pagado y, según corresponda, la suscripción activa o completada. */
-  markPaid(contributionId: string, paidAt: Date): Promise<void>;
+  /** `paymentKey`: la clave del pago desde la app, para que repetirlo sea idempotente. */
+  markPaid(contributionId: string, paidAt: Date, paymentKey?: string): Promise<void>;
+  /** ¿Algún aporte de la suscripción ya se pagó con esa clave? */
+  paidWithKey(subscriptionId: string, paymentKey: string): Promise<boolean>;
   reject(subscriptionId: string, detail: string | null): Promise<void>;
   /** Aportes pendientes y vencidos de suscripciones activas con débito automático. */
   dueForAutoDebit(today: string): Promise<DueContribution[]>;
@@ -296,5 +299,85 @@ export class CollectSavingContributionsUseCase {
     }
     this.logger.log({ event: 'savings.contributions_collected', today, ...result });
     return result;
+  }
+}
+
+/** El aporte todavía no vence: no se paga por adelantado. */
+export class ContributionNotDueError extends DomainError {
+  constructor(dueOn: string) {
+    super('CONTRIBUTION_NOT_DUE', 'El próximo aporte todavía no vence', { dueOn });
+  }
+}
+
+/**
+ * `POST /v1/me/savings/:id/contributions/pay` (COPAYNI-93): quien no tiene débito automático
+ * paga desde la app el aporte pendiente más antiguo, si ya venció o vence hoy. Idempotente por
+ * `Idempotency-Key`: reintentar no cobra dos veces. Un rechazo deja el aporte pendiente.
+ */
+@Injectable()
+export class PayContributionUseCase {
+  private readonly logger = new Logger('Savings');
+
+  constructor(
+    @Inject(SAVING_SUBSCRIPTIONS) private readonly subscriptions: SavingSubscriptionsPort,
+    @Inject(SAVING_SETTINGS) private readonly settings: SavingSettings,
+    @Inject(PAYMENT_GATEWAY) private readonly gateway: PaymentGatewayPort,
+    @Inject(SAVED_CARDS) private readonly cards: SavedCardRepositoryPort,
+    @Inject(USER_REPOSITORY) private readonly users: UserRepositoryPort,
+    @Inject(CLOCK) private readonly clock: ClockPort,
+  ) {}
+
+  async execute(
+    principal: Principal,
+    subscriptionId: string,
+    cardId: string,
+    idempotencyKey: string | undefined,
+  ): Promise<SavingSubscription> {
+    if (!idempotencyKey || !IDEMPOTENCY_KEY.test(idempotencyKey)) {
+      throw new ValidationError('Falta un Idempotency-Key válido', {
+        idempotencyKey: 'invalid',
+      });
+    }
+    const mine = await this.subscriptions.listOf(principal.userId);
+    const owned = mine.find(({ id }) => id === subscriptionId);
+    // Repetir un pago ya hecho devuelve el plan sin cobrar de nuevo.
+    if (owned && (await this.subscriptions.paidWithKey(subscriptionId, idempotencyKey))) {
+      return owned;
+    }
+    const subscription = owned?.status === 'active' ? owned : undefined;
+    if (!subscription) {
+      throw new NotFoundError(
+        'No existe ese plan de ahorro activo',
+        'SAVING_SUBSCRIPTION_NOT_FOUND',
+      );
+    }
+    const contribution = subscription.contributions.find(({ status }) => status === 'pending');
+    if (!contribution) return subscription;
+    const today = LocalDate.fromDate(this.clock.now(), this.settings.timeZone).toString();
+    if (contribution.dueOn > today) throw new ContributionNotDueError(contribution.dueOn);
+    if (!(await this.cards.list(principal.userId)).some(({ id }) => id === cardId)) {
+      throw new NotFoundError('No se encontró la tarjeta', 'CARD_NOT_FOUND');
+    }
+
+    const payment = await chargeContribution(
+      { gateway: this.gateway, cards: this.cards, users: this.users },
+      { ...subscription, cardId },
+      contribution,
+      idempotencyKey,
+    );
+    this.logger.log({
+      event: 'savings.contribution_paid_from_app',
+      subscriptionId,
+      sequence: contribution.sequence,
+      status: payment.status,
+    });
+    if (payment.status === 'rejected') throw new SavingPaymentRejectedError(payment.statusDetail);
+    if (payment.status === 'approved') {
+      await this.subscriptions.markPaid(contribution.id, this.clock.now(), idempotencyKey);
+    }
+    const updated = (await this.subscriptions.listOf(principal.userId)).find(
+      ({ id }) => id === subscriptionId,
+    );
+    return updated ?? subscription;
   }
 }

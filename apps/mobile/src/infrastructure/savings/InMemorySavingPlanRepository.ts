@@ -145,4 +145,42 @@ export class InMemorySavingPlanRepository implements SavingPlanRepositoryPort {
     await simulateLatency(this.latencyMs, signal);
     return [...this.subscriptions.values()].reverse();
   }
+
+  readonly payments = new Set<string>();
+
+  async payContribution(subscriptionId: string, _cardId: string, idempotencyKey: string) {
+    await simulateLatency(this.latencyMs);
+    const entry = [...this.subscriptions.entries()].find(([, item]) => item.id === subscriptionId);
+    if (!entry) {
+      throw new AppError('not_found', 'Not found', { code: 'SAVING_SUBSCRIPTION_NOT_FOUND' });
+    }
+    const [key, subscription] = entry;
+    if (this.payments.has(idempotencyKey) || !subscription.nextContribution) return subscription;
+    if (this.rejectWith) {
+      throw new AppError('business', 'Payment rejected', {
+        status: 422,
+        code: 'SAVING_PAYMENT_REJECTED',
+        fieldErrors: { detail: this.rejectWith },
+      });
+    }
+    this.payments.add(idempotencyKey);
+    const paid = subscription.paidContributions + 1;
+    const next = subscription.nextContribution;
+    const updated: SavingSubscription = {
+      ...subscription,
+      saved: subscription.saved.add(next.amount),
+      paidContributions: paid,
+      status: paid === subscription.months ? 'completed' : 'active',
+      nextContribution:
+        paid < subscription.months
+          ? {
+              sequence: next.sequence + 1,
+              dueOn: `${addMonths(next.dueOn.slice(0, 7), 1)}${next.dueOn.slice(7)}`,
+              amount: next.amount,
+            }
+          : null,
+    };
+    this.subscriptions.set(key, updated);
+    return updated;
+  }
 }

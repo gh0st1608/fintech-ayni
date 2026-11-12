@@ -1,4 +1,14 @@
-import { Body, Controller, Get, Headers, HttpCode, HttpStatus, Inject, Post } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Headers,
+  HttpCode,
+  HttpStatus,
+  Inject,
+  Param,
+  Post,
+} from '@nestjs/common';
 import {
   ApiBadRequestResponse,
   ApiBearerAuth,
@@ -20,6 +30,7 @@ import { cardLabel } from '../../payments/application/ports/payment-method-log.p
 import { type SavedCard } from '../../payments/application/ports/saved-card-repository.port';
 import {
   ListMySavingsUseCase,
+  PayContributionUseCase,
   SubscribeToSavingPlanUseCase,
 } from '../application/subscription.use-cases';
 import {
@@ -49,6 +60,12 @@ export class SubscribeRequest {
   @ApiProperty({ description: 'Cobrar los aportes siguientes sin entrar a la app' })
   @IsBoolean()
   autoDebit!: boolean;
+}
+
+export class PayContributionRequest {
+  @ApiProperty({ format: 'uuid', description: 'Tarjeta guardada con que se paga el aporte' })
+  @IsUUID()
+  cardId!: string;
 }
 
 export class ContributionResponse {
@@ -145,7 +162,36 @@ export class SavingSubscriptionsController {
   constructor(
     @Inject(SubscribeToSavingPlanUseCase) private readonly subscribe: SubscribeToSavingPlanUseCase,
     @Inject(ListMySavingsUseCase) private readonly listMine: ListMySavingsUseCase,
+    @Inject(PayContributionUseCase) private readonly payContribution: PayContributionUseCase,
   ) {}
+
+  @Post('me/savings/:id/contributions/pay')
+  @HttpCode(HttpStatus.OK)
+  @ApiHeader({ name: 'Idempotency-Key', required: true, description: '16 a 255 caracteres' })
+  @ApiOkResponse({ type: SubscriptionResponse, description: 'Envuelto. El plan actualizado' })
+  @ApiBadRequestResponse({ description: 'Cuerpo o Idempotency-Key inválidos (VALIDATION_ERROR)' })
+  @ApiNotFoundResponse({ description: 'SAVING_SUBSCRIPTION_NOT_FOUND o CARD_NOT_FOUND' })
+  @ApiUnprocessableEntityResponse({
+    description: 'CONTRIBUTION_NOT_DUE o SAVING_PAYMENT_REJECTED (details.detail)',
+  })
+  @ApiUnauthorizedResponse({ description: 'Sin token o token inválido (UNAUTHORIZED)' })
+  async pay(
+    @CurrentPrincipal() principal: Principal,
+    @Param('id') id: string,
+    @Headers('idempotency-key') idempotencyKey: string | undefined,
+    @Body() body: PayContributionRequest,
+  ): Promise<SubscriptionResponse> {
+    const subscription = await this.payContribution.execute(
+      principal,
+      id,
+      body.cardId,
+      idempotencyKey,
+    );
+    const [mine] = (await this.listMine.execute(principal)).filter(
+      (item) => item.subscription.id === subscription.id,
+    );
+    return SubscriptionResponse.from(subscription, mine?.card ?? null);
+  }
 
   @Post('savings/subscriptions')
   @HttpCode(HttpStatus.OK)

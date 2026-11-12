@@ -373,6 +373,11 @@
       "nextManual": "Tu próximo aporte de {{amount}} vence el {{date}}.",
       "allPaid": "Ya pagaste todos los aportes.",
       "done": "Entendido"
+    },
+    "mine": {
+      "title": "Mis planes de ahorro",
+      "progress": "Ahorraste {{saved}} de {{target}} ({{paid}} de {{total}} aportes).",
+      "pay": "Pagar aporte de {{amount}}"
     }
   },
   "profile": {

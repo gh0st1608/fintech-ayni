@@ -109,14 +109,22 @@ export class SqlSavingSubscriptions implements SavingSubscriptionsPort {
     return this.hydrate(rows);
   }
 
-  async markPaid(contributionId: string, paidAt: Date): Promise<void> {
+  async paidWithKey(subscriptionId: string, paymentKey: string): Promise<boolean> {
+    const rows = await this.dataSource.query<unknown[]>(
+      `SELECT 1 FROM saving_contributions WHERE subscription_id = $1 AND payment_key = $2`,
+      [subscriptionId, paymentKey],
+    );
+    return rows.length > 0;
+  }
+
+  async markPaid(contributionId: string, paidAt: Date, paymentKey?: string): Promise<void> {
     await this.dataSource.transaction(async (manager) => {
       // Con UPDATE ... RETURNING, TypeORM devuelve [filas, filas afectadas].
       const [rows] = await manager.query<[{ subscription_id: string }[], number]>(
-        `UPDATE saving_contributions SET status = 'paid', paid_at = $2
+        `UPDATE saving_contributions SET status = 'paid', paid_at = $2, payment_key = $3
           WHERE id = $1 AND status = 'pending'
         RETURNING subscription_id`,
-        [contributionId, paidAt],
+        [contributionId, paidAt, paymentKey ?? null],
       );
       const row = rows[0];
       if (!row) return;

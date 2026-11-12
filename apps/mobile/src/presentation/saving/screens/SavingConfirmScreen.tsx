@@ -19,6 +19,7 @@ import { EmptyState } from '@/presentation/shared/components/EmptyState';
 import { Screen } from '@/presentation/shared/components/Screen';
 import { colors, radius, spacing } from '@/presentation/theme/tokens';
 
+import { mySavingsQueryKey } from '../components/MySavingPlans';
 import { savingPlanName } from '../savingPlanName';
 import { useSavingQuotes } from '../useSavings';
 
@@ -60,7 +61,7 @@ export function SavingConfirmScreen({
   const subscribe = useMutation({
     mutationFn: (cardId: string) =>
       savings.subscribe.execute({ planId, months, cardId, autoDebit }, attemptKey),
-    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['savings', 'mine'] }),
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: mySavingsQueryKey }),
     onError: (error) => {
       if (error instanceof AppError && error.code === 'SAVING_PAYMENT_REJECTED') {
         setAttemptKey(ids.next());
