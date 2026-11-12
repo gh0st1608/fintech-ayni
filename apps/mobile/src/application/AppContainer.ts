@@ -47,6 +47,7 @@ import type {
   UpdatePaymentSettingsUseCase,
 } from '@/application/payments/usecases/paymentUseCases';
 import type {
+  GetPayoutAccountUseCase,
   ListPayoutMethodsUseCase,
   SelectPayoutMethodUseCase,
 } from '@/application/payouts/usecases/payoutMethodUseCases';
@@ -171,6 +172,7 @@ export interface AppContainer {
   payouts: {
     listPayoutMethods: ListPayoutMethodsUseCase;
     selectPayoutMethod: SelectPayoutMethodUseCase;
+    getPayoutAccount: GetPayoutAccountUseCase;
   };
   i18n: {
     resolveLanguage: ResolveLanguageUseCase;

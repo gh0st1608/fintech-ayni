@@ -551,7 +551,14 @@
       "savedCards": "Saved Cards",
       "save": "Save",
       "changePayoutMethodDescription": "You can change the payout method before your payout month.",
-      "savedCardsDescription": "Manage your pay-in cards."
+      "savedCardsDescription": "Manage your pay-in cards.",
+      "payoutAccount": {
+        "title": "Payout account",
+        "registered": "You'll receive your payout here. Holder: {{holder}}.",
+        "missing": "We haven't registered your payout account yet.",
+        "missingHint": "Send support proof of your bank account (CCI) or of your Yape or Plin in your name. Our team registers it for your security.",
+        "changeHint": "To change it, contact support with proof of the new account."
+      }
     },
     "cards": {
       "empty": "There are no saved cards",

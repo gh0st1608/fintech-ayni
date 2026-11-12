@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 
 import { errorMessage } from '@/presentation/i18n/errorMessageKey';
+import { PayoutAccountCard } from '@/presentation/payouts/PayoutAccountCard';
 import { PayoutMethodPicker } from '@/presentation/payouts/PayoutMethodPicker';
 import { usePayoutMethods } from '@/presentation/payouts/usePayoutMethods';
 import { AppText } from '@/presentation/shared/components/AppText';
@@ -9,7 +10,10 @@ import { Button } from '@/presentation/shared/components/Button';
 import { Screen } from '@/presentation/shared/components/Screen';
 import { spacing } from '@/presentation/theme/tokens';
 
-/** "Change Payout Method" de Payment Settings (COPAYNI-37 y 38): el mismo selector que la unión. */
+/**
+ * "Change Payout Method" de Payment Settings (COPAYNI-37 y 38): la cuenta de cobro registrada por
+ * el equipo (COPAYNI-81) y el mismo selector de método que la unión.
+ */
 export function ChangePayoutMethodScreen({ onSaved }: { onSaved: () => void }) {
   const { t } = useTranslation();
   const methods = usePayoutMethods();
@@ -30,11 +34,14 @@ export function ChangePayoutMethodScreen({ onSaved }: { onSaved: () => void }) {
           />
         </View>
       ) : (
-        <PayoutMethodPicker
-          catalog={methods.data}
-          submitLabel={t('payment.settings.save')}
-          onSaved={onSaved}
-        />
+        <>
+          <PayoutAccountCard />
+          <PayoutMethodPicker
+            catalog={methods.data}
+            submitLabel={t('payment.settings.save')}
+            onSaved={onSaved}
+          />
+        </>
       )}
     </Screen>
   );

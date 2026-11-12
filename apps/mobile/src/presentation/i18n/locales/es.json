@@ -551,7 +551,14 @@
       "savedCards": "Tarjetas guardadas",
       "save": "Guardar",
       "changePayoutMethodDescription": "Puedes cambiar el método de cobro antes de tu mes de cobro.",
-      "savedCardsDescription": "Administra las tarjetas con las que pagas tus cuotas."
+      "savedCardsDescription": "Administra las tarjetas con las que pagas tus cuotas.",
+      "payoutAccount": {
+        "title": "Cuenta de cobro",
+        "registered": "Aquí recibirás tu pozo. Titular: {{holder}}.",
+        "missing": "Todavía no registramos tu cuenta de cobro.",
+        "missingHint": "Envía a soporte la constancia de tu cuenta bancaria (CCI) o de tu Yape o Plin a tu nombre. Nuestro equipo la registra por seguridad.",
+        "changeHint": "Para cambiarla, escribe a soporte con la constancia de la nueva cuenta."
+      }
     },
     "cards": {
       "empty": "No tienes tarjetas guardadas",

@@ -50,6 +50,7 @@ import {
 import {
   ListPayoutMethodsUseCase,
   SelectPayoutMethodUseCase,
+  GetPayoutAccountUseCase,
 } from '@/application/payouts/usecases/payoutMethodUseCases';
 import {
   GetMyProfileUseCase,
@@ -397,6 +398,7 @@ export function createContainer(
     payouts: {
       listPayoutMethods: new ListPayoutMethodsUseCase(adapters.payoutMethods),
       selectPayoutMethod: new SelectPayoutMethodUseCase(adapters.payoutMethods),
+      getPayoutAccount: new GetPayoutAccountUseCase(adapters.payoutMethods),
     },
     i18n: {
       resolveCountry: new ResolveDefaultCountryUseCase(adapters.deviceLocale),

@@ -146,4 +146,27 @@ describe('ChangePayoutMethodScreen', () => {
     await waitFor(() => expect(onSaved).toHaveBeenCalledWith('bankTransfer'));
     expect(payoutMethods.selected).toBe('bankTransfer');
   });
+
+  it('muestra la cuenta de cobro registrada por el equipo, enmascarada (COPAYNI-81)', async () => {
+    const payoutMethods = new InMemoryPayoutMethodRepository('PEN', {
+      latencyMs: 0,
+      account: {
+        kind: 'bankAccount',
+        label: 'BCP •••• 4567',
+        holderName: 'Juana Torres',
+        registeredAt: new Date('2026-11-12T15:00:00Z'),
+      },
+    });
+    await renderWithProviders(
+      <ChangePayoutMethodScreen onSaved={jest.fn()} />,
+      createTestContainer({ payoutMethods }),
+    );
+    expect(await screen.findByText('BCP •••• 4567')).toBeOnTheScreen();
+    expect(screen.getByText('Aquí recibirás tu pozo. Titular: Juana Torres.')).toBeOnTheScreen();
+  });
+
+  it('sin cuenta, explica cómo enviarla a soporte', async () => {
+    await renderWithProviders(<ChangePayoutMethodScreen onSaved={jest.fn()} />);
+    expect(await screen.findByText('Todavía no registramos tu cuenta de cobro.')).toBeOnTheScreen();
+  });
 });

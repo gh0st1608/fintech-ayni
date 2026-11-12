@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
 import type { PayoutMethodRepositoryPort } from '@/domain/payouts/ports/PayoutMethodRepositoryPort';
+import type { PayoutAccount } from '@/domain/payouts/value-objects/PayoutAccount';
 import {
   PayoutMethod,
   type PayoutMethods,
@@ -48,7 +49,19 @@ const toPayoutMethods = (dto: z.infer<typeof payoutMethodsDto>): PayoutMethods =
   selected: dto.selected ? TYPE_BY_DTO[dto.selected] : null,
 });
 
-/** Adaptador HTTP de los métodos de cobro (COPAYNI-37). */
+/** DTO de GET /me/payout-account (COPAYNI-81): solo lo que la app muestra. */
+const payoutAccountDto = z.object({
+  account: z
+    .object({
+      kind: z.enum(['bank_account', 'wallet']),
+      label: z.string().min(1),
+      holderName: z.string(),
+      registeredAt: z.iso.datetime({ offset: true }),
+    })
+    .nullable(),
+});
+
+/** Adaptador HTTP de los métodos de cobro (COPAYNI-37) y de la cuenta de cobro (COPAYNI-81). */
 export class PayoutMethodApiRepository implements PayoutMethodRepositoryPort {
   constructor(private readonly http: HttpClientPort) {}
 
@@ -66,5 +79,20 @@ export class PayoutMethodApiRepository implements PayoutMethodRepositoryPort {
       parse: (data) => payoutMethodsDto.parse(data),
     });
     return toPayoutMethods(dto);
+  }
+
+  async account(signal?: AbortSignal): Promise<PayoutAccount | null> {
+    const { account } = await this.http.get('/me/payout-account', {
+      signal,
+      parse: (data) => payoutAccountDto.parse(data),
+    });
+    return account
+      ? {
+          kind: account.kind === 'bank_account' ? 'bankAccount' : 'wallet',
+          label: account.label,
+          holderName: account.holderName,
+          registeredAt: new Date(account.registeredAt),
+        }
+      : null;
   }
 }
