@@ -28,7 +28,7 @@ export const KYC_SIMULATED_RESULTS = ['approved', 'rejected', 'in_review'] as co
 /** Almacenamiento de documentos KYC (COPAYNI-43). */
 export const DOCUMENT_STORAGES = ['simulated', 's3'] as const;
 /** Verificación de documentos (COPAYNI-42): simulada o revisión manual de operaciones. */
-export const KYC_PROVIDERS = ['simulated', 'manual'] as const;
+export const KYC_PROVIDERS = ['simulated', 'manual', 'verificaid'] as const;
 
 /** Envío del OTP (pending-scope T6): ninguno o AWS (SES y End User Messaging SMS). */
 export const OTP_DELIVERIES = ['none', 'aws'] as const;
@@ -428,6 +428,54 @@ export class EnvironmentVariables {
   /** Resultado del proveedor simulado para el National ID y el comprobante de ingresos. */
   @IsIn(KYC_SIMULATED_RESULTS)
   KYC_SIMULATED_RESULT: (typeof KYC_SIMULATED_RESULTS)[number] = 'approved';
+
+  /**
+   * API de VerificaID (COPAYNI-42): `https://sandbox-api.verifica.id` o, en producción,
+   * `https://api.verifica.id`.
+   */
+  @IsUrl({ require_tld: false, require_protocol: true, protocols: ['https', 'http'] })
+  VERIFICAID_API_URL: string = 'https://sandbox-api.verifica.id';
+
+  /** Token Bearer de VerificaID (prod-hub.verifica.id). Es un secreto: nunca se registra. */
+  @ValidateIf((env: EnvironmentVariables) => env.KYC_PROVIDER === 'verificaid')
+  @IsString()
+  @IsNotEmpty()
+  VERIFICAID_API_TOKEN?: string;
+
+  /**
+   * Token secreto de la URL del webhook de VerificaID (`/v1/webhooks/verificaid?token=`). Es un
+   * secreto; VerificaID no documenta firma de webhooks.
+   */
+  @ValidateIf((env: EnvironmentVariables) => env.KYC_PROVIDER === 'verificaid')
+  @IsString()
+  @MinLength(32)
+  VERIFICAID_WEBHOOK_TOKEN?: string;
+
+  /** Adónde vuelve la persona al terminar el flujo biométrico (deep link de la app). */
+  @IsString()
+  @IsNotEmpty()
+  VERIFICAID_CALLBACK_URL: string = 'ayni://identity-verification';
+
+  @IsInt()
+  @Min(1000)
+  @Max(30000)
+  VERIFICAID_TIMEOUT_MS: number = 10000;
+
+  /** Versión del consentimiento del tratamiento de datos biométricos (L3, provisional). */
+  @Matches(/^[\w.-]{1,32}$/)
+  IDENTITY_CONSENT_VERSION: string = '2026-11';
+
+  /** Rechazos atribuibles a la persona antes de pasar a revisión manual (kyc-peru.md). */
+  @IsInt()
+  @Min(1)
+  @Max(10)
+  IDENTITY_MAX_REJECTED_ATTEMPTS: number = 3;
+
+  /** Horas tras las que una sesión biométrica sin resultado se da por vencida. */
+  @IsInt()
+  @Min(1)
+  @Max(168)
+  IDENTITY_SESSION_TTL_HOURS: number = 24;
 
   /**
    * Dónde se guardan los documentos KYC (COPAYNI-43): `s3` (floci en dev, AWS en prd) o
