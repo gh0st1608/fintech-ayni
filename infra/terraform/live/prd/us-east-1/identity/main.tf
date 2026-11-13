@@ -62,12 +62,12 @@ module "identity_center" {
       session_duration    = "PT4H"
     }
     # ViewOnlyAccess y no ReadOnlyAccess: esta última lee objetos de S3 (documentos KYC).
-    solo-lectura = {
+    lectores = {
       description         = "Consulta de configuración y recursos, sin leer datos"
       managed_policy_arns = ["arn:aws:iam::aws:policy/job-function/ViewOnlyAccess"]
       session_duration    = "PT8H"
     }
-    facturacion = {
+    facturadores = {
       description         = "Costos, facturas y presupuestos, sin acceso a recursos"
       managed_policy_arns = ["arn:aws:iam::aws:policy/job-function/Billing"]
       session_duration    = "PT4H"

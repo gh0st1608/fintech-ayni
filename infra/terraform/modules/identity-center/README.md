@@ -19,7 +19,7 @@ module "identity_center" {
   account_id  = var.aws_account_id
   name_prefix = "ayni-prd"
   accesses = {
-    solo-lectura = {
+    lectores = {
       description         = "Consulta de recursos sin cambios"
       managed_policy_arns = ["arn:aws:iam::aws:policy/ReadOnlyAccess"]
       session_duration    = "PT8H"

@@ -21,7 +21,7 @@ run "cuatro_accesos" {
   command = plan
 
   assert {
-    condition     = toset(keys(module.identity_center.permission_set_arns)) == toset(["administradores", "solo-lectura", "facturacion", "soporte"])
+    condition     = toset(keys(module.identity_center.permission_set_arns)) == toset(["administradores", "lectores", "facturadores", "soporte"])
     error_message = "Administradores, solo lectura, facturación y soporte."
   }
 }

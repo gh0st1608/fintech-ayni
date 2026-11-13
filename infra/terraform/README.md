@@ -200,8 +200,8 @@ Crea cuatro grupos, cada uno con su permission set asignado a la cuenta:
 | Grupo | Permisos | Sesión |
 | --- | --- | --- |
 | `ayni-prd-administradores` | `AdministratorAccess` | 4 h |
-| `ayni-prd-solo-lectura` | `ViewOnlyAccess`: configuración, sin leer datos. No se usa `ReadOnlyAccess` porque lee los documentos KYC en S3 | 8 h |
-| `ayni-prd-facturacion` | `Billing` | 4 h |
+| `ayni-prd-lectores` | `ViewOnlyAccess`: configuración, sin leer datos. No se usa `ReadOnlyAccess` porque lee los documentos KYC en S3 | 8 h |
+| `ayni-prd-facturadores` | `Billing` | 4 h |
 | `ayni-prd-soporte` | `ViewOnlyAccess`, más logs, métricas y reinicio de la API (`ecs:UpdateService` y `ecs:StopTask` en `ayni-prd-*`) | 8 h |
 
 Las personas se agregan a los grupos en la consola: sus datos no pasan por Terraform.
