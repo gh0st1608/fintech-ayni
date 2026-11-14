@@ -105,7 +105,6 @@ resource "null_resource" "backoffice_grant" {
     interpreter = ["bash", "-c"]
     command     = <<-CMD
       aws sso-admin put-application-grant \
-        --instance-arn "${local.instance_arn}" \
         --application-arn "${aws_ssoadmin_application.backoffice.arn}" \
         --grant-type "authorization_code" \
         --grant '{"authorizationCode":{"redirectUris":["${var.backoffice_url}/auth/callback"]}}'
