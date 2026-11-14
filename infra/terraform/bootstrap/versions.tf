@@ -8,8 +8,14 @@ terraform {
     }
   }
 
-  # Primer apply con estado local; después se migra al bucket que este stack crea (README).
-  backend "local" {}
+  # El primer apply fue con estado local; después se migró al bucket que este stack crea (README).
+  backend "s3" {
+    bucket       = "ayni-prd-tfstate-079982009754"
+    key          = "bootstrap/terraform.tfstate"
+    region       = "us-east-1"
+    encrypt      = true
+    use_lockfile = true
+  }
 }
 
 provider "aws" {

@@ -1,9 +1,9 @@
-# CAMBIAR: cuenta AWS dedicada (ADR, D2). Con este valor, plan y apply fallan a propósito.
-aws_account_id = "000000000000"
+# Cuenta AWS dedicada de prd (ADR, D2), gestión de la organización o-z52poswyp2.
+aws_account_id = "079982009754"
 
-# CAMBIAR: responsables reales para las etiquetas de costos.
-owner       = "por-definir"
-cost_center = "por-definir"
+# Responsables para las etiquetas de costos.
+owner       = "plataforma-ayni"
+cost_center = "ayni-prd"
 
 # CAMBIAR: cuenta de New Relic de prd. Con account_id = 0 y enabled = true, el plan falla a propósito.
 new_relic = {
