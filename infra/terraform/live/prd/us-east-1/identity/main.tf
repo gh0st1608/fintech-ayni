@@ -1,8 +1,13 @@
 # Acceso humano a la cuenta de prd por IAM Identity Center (runbook de seguridad: sin usuarios IAM
 # con consola). Lo aplica un administrador, como el bootstrap: el rol de apply de CI no administra
 # Identity Center. Las personas se agregan a los grupos en la consola.
+data "aws_ssoadmin_instances" "this" {}
+
 locals {
-  name = "ayni-prd"
+  name         = "ayni-prd"
+  instance_arn = one(data.aws_ssoadmin_instances.this.arns)
+  # Extrae el ID de instancia del ARN: arn:aws:sso:::instance/ssoins-xxx → ssoins-xxx
+  instance_id = regex("[^/]+$", local.instance_arn)
 
   tags = {
     Application        = "ayni"
@@ -46,6 +51,74 @@ data "aws_iam_policy_document" "support" {
     resources = ["arn:aws:ecs:${var.region}:${var.aws_account_id}:task/${local.name}-*/*"]
   }
 }
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Back-office OIDC: aplicación personalizada en Identity Center (COPAYNI-72)
+# ──────────────────────────────────────────────────────────────────────────────
+
+# Aplicación custom OIDC PKCE: sin client secret; los usuarios se autentican con MFA y vuelven al
+# back-office con un código. Los grupos de Identity Center determinan los roles de staff (groupsMap).
+resource "aws_ssoadmin_application" "backoffice" {
+  name                     = "${local.name}-backoffice"
+  application_provider_arn = "arn:aws:sso::aws:applicationProvider/custom"
+  instance_arn             = local.instance_arn
+  description              = "Back-office del personal de Ayni (OIDC PKCE, sin client secret)"
+  status                   = "ENABLED"
+
+  tags = local.tags
+}
+
+# Ámbitos OAuth2 que el back-office solicita: identidad + email + perfil.
+resource "aws_ssoadmin_application_access_scope" "backoffice" {
+  for_each = toset(["openid", "profile", "email"])
+
+  # `arn` es el atributo no deprecado de aws_ssoadmin_application en provider 6.x
+  application_arn = aws_ssoadmin_application.backoffice.arn
+  scope           = each.value
+}
+
+# Solo los grupos asignados pueden iniciar sesión; lectores quedan excluidos.
+# aws_ssoadmin_application_assignment_configuration es el recurso correcto en provider 6.x.
+resource "aws_ssoadmin_application_assignment_configuration" "backoffice" {
+  application_arn     = aws_ssoadmin_application.backoffice.arn
+  assignment_required = true
+}
+
+# Grupos con acceso al back-office: administradores, soporte y facturadores.
+resource "aws_ssoadmin_application_assignment" "backoffice" {
+  for_each = {
+    administradores = module.identity_center.group_ids["administradores"]
+    soporte         = module.identity_center.group_ids["soporte"]
+    facturadores    = module.identity_center.group_ids["facturadores"]
+  }
+
+  application_arn = aws_ssoadmin_application.backoffice.arn
+  principal_id    = each.value
+  principal_type  = "GROUP"
+}
+
+# `aws_ssoadmin_application_grant` no existe en provider 6.68: se configura la URI de redirección
+# vía AWS CLI con PutApplicationGrant (idempotente). Solo se re-ejecuta si cambia la URL.
+resource "null_resource" "backoffice_grant" {
+  triggers = {
+    app_arn      = aws_ssoadmin_application.backoffice.arn
+    redirect_uri = "${var.backoffice_url}/auth/callback"
+  }
+
+  provisioner "local-exec" {
+    command = <<-CMD
+      aws sso-admin put-application-grant \
+        --instance-arn "${local.instance_arn}" \
+        --application-arn "${aws_ssoadmin_application.backoffice.arn}" \
+        --grant-type "authorization_code" \
+        --grant "{\"authorizationCode\":{\"redirectUris\":[\"${var.backoffice_url}/auth/callback\"]}}"
+    CMD
+  }
+
+  depends_on = [aws_ssoadmin_application.backoffice]
+}
+
+# ──────────────────────────────────────────────────────────────────────────────
 
 module "identity_center" {
   source = "../../../../modules/identity-center"

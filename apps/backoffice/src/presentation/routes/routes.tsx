@@ -3,6 +3,7 @@ import { Navigate, NavLink, Outlet, type RouteObject, useLocation } from 'react-
 import { can, ROLE_LABELS } from '@/domain/staff/Staff';
 
 import { LoginScreen } from '../auth/LoginScreen';
+import { OidcCallbackScreen } from '../auth/OidcCallbackScreen';
 import { Button, EmptyState, Spinner } from '../components/ui';
 import { useSession, useStaff } from '../providers/AppProviders';
 
@@ -156,6 +157,7 @@ function Home() {
 
 export const routes: RouteObject[] = [
   { path: '/login', element: <LoginScreen /> },
+  { path: '/auth/callback', element: <OidcCallbackScreen /> },
   {
     element: <RequireSession />,
     hydrateFallbackElement: <LoadingScreen />,

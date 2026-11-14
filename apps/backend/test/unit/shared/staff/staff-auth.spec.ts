@@ -98,6 +98,68 @@ describe('OidcStaffAuthenticator', () => {
       code: 'UNAUTHORIZED',
     });
   });
+
+  describe('mapeo de grupos de Identity Center (groupsMap)', () => {
+    const IC_ISSUER = 'https://identitycenter.amazonaws.com/ssoins-722326feeecaf3f6';
+    const IC_CLIENT_ID = 'my-backoffice-app';
+
+    const groupsMap = {
+      'ayni-prd-administradores': ['admin', 'super_admin', 'operations', 'finance', 'support'],
+      'ayni-prd-soporte': ['support', 'operations'],
+      'ayni-prd-facturadores': ['finance'],
+    } as const;
+
+    function icAuthenticator(keys: Record<string, KeyObject> = { k1: rsa.publicKey }) {
+      return new OidcStaffAuthenticator(
+        {
+          issuer: IC_ISSUER,
+          audience: IC_CLIENT_ID,
+          rolesClaim: 'cognito:groups',
+          groupsMap,
+        },
+        { key: (kid) => Promise.resolve(keys[kid] ?? null) },
+        new TestClock(NOW),
+      );
+    }
+
+    const icClaims = (groups: string[]) => ({
+      iss: IC_ISSUER,
+      sub: 'staff-uuid',
+      aud: IC_CLIENT_ID,
+      'cognito:groups': groups,
+      auth_time: NOW_SECONDS - 120,
+      iat: NOW_SECONDS - 60,
+      exp: NOW_SECONDS + 3600,
+    });
+
+    it('traduce ayni-prd-soporte a support y operations (sin duplicados)', async () => {
+      const token = jwt(icClaims(['ayni-prd-soporte']));
+      await expect(icAuthenticator().authenticate(token)).resolves.toMatchObject({
+        roles: expect.arrayContaining(['support', 'operations']),
+      });
+    });
+
+    it('traduce ayni-prd-administradores a todos los roles de admin', async () => {
+      const token = jwt(icClaims(['ayni-prd-administradores']));
+      const result = await icAuthenticator().authenticate(token);
+      expect(result.roles).toEqual(
+        expect.arrayContaining(['admin', 'super_admin', 'operations', 'finance', 'support']),
+      );
+    });
+
+    it('combina grupos sin duplicar roles (soporte + facturadores → support, operations, finance)', async () => {
+      const token = jwt(icClaims(['ayni-prd-soporte', 'ayni-prd-facturadores']));
+      const result = await icAuthenticator().authenticate(token);
+      expect([...result.roles].sort()).toEqual(['finance', 'operations', 'support'].sort());
+    });
+
+    it('un grupo no mapeado (ayni-prd-lectores) produce roles vacíos', async () => {
+      const token = jwt(icClaims(['ayni-prd-lectores']));
+      await expect(icAuthenticator().authenticate(token)).resolves.toMatchObject({
+        roles: [],
+      });
+    });
+  });
 });
 
 describe('HttpJwks', () => {
