@@ -4,3 +4,6 @@ aws_account_id = "079982009754"
 # Responsables para las etiquetas de costos.
 owner       = "plataforma-ayni"
 cost_center = "ayni-prd"
+
+# URL base del back-office. Cuando se defina el dominio real reemplazar este valor.
+backoffice_url = "https://backoffice.ayni.pe"

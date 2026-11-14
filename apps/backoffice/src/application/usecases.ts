@@ -98,6 +98,30 @@ export class SignOutUseCase {
   }
 }
 
+/** Solo modo OIDC: inicia el flujo PKCE (redirige el navegador al proveedor). */
+export class InitiateOidcFlowUseCase {
+  constructor(private readonly auth: StaffAuthPort) {}
+
+  execute(returnTo?: string): void {
+    if (!this.auth.initiateFlow) {
+      throw new AppError('validation', 'El modo de autenticación actual no admite flujo OIDC');
+    }
+    this.auth.initiateFlow(returnTo);
+  }
+}
+
+/** Solo modo OIDC: intercambia el código recibido del proveedor por un token de staff. */
+export class HandleOidcCallbackUseCase {
+  constructor(private readonly auth: StaffAuthPort) {}
+
+  execute(code: string, state: string): Promise<StaffMember> {
+    if (!this.auth.handleCallback) {
+      throw new AppError('validation', 'El modo de autenticación actual no admite callback OIDC');
+    }
+    return this.auth.handleCallback(code, state);
+  }
+}
+
 export class ListCirclesUseCase {
   constructor(private readonly circles: CirclesRepositoryPort) {}
 

@@ -33,6 +33,8 @@ type SessionState =
 interface SessionValue {
   session: SessionState;
   signIn: (credentials: DevCredentials) => Promise<StaffMember>;
+  initiateOidcFlow?: (returnTo?: string) => void;
+  handleOidcCallback?: (code: string, state: string) => Promise<StaffMember>;
   signOut: () => void;
 }
 
@@ -79,6 +81,22 @@ function SessionProvider({ children }: { children: React.ReactNode }) {
     [auth.signIn],
   );
 
+  const initiateOidcFlow = useMemo(() => {
+    const uc = auth.initiateFlow;
+    if (!uc) return undefined;
+    return (returnTo?: string) => uc.execute(returnTo);
+  }, [auth.initiateFlow]);
+
+  const handleOidcCallback = useMemo(() => {
+    const uc = auth.handleCallback;
+    if (!uc) return undefined;
+    return async (code: string, state: string) => {
+      const staff = await uc.execute(code, state);
+      setSession({ status: 'signed_in', staff });
+      return staff;
+    };
+  }, [auth.handleCallback]);
+
   const signOut = useCallback(() => {
     auth.signOut.execute();
     // Nada de lo que vio una persona queda en caché para la siguiente.
@@ -86,7 +104,10 @@ function SessionProvider({ children }: { children: React.ReactNode }) {
     setSession({ status: 'signed_out' });
   }, [auth.signOut, queryClient]);
 
-  const value = useMemo(() => ({ session, signIn, signOut }), [session, signIn, signOut]);
+  const value = useMemo(
+    () => ({ session, signIn, initiateOidcFlow, handleOidcCallback, signOut }),
+    [session, signIn, initiateOidcFlow, handleOidcCallback, signOut],
+  );
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;
 }
 

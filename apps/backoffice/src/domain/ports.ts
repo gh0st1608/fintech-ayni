@@ -41,10 +41,16 @@ export interface DevCredentials {
 
 /**
  * Sesión del personal. El token vive solo en memoria: nunca en LocalStorage (base técnica §11).
- * El modo OIDC (Cognito, BO2) implementará este mismo puerto.
+ * - Dev: `signIn(credentials)` intercambia credenciales por un token del backend.
+ * - OIDC: `initiateFlow()` inicia el flujo PKCE (redirige, no retorna); `handleCallback()` completa
+ *   el intercambio del código tras la redirección de vuelta.
  */
 export interface StaffAuthPort {
   signIn(credentials: DevCredentials): Promise<StaffMember>;
+  /** Solo modo OIDC: inicia el flujo PKCE hacia el proveedor (redirige el navegador). */
+  initiateFlow?(returnTo?: string): void;
+  /** Solo modo OIDC: intercambia el código recibido del proveedor por un token de staff. */
+  handleCallback?(code: string, state: string): Promise<StaffMember>;
   current(signal?: AbortSignal): Promise<StaffMember | null>;
   signOut(): void;
 }

@@ -23,3 +23,8 @@ variable "cost_center" {
   description = "Centro de costos (etiqueta CostCenter)."
   type        = string
 }
+
+variable "backoffice_url" {
+  description = "URL base del back-office (p. ej. https://backoffice.ayni.pe). Se usa como redirect URI OIDC."
+  type        = string
+}

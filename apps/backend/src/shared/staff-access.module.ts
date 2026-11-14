@@ -8,6 +8,7 @@ import { STAFF_AUDIT } from './application/ports/staff-audit.port';
 import {
   STAFF_AUTHENTICATOR,
   type StaffAuthenticatorPort,
+  type StaffRole,
 } from './application/ports/staff-authenticator.port';
 import { StaffSessionController } from './presentation/http/controllers/staff-session.controller';
 import {
@@ -65,11 +66,16 @@ const JWKS_MIN_REFRESH_SECONDS = 30;
         const issuer = config.get('STAFF_OIDC_ISSUER', { infer: true })!.replace(/\/+$/, '');
         const jwksUrl =
           config.get('STAFF_OIDC_JWKS_URL', { infer: true }) ?? `${issuer}/.well-known/jwks.json`;
+        const groupsMapRaw = config.get('STAFF_OIDC_GROUPS_MAP', { infer: true });
+        const groupsMap = groupsMapRaw
+          ? (JSON.parse(groupsMapRaw) as Record<string, StaffRole[]>)
+          : undefined;
         return new OidcStaffAuthenticator(
           {
             issuer,
             audience: config.get('STAFF_OIDC_AUDIENCE', { infer: true }),
             rolesClaim: config.get('STAFF_OIDC_ROLES_CLAIM', { infer: true }),
+            groupsMap,
           },
           new HttpJwks(
             {

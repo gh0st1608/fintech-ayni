@@ -365,6 +365,16 @@ export class EnvironmentVariables {
   STAFF_OIDC_ROLES_CLAIM: string = 'cognito:groups';
 
   /**
+   * Mapa JSON de grupos del proveedor a roles de staff. Requerido cuando los grupos no se llaman
+   * igual que los roles (p. ej. Identity Center: `{"ayni-prd-soporte":["support","operations"]}`).
+   * Sin este campo, los valores del claim se tratan directamente como roles (compatible con Cognito).
+   */
+  @ValidateIf((env: EnvironmentVariables) => env.STAFF_AUTH_PROVIDER === 'oidc')
+  @IsOptional()
+  @IsString()
+  STAFF_OIDC_GROUPS_MAP?: string;
+
+  /**
    * Cobro de cuotas y pago de payouts del ciclo mensual. `fake` simula ambos (desarrollo y
    * pruebas) y está prohibido en production. `gateway` cobra con débito automático en la pasarela
    * (`PAYMENT_GATEWAY`); los payouts todavía no tienen riel (T5). Sin valor, el ciclo falla al

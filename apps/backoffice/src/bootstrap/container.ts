@@ -29,6 +29,8 @@ import {
   SetCirclePauseUseCase,
   SignInUseCase,
   SignOutUseCase,
+  InitiateOidcFlowUseCase,
+  HandleOidcCallbackUseCase,
 } from '@/application/usecases';
 import type {
   CirclesRepositoryPort,
@@ -48,6 +50,7 @@ import {
   CycleRunsApiRepository,
   HelpApiRepository,
 } from '@/infrastructure/api/adapters';
+import { OidcStaffAuth } from '@/infrastructure/auth/OidcStaffAuth';
 import { FetchHttpClient } from '@/infrastructure/http/FetchHttpClient';
 import { TokenStore } from '@/infrastructure/http/TokenStore';
 
@@ -58,6 +61,8 @@ export interface AppContainer {
     signIn: SignInUseCase;
     current: GetCurrentStaffUseCase;
     signOut: SignOutUseCase;
+    initiateFlow?: InitiateOidcFlowUseCase;
+    handleCallback?: HandleOidcCallbackUseCase;
   };
   circles: {
     list: ListCirclesUseCase;
@@ -117,6 +122,12 @@ export function createContainer(adapters: ContainerAdapters): AppContainer {
       signIn: new SignInUseCase(adapters.auth),
       current: new GetCurrentStaffUseCase(adapters.auth),
       signOut: new SignOutUseCase(adapters.auth),
+      ...(adapters.auth.initiateFlow && {
+        initiateFlow: new InitiateOidcFlowUseCase(adapters.auth),
+      }),
+      ...(adapters.auth.handleCallback && {
+        handleCallback: new HandleOidcCallbackUseCase(adapters.auth),
+      }),
     },
     circles: {
       list: new ListCirclesUseCase(adapters.circles),
@@ -164,8 +175,18 @@ export function createContainer(adapters: ContainerAdapters): AppContainer {
 export function createAppContainer(config: AppConfig): AppContainer {
   const tokens = new TokenStore();
   const http = new FetchHttpClient(config.apiUrl, tokens, config.httpTimeoutMs);
+  const auth =
+    config.authMode === 'oidc' && config.oidc
+      ? new OidcStaffAuth(
+          config.oidc.issuer,
+          config.oidc.clientId,
+          config.oidc.redirectUri,
+          http,
+          tokens,
+        )
+      : new DevStaffAuth(http, tokens);
   return createContainer({
-    auth: new DevStaffAuth(http, tokens),
+    auth,
     circles: new CirclesApiRepository(http),
     kyc: new KycApiRepository(http),
     users: new UsersApiRepository(http),

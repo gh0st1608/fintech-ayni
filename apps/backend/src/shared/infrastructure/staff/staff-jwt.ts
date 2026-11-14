@@ -20,6 +20,12 @@ export interface StaffJwtExpectations {
   audience: string;
   /** Claim con los roles, p. ej. `cognito:groups`. Los valores que no son roles se ignoran. */
   rolesClaim: string;
+  /**
+   * Mapa de nombres de grupo del proveedor a roles de staff (p. ej. Identity Center). Sin él, los
+   * valores del claim se tratan directamente como roles (compatible con Cognito cuando los grupos
+   * se llaman igual que los roles).
+   */
+  groupsMap?: Readonly<Record<string, readonly StaffRole[]>>;
 }
 
 type Claims = Record<string, unknown>;
@@ -46,9 +52,21 @@ function audienceMatches(claims: Claims, audience: string): boolean {
   return claims.client_id === audience;
 }
 
-function rolesOf(claims: Claims, rolesClaim: string): StaffRole[] {
+function rolesOf(
+  claims: Claims,
+  rolesClaim: string,
+  groupsMap?: Readonly<Record<string, readonly StaffRole[]>>,
+): StaffRole[] {
   const raw = claims[rolesClaim];
   if (!Array.isArray(raw)) return [];
+  if (groupsMap) {
+    const roles = new Set<StaffRole>();
+    for (const group of raw) {
+      if (typeof group !== 'string') continue;
+      for (const role of groupsMap[group] ?? []) roles.add(role);
+    }
+    return [...roles];
+  }
   return STAFF_ROLES.filter((role) => raw.includes(role));
 }
 
@@ -95,7 +113,7 @@ export async function verifyStaffJwt(
   return {
     staffId: claims.sub,
     email: typeof claims.email === 'string' ? claims.email : undefined,
-    roles: rolesOf(claims, expected.rolesClaim),
+    roles: rolesOf(claims, expected.rolesClaim, expected.groupsMap),
     authenticatedAt: new Date(authTime * 1000),
   };
 }
