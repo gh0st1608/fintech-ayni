@@ -163,6 +163,8 @@ describe('validateEnvironment', () => {
       ...REQUIRED,
       NODE_ENV: 'production',
       KYC_PROVIDER: 'manual',
+      // Tope de lanzamiento: con revisión manual de documentos no se admite un payout mayor (P4).
+      JOIN_PAYOUT_MAX: '600000',
       DOCUMENT_STORAGE: 's3',
       DOCUMENTS_BUCKET: 'ayni-prd-documents',
       JWT_PRIVATE_KEY: '-----BEGIN PRIVATE KEY-----\nabc\n-----END PRIVATE KEY-----',
@@ -316,7 +318,7 @@ describe('validateEnvironment', () => {
 
     it('trae los valores propuestos del fondo de garantía (COPAYNI-58)', () => {
       expect(validateEnvironment({ ...REQUIRED })).toMatchObject({
-        GUARANTEE_FUND_FEE_SHARE_BPS: 2500,
+        GUARANTEE_FUND_FEE_SHARE_BPS: 5000,
         GUARANTEE_FUND_MIN_INSTALLMENTS_PER_CIRCLE: 2,
       });
       expect(() =>
@@ -327,9 +329,24 @@ describe('validateEnvironment', () => {
       ).toThrow(/GUARANTEE_FUND_MIN_INSTALLMENTS_PER_CIRCLE/);
     });
 
+    it('en production, un payout alto exige verificación biométrica (pending-scope §3.2, P4)', () => {
+      const HIGH = { ...PRODUCTION, JOIN_PAYOUT_MAX: '12000000' };
+      expect(() => validateEnvironment(HIGH)).toThrow(/JOIN_PAYOUT_MAX[\s\S]*verificaid/);
+      expect(
+        validateEnvironment({
+          ...HIGH,
+          KYC_PROVIDER: 'verificaid',
+          VERIFICAID_API_TOKEN: 't'.repeat(32),
+          VERIFICAID_WEBHOOK_TOKEN: 'w'.repeat(32),
+        }).JOIN_PAYOUT_MAX,
+      ).toBe(12_000_000);
+      // Fuera de production el tope no se restringe: los tests usan el círculo de 30.000 PEN.
+      expect(() => validateEnvironment({ ...REQUIRED, JOIN_PAYOUT_MAX: '12000000' })).not.toThrow();
+    });
+
     it('trae los valores propuestos de la regla de confianza y la retención (COPAYNI-60)', () => {
       expect(validateEnvironment({ ...REQUIRED })).toMatchObject({
-        TRUST_FASTEST_MIN_COMPLETED_CIRCLES: 1,
+        TRUST_FASTEST_MIN_COMPLETED_CIRCLES: 0,
         PAYOUT_RETENTION_INSTALLMENTS: 2,
       });
       expect(() =>

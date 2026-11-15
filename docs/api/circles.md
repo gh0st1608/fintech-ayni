@@ -258,7 +258,7 @@ Se comprueba en este orden, que es el orden en que la app resuelve cada caso:
 
 - `slots` marca cada turno con `allowed` y `notAllowedReason`; la unión rechaza un turno no permitido con `SLOT_NOT_ALLOWED` (422, `details.reason`).
 - **Ingreso declarado:** la app todavía no lo pide (R5), así que la elegibilidad provisional lo da por declarado.
-- **Retención:** en los turnos de la primera mitad (`position ≤ months / 2`) se retienen `PAYOUT_RETENTION_INSTALLMENTS` cuotas base del payout (2 por defecto, como mucho las cuotas que le quedan después de cobrar). `netPayout` ya la descuenta, y `retention` la muestra en `slots` y en la unión, antes de unirse.
+- **Retención:** en cada turno se retienen `PAYOUT_RETENTION_INSTALLMENTS` cuotas base del payout (2 por defecto), como mucho las que le quedan por pagar después de cobrar: `min(PAYOUT_RETENTION_INSTALLMENTS, months - position)`. El último turno no retiene nada. Antes se cortaba en la primera mitad, lo que dejaba al turno 6 de 10 con más exposición que al 5 (pending-scope §3.2, P1 y P5). `netPayout` ya la descuenta, y `retention` la muestra en `slots` y en la unión, antes de unirse.
 - **Cómo se aplica:** al cobrar, la retención pasa a la cuenta `retention_held` del miembro. Sus últimas cuotas quedan `retained`: no se cobran y las paga la retención (`retention_applied`). Ejemplo: payout de 30.000 en 10 meses, turno 3: recibe 24.000 y sus cuotas de los meses 9 y 10 quedan pagadas.
 - **Si deja de pagar después de cobrar,** su retención va al fondo (`retention_to_fund`) y se descuenta de su deuda; el fondo cubre el resto.
 - La deducción del pay-in desde el payout de COPAYNI-38 debe usar este mismo mecanismo.

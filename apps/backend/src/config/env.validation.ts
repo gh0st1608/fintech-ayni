@@ -30,6 +30,13 @@ export const DOCUMENT_STORAGES = ['simulated', 's3'] as const;
 /** Verificación de documentos (COPAYNI-42): simulada o revisión manual de operaciones. */
 export const KYC_PROVIDERS = ['simulated', 'manual', 'verificaid'] as const;
 
+/**
+ * Payout máximo, en unidades menores, que se admite sin verificación biométrica de identidad
+ * (P4 de pending-scope §3.2). Por encima, la exposición por impago supera lo que la revisión
+ * manual de documentos puede sostener y se exige `KYC_PROVIDER=verificaid`.
+ */
+export const PAYOUT_MAX_WITHOUT_BIOMETRIC_KYC = 600_000;
+
 /** Envío del OTP (pending-scope T6): ninguno o AWS (SES y End User Messaging SMS). */
 export const OTP_DELIVERIES = ['none', 'aws'] as const;
 
@@ -276,12 +283,12 @@ export class EnvironmentVariables {
 
   /**
    * Parte de las Admin Fees de quien cobra que va al fondo de garantía (COPAYNI-58, R16), en
-   * puntos básicos (R18, propuesto: 25 %).
+   * puntos básicos. 50 % desde P2 de pending-scope §3.2; rango de operación sugerido 3000–5000.
    */
   @IsInt()
   @Min(0)
   @Max(10000)
-  GUARANTEE_FUND_FEE_SHARE_BPS: number = 2500;
+  GUARANTEE_FUND_FEE_SHARE_BPS: number = 5000;
 
   /** Saldo mínimo del fondo en cuotas base por círculo en curso; debajo, alerta (R18, propuesto). */
   @IsInt()
@@ -289,15 +296,19 @@ export class EnvironmentVariables {
   @Max(12)
   GUARANTEE_FUND_MIN_INSTALLMENTS_PER_CIRCLE: number = 2;
 
-  /** Círculos completados sin expulsión que pide un turno Fastest Payout (COPAYNI-60, R18). */
+  /**
+   * Círculos completados sin expulsión que pide un turno Fastest Payout (COPAYNI-60, R18). 0 al
+   * lanzar (P10 de pending-scope §3.2): nadie tiene historial todavía y exigir 1 dejaría esos
+   * turnos vacíos. El riesgo lo compensa el tope bajo de `JOIN_PAYOUT_MAX`.
+   */
   @IsInt()
   @Min(0)
   @Max(12)
-  TRUST_FASTEST_MIN_COMPLETED_CIRCLES: number = 1;
+  TRUST_FASTEST_MIN_COMPLETED_CIRCLES: number = 0;
 
   /**
-   * Cuotas base retenidas del payout de los turnos de la primera mitad, que pagan sus últimas
-   * cuotas (COPAYNI-60, R18 propuesto). 0 desactiva la retención.
+   * Cuotas base retenidas del payout de cada turno, que pagan sus últimas cuotas (COPAYNI-60;
+   * proporcional desde P1/P5 de pending-scope §3.2). 0 desactiva la retención.
    */
   @IsInt()
   @Min(0)
@@ -872,6 +883,15 @@ export function validateEnvironment(config: Record<string, unknown>): Environmen
   if (env.NODE_ENV === 'production' && env.KYC_PROVIDER === 'simulated') {
     throw new Error(
       'Configuración inválida:\n- KYC_PROVIDER: simulated no se admite en production',
+    );
+  }
+  if (
+    env.NODE_ENV === 'production' &&
+    env.JOIN_PAYOUT_MAX > PAYOUT_MAX_WITHOUT_BIOMETRIC_KYC &&
+    env.KYC_PROVIDER !== 'verificaid'
+  ) {
+    throw new Error(
+      `Configuración inválida:\n- JOIN_PAYOUT_MAX: por encima de ${PAYOUT_MAX_WITHOUT_BIOMETRIC_KYC} exige KYC_PROVIDER=verificaid (pending-scope §3.2, P4)`,
     );
   }
   if (errors.length === 0) assertCurrencies(env);

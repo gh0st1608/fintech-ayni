@@ -270,7 +270,7 @@ describe('TypeOrmCircleCycleRepository', () => {
     await expect(debts.settle('no-es-uuid', id, recovery)).resolves.toBeNull();
   });
 
-  it('la retención paga las últimas cuotas de la primera mitad y cuenta la confianza (COPAYNI-60)', async () => {
+  it('la retención paga las últimas cuotas de cada turno y cuenta la confianza (COPAYNI-60)', async () => {
     const retaining = new SlotPricing(
       SlotPricingRules.create({ ...TEST_PRICING_RULES.props, retentionInstallments: 2 }),
     );
@@ -282,26 +282,28 @@ describe('TypeOrmCircleCycleRepository', () => {
       await runOn(`${month > 10 ? 2026 : 2027}-${String(month).padStart(2, '0')}-05`);
     }
 
-    // Turnos 1 a 3 (primera mitad): sus 2 últimas cuotas las paga la retención.
+    // Retención proporcional (§3.2, P1/P5): en 6 meses, los turnos 1 a 4 retienen sus 2 últimas
+    // cuotas, el 5 solo le queda una y el 6 no tiene ninguna posterior al cobro.
     const retained = await dataSource.query<{ position: number; period: string }[]>(
       `SELECT position, to_char(period, 'YYYY-MM') AS period FROM circle_installments
         WHERE circle_id = $1 AND status = 'retained' ORDER BY position, period`,
       [id],
     );
-    expect(retained).toEqual(
-      [1, 2, 3].flatMap((position) => [
+    expect(retained).toEqual([
+      ...[1, 2, 3, 4].flatMap((position) => [
         { position, period: '2027-03' },
         { position, period: '2027-04' },
       ]),
-    );
+      { position: 5, period: '2027-04' },
+    ]);
     const kinds = await dataSource.query<{ kind: string; total: number }[]>(
       `SELECT kind, count(*)::int AS total FROM ledger_transactions
         WHERE circle_id = $1 AND kind LIKE 'retention%' GROUP BY kind ORDER BY kind`,
       [id],
     );
     expect(kinds).toEqual([
-      { kind: 'retention_applied', total: 6 },
-      { kind: 'retention_held', total: 3 },
+      { kind: 'retention_applied', total: 9 },
+      { kind: 'retention_held', total: 5 },
     ]);
     const [held] = await dataSource.query<{ total: string }[]>(
       `SELECT COALESCE(sum(e.amount), 0)::text AS total FROM ledger_entries e

@@ -44,21 +44,24 @@ describe('GET /v1/circles/slots', () => {
       fee: { amount: 300_000, currency: 'PEN' },
       discount: { amount: 0, currency: 'PEN' },
       catchUp: { amount: 0, currency: 'PEN' },
-      // Primera mitad: se retienen 2 cuotas base (COPAYNI-60).
+      // Se retienen 2 cuotas base (COPAYNI-60).
       retention: { amount: 600_000, currency: 'PEN' },
       available: true,
       // Un usuario sin círculos completados no puede tomar Fastest Payout.
       allowed: false,
       notAllowedReason: 'trust_required',
     });
+    // La retención es proporcional a lo que queda por pagar, sin corte en la mitad (§3.2, P1/P5).
     expect(response.body.data.slots[5]).toMatchObject({
-      retention: { amount: 0, currency: 'PEN' },
+      retention: { amount: 600_000, currency: 'PEN' },
       allowed: true,
       notAllowedReason: null,
     });
     expect(response.body.data.slots[9]).toMatchObject({
       type: 'highest_return',
       discount: { amount: 150_000, currency: 'PEN' },
+      // El último turno no tiene cuotas posteriores al cobro: nada que retener.
+      retention: { amount: 0, currency: 'PEN' },
     });
   });
 

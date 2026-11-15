@@ -191,7 +191,7 @@ Story points relativos al backlog actual. **Confianza baja:** no hay diseño del
 | BO3 | Confirmar la matriz de roles de §5                                                               | PO / Legal  |
 | BO4 | Campos de "Popular Goals" y "Latest Offers" (Figma `55:8637`)                                    | UX          |
 | BO5 | ¿Las ofertas se segmentan por usuario?                                                           | PO          |
-| BO6 | ¿Qué acciones requieren doble aprobación y quién aprueba?                                        | PO / Legal  |
+| BO6 | **Decidido por el PO (14/11/2026):** solo los movimientos del **fondo de garantía** requieren doble aprobación, por el momento. Las demás acciones del backoffice no. | —           |
 | BO7 | Diseño UX del back-office (no existe en el Figma)                                                | UX          |
 | BO8 | Exposición de `/admin`: ALB interno con VPN o WAF en el ALB público                              | TL          |
 | BO9 | ~~Stack del front~~ **Decidido:** React, Vite y TanStack Query, sin librería de administración   | TL          |

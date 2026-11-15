@@ -47,7 +47,7 @@ El Figma está localizado para Marruecos/Egipto (MAD, árabe, Fawry). El backlog
 | --- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------- |
 | R1  | Fórmula de **fees de los primeros slots** y **descuentos de los últimos**. **Confirmado por el PO (cualitativo):** la cuota mensual varía según el fee o el descuento del turno. **Pendiente:** porcentajes y cómo bajan de un turno a otro. Implementado con parámetros y una fórmula lineal provisional (`SlotPricingRules`, README del backend)                                                                                                                                                                                                                                                                                                                                               | T3.1, H3.6        |
 | R2  | Cómo se **forman los círculos** (admin o automático), número de miembros. Implementado con una regla provisional configurable (`CIRCLE_ASSIGNMENT_STRATEGY`, [circles.md](api/circles.md)). **Decidido por el PO:** si no se llenan al llegar su mes de inicio, el fondo no cubre los turnos vacíos: se avisa que se reducirán el pozo y los integrantes y se pide a los miembros aprobar el inicio ([§3.1](#31-ciclo-del-círculo-y-mora-decisiones-del-po)). **Implementado con supuestos** (COPAYNI-62, [circles.md](api/circles.md#inicio-de-un-círculo-incompleto-copayni-62)). **Pendiente:** confirmar los supuestos y el diseño                                                           | T3.1, H3.1, H3.7  |
-| R3  | **Mora e impago.** **Decidido por el PO:** gracia, expulsión, bloqueo, devolución, reemplazo del turno, fondo de garantía y pausa; ver la [sección 3.1](#31-ciclo-del-círculo-y-mora-decisiones-del-po). **Pendiente:** aprobar los valores de R18 y los puntos marcados [?]                                                                                                                                                                                                                                                                                                                                                                                                                     | T3.1, D1, D3      |
+| R3  | **Mora e impago.** **Decidido por el PO:** gracia, expulsión, bloqueo, devolución, reemplazo del turno, fondo de garantía y pausa; ver la [sección 3.1](#31-ciclo-del-círculo-y-mora-decisiones-del-po). **Decidido (14/11/2026):** devolución de cuotas al cerrar el círculo (no al expulsar); plazo de 7 días para aprobar un inicio reducido (una salida abre nueva ronda); capital semilla de 30.000 PEN, **no bloqueante para el lanzamiento**. **Pendiente:** tope legal del cargo por mora (Legal, R18). Ver los huecos de pérdida en [§3.2](#32-huecos-de-pérdida-para-la-empresa-análisis-de-riesgo)                                                                                                                                                                                                                                                                                                                                                                                                                     | T3.1, D1, D3      |
 | R4  | ¿Las **Admin Fees** se suman a la cuota o se descuentan del payout? **Resuelto por el PO:** se reparten entre las cuotas hasta el mes de cobro (`adminFeeMode=added_to_installments`, el valor por defecto). **Pendiente:** el porcentaje (hoy 12 % provisional, `ADMIN_FEE_BPS`) y si "proporcionalmente" significa algo distinto de partes iguales                                                                                                                                                                                                                                                                                                                                             | T3.1, H3.5        |
 | R5  | Fórmula del **límite mensual de pay-in** según ingresos y documentos. **Confirmado por el PO:** el límite se calcula con el ingreso mensual. **Pendiente:** la fórmula y cuánto suben el límite los demás documentos. **Provisional:** con un comprobante de ingresos aprobado, el límite es el 30 % del ingreso (`PAYIN_LIMIT_INCOME_SHARE_BPS`); sin él, `JOIN_MONTHLY_PAYIN_LIMIT` (sin límite por defecto). Lo usan el perfil y la unión ([documents.md](api/documents.md))                                                                                                                                                                                                                  | H6.1, H6.5, H3.7  |
 | R6  | Fórmula del **cashback** del ahorro (el diseño muestra 20% y 5%) y nombres de los planes. **Implementado con supuestos** ([savings.md](api/savings.md)): 5 %, 10 % y 20 % según la duración (6, 12 y 24 meses); los planes duplicados "Silver" se renombraron Platinum y Diamond. **Pendiente:** confirmar con el PO                                                                                                                                                                                                                                                                                                                                                                             | H4.1, H4.2        |
@@ -62,10 +62,10 @@ El Figma está localizado para Marruecos/Egipto (MAD, árabe, Fawry). El backlog
 | R14 | **Biometría. Implementado con supuestos** (COPAYNI-22): estado de sesión `locked`; se pide al abrir la app y al volver de background tras 5 minutos; 3 fallos llevan al passcode o al OTP; el PIN del dispositivo no sirve de respaldo; cerrar sesión la desactiva. **Pendiente:** confirmar con el PO                                                                                                                                                                                                                                                                                                                                                                                           | COPAYNI-22        |
 | R16 | **Origen del seguro. Decidido:** fondo de garantía propio con un porcentaje de las Admin Fees; póliza externa más adelante si el volumen lo justifica. **Pendiente:** capital semilla y validación de Legal (L1). Ver la [sección 3.1](#31-ciclo-del-círculo-y-mora-decisiones-del-po)                                                                                                                                                                                                                                                                                                                                                                                                           | R3, D3, L1        |
 | R17 | **Turno del expulsado. Decidido:** lo puede tomar un miembro nuevo dentro del plazo del pago mensual; si nadie lo toma, se ajusta. **Implementado (COPAYNI-59, [circles.md](api/circles.md#reemplazo-del-turno-copayni-59)) con la propuesta técnica:** quien lo toma se pone al día con lo vencido hasta su mes de cobro, el fondo cubre los meses sin reemplazo y el pozo se reduce solo si el fondo no tiene saldo. **Supuesto:** la vacante se ofrece hasta el día anterior al vencimiento de cada mes. Ver la [sección 3.1](#31-ciclo-del-círculo-y-mora-decisiones-del-po)                                                                                                                 | R3, R2            |
-| R21 | **Detalles del fondo de garantía** (COPAYNI-58, [circles.md](api/circles.md#fondo-de-garantía-copayni-58)). **Decidido por el PO:** (1) el fondo **no** cubre turnos que nunca se llenaron: el círculo solo empieza completo o reducido con aprobación (R2); (2) el aporte de las Admin Fees entra cuando el miembro cobra; (3) la deuda recuperada entra entera al fondo; (4) la diferencia que el fondo le debe a un miembro por un pozo reducido no se paga automáticamente. **Propuesto:** cómo pagar esa diferencia y escenarios de capital semilla ([§3.1](#31-ciclo-del-círculo-y-mora-decisiones-del-po)). **Pendiente:** elegir el monto del capital semilla y validación de Legal (L1) | R16, R17, R18, L1 |
-| R20 | **Detalles del impago no decididos por el PO**, implementados con un criterio provisional (COPAYNI-57, [circles.md](api/circles.md#impago-copayni-57)): (1) la deuda de quien ya cobró incluye todas sus cuotas restantes, como el ejemplo de §3.1; (2) solo se expulsa por una cuota con un intento de cobro fallido; (3) "penalidad mínima del 5 %" se tomó como piso del parámetro; (4) la deuda y la devolución del mismo expulsado no se compensan entre sí. **Pendiente:** confirmar con el PO                                                                                                                                                                                             | R3, R18           |
-| R19 | **Día de vencimiento de la cuota mensual** y cuándo se paga el payout del mes. Implementado provisional: vence el día `CIRCLE_INSTALLMENT_DUE_DAY` (1 por defecto) y el payout se paga en cuanto todas las cuotas del mes están pagadas (COPAYNI-56)                                                                                                                                                                                                                                                                                                                                                                                                                                             | R3, D1            |
-| R18 | **Valores iniciales del esquema de mora y riesgo:** propuestos (cargo por mora, regla de confianza, retención, aporte al fondo, saldo mínimo, capital semilla). Implementados y parametrizables; la regla de confianza y la retención desde COPAYNI-60 ([circles.md](api/circles.md#regla-de-confianza-y-retención-copayni-60-valores-propuestos-de-r18)). **Supuesto:** el ingreso declarado de Lowest Fees se da por cumplido hasta que la app lo pida (R5). **Pendiente:** aprobación del PO y tope legal del cargo por mora. Ver la [sección 3.1](#31-ciclo-del-círculo-y-mora-decisiones-del-po)                                                                                            | R3                |
+| R21 | **Detalles del fondo de garantía** (COPAYNI-58, [circles.md](api/circles.md#fondo-de-garantía-copayni-58)). **Decidido por el PO:** (1) el fondo **no** cubre turnos que nunca se llenaron: el círculo solo empieza completo o reducido con aprobación (R2); (2) el aporte de las Admin Fees entra cuando el miembro cobra; (3) la deuda recuperada entra entera al fondo; (4) **Decidido (14/11/2026):** la diferencia que el fondo le debe a un miembro se paga automáticamente con el excedente sobre el saldo mínimo y, si pasan 30 días, la cooperativa la paga desde `operator` con doble aprobación (combinación A + C, [§3.1](#31-ciclo-del-círculo-y-mora-decisiones-del-po)). Capital semilla: **30.000 PEN**, no bloqueante para el lanzamiento. **Pendiente:** validación de Legal (L1) e interés compensatorio de la deuda del fondo | R16, R17, R18, L1 |
+| R20 | **Detalles del impago** (COPAYNI-57, [circles.md](api/circles.md#impago-copayni-57)). **Decidido por el PO (14/11/2026):** (1) la deuda incluye **todas las cuotas restantes** (vencidas y futuras); **pendiente:** diseño de la vista de desglose en el backoffice (vencidas vs. futuras, ver propuesta en §3.1); (2) se expulsa estrictamente por **una sola cuota** con un intento de cobro fallido; (3) penalidad mínima del **5 % como piso configurable** desde el backoffice; (4) deuda y devolución **no se compensan**: la devolución se **congela** mientras la deuda esté activa y se libera automáticamente al pagarla (opción X, §3.1)                                                                                                                                                                                             | R3, R18           |
+| R19 | **Día de vencimiento de la cuota mensual** y cuándo se paga el payout del mes. **Decidido por el PO (14/11/2026):** día 1 del mes (`CIRCLE_INSTALLMENT_DUE_DAY = 1`). El payout se paga en cuanto todas las cuotas del mes están pagadas (COPAYNI-56) | R3, D1            |
+| R18 | **Valores iniciales del esquema de mora y riesgo.** Regla de confianza y retención desde COPAYNI-60 ([circles.md](api/circles.md#regla-de-confianza-y-retención-copayni-60-valores-propuestos-de-r18)). **Supuesto:** el ingreso declarado de Lowest Fees se da por cumplido hasta que la app lo pida (R5). **Decidido por el PO (14/11/2026):** cargo por mora del **3 % de la cuota vencida**, único, sin interés diario; debe ser **parametrizable desde el backoffice**. **Pendiente:** tope legal del BCRP — Legal debe validar antes de fijarlo (L1). Ver la [sección 3.1](#31-ciclo-del-círculo-y-mora-decisiones-del-po) | R3                |
 
 ### 3.1 Ciclo del círculo y mora (decisiones del PO)
 
@@ -84,11 +84,11 @@ El Figma está localizado para Marruecos/Egipto (MAD, árabe, Fawry). El backlog
 | Turno del expulsado   | Lo puede tomar un **miembro nuevo**; si nadie lo toma, cubre el fondo de garantía (ver más abajo)               | Ventana de reemplazo                      |
 | Cobertura de su parte | **Fondo de garantía propio** (R16)                                                                              | Aporte al fondo                           |
 
-Propuesta para cuidar la caja **[?]**: devolver las cuotas del expulsado **al cerrar el círculo** y no al expulsarlo. Así el dinero sigue sirviendo al pozo mientras el círculo está en curso, y el balance del fondo de abajo cierra.
+**Decidido por el PO (14/11/2026):** devolver las cuotas del expulsado **al cerrar el círculo** y no al expulsarlo. Así el dinero sigue sirviendo al pozo mientras el círculo está en curso, y el balance del fondo de abajo cierra.
 
 **Origen del seguro (R16, decidido):** **fondo de garantía propio** para el MVP, alimentado con un porcentaje de las Admin Fees. Más adelante, si el volumen lo justifica, se evalúa una póliza externa (crédito o caución) o un esquema mixto. Legal debe validar que el fondo no sea un seguro regulado (L1).
 
-- **Capital semilla [?]:** el fondo empieza en cero y se llena con las cuotas. Los primeros meses necesitan un aporte inicial de la cooperativa; el monto lo decide el PO (sugerencia en R18).
+- **Capital semilla:** el fondo empieza en cero y se llena con las cuotas. **Decidido por el PO (14/11/2026):** capital semilla conservador de **30.000 PEN** (cubre 5 círculos activos simultáneos). **No es bloqueante para el lanzamiento:** la app puede arrancar sin él; el fondo sencillamente no cubre nada hasta que haya saldo.
 - La regla "mayoría de nuevos, 80 %" queda **sin efecto**: con el fondo propio, el fondo siempre cubre primero.
 
 **Turno del expulsado (R17, decidido el criterio, recomendación técnica en el detalle):**
@@ -154,14 +154,18 @@ Lectura del aporte al fondo: un moroso que cobró en el turno 3 de ese ejemplo d
 
 Implementado con esta recomendación en COPAYNI-61 ([circles.md](api/circles.md#pausa-copayni-61)). Supuestos **[?]**: una cuota que ya estaba en gracia al pausar se corre los días de la pausa (no cuentan para la gracia), y si la pausa dura varios meses el calendario se corre esa cantidad de meses. Los avisos a los miembros y a los demás `super_admin` quedan en el log hasta que existan las notificaciones del back-office.
 
-**Círculo incompleto al llegar su mes de inicio (decidido por el PO, R2):** el fondo de garantía **no** cubre turnos que nunca se llenaron. En su lugar se avisa a los miembros que se reducirán el pozo y los integrantes, y se les pide aprobar el inicio. Implementado en COPAYNI-62 con esta recomendación, salvo el plazo (7 días) y que una salida abre una ronda nueva de aprobación. **[?]**:
+**Círculo incompleto al llegar su mes de inicio (decidido por el PO, R2):** el fondo de garantía **no** cubre turnos que nunca se llenaron. En su lugar se avisa a los miembros que se reducirán el pozo y los integrantes, y se les pide aprobar el inicio. Implementado en COPAYNI-62 con esta recomendación. **Aceptado por el PO (14/11/2026):** plazo de 7 días y una salida abre nueva ronda de aprobación:
 
 1. **Propuesta de reducción.** El primer día del mes de inicio, el círculo pasa a "esperando aprobación". La propuesta tiene tantos turnos como miembros y la misma cuota base, así que el pozo baja a miembros × cuota base. Los turnos se reordenan en el mismo orden relativo y los precios se recalculan con las reglas de slots vigentes para la nueva duración.
 2. **Aviso y respuesta.** Cada miembro ve el pozo, la cuota y su turno nuevos (notificación y pantalla en la app), y acepta o se retira sin penalidad.
 3. **Plazo.** Por ejemplo, hasta el día de vencimiento del primer mes. Quien no responde se cuenta como retirado.
 4. **Inicio.** Empieza con quienes aceptaron, si son al menos `MIN_CIRCLE_MONTHS`; el calendario se corre si el plazo pasa el vencimiento. Si quedan menos, el círculo se cancela y nadie paga.
 
-**Lo que el fondo le debe a un miembro (propuesta, R21-4).** Se registra en `member_payable` cuando un pozo se redujo porque el fondo no tenía saldo. Recomendación **[?]**:
+**Lo que el fondo le debe a un miembro (R21-4). Decidido por el PO (14/11/2026): combinación A + C.** Se registra en `member_payable` cuando el fondo no tenía saldo suficiente para cubrir la cuota de un moroso y el miembro receptor cobró menos de lo prometido.
+
+**Ejemplo concreto:** círculo de 10 personas, payout 30.000 PEN, cuota mensual 3.000 PEN. En el mes 5 el fondo tiene 1.000 PEN y le falta cubrir 3.000 PEN de un moroso. El miembro del turno 5 recibe 28.000 PEN en lugar de 30.000 PEN. Se registra `member_payable = 2.000 PEN` a favor de ese miembro. Cuando el fondo recupere saldo, deberá pagarle esos 2.000 PEN.
+
+Opciones para resolver la deuda del fondo:
 
 | Opción                               | Cómo funciona                                                                                                                                                                                                                                                                                                                    | Ventajas y riesgos                                                                                                          |
 | ------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
@@ -170,6 +174,48 @@ Implementado con esta recomendación en COPAYNI-61 ([circles.md](api/circles.md#
 | C. Pago manual desde el back-office  | El admin general paga la deuda con aprobación 4-eyes, también desde la cuenta de la cooperativa                                                                                                                                                                                                                                  | Control total, pero depende de una persona; útil como respaldo de A                                                         |
 
 Puntos a decidir con A: si la cooperativa paga desde `operator` las deudas que el fondo no pague en un plazo (por ejemplo 30 días), si la deuda genera algún interés compensatorio (L1) y cómo se muestra en la app.
+
+**Vista de desglose de la deuda en el backoffice (R20-1). Pendiente diseño de pantalla.**
+
+La deuda total incluye cuotas vencidas y cuotas futuras. Para el equipo de cobranza es importante distinguirlas:
+
+- **Cuotas vencidas**: meses ya transcurridos que el moroso no pagó (las que gatillaron la expulsión). Son las urgentes para recuperar.
+- **Cuotas futuras**: meses que aún no llegaron pero que el moroso ya no pagará porque fue expulsado y ya cobró su payout.
+- **Cargo por mora**: 3 % del total de cuotas vencidas al momento de la expulsión.
+
+Propuesta de fila en la pantalla de mora del backoffice:
+```
+Juan Pérez — Expulsado del círculo #42 (turno 3 de 10)
+Deuda total:  23.160 PEN
+  Cuotas vencidas (meses 4-5):   6.000 PEN  ← urgente cobrar
+  Cuotas futuras (meses 6-10):  15.000 PEN
+  Cargo por mora:                2.160 PEN  (3 %)
+Devolución pendiente: 8.550 PEN  (3 cuotas × 3.000 × 95 %)
+Estado devolución: BLOQUEADA (pendiente de R21-4)
+```
+
+---
+
+**Decidido por el PO (14/11/2026): combinación A + C.** El sistema paga automáticamente (A) cuando hay excedente sobre el saldo mínimo del fondo. Si pasan **30 días** sin poder pagar la deuda completa, se genera una alerta en el backoffice y la cooperativa la paga desde `operator` con doble aprobación (C). **Pendiente:** si la deuda genera interés compensatorio (L1) y cómo se muestra en la app.
+
+---
+
+**Gestión separada de deuda y devolución en el mismo ex-miembro (R20-4). Decidido por el PO (14/11/2026): opción X.**
+
+Un ex-miembro expulsado puede tener al mismo tiempo:
+- Una **devolución pendiente** a su favor: las cuotas que pagó antes de ser expulsado × (1 − penalidad del 5 %)
+- Una **deuda activa**: cuotas restantes que no pagará + cargo por mora del 3 %
+
+Ambas se gestionan con sus propios estados (`pendiente`, `lista`, `procesada` para la devolución; `activa`, `en_cobranza`, `pagada` para la deuda). **No se descuenta una de la otra.** La pregunta clave es si la devolución se paga aunque la deuda esté activa:
+
+| Opción | Comportamiento | Ventaja | Riesgo |
+|--------|---------------|---------|--------|
+| **X. Retener devolución mientras haya deuda (elegida)** | La devolución queda en estado `bloqueada` hasta que el ex-miembro pague su deuda. Al pagar, la devolución pasa a `lista` y se procesa al cierre del círculo | No se le devuelve dinero a alguien que debe; incentiva el pago | El ex-miembro espera más para recibir lo suyo |
+| Y. Pagar devolución siempre al cierre del círculo | La devolución se procesa sin importar la deuda; ambas corren en paralelo | Más simple; cumple la promesa sin condiciones | Se puede pagar a alguien que nunca pagó su deuda |
+
+**Decidido por el PO (14/11/2026): opción X.** El bloqueo no es compensación (los montos no se tocan), solo congela el pago hasta que la deuda se liquide; al pagarla, la devolución se libera **automáticamente**. Se muestra en el backoffice con dos filas separadas: "Devolución bloqueada por deuda activa".
+
+**Límite de esta protección (ver §3.2):** la devolución solo existe para quien fue expulsado **antes** de cobrar. Quien ya cobró no tiene devolución que congelar, así que la opción X no protege en el escenario de mayor pérdida.
 
 **Escenarios de capital semilla (para las pruebas; el monto lo elige el PO, R18).** Regla propuesta: el saldo mínimo de los círculos previstos para los 3 primeros meses. Círculo de referencia: el de §3.1, 30.000 PEN en 10 meses, con una cuota base de 3.000 y un mínimo de 2 cuotas base, o sea **6.000 PEN por círculo**. Es lo que el fondo adelanta, como máximo, por una expulsión sin reemplazo antes de recuperar el pozo del turno vacante (meses 5 y 6 del ejemplo).
 
@@ -180,6 +226,102 @@ Puntos a decidir con A: si la cooperativa paga desde `operator` las deudas que e
 | Expansión   | 20                               | 120.000 PEN     | Lo mismo con 20 círculos                                                                   |
 
 Con un círculo más que los del escenario, el fondo no alcanza y algún pozo se reduce: el capital semilla debe crecer con los círculos hasta que el aporte de las Admin Fees acumule saldo. Los círculos con payouts mayores necesitan más, porque el mínimo crece con la cuota base.
+
+### 3.2 Huecos de pérdida para la empresa (análisis de riesgo)
+
+Análisis del 14/11/2026 sobre el modelo implementado (`SlotPricing`, `trust-policy.ts` y los parámetros de `.env.example`). **Círculo de referencia:** 10 meses, payout 30.000 PEN, cuota base 3.000 PEN, Admin Fee 12 %, aporte al fondo 25 % de las Admin Fees, retención 2 cuotas, `SLOT_FASTEST_SHARE_BPS=2500`.
+
+El 15/11/2026 se aplicaron las mitigaciones de P1, P2, P3, P4, P5 y P10. Esta sección conserva el diagnóstico original como línea base; el estado posterior está en «Mitigaciones aplicadas».
+
+#### Exposición por turno antes de las mitigaciones (línea base)
+
+Con los parámetros de entonces, `fastest = floor(10 × 0,25) = 2`: la **regla de confianza solo cubría los turnos 1 y 2**, y la retención se cortaba en `position <= floor(months/2) = 5`.
+
+| Turno | Tipo           | Exige historial | Retención | Debe tras cobrar | **Exposición neta** |
+| ----: | -------------- | --------------- | --------- | ---------------: | ------------------: |
+|     1 | fastest        | 1 círculo       | 6.000     |           27.000 |              21.000 |
+|     2 | fastest        | 1 círculo       | 6.000     |           24.000 |              18.000 |
+|     3 | lowest_fees    | **ninguno**     | 6.000     |           21.000 |          **15.000** |
+|     4 | lowest_fees    | **ninguno**     | 6.000     |           18.000 |          **12.000** |
+|     5 | lowest_fees    | **ninguno**     | 6.000     |           15.000 |               9.000 |
+|     6 | lowest_fees    | **ninguno**     | **0**     |           12.000 |          **12.000** |
+|     7 | lowest_fees    | **ninguno**     | **0**     |            9.000 |               9.000 |
+|     8 | lowest_fees    | ninguno         | 0         |            6.000 |               6.000 |
+|     9 | highest_return | ninguno         | 0         |            3.000 |               3.000 |
+|    10 | highest_return | ninguno         | 0         |                0 |                   0 |
+
+**Exposición total del círculo: 105.000 PEN. Aporte del círculo al fondo: 9.000 PEN (8,6 %).**
+
+#### Huecos ordenados por severidad
+
+| #   | Hueco                                                                                                                                                                                                                                                                                                                            | Severidad   |
+| --- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------- |
+| P1  | ✅ **Resuelto (15/11).** **La regla de confianza solo protege 2 de 10 turnos.** El turno 3 expone 15.000 PEN y solo exige identidad verificada e ingreso declarado: ningún historial de pago. Es el turno más rentable para un defaulter y el menos protegido en relación con su riesgo                                                                   | **Crítica** |
+| P2  | ✅ **Resuelto (15/11).** **El aporte al fondo cubre 8,6 % de la exposición.** 9.000 PEN por círculo frente a 105.000 de exposición teórica. Un solo defaulter del turno 3 (15.000) consume el aporte de 1,7 círculos. **Punto de quiebre ≈ 5 % de mora en turnos 1–7**; la mora de microfinanzas en Perú va de 5 % a 15 %                                | **Crítica** |
+| P3  | **Sin pagaré ejecutable al lanzamiento.** Toda la capa de recuperación poscobro descansa en el pagaré (D3 sin diseño) y en la firma electrónica (T9 sin proveedor). El reporte a centrales de riesgo depende de L1, sin resolver. En la práctica, la única garantía al lanzar es la retención de 6.000 PEN                      | **Crítica** |
+| P4  | ✅ **Acotado (15/11).** **KYC manual frente a 15.000–21.000 PEN de incentivo al fraude.** `KYC_PROVIDER=manual` al lanzar y VerificaID (T4) sin token ni sandbox. El botín de un fraude de identidad exitoso equivale a 13–18 sueldos mínimos: justifica de sobra el costo de falsificar documentos                                                      | **Crítica** |
+| P5  | ✅ **Resuelto (15/11).** **Discontinuidad de la retención en el turno 6.** La exposición no es monótona: el turno 6 (12.000) arriesga **más** que el turno 5 (9.000), porque la retención se corta en `floor(months/2)`. El modelo de riesgo tiene un escalón que un usuario puede identificar y aprovechar                                               | **Alta**    |
+| P6  | **La devolución congelada no protege donde está la pérdida.** La opción X solo muerde a quien fue expulsado **antes** de cobrar, y esa persona debe poco (1 cuota + 3 %). Quien ya cobró —el que deja 12.000–21.000 PEN— no tiene devolución que congelar. La única garantía existe justo donde no hace falta                    | **Alta**    |
+| P7  | **`member_payable` sin tope convierte un faltante del fondo en pérdida corporativa.** Con la opción C, a los 30 días la cooperativa paga desde `operator`. No hay límite de cuántas deudas pueden acumularse ni tope del monto total comprometido                                                                                | **Alta**    |
+| P8  | **Nada impide abrir círculos cuando el fondo no alcanza.** `GUARANTEE_FUND_MIN_INSTALLMENTS_PER_CIRCLE=2` es un umbral de **alerta**, no un bloqueo. Crecer más rápido que el fondo produce pozos reducidos → `member_payable` → P7                                                                                             | **Alta**    |
+| P9  | ✅ **Resuelto (15/11) por la retención proporcional.** **El reemplazo de vacante en la segunda mitad es un préstamo a un mes sin garantía.** Quien toma el turno 7 en el mes 6 paga ~21.000 de puesta al día, cobra 30.000 y queda debiendo 9.000 **con retención cero**. Perfil ideal para un oportunista: entrar, ponerse al día, cobrar y desaparecer                                | **Alta**    |
+| P10 | ✅ **Resuelto (15/11).** **Al lanzar, ningún usuario puede tomar los turnos 1 y 2.** `TRUST_FASTEST_MIN_COMPLETED_CIRCLES=1` y nadie tiene círculos completados: **todos** los círculos arrancarán incompletos y pasarán a `approving` (COPAYNI-62). No es pérdida crediticia, es pérdida de adquisición: círculos que se reducen o cancelan en cadena   | **Alta**    |
+| P11 | **El cargo por mora no disuade el default estratégico.** 3 % de una cuota = 90 PEN frente a quedarse con 12.000–21.000. El bloqueo solo impide unirse a otro círculo: para quien entró una sola vez a cobrar, no es un costo                                                                                                     | Media       |
+| P12 | **Expulsión por una sola cuota + gracia en días corridos = expulsión indebida.** Vencimiento el día 1; si cae en fin de semana o feriado y la liquidación de Mercado Pago se retrasa, se expulsa a alguien que **sí** pagó. Genera obligación de devolución, reclamo legal y daño reputacional                                   | Media       |
+| P13 | **Posición cambiaria abierta en círculos USD.** Tipo de cambio fijo actualizado a mano, sin cobertura (M2). El capital semilla está en PEN: el subfondo en USD arranca en cero y cubrir una cuota en USD cuesta más PEN de lo provisionado si el tipo de cambio se mueve                                                        | Media       |
+| P14 | **Las Admin Fees del 12 % son provisionales y el fondo depende de ellas.** Bajarlas a 8 % por competencia recorta 33 % del único ingreso recurrente del fondo sin reducir el riesgo                                                                                                                                              | Media       |
+| P15 | **El costo de cobranza no está modelado.** R21-3 dice que la deuda recuperada entra **entera** al fondo, pero una agencia en Perú cobra 20–40 % de lo recuperado. Falta definir quién absorbe esa comisión                                                                                                                       | Baja        |
+
+#### Mitigaciones aplicadas (aprobadas por el PO el 15/11/2026)
+
+| Hueco        | Qué se hizo                                                                                                                                                                                                                          |
+| ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **P1, P5**   | **Retención proporcional a la deuda restante en todos los turnos:** `min(PAYOUT_RETENTION_INSTALLMENTS, months - position)`, sin el corte en la primera mitad. Desaparece el escalón del turno 6 y los últimos turnos quedan cubiertos |
+| **P3**       | **`JOIN_PAYOUT_MAX=600000`** (6.000 PEN) como tope de lanzamiento. Exposición máxima por impago: 4.200 PEN, que el capital semilla de 30.000 absorbe ~7 veces                                                                         |
+| **P2**       | **`GUARANTEE_FUND_FEE_SHARE_BPS=5000`** (50 %, antes 25 %). Parametrizable en todo el rango; rango de operación sugerido 3000–5000 bps                                                                                                |
+| **P10**      | **`TRUST_FASTEST_MIN_COMPLETED_CIRCLES=0`** al lanzar, compensado con el tope bajo de payout. Subir a 1 cuando existan círculos terminados                                                                                           |
+| **P4**       | **El tope de payout está acoplado al KYC:** en `production`, `JOIN_PAYOUT_MAX` por encima de 600.000 exige `KYC_PROVIDER=verificaid`; lo rechaza el arranque (`env.validation.ts`). Ver la propuesta de niveles más abajo             |
+
+Exposición resultante con las mitigaciones, en el círculo de 6.000 PEN en 10 meses (cuota base 600):
+
+| Turno | Debe tras cobrar | Retención | Exposición neta |
+| ----: | ---------------: | --------: | --------------: |
+|     1 |            5.400 |     1.200 |       **4.200** |
+|     2 |            4.800 |     1.200 |           3.600 |
+|     3 |            4.200 |     1.200 |           3.000 |
+|     5 |            3.000 |     1.200 |           1.800 |
+|     6 |            2.400 |     1.200 |           1.200 |
+|     8 |            1.200 |     1.200 |           **0** |
+|  9–10 |        600 / 0 |   600 / 0 |           **0** |
+
+**Exposición total del círculo: 16.800 PEN (antes 105.000). Aporte al fondo: 3.600 PEN por círculo (21,4 %, antes 8,6 %).** Los turnos 8 a 10 quedan completamente garantizados por su propia retención.
+
+#### Mitigaciones todavía pendientes
+
+| Hueco   | Mitigación propuesta                                                                                                                                                     | Costo |
+| ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----- |
+| P6      | Estructural: la devolución solo existe antes del cobro, así que la opción X no cubre al que ya cobró. Se contiene manteniendo bajo el tope de payout mientras falte P3    | —     |
+| P7, P8  | **Bloquear la apertura de círculos** cuando el fondo no cubra el mínimo de los activos más el nuevo; y fijar un tope mensual de `member_payable` que la cooperativa asume | Medio |
+| P11     | Cargo por mora proporcional a la **deuda total**, no a una cuota (sujeto al tope legal del BCRP, L1)                                                                     | Bajo  |
+| P12     | Gracia en **días hábiles** y no expulsar sin confirmar con la pasarela que no hay un pago en tránsito                                                                    | Medio |
+| P13     | Mantener USD deshabilitado hasta tener subfondo propio en USD con su capital semilla                                                                                     | Nulo  |
+| P14     | Si se bajan las Admin Fees, recalcular `GUARANTEE_FUND_FEE_SHARE_BPS` para mantener el aporte absoluto al fondo                                                          | Bajo  |
+| P15     | Definir quién absorbe la comisión de cobranza antes de contratar una agencia                                                                                             | —     |
+
+#### Niveles de verificación de identidad por exposición (propuesta para P4)
+
+La revisión **manual** de documentos es el control más **débil** (una persona mirando una foto subida); VerificaID es el más fuerte, porque valida la autenticidad del documento y añade biometría facial con prueba de vida. El criterio no es "a más monto, revisión manual", sino al contrario:
+
+| Exposición del turno | Verificación exigida                                                           | Estado                                 |
+| -------------------- | ------------------------------------------------------------------------------ | -------------------------------------- |
+| 0 (turnos finales)   | Identidad verificada, como hoy                                                 | Ya implementado                        |
+| Hasta ~4.200 PEN     | Revisión manual de documentos + comprobante de ingresos                        | **Es la configuración de lanzamiento** |
+| Por encima de eso    | VerificaID: documental (Consulta) + biometría y prueba de vida (CheckMatch)     | Exige T4 activo                        |
+| Montos altos futuros | VerificaID **y además** revisión manual de un operador (doble control, 4-eyes) | Por definir con el PO                  |
+
+Mientras VerificaID no esté activo (le faltan el token y el sandbox, T4), el control efectivo es el **tope de payout**: con 6.000 PEN ninguna exposición supera los 4.200 PEN y la revisión manual es proporcionada. `env.validation.ts` impide subir el tope en producción sin `KYC_PROVIDER=verificaid`, así que el acoplamiento es estructural y no un acuerdo tácito.
+
+**Lectura de conjunto:** el modelo era sólido para las expulsiones **antes** del cobro y frágil para las **posteriores**, que es donde se concentra el dinero. Con P1, P2, P3, P5 y P10 aplicados, la exposición máxima por impago baja de 21.000 a 4.200 PEN y la cobertura del fondo sube de 8,6 % a 21,4 %. Lo que queda abierto (P7, P8 y P12) es trabajo de producto, no de parámetros.
 
 ## 4. Decisiones técnicas y de proveedores
 
