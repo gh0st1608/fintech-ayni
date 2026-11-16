@@ -8,12 +8,14 @@ import {
   type NotificationsFilter,
   type NotificationsPort,
 } from '../application/notifications.ports';
+import { type PendingPush } from '../application/push.ports';
 import {
   type Notification,
   type NotificationCategory,
   type NotificationData,
   type NotificationType,
 } from '../domain/notification';
+import { pushLanguageOf } from '../domain/push-message';
 
 /**
  * Cada fuente es un `SELECT` de (user_id, type, category, data, dedupe_key, occurred_at) sobre los
@@ -108,6 +110,17 @@ const SOURCES: readonly string[] = [
       AND ${ME('m.user_id')}`,
 ];
 
+/** Fila pendiente de envio al celular (COPAYNI-85), con el idioma del perfil. */
+interface PendingPushRow {
+  id: string;
+  user_id: string;
+  type: NotificationType;
+  category: NotificationCategory;
+  data: NotificationData;
+  created_at: Date;
+  preferred_language: string | null;
+}
+
 interface NotificationRow {
   id: string;
   type: NotificationType;
@@ -201,6 +214,46 @@ export class SqlNotificationsRepository implements NotificationsPort {
       `UPDATE notifications SET read_at = $2
         WHERE user_id = $1 AND read_at IS NULL AND ($3::uuid[] IS NULL OR id = ANY($3::uuid[]))`,
       [userId, at, ids],
+    );
+    return updated;
+  }
+
+  async pendingPush(props: { limit: number; maxAttempts: number }): Promise<PendingPush[]> {
+    const rows = await this.dataSource.query<PendingPushRow[]>(
+      `SELECT n.id, n.user_id, n.type, n.category, n.data, n.created_at, u.preferred_language
+         FROM notifications n
+         JOIN users u ON u.id = n.user_id
+        WHERE n.pushed_at IS NULL AND n.push_attempts < $2::int AND u.blocked_at IS NULL
+        ORDER BY n.created_at, n.id
+        LIMIT $1`,
+      [props.limit, props.maxAttempts],
+    );
+    return rows.map((row) => ({
+      notificationId: row.id,
+      userId: row.user_id,
+      type: row.type,
+      category: row.category,
+      data: row.data,
+      createdAt: new Date(row.created_at),
+      language: pushLanguageOf(row.preferred_language),
+    }));
+  }
+
+  async markPushed(ids: readonly string[], at: Date): Promise<number> {
+    if (ids.length === 0) return 0;
+    const [, updated] = await this.dataSource.query<[unknown[], number]>(
+      'UPDATE notifications SET pushed_at = $2 WHERE id = ANY($1::uuid[]) AND pushed_at IS NULL',
+      [ids, at],
+    );
+    return updated;
+  }
+
+  async markPushAttempt(ids: readonly string[]): Promise<number> {
+    if (ids.length === 0) return 0;
+    const [, updated] = await this.dataSource.query<[unknown[], number]>(
+      `UPDATE notifications SET push_attempts = push_attempts + 1
+        WHERE id = ANY($1::uuid[]) AND pushed_at IS NULL`,
+      [ids],
     );
     return updated;
   }

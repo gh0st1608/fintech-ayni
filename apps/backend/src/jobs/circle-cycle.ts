@@ -21,6 +21,7 @@ import { AdvanceCircleCyclesUseCase } from '../modules/circles/application/use-c
 import { CheckGuaranteeFundUseCase } from '../modules/circles/application/use-cases/check-guarantee-fund.use-case';
 import { ReleaseUnsignedMembershipsUseCase } from '../modules/circles/application/use-cases/release-unsigned-memberships.use-case';
 import { SyncNotificationsUseCase } from '../modules/notifications/application/notifications.use-cases';
+import { SendPendingPushUseCase } from '../modules/notifications/application/push.use-cases';
 import { CollectSavingContributionsUseCase } from '../modules/savings/application/subscription.use-cases';
 import { createLogger } from '../shared/infrastructure/observability/logger';
 import { PinoNestLogger } from '../shared/infrastructure/observability/pino-nest-logger';
@@ -66,6 +67,9 @@ async function run(): Promise<boolean> {
     // Recordatorios de vencimiento y avisos del día (COPAYNI-84). Un fallo aquí no frena el ciclo.
     try {
       await app.get(SyncNotificationsUseCase).execute();
+      // El aviso al celular va después de generarlos (COPAYNI-85): así los recordatorios salen
+      // aunque nadie abra la app. Lo que no se pueda enviar queda pendiente para mañana.
+      await app.get(SendPendingPushUseCase).execute();
     } catch (error) {
       Logger.error(
         { event: 'notifications.sync_failed', reason: error instanceof Error ? error.message : '' },

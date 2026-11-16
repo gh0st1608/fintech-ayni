@@ -18,7 +18,16 @@ import {
   ListNotificationsUseCase,
   MarkNotificationsReadUseCase,
 } from '@/application/notifications/notificationUseCases';
+import {
+  GetNotificationPreferencesUseCase,
+  GetPushPermissionUseCase,
+  ObservePushTapsUseCase,
+  RegisterPushDeviceUseCase,
+  SaveNotificationPreferencesUseCase,
+  UnregisterPushDeviceUseCase,
+} from '@/application/notifications/pushUseCases';
 import type { NotificationRepositoryPort } from '@/domain/notifications/NotificationRepositoryPort';
+import type { PushNotifierPort, PushRepositoryPort } from '@/domain/notifications/PushPorts';
 import { GetHelpUseCase } from '@/application/help/helpUseCases';
 import type { HelpRepositoryPort } from '@/domain/help/HelpRepositoryPort';
 import type { AppContainer } from '@/application/AppContainer';
@@ -190,6 +199,12 @@ import { HelpApiRepository } from '@/infrastructure/help/HelpApiRepository';
 import { InMemoryHelpRepository } from '@/infrastructure/help/InMemoryHelpRepository';
 import { InMemoryNotificationRepository } from '@/infrastructure/notifications/InMemoryNotificationRepository';
 import { NotificationApiRepository } from '@/infrastructure/notifications/NotificationApiRepository';
+import { ExpoPushNotifier } from '@/infrastructure/notifications/ExpoPushNotifier';
+import {
+  FakePushNotifier,
+  InMemoryPushRepository,
+} from '@/infrastructure/notifications/InMemoryPushRepository';
+import { PushApiRepository } from '@/infrastructure/notifications/PushApiRepository';
 import { InMemoryPayoutMethodRepository } from '@/infrastructure/payouts/InMemoryPayoutMethodRepository';
 import { PayoutMethodApiRepository } from '@/infrastructure/payouts/PayoutMethodApiRepository';
 import { InMemoryUserProfileRepository } from '@/infrastructure/profile/InMemoryUserProfileRepository';
@@ -227,6 +242,10 @@ export interface ContainerAdapters {
   userProfile: UserProfileRepositoryPort;
   payoutMethods: PayoutMethodRepositoryPort;
   notifications: NotificationRepositoryPort;
+  /** Dispositivos y preferencias de aviso (COPAYNI-85). */
+  push: PushRepositoryPort;
+  /** El celular: permisos y token del proveedor de push. */
+  pushNotifier: PushNotifierPort;
   help: HelpRepositoryPort;
   payments: PaymentRepositoryPort;
   cards: CardRepositoryPort;
@@ -299,6 +318,11 @@ export function createContainer(
       env.notificationsApi === 'fake'
         ? new InMemoryNotificationRepository(env.defaultCurrency)
         : new NotificationApiRepository(http),
+    // El push es parte de las notificaciones, asi que sigue su bandera.
+    push:
+      env.notificationsApi === 'fake' ? new InMemoryPushRepository() : new PushApiRepository(http),
+    // El doble evita pedir permisos del sistema operativo en el modo fake y en las pruebas.
+    pushNotifier: env.notificationsApi === 'fake' ? new FakePushNotifier() : new ExpoPushNotifier(),
     payoutMethods:
       env.payoutsApi === 'fake'
         ? new InMemoryPayoutMethodRepository(env.defaultCurrency)
@@ -488,6 +512,14 @@ export function createContainer(
       list: new ListNotificationsUseCase(adapters.notifications),
       countUnread: new CountUnreadNotificationsUseCase(adapters.notifications),
       markRead: new MarkNotificationsReadUseCase(adapters.notifications),
+    },
+    push: {
+      register: new RegisterPushDeviceUseCase(adapters.pushNotifier, adapters.push),
+      unregister: new UnregisterPushDeviceUseCase(adapters.pushNotifier, adapters.push),
+      permission: new GetPushPermissionUseCase(adapters.pushNotifier),
+      taps: new ObservePushTapsUseCase(adapters.pushNotifier),
+      preferences: new GetNotificationPreferencesUseCase(adapters.push),
+      savePreferences: new SaveNotificationPreferencesUseCase(adapters.push),
     },
     payouts: {
       listPayoutMethods: new ListPayoutMethodsUseCase(adapters.payoutMethods),

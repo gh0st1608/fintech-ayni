@@ -1,7 +1,9 @@
-import { Stack } from 'expo-router';
+import { router, Stack } from 'expo-router';
+import { useCallback } from 'react';
 
 import { useRetryPendingLanguageSync } from '@/presentation/i18n/useLanguage';
 import { JoinFlowProvider } from '@/presentation/join/JoinFlowProvider';
+import { usePushRegistration } from '@/presentation/notifications/usePushRegistration';
 import { useClaimPendingReferral } from '@/presentation/referrals/useReferrals';
 
 import {
@@ -26,6 +28,8 @@ export default function PrivateLayout() {
   useRetryPendingLanguageSync();
   // Igual con el código de un enlace de invitación abierto antes de iniciar sesión.
   useClaimPendingReferral();
+  // Registra el celular para los avisos y, al tocar uno, abre la bandeja (COPAYNI-85).
+  usePushRegistration(useCallback(() => router.navigate('/notifications'), []));
 
   // El borrador de unión vive mientras dure la sesión privada; cada flujo lo reinicia al empezar.
   return (
@@ -41,7 +45,8 @@ export default function PrivateLayout() {
         <Stack.Screen name="join/saving-program" options={joinOptions.savingProgram} />
         <Stack.Screen name="join/saving-confirm" options={joinOptions.savingConfirm} />
         <Stack.Screen name="circles/[circleId]" options={circleOptions.detail} />
-        <Stack.Screen name="notifications" options={notificationOptions} />
+        <Stack.Screen name="notifications/index" options={notificationOptions.inbox} />
+        <Stack.Screen name="notifications/settings" options={notificationOptions.settings} />
         <Stack.Screen name="payment/history" options={paymentOptions.history} />
         <Stack.Screen
           name="payment/transaction/[transactionId]"

@@ -23,6 +23,8 @@ interface ProfileScreenProps {
   onOpenPasscode?: () => void;
   onOpenDocuments?: () => void;
   onOpenReferral?: () => void;
+  /** Ajustes de los avisos en el celular (COPAYNI-85); sin valor, no se ofrece. */
+  onOpenNotificationSettings?: () => void;
   /** Abre el catálogo del design system; solo se muestra en el ambiente dev. */
   onOpenCatalog?: () => void;
 }
@@ -39,6 +41,7 @@ export function ProfileScreen({
   onOpenPasscode,
   onOpenDocuments,
   onOpenReferral,
+  onOpenNotificationSettings,
   onOpenCatalog,
 }: ProfileScreenProps) {
   const { t } = useTranslation();
@@ -91,6 +94,14 @@ export function ProfileScreen({
         </Section>
         {/* Support (Get Help) del Figma no tiene historia todavía. */}
         <Section title={t('profile.sections.settings')}>
+          {onOpenNotificationSettings && (
+            <ListItem
+              title={t('notifications.settings.item')}
+              icon="notifications-outline"
+              onPress={onOpenNotificationSettings}
+              testID="profile-notification-settings"
+            />
+          )}
           <ListItem
             title={t('profile.language.item')}
             description={currentLanguage}

@@ -35,7 +35,13 @@ export function useCircleScreenOptions() {
 /** La bandeja de notificaciones (COPAYNI-84), apilada sobre las pestañas. */
 export function useNotificationScreenOptions() {
   const { t } = useTranslation();
-  return { title: t('notifications.title'), headerBackButtonDisplayMode: 'minimal' } as const;
+  return {
+    inbox: { title: t('notifications.title'), headerBackButtonDisplayMode: 'minimal' },
+    settings: {
+      title: t('notifications.settings.title'),
+      headerBackButtonDisplayMode: 'minimal',
+    },
+  } as const;
 }
 
 /** Pantallas de la sección Payment apiladas sobre las pestañas. */

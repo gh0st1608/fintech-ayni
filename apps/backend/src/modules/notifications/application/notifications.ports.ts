@@ -1,4 +1,5 @@
 import { type Notification, type NotificationCategory } from '../domain/notification';
+import { type PendingPush } from './push.ports';
 
 export const NOTIFICATIONS = Symbol('NOTIFICATIONS');
 export const NOTIFICATION_SETTINGS = Symbol('NOTIFICATION_SETTINGS');
@@ -30,4 +31,13 @@ export interface NotificationsPort {
   unreadCount(userId: string): Promise<number>;
   /** Marca como leídas las indicadas (o todas, sin ids). Solo toca las de la persona. */
   markRead(userId: string, ids: readonly string[] | null, at: Date): Promise<number>;
+  /**
+   * Notificaciones que todavía no se enviaron al celular (COPAYNI-85), de la más antigua, con el
+   * idioma del perfil para escribir el aviso. No devuelve las que agotaron sus intentos.
+   */
+  pendingPush(props: { limit: number; maxAttempts: number }): Promise<PendingPush[]>;
+  /** Marca enviadas las indicadas: enviar es de una sola vez, aunque la tarea se repita. */
+  markPushed(ids: readonly string[], at: Date): Promise<number>;
+  /** Suma un intento fallido; al llegar a `maxAttempts` la notificación deja de intentarse. */
+  markPushAttempt(ids: readonly string[]): Promise<number>;
 }

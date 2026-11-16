@@ -22,7 +22,7 @@ const SessionContext = createContext<SessionContextValue | null>(null);
 
 /** Expone el estado de sesión a la UI; las reglas viven en los casos de uso de auth. */
 export function SessionProvider({ children }: { children: React.ReactNode }) {
-  const { auth } = useContainer();
+  const { auth, push } = useContainer();
   const queryClient = useQueryClient();
   const [status, setStatus] = useState<SessionStatus>('checking');
 
@@ -71,10 +71,13 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   );
 
   const signOut = useCallback(async () => {
+    // Este celular deja de recibir los avisos de esta persona (COPAYNI-85). Nunca frena el cierre
+    // de sesión: el caso de uso se traga sus propios fallos.
+    await push.unregister.execute();
     const next = await auth.signOut.execute();
     queryClient.clear();
     setStatus(next);
-  }, [auth.signOut, queryClient]);
+  }, [auth.signOut, push.unregister, queryClient]);
 
   const value = useMemo(
     () => ({ status, completeSignIn, unlock, signOut }),

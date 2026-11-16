@@ -9,6 +9,7 @@ export default function ProfileRoute() {
       onOpenPasscode={() => router.push('/profile/passcode')}
       onOpenDocuments={() => router.push('/profile/documents')}
       onOpenReferral={() => router.push('/profile/referral')}
+      onOpenNotificationSettings={() => router.push('/notifications/settings')}
       onOpenCatalog={() => router.push('/catalog')}
     />
   );

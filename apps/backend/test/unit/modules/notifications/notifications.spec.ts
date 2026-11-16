@@ -26,6 +26,19 @@ function setup() {
       ReturnType<NotificationsPort['markRead']>,
       Parameters<NotificationsPort['markRead']>
     >(() => Promise.resolve(1)),
+    // El envío al celular (COPAYNI-85) tiene sus propias pruebas en push.spec.ts.
+    pendingPush: jest.fn<
+      ReturnType<NotificationsPort['pendingPush']>,
+      Parameters<NotificationsPort['pendingPush']>
+    >(() => Promise.resolve([])),
+    markPushed: jest.fn<
+      ReturnType<NotificationsPort['markPushed']>,
+      Parameters<NotificationsPort['markPushed']>
+    >(() => Promise.resolve(0)),
+    markPushAttempt: jest.fn<
+      ReturnType<NotificationsPort['markPushAttempt']>,
+      Parameters<NotificationsPort['markPushAttempt']>
+    >(() => Promise.resolve(0)),
   } satisfies NotificationsPort;
   const clock = new TestClock(NOW);
   const sync = new SyncNotificationsUseCase(

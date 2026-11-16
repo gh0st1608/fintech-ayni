@@ -954,6 +954,33 @@
         "title": "Nuevo miembro en tu junta",
         "body": "Se tomó un turno más."
       }
+    },
+    "settings": {
+      "item": "Avisos en el celular",
+      "title": "Avisos",
+      "intro": "Elige qué te avisamos en el celular. La bandeja de notificaciones sigue mostrando todo.",
+      "pushEnabled": "Recibir avisos",
+      "pushEnabledDescription": "Al apagarlo no te llega ningún aviso al celular.",
+      "categoriesTitle": "Qué te avisamos",
+      "categories": {
+        "payments": {
+          "label": "Pagos y cobros",
+          "description": "Cuotas por vencer, pagos recibidos y tu turno de cobro."
+        },
+        "circles": {
+          "label": "Tus juntas",
+          "description": "Cuando tu junta empieza, se pausa o suma un miembro."
+        },
+        "account": {
+          "label": "Tu cuenta",
+          "description": "Documentos aprobados o rechazados y tu verificación de identidad."
+        }
+      },
+      "permissionAsk": "Para avisarte en el celular necesitamos tu permiso.",
+      "enable": "Activar los avisos",
+      "permissionDenied": "Tu teléfono tiene los avisos de Ayni bloqueados. Actívalos en los ajustes del teléfono para volver a recibirlos.",
+      "openSystemSettings": "Abrir los ajustes del teléfono",
+      "inboxNote": "Apagar un aviso no esconde nada: todo sigue en tu bandeja de notificaciones."
     }
   },
   "help": {

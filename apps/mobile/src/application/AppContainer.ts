@@ -66,6 +66,14 @@ import type {
   MarkNotificationsReadUseCase,
 } from '@/application/notifications/notificationUseCases';
 import type {
+  GetNotificationPreferencesUseCase,
+  GetPushPermissionUseCase,
+  ObservePushTapsUseCase,
+  RegisterPushDeviceUseCase,
+  SaveNotificationPreferencesUseCase,
+  UnregisterPushDeviceUseCase,
+} from '@/application/notifications/pushUseCases';
+import type {
   GetPayoutAccountUseCase,
   ListPayoutMethodsUseCase,
   SelectPayoutMethodUseCase,
@@ -214,6 +222,16 @@ export interface AppContainer {
     list: ListNotificationsUseCase;
     countUnread: CountUnreadNotificationsUseCase;
     markRead: MarkNotificationsReadUseCase;
+  };
+  /** Aviso en el celular: dispositivo y preferencias (COPAYNI-85). */
+  push: {
+    register: RegisterPushDeviceUseCase;
+    unregister: UnregisterPushDeviceUseCase;
+    permission: GetPushPermissionUseCase;
+    /** Toque en un aviso: la ruta decide a dónde lleva. */
+    taps: ObservePushTapsUseCase;
+    preferences: GetNotificationPreferencesUseCase;
+    savePreferences: SaveNotificationPreferencesUseCase;
   };
   payouts: {
     listPayoutMethods: ListPayoutMethodsUseCase;

@@ -68,6 +68,63 @@ Las notificaciones **se derivan de los hechos ya guardados**, sin tocar cada cas
 | `VALIDATION_ERROR` | 400  | `category`, `limit`, `cursor` o `ids` inválidos |
 | `UNAUTHORIZED`     | 401  | Sin token o token inválido                      |
 
+## Aviso en el celular (push, COPAYNI-85)
+
+**Estado:** implementado en el backend. Proveedor: **Expo Push Service** (T7, propuesto en [frontend-pending-plan.md](../frontend-pending-plan.md)); `PUSH_PROVIDER=fake` registra el envío sin salir a la red y está prohibido en production. El envío va detrás de un puerto, así que cambiar de proveedor no toca el dominio ni la app.
+
+El push **no es una notificación nueva**: es el aviso de las que ya están en la bandeja. El texto lo arma el backend, porque cuando el aviso llega la app puede estar cerrada, y usa el idioma del perfil (`preferred_language`), con español por defecto.
+
+Cuándo sale: la tarea diaria (`node dist/jobs/circle-cycle.js`) genera las notificaciones y, justo después, envía las que estén sin enviar. Reglas que lo hacen seguro de repetir:
+
+- Cada notificación se marca enviada en cuanto el proveedor la acepta: una segunda corrida no vuelve a avisar lo mismo.
+- Lo que la persona apagó, lo que no tiene dispositivo y lo que ya pasó de `PUSH_MAX_AGE_HOURS` (12 h) se marca igual, para que nada quede pendiente para siempre. La notificación sigue en la bandeja.
+- Un fallo del proveedor deja el aviso pendiente y suma un intento; al llegar a `PUSH_MAX_ATTEMPTS` (3) se abandona, así un aviso roto no bloquea la cola.
+- Basta que **un** dispositivo lo reciba para darlo por entregado.
+- Si el proveedor responde `DeviceNotRegistered`, ese token queda apagado y deja de intentarse.
+
+### `POST /v1/me/devices`
+
+```json
+{ "token": "ExponentPushToken[xxxxxxxxxxxxxxxxxxxxxx]", "platform": "android" }
+```
+
+Responde `{ "deviceId": "…", "platform": "android" }`. Es idempotente por token: repetirlo no duplica el dispositivo. El token identifica la instalación, así que si vuelve con otra cuenta (alguien más inicia sesión en ese celular) cambia de dueño, y si estaba apagado por un cierre de sesión vuelve a quedar activo.
+
+### `DELETE /v1/me/devices/{token}`
+
+`204` sin cuerpo. Lo llama la app al cerrar sesión: ese celular deja de recibir avisos. No distingue si el token existía.
+
+### `GET` y `PUT /v1/me/notification-preferences`
+
+```json
+{
+  "pushEnabled": true,
+  "categories": { "payments": true, "circles": true, "account": true }
+}
+```
+
+`PUT` es un cambio parcial: lo que no se envía queda como estaba. Quien nunca las tocó las tiene todas activadas. `pushEnabled: false` apaga todo sin perder las categorías.
+
+**Las preferencias no filtran la bandeja:** apagar una categoría deja de interrumpir, no esconde lo que pasó.
+
+| Error              | HTTP | Cuándo                                                          |
+| ------------------ | ---- | --------------------------------------------------------------- |
+| `VALIDATION_ERROR` | 400  | `token` sin formato de Expo, `platform` desconocida, cuerpo mal |
+| `UNAUTHORIZED`     | 401  | Sin token o token inválido                                      |
+
+### En la app
+
+- **Registro:** al entrar a la zona privada la app registra este celular, en silencio, **solo si ya tenía el permiso**. No pide el permiso al arrancar: un diálogo del sistema sin contexto se rechaza, y un rechazo solo se deshace desde los ajustes del teléfono.
+- **Ajustes** (Perfil › Avisos en el celular): el interruptor general, las tres categorías y, cuando el permiso está sin decidir, el botón que lo pide. Con el permiso denegado explica qué pasó y ofrece abrir los ajustes del teléfono, porque los interruptores no cambiarían nada.
+- **Al tocar un aviso** se abre la bandeja, con lo nuevo ya cargado.
+- **Al cerrar sesión** la app da de baja el token: ese celular deja de recibir los avisos de esa persona. Si la baja falla no frena el cierre de sesión.
+- **Modo fake** (`EXPO_PUBLIC_NOTIFICATIONS_API=fake`): dispositivos y preferencias en memoria y un token simulado, para recorrer el flujo sin un development build.
+
+### Pendiente [?]
+
+- **Recibos de entrega:** Expo devuelve un "ticket" (lo recibió), no la entrega real. Los recibos permitirían saber si el celular lo mostró; hoy solo se aprovecha `DeviceNotRegistered`, que ya llega en el ticket.
+- **Development build y credenciales:** `expo-notifications` no funciona en Expo Go, y el token necesita el `projectId` de EAS (`extra.eas.projectId`), FCM V1 para Android y una cuenta de Apple Developer para iOS. Sin eso, la app responde que no puede registrar el dispositivo en vez de fallar.
+
 ## App
 
 - La campana de Home muestra un punto si hay no leídas y abre la bandeja.
