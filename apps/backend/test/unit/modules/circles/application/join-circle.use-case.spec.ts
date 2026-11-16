@@ -2,6 +2,7 @@ import { Logger } from '@nestjs/common';
 
 import { IdempotencyKeyExistsError } from '@src/modules/circles/application/ports/circle-repository.port';
 import { type MemberDebt } from '@src/modules/circles/application/ports/member-debts.port';
+import { type MembershipAgreementsPort } from '@src/modules/circles/application/ports/membership-agreements.port';
 import { type JoinCircleCommand } from '@src/modules/circles/application/use-cases/join-circle.use-case';
 import { Circle } from '@src/modules/circles/domain/entities/circle';
 import { type JoinApplicant } from '@src/modules/circles/domain/services/join-eligibility';
@@ -14,6 +15,7 @@ import { InMemoryCircleRepository } from '@test/support/in-memory-circle.reposit
 import {
   createJoinCircleUseCase,
   ELIGIBLE,
+  NO_AGREEMENTS,
   TEST_CURRENCIES,
   TEST_CURRENCIES_WITH_USD,
   TEST_PRICING,
@@ -201,6 +203,75 @@ describe('JoinCircleUseCase', () => {
     expect([first.created, second.created].sort()).toEqual([false, true]);
     expect(first.circleId).toBe(second.circleId);
     expect(circles.size).toBe(1);
+  });
+
+  describe('contrato y pagaré pendientes de firma (COPAYNI-89)', () => {
+    /** Un puerto que falla las primeras `failures` veces y luego registra lo que abre. */
+    const flaky = (failures: number) => {
+      const opened: { userId: string; circleId: string; position: number }[] = [];
+      let left = failures;
+      return {
+        opened,
+        port: {
+          ...NO_AGREEMENTS,
+          openFor: ({
+            userId,
+            circleId,
+            position,
+          }: {
+            userId: string;
+            circleId: string;
+            position: number;
+          }) => {
+            if (left > 0) {
+              left -= 1;
+              return Promise.reject(new Error('base caída'));
+            }
+            opened.push({ userId, circleId, position });
+            return Promise.resolve();
+          },
+        } as MembershipAgreementsPort,
+      };
+    };
+
+    it('al unirse se abren los acuerdos del turno', async () => {
+      const { opened, port } = flaky(0);
+      const useCase = createJoinCircleUseCase(new InMemoryCircleRepository(), {
+        agreements: port,
+      });
+      const join = await useCase.execute(NEW_CIRCLE);
+
+      expect(opened).toEqual([
+        { userId: NEW_CIRCLE.userId, circleId: join.circleId, position: NEW_CIRCLE.position },
+      ]);
+    });
+
+    it('si no se pueden abrir, la unión falla en vez de quedar sin firma', async () => {
+      const { port } = flaky(1);
+      const useCase = createJoinCircleUseCase(new InMemoryCircleRepository(), {
+        agreements: port,
+      });
+      // Silenciar el error no sirve: el checklist exime a quien no tiene acuerdos (se unió antes
+      // de COPAYNI-89), así que daría el contrato y el pagaré por cumplidos sin haber firmado.
+      await expect(useCase.execute(NEW_CIRCLE)).rejects.toThrow('base caída');
+    });
+
+    it('repetir la unión sanea los acuerdos que no se alcanzaron a abrir', async () => {
+      const { opened, port } = flaky(1);
+      const circles = new InMemoryCircleRepository();
+      const useCase = createJoinCircleUseCase(circles, { agreements: port });
+      await expect(useCase.execute(NEW_CIRCLE)).rejects.toThrow('base caída');
+      expect(opened).toEqual([]);
+
+      // La membresía quedó hecha, así que el reintento responde la misma unión; abrir es
+      // idempotente, de modo que esta vez sí quedan los acuerdos.
+      const retry = await useCase.execute(NEW_CIRCLE);
+
+      expect(retry.created).toBe(false);
+      expect(opened).toEqual([
+        { userId: NEW_CIRCLE.userId, circleId: retry.circleId, position: NEW_CIRCLE.position },
+      ]);
+    });
   });
 
   it.each([

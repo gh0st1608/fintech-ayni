@@ -19,6 +19,7 @@ import { AppModule } from '../app.module';
 import { type AppConfigService } from '../config/configuration';
 import { AdvanceCircleCyclesUseCase } from '../modules/circles/application/use-cases/advance-circle-cycles.use-case';
 import { CheckGuaranteeFundUseCase } from '../modules/circles/application/use-cases/check-guarantee-fund.use-case';
+import { ReleaseUnsignedMembershipsUseCase } from '../modules/circles/application/use-cases/release-unsigned-memberships.use-case';
 import { SyncNotificationsUseCase } from '../modules/notifications/application/notifications.use-cases';
 import { CollectSavingContributionsUseCase } from '../modules/savings/application/subscription.use-cases';
 import { createLogger } from '../shared/infrastructure/observability/logger';
@@ -38,6 +39,18 @@ async function run(): Promise<boolean> {
     ),
   );
   try {
+    // Antes de avanzar: libera los turnos de quien no firmó en plazo (COPAYNI-89), así un turno
+    // liberado ya cuenta como libre al evaluar si el círculo puede empezar. No frena el ciclo.
+    try {
+      const released = await app.get(ReleaseUnsignedMembershipsUseCase).execute();
+      if (released.expired > 0)
+        Logger.log({ event: 'agreements.released', ...released }, 'Agreements');
+    } catch (error) {
+      Logger.error(
+        { event: 'agreements.release_failed', reason: error instanceof Error ? error.message : '' },
+        'Agreements',
+      );
+    }
     const result = await app.get(AdvanceCircleCyclesUseCase).execute();
     Logger.log({ event: 'circles.cycle.run', ...result }, 'CircleCycle');
     await app.get(CheckGuaranteeFundUseCase).execute();

@@ -297,6 +297,15 @@ export class EnvironmentVariables {
   GUARANTEE_FUND_MIN_INSTALLMENTS_PER_CIRCLE: number = 2;
 
   /**
+   * Horas para firmar el contrato y el pagaré antes de que el turno se libere (COPAYNI-89).
+   * 48 h por decisión del PO; la tarea diaria procesa los vencidos.
+   */
+  @IsInt()
+  @Min(1)
+  @Max(720)
+  AGREEMENT_SIGNATURE_TTL_HOURS: number = 48;
+
+  /**
    * Círculos completados sin expulsión que pide un turno Fastest Payout (COPAYNI-60, R18). 0 al
    * lanzar (P10 de pending-scope §3.2): nadie tiene historial todavía y exigir 1 dejaría esos
    * turnos vacíos. El riesgo lo compensa el tope bajo de `JOIN_PAYOUT_MAX`.
