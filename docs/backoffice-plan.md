@@ -15,18 +15,18 @@ Convención: **[H]** hecho observado (código, Figma o docs), **[I]** inferencia
 
 Así estaba el backend antes del back-office. Lo implementado desde entonces está en §7.1.
 
-| Pieza                               | Estado [H]                                                                                                                                                                             |
-| ----------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Autorización del personal           | `StaffGuard` y `@RequireStaff(rol, { stepUp })` en el backend, con roles `support`, `operations`, `finance`, `admin` y `super_admin`                                                   |
-| Autenticación reforzada (step-up)   | Las acciones críticas exigen haberse autenticado hace menos de `STAFF_STEP_UP_MAX_AGE_SECONDS` (300 s)                                                                                 |
+| Pieza                               | Estado [H]                                                                                                                                                                                                                                                                                                                                              |
+| ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Autorización del personal           | `StaffGuard` y `@RequireStaff(rol, { stepUp })` en el backend, con roles `support`, `operations`, `finance`, `admin` y `super_admin`                                                                                                                                                                                                                    |
+| Autenticación reforzada (step-up)   | Las acciones críticas exigen haberse autenticado hace menos de `STAFF_STEP_UP_MAX_AGE_SECONDS` (300 s)                                                                                                                                                                                                                                                  |
 | Proveedor de identidad del personal | **En curso (fase 1):** `STAFF_AUTH_PROVIDER` admite `oidc` (cualquier OIDC estándar, validado con su JWKS, con los grupos traducidos a roles por `STAFF_OIDC_GROUPS_MAP`) y `dev` (solo local). El front tiene el flujo PKCE y la vuelta en `/auth/callback`. Falta un proveedor verificado de punta a punta (BO2, ver §7.2) ([admin.md](api/admin.md)) |
-| API de administración               | Solo `POST /admin/v1/circles/:id/pause` y `/resume` (COPAYNI-61), con rol `super_admin`, step-up y motivo                                                                              |
-| Auditoría                           | `circle_admin_events`, de solo inserción, para pausas y reanudaciones                                                                                                                  |
-| KYC sin proveedor                   | `KYC_PROVIDER=manual` deja cada documento **en revisión**; operaciones lo resuelve en la cola de KYC del back-office                                                                   |
-| Fondo de garantía                   | Registro contable de doble entrada (COPAYNI-58). `RecordFundMovementUseCase` existe para el capital semilla y las correcciones, **sin endpoint**                                       |
-| Ciclo mensual                       | La tarea diaria registra eventos (`circles.cycle.*`) solo en los logs. Los estados `approving` y `cancelled` (COPAYNI-62) no tienen vista para operaciones                             |
-| Mora e impago                       | Gracia, expulsión, deuda con cargo por mora y bloqueo (COPAYNI-57), sin vista para el personal                                                                                         |
-| Reglas de negocio                   | Siguen en variables de entorno: cambiar una regla exige un despliegue                                                                                                                  |
+| API de administración               | Solo `POST /admin/v1/circles/:id/pause` y `/resume` (COPAYNI-61), con rol `super_admin`, step-up y motivo                                                                                                                                                                                                                                               |
+| Auditoría                           | `circle_admin_events`, de solo inserción, para pausas y reanudaciones                                                                                                                                                                                                                                                                                   |
+| KYC sin proveedor                   | `KYC_PROVIDER=manual` deja cada documento **en revisión**; operaciones lo resuelve en la cola de KYC del back-office                                                                                                                                                                                                                                    |
+| Fondo de garantía                   | Registro contable de doble entrada (COPAYNI-58). `RecordFundMovementUseCase` existe para el capital semilla y las correcciones, **sin endpoint**                                                                                                                                                                                                        |
+| Ciclo mensual                       | La tarea diaria registra eventos (`circles.cycle.*`) solo en los logs. Los estados `approving` y `cancelled` (COPAYNI-62) no tienen vista para operaciones                                                                                                                                                                                              |
+| Mora e impago                       | Gracia, expulsión, deuda con cargo por mora y bloqueo (COPAYNI-57), sin vista para el personal                                                                                                                                                                                                                                                          |
+| Reglas de negocio                   | Siguen en variables de entorno: cambiar una regla exige un despliegue                                                                                                                                                                                                                                                                                   |
 
 ## 3. Alcance
 
@@ -127,13 +127,13 @@ El código ya define 5 roles. Propuesta para el MVP, sin agregar roles hasta que
 
 ### 7.1 Avance (10 de noviembre de 2026)
 
-| Fase | Estado                                                                                                                                                                                                                                                   | Jira                 |
-| ---- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------- |
-| 0    | Decidido BO9 (React, Vite y TanStack Query en `apps/backoffice`). Siguen abiertas BO1–BO8                                                                                                                                                                | —                    |
+| Fase | Estado                                                                                                                                                                                                                                                                                                                                | Jira                 |
+| ---- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------- |
+| 0    | Decidido BO9 (React, Vite y TanStack Query en `apps/backoffice`). Siguen abiertas BO1–BO8                                                                                                                                                                                                                                             | —                    |
 | 1    | **Parcial.** Hecho: `apps/backoffice` con CI, lint, pruebas y carga por sección; `staff_audit_log` de solo inserción; puerto de identidad con `oidc` y `dev`; login PKCE en el front y mapeo de grupos a roles en el backend. Falta: verificar el proveedor de punta a punta (BO2, §7.2) y publicar el front y exponer `/admin` (BO8) | COPAYNI-65 · 72 y 74 |
-| 2    | **Hecha.** Juntas con pausa y reanudación, cola y revisión de KYC, búsqueda de personas, acciones de soporte (sesiones, bloqueo, PII y notas) y ejecuciones del ciclo                                                                                    | COPAYNI-66 a 69 y 71 |
-| 3    | **Parcial.** Hecha la lectura de cuotas, pozos y fondo de garantía, y los movimientos del fondo con doble aprobación (`staff_approvals`, regla provisional hasta BO6). Falta mora y devoluciones, y la conciliación con la pasarela (T3)                 | COPAYNI-70 · 73      |
-| 4–6  | Sin empezar                                                                                                                                                                                                                                              | —                    |
+| 2    | **Hecha.** Juntas con pausa y reanudación, cola y revisión de KYC, búsqueda de personas, acciones de soporte (sesiones, bloqueo, PII y notas) y ejecuciones del ciclo                                                                                                                                                                 | COPAYNI-66 a 69 y 71 |
+| 3    | **Parcial.** Hecha la lectura de cuotas, pozos y fondo de garantía, y los movimientos del fondo con doble aprobación (`staff_approvals`, regla provisional hasta BO6). Falta mora y devoluciones, y la conciliación con la pasarela (T3)                                                                                              | COPAYNI-70 · 73      |
+| 4–6  | Sin empezar                                                                                                                                                                                                                                                                                                                           | —                    |
 
 **Endpoints de la fase 2 [I]** (nombres provisionales):
 
@@ -161,8 +161,8 @@ El código ya define 5 roles. Propuesta para el MVP, sin agregar roles hasta que
 
 **[?] Riesgo abierto: Identity Center puede no servir como proveedor de login del back-office.** La documentación de AWS apunta en contra y hay que comprobarlo contra el tenant real **antes** de dar BO2 por cerrado:
 
-1. Su API de OIDC declara el `idToken` como **no soportado** y cubre sobre todo el *device authorization grant* del inicio de sesión de la CLI.
-2. Las aplicaciones *customer managed* están pensadas para **trusted identity propagation** (canje de JWT con `CreateTokenWithIAM`), no para que una SPA inicie sesión con el flujo de código.
+1. Su API de OIDC declara el `idToken` como **no soportado** y cubre sobre todo el _device authorization grant_ del inicio de sesión de la CLI.
+2. Las aplicaciones _customer managed_ están pensadas para **trusted identity propagation** (canje de JWT con `CreateTokenWithIAM`), no para que una SPA inicie sesión con el flujo de código.
 3. Está sin verificar que publique `/.well-known/openid-configuration` y un JWKS en el emisor, y **qué claim lleva los grupos** de la persona.
 
 Qué comprobar, en este orden: que el emisor devuelva el documento de descubrimiento; que el token de la vuelta sea un JWT verificable con su JWKS; y qué claim trae los grupos (para fijar `STAFF_OIDC_ROLES_CLAIM`). Si algo de eso falla, la alternativa es **Cognito con MFA obligatorio** (la recomendación original de BO2): el código no cambia, porque el adaptador es de OIDC estándar; cambian la configuración y el stack de Terraform.
@@ -190,28 +190,28 @@ Story points relativos al backlog actual. **Confianza baja:** no hay diseño del
 
 ## 10. Riesgos
 
-| Riesgo                                                                                     | Mitigación                                                            |
-| ------------------------------------------------------------------------------------------ | --------------------------------------------------------------------- |
-| Lanzar con `KYC_PROVIDER=manual` sin cola de revisión deja a los usuarios sin poder unirse | La cola de KYC entra en la fase 2, antes del lanzamiento              |
-| Un error del personal mueve dinero                                                         | Doble aprobación, motivo obligatorio y solo registros compensatorios  |
-| Exposición de PII o documentos                                                             | Enmascarado por defecto, revelado auditado, URLs cortas y red interna |
-| El front depende de un pipeline de despliegue que todavía no existe                        | La fase 1 comparte el trabajo del pipeline de la API                  |
+| Riesgo                                                                                     | Mitigación                                                                          |
+| ------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------- |
+| Lanzar con `KYC_PROVIDER=manual` sin cola de revisión deja a los usuarios sin poder unirse | La cola de KYC entra en la fase 2, antes del lanzamiento                            |
+| Un error del personal mueve dinero                                                         | Doble aprobación, motivo obligatorio y solo registros compensatorios                |
+| Exposición de PII o documentos                                                             | Enmascarado por defecto, revelado auditado, URLs cortas y red interna               |
+| El front depende de un pipeline de despliegue que todavía no existe                        | La fase 1 comparte el trabajo del pipeline de la API                                |
 | Identity Center puede no servir de proveedor de login del back-office (§7.2)               | El adaptador es de OIDC estándar: si falla, se cambia a Cognito sin tocar el código |
-| Las reglas sin definir (R1, R4, R5) cambian después de construir la fase 4                 | La fase 4 va después del MVP; los parámetros se versionan             |
+| Las reglas sin definir (R1, R4, R5) cambian después de construir la fase 4                 | La fase 4 va después del MVP; los parámetros se versionan                           |
 
 ## 11. Decisiones pendientes
 
-| #   | Pregunta                                                                                         | Responsable |
-| --- | ------------------------------------------------------------------------------------------------ | ----------- |
-| BO1 | ¿Back-office propio para todo, o CMS headless solo para ayuda y legales?                         | PO / TL     |
+| #   | Pregunta                                                                                                                                                                                                                              | Responsable |
+| --- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------- |
+| BO1 | ¿Back-office propio para todo, o CMS headless solo para ayuda y legales?                                                                                                                                                              | PO / TL     |
 | BO2 | Proveedor de identidad del personal y política de MFA. Se eligió Identity Center y su aplicación OIDC ya está en Terraform, pero su parte OIDC **está sin verificar** (§7.2); la alternativa sigue siendo Cognito con MFA obligatorio | TL          |
-| BO3 | Confirmar la matriz de roles de §5                                                               | PO / Legal  |
-| BO4 | Campos de "Popular Goals" y "Latest Offers" (Figma `55:8637`)                                    | UX          |
-| BO5 | ¿Las ofertas se segmentan por usuario?                                                           | PO          |
-| BO6 | **Decidido por el PO (14/11/2026):** solo los movimientos del **fondo de garantía** requieren doble aprobación, por el momento. Las demás acciones del backoffice no. | —           |
-| BO7 | Diseño UX del back-office (no existe en el Figma)                                                | UX          |
-| BO8 | Exposición de `/admin`: ALB interno con VPN o WAF en el ALB público                              | TL          |
-| BO9 | ~~Stack del front~~ **Decidido:** React, Vite y TanStack Query, sin librería de administración   | TL          |
+| BO3 | Confirmar la matriz de roles de §5                                                                                                                                                                                                    | PO / Legal  |
+| BO4 | Campos de "Popular Goals" y "Latest Offers" (Figma `55:8637`). **Propuesta lista** con los campos, la ilustracion por catalogo y el destino de lista cerrada: [home-content-plan.md](home-content-plan.md)                            | UX          |
+| BO5 | ¿Las ofertas se segmentan por usuario? **Propuesta: no en la v1**, con `audience` reservado para no romper el contrato después ([home-content-plan.md](home-content-plan.md) §3)                                                      | PO          |
+| BO6 | **Decidido por el PO (14/11/2026):** solo los movimientos del **fondo de garantía** requieren doble aprobación, por el momento. Las demás acciones del backoffice no.                                                                 | —           |
+| BO7 | Diseño UX del back-office (no existe en el Figma)                                                                                                                                                                                     | UX          |
+| BO8 | Exposición de `/admin`: ALB interno con VPN o WAF en el ALB público                                                                                                                                                                   | TL          |
+| BO9 | ~~Stack del front~~ **Decidido:** React, Vite y TanStack Query, sin librería de administración                                                                                                                                        | TL          |
 
 ## 12. Siguiente paso
 
