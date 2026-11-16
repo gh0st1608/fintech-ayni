@@ -10,6 +10,7 @@ export default function DocumentsRoute() {
         proofOfIncome: () => router.push('/profile/documents/proof-of-income'),
       }}
       onVerifyIdentity={() => router.push('/profile/documents/identity')}
+      onOpenAgreements={() => router.push('/agreements')}
     />
   );
 }

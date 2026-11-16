@@ -61,6 +61,7 @@ async function renderConfirm({
     onEditSlot: jest.fn(),
     onEditPayoutMethod: jest.fn(),
     onDone: jest.fn(),
+    onSign: jest.fn(),
     ...(withRoutes ? { onVerifyIdentity: jest.fn(), onIncreaseLimit: jest.fn() } : {}),
   };
   const test = createTestContainer({ circleMembership });
@@ -132,18 +133,31 @@ describe('JoinConfirmScreen', () => {
     expect(onEditPayoutMethod).toHaveBeenCalled();
   });
 
-  it('al confirmar se une y muestra el turno y la primera cuota', async () => {
+  it('al confirmar reserva el turno y muestra el cobro y la primera cuota', async () => {
     const { onDone, circleMembership } = await renderConfirm();
     await fireEvent.press(await submit());
 
     const success = await screen.findByTestId('join-success');
-    expect(success).toHaveTextContent(/Ya eres parte de la junta/);
+    // El turno queda reservado, no firme: unirse ya no cierra el trámite (COPAYNI-89).
+    expect(success).toHaveTextContent(/Reservamos tu turno/);
     expect(success).toHaveTextContent(/30\.?000.* en ene\.? 2027 \(turno 3 de 10\)/i);
     expect(success).toHaveTextContent(/primera cuota es de .*3\.?000.* en nov\.? 2026/i);
     expect(circleMembership.joinCount).toBe(1);
 
     await fireEvent.press(screen.getByRole('button', { name: 'Ver mis juntas' }));
     expect(onDone).toHaveBeenCalled();
+  });
+
+  it('tras unirse avisa que falta firmar y lleva a la firma (COPAYNI-89)', async () => {
+    const { onSign } = await renderConfirm();
+    await fireEvent.press(await submit());
+
+    const pending = await screen.findByTestId('join-pending-signature');
+    expect(pending).toHaveTextContent(/[Ff]alta firmar el contrato y el pagaré/);
+    expect(pending).toHaveTextContent(/tu turno se libera/i);
+
+    await fireEvent.press(screen.getByRole('button', { name: 'Firmar documentos' }));
+    expect(onSign).toHaveBeenCalled();
   });
 
   it('al tomar una vacante muestra la primera cuota de su mes de ingreso y la puesta al día', async () => {

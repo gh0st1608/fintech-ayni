@@ -19,6 +19,11 @@ export default function JoinConfirmRoute() {
         // La unión terminó: el siguiente flujo empieza vacío.
         start();
       }}
+      onSign={() => {
+        // El turno quedó reservado: falta firmar para que sea firme (COPAYNI-89).
+        router.dismissTo('/agreements');
+        start();
+      }}
     />
   );
 }

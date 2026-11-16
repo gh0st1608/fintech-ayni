@@ -19,6 +19,8 @@ export const colors = {
   borderNormal: '#A1A1AA',
   textSecondary: '#3F3F46',
   success: '#15B097',
+  /** Fondo de las etiquetas en verde, p. ej. "Leído" de la firma (D3, 2051:2355). */
+  success100: '#E3F6F2',
   /** Fuego de la racha de pagos (D11) y su fondo. */
   streak: '#F05A28',
   streak100: '#FFEDE5',
