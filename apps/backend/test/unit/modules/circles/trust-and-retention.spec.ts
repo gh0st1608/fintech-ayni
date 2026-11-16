@@ -132,10 +132,12 @@ describe('Retención del payout (COPAYNI-60)', () => {
     expect(quote.retention).toEqual(pen(6_000));
     expect(quote.netPayout).toEqual(pen(24_000));
     expect(quote.totalPaid).toEqual(pen(30_000));
-    // Solo la primera mitad: el turno 5 retiene, el 6 no.
+    // Proporcional a la deuda restante (P1/P5): sin escalón entre el turno 5 y el 6.
     expect(RETAINING.quote(TERMS, 5).retention).toEqual(pen(6_000));
-    expect(RETAINING.quote(TERMS, 6).retention).toEqual(pen(0));
-    // Sin cuotas suficientes después del cobro, retiene las que haya.
+    expect(RETAINING.quote(TERMS, 6).retention).toEqual(pen(6_000));
+    // Sin cuotas suficientes después del cobro, retiene las que haya; el último turno no retiene.
+    expect(RETAINING.quote(TERMS, 9).retention).toEqual(pen(3_000));
+    expect(RETAINING.quote(TERMS, 10).retention).toEqual(pen(0));
     const short = CircleTerms.create({ payout: pen(6_000), months: 2, startsOn: TERMS.startsOn });
     expect(RETAINING.quote(short, 1).retention).toEqual(pen(3_000));
   });
@@ -143,9 +145,9 @@ describe('Retención del payout (COPAYNI-60)', () => {
   it('se congela con el precio y un precio anterior a COPAYNI-60 no tiene retención', () => {
     const price = priceOf(RETAINING.quote(TERMS, 3));
     expect(fromStoredPrice(toStoredPrice(price)).retention).toEqual(pen(6_000));
-    const legacy = priceOf(RETAINING.quote(TERMS, 8));
+    const legacy = priceOf(RETAINING.quote(TERMS, 10));
     expect(legacy.retention).toBeUndefined();
-    expect(RETAINING.quoteOf(TERMS, 8, legacy).retention).toEqual(pen(0));
+    expect(RETAINING.quoteOf(TERMS, 10, legacy).retention).toEqual(pen(0));
     expect(() =>
       SlotPricingRules.create({ ...RETAINING_RULES, retentionInstallments: 13 }),
     ).toThrow(expect.objectContaining({ code: 'INVALID_SLOT_PRICING_RULES' }));
@@ -220,7 +222,8 @@ describe('Retención del payout (COPAYNI-60)', () => {
 
     expect(cycles.get('c-1')?.state).toBe('finished');
     expect(disbursed.find(({ userId }) => userId === 'u-3')?.amount).toEqual(pen(24_000));
-    expect(disbursed.find(({ userId }) => userId === 'u-8')?.amount).toEqual(pen(30_000));
+    // El último turno no tiene cuotas posteriores que retener: cobra el pozo completo.
+    expect(disbursed.find(({ userId }) => userId === 'u-10')?.amount).toEqual(pen(30_000));
     // Sus cuotas de julio y agosto de 2027 (meses 9 y 10) no se cobran: las paga la retención.
     expect(collected.filter((entry) => entry.startsWith('u-3@'))).toHaveLength(8);
     const retained = [...cycles.installments.values()].filter(

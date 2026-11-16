@@ -22,6 +22,9 @@ export const TEST_ENV = {
   JOIN_PAYOUT_MIN: '300000',
   JOIN_PAYOUT_MAX: '12000000',
   JOIN_PAYOUT_STEP: '50000',
+  // Las pruebas ejercitan la regla de confianza, no su valor de lanzamiento: en producción arranca
+  // en 0 porque nadie tiene círculos completados todavía (pending-scope §3.2, P10).
+  TRUST_FASTEST_MIN_COMPLETED_CIRCLES: '1',
   SAVING_PROGRAM_MAX: '100000000',
   CIRCLE_DURATION_OPTIONS: '6,10,12',
   // PostgreSQL de compose.yaml (npm run db:up) o el service de CI. Credenciales solo de prueba.

@@ -39,7 +39,7 @@ export interface SlotQuote {
   /** Lo que recibe el miembro en su mes de cobro, sin la retención. */
   netPayout: Money;
   /**
-   * Parte del payout que se retiene en los turnos de la primera mitad y paga sus últimas cuotas
+   * Parte del payout que se retiene para pagar las últimas cuotas de quien cobra
    * (COPAYNI-60, pending-scope §3.1). Cero en los demás.
    */
   retention: Money;
@@ -182,11 +182,10 @@ export class SlotPricing {
             .subtract(share(discountShares, month, months)),
     );
 
-    // Retención (COPAYNI-60): turnos de la primera mitad, hasta sus cuotas posteriores al cobro.
-    const retained =
-      position <= Math.floor(months / 2)
-        ? Math.min(retentionInstallments ?? 0, months - position)
-        : 0;
+    // Retención (COPAYNI-60; proporcional desde P1/P5 de pending-scope §3.2): todos los turnos
+    // retienen hasta `retentionInstallments` de las cuotas que les quedan tras cobrar. Cortarla en
+    // la primera mitad dejaba al turno 6 con más exposición que al 5, un escalón aprovechable.
+    const retained = Math.min(retentionInstallments ?? 0, months - position);
     const retention = terms.baseInstallment.times(retained);
     const fullPayout = adminFeeMode === 'deducted_from_payout' ? payout.subtract(adminFee) : payout;
 

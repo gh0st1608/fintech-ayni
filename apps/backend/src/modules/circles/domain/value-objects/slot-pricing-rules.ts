@@ -24,7 +24,7 @@ export interface SlotPricingRulesProps {
   adminFeeBps: number;
   adminFeeMode: AdminFeeMode;
   /**
-   * Cuotas base que se retienen del payout de los turnos de la primera mitad y pagan sus últimas
+   * Cuotas base que se retienen del payout de cada turno y pagan sus últimas
    * cuotas (COPAYNI-60, R18 propuesto: 2). 0 o ausente: sin retención.
    */
   retentionInstallments?: number;

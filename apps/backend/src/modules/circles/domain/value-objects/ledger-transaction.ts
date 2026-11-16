@@ -46,7 +46,7 @@ export const LEDGER_KINDS = [
   'refund_paid',
   /** El expulsado pagó lo vencido más el cargo por mora: vuelve al fondo. */
   'debt_recovered',
-  /** Retención del payout de quien cobra en la primera mitad (COPAYNI-60). */
+  /** Retención del payout de quien cobra, que paga sus últimas cuotas (COPAYNI-60). */
   'retention_held',
   /** La retención paga sus últimas cuotas. */
   'retention_applied',

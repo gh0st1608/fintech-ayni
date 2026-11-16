@@ -66,8 +66,7 @@ export class SlotResponse {
 
   @ApiProperty({
     type: MoneyResponse,
-    description:
-      'Retención del payout en los turnos de la primera mitad, que paga sus últimas cuotas (COPAYNI-60)',
+    description: 'Retención del payout de cada turno, que paga sus últimas cuotas (COPAYNI-60)',
   })
   retention!: MoneyResponse;
 

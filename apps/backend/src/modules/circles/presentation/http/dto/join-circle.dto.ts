@@ -98,7 +98,7 @@ export class JoinCircleResponse {
   @ApiProperty({
     type: MoneyResponse,
     description:
-      'Retención del payout que paga sus últimas cuotas (COPAYNI-60); cero fuera de la primera mitad',
+      'Retención del payout que paga sus últimas cuotas (COPAYNI-60); cero en el último turno',
   })
   retention!: MoneyResponse;
 
