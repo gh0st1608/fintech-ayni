@@ -1,3 +1,5 @@
+const { webcrypto } = require('node:crypto');
+
 const { TestEnvironment } = require('jest-environment-jsdom');
 
 /**
@@ -20,6 +22,9 @@ class JsdomWithFetch extends TestEnvironment {
       ReadableStream,
       structuredClone,
     });
+    if (!this.global.crypto || typeof this.global.crypto.subtle === 'undefined') {
+      Object.defineProperty(this.global, 'crypto', { value: webcrypto, configurable: true });
+    }
   }
 }
 

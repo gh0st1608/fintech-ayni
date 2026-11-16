@@ -77,6 +77,28 @@ export class InMemoryStaffAuth implements StaffAuthPort {
   }
 }
 
+/**
+ * Personal autenticado por SSO (COPAYNI-72). Al declarar `initiateFlow` y `handleCallback`, el
+ * contenedor expone los casos de uso del flujo OIDC y la app se comporta como en producción.
+ */
+export class InMemoryOidcStaffAuth extends InMemoryStaffAuth {
+  /** Destinos con los que se inició el flujo, en orden. */
+  readonly flows: (string | undefined)[] = [];
+  /** El código que el proveedor devuelve en la vuelta; con `null`, la vuelta falla. */
+  code: string | null = 'code-1';
+
+  initiateFlow(returnTo?: string): void {
+    this.flows.push(returnTo);
+  }
+
+  handleCallback(code: string): Promise<StaffMember> {
+    if (code !== this.code) {
+      return Promise.reject(new AppError('unauthorized', 'Estado del flujo OIDC inválido'));
+    }
+    return this.signIn({ email: 'sso@ayni.pe', roles: ['operations'] });
+  }
+}
+
 let sequence = 0;
 
 export function circle(overrides: Partial<CircleDetail> = {}): CircleDetail {
