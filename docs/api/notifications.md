@@ -97,22 +97,33 @@ Responde `{ "deviceId": "…", "platform": "android" }`. Es idempotente por toke
 ### `GET` y `PUT /v1/me/notification-preferences`
 
 ```json
-{ "pushEnabled": true, "categories": { "payments": true, "circles": true, "account": true } }
+{
+  "pushEnabled": true,
+  "categories": { "payments": true, "circles": true, "account": true }
+}
 ```
 
 `PUT` es un cambio parcial: lo que no se envía queda como estaba. Quien nunca las tocó las tiene todas activadas. `pushEnabled: false` apaga todo sin perder las categorías.
 
 **Las preferencias no filtran la bandeja:** apagar una categoría deja de interrumpir, no esconde lo que pasó.
 
-| Error              | HTTP | Cuándo                                                           |
-| ------------------ | ---- | ---------------------------------------------------------------- |
-| `VALIDATION_ERROR` | 400  | `token` sin formato de Expo, `platform` desconocida, cuerpo mal  |
-| `UNAUTHORIZED`     | 401  | Sin token o token inválido                                       |
+| Error              | HTTP | Cuándo                                                          |
+| ------------------ | ---- | --------------------------------------------------------------- |
+| `VALIDATION_ERROR` | 400  | `token` sin formato de Expo, `platform` desconocida, cuerpo mal |
+| `UNAUTHORIZED`     | 401  | Sin token o token inválido                                      |
+
+### En la app
+
+- **Registro:** al entrar a la zona privada la app registra este celular, en silencio, **solo si ya tenía el permiso**. No pide el permiso al arrancar: un diálogo del sistema sin contexto se rechaza, y un rechazo solo se deshace desde los ajustes del teléfono.
+- **Ajustes** (Perfil › Avisos en el celular): el interruptor general, las tres categorías y, cuando el permiso está sin decidir, el botón que lo pide. Con el permiso denegado explica qué pasó y ofrece abrir los ajustes del teléfono, porque los interruptores no cambiarían nada.
+- **Al tocar un aviso** se abre la bandeja, con lo nuevo ya cargado.
+- **Al cerrar sesión** la app da de baja el token: ese celular deja de recibir los avisos de esa persona. Si la baja falla no frena el cierre de sesión.
+- **Modo fake** (`EXPO_PUBLIC_NOTIFICATIONS_API=fake`): dispositivos y preferencias en memoria y un token simulado, para recorrer el flujo sin un development build.
 
 ### Pendiente [?]
 
 - **Recibos de entrega:** Expo devuelve un "ticket" (lo recibió), no la entrega real. Los recibos permitirían saber si el celular lo mostró; hoy solo se aprovecha `DeviceNotRegistered`, que ya llega en el ticket.
-- **App:** registrar el token con `expo-notifications` exige un development build nuevo (no funciona en Expo Go).
+- **Development build y credenciales:** `expo-notifications` no funciona en Expo Go, y el token necesita el `projectId` de EAS (`extra.eas.projectId`), FCM V1 para Android y una cuenta de Apple Developer para iOS. Sin eso, la app responde que no puede registrar el dispositivo en vez de fallar.
 
 ## App
 

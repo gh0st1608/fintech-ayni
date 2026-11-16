@@ -23,6 +23,10 @@ import {
 import { FakeFilePicker } from './FakeFilePicker';
 import { InMemoryHelpRepository } from '@/infrastructure/help/InMemoryHelpRepository';
 import { InMemoryNotificationRepository } from '@/infrastructure/notifications/InMemoryNotificationRepository';
+import {
+  FakePushNotifier,
+  InMemoryPushRepository,
+} from '@/infrastructure/notifications/InMemoryPushRepository';
 import { InMemoryPayoutMethodRepository } from '@/infrastructure/payouts/InMemoryPayoutMethodRepository';
 import { InMemoryUserProfileRepository } from '@/infrastructure/profile/InMemoryUserProfileRepository';
 import { InMemoryReferralRepository } from '@/infrastructure/referrals/InMemoryReferralRepository';
@@ -59,6 +63,8 @@ interface TestAdapters {
   userProfile: InMemoryUserProfileRepository;
   payoutMethods: InMemoryPayoutMethodRepository;
   notifications: InMemoryNotificationRepository;
+  push: InMemoryPushRepository;
+  pushNotifier: FakePushNotifier;
   help: InMemoryHelpRepository;
   payments: InMemoryPaymentRepository;
   cards: InMemoryCardRepository;
@@ -97,6 +103,8 @@ export function createTestContainer(overrides: Partial<TestAdapters> = {}) {
     userProfile: new InMemoryUserProfileRepository({ latencyMs: 0, currency: 'PEN' }),
     payoutMethods: new InMemoryPayoutMethodRepository('PEN', { latencyMs: 0 }),
     notifications: new InMemoryNotificationRepository('PEN', { latencyMs: 0, items: [] }),
+    push: new InMemoryPushRepository(),
+    pushNotifier: new FakePushNotifier(),
     help: new InMemoryHelpRepository(undefined, 0),
     payments: new InMemoryPaymentRepository('PEN', { latencyMs: 0 }),
     cards: new InMemoryCardRepository({ latencyMs: 0 }),

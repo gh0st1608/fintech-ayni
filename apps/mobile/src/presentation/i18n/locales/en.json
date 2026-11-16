@@ -954,6 +954,33 @@
         "title": "New member in your circle",
         "body": "One more slot was taken."
       }
+    },
+    "settings": {
+      "item": "Push notifications",
+      "title": "Notifications",
+      "intro": "Choose what we notify you about on your phone. Your inbox still shows everything.",
+      "pushEnabled": "Receive notifications",
+      "pushEnabledDescription": "Turning this off stops every notification on your phone.",
+      "categoriesTitle": "What we notify you about",
+      "categories": {
+        "payments": {
+          "label": "Payments and payouts",
+          "description": "Installments due, payments received and your payout turn."
+        },
+        "circles": {
+          "label": "Your circles",
+          "description": "When your circle starts, is paused or gains a member."
+        },
+        "account": {
+          "label": "Your account",
+          "description": "Documents approved or rejected and your identity verification."
+        }
+      },
+      "permissionAsk": "We need your permission to notify you on your phone.",
+      "enable": "Turn notifications on",
+      "permissionDenied": "Your phone has Ayni notifications blocked. Turn them on in your phone settings to receive them again.",
+      "openSystemSettings": "Open phone settings",
+      "inboxNote": "Turning a notification off hides nothing: everything stays in your inbox."
     }
   },
   "help": {
