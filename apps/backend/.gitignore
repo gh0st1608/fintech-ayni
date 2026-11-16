@@ -9,4 +9,6 @@ coverage/
 !.env.example
 
 npm-debug.*
+# Logs de ejecución local (p. ej. backoffice-api.log).
+*.log
 .DS_Store

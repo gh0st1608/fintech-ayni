@@ -1,1 +1,4 @@
 node_modules/
+
+# Configuración local del editor, no del proyecto.
+*.code-workspace
