@@ -89,6 +89,13 @@ import {
   SubmitProofOfIncomeUseCase,
 } from '@/application/documents/usecases/documentUseCases';
 import {
+  ListAgreementsUseCase,
+  ListPendingAgreementsUseCase,
+  ReadAgreementDocumentUseCase,
+  RequestSignatureCodeUseCase,
+  SignAgreementUseCase,
+} from '@/application/agreements/usecases/agreementUseCases';
+import {
   CapturePendingReferralUseCase,
   ClaimPendingReferralUseCase,
   CopyReferralCodeUseCase,
@@ -117,6 +124,7 @@ import type { TokenStoragePort } from '@/domain/auth/ports/TokenStoragePort';
 import type { CircleMembershipRepositoryPort } from '@/domain/circles/ports/CircleMembershipRepositoryPort';
 import type { CircleQuoteRepositoryPort } from '@/domain/circles/ports/CircleQuoteRepositoryPort';
 import type { JoinConfigRepositoryPort } from '@/domain/circles/ports/JoinConfigRepositoryPort';
+import type { AgreementRepositoryPort } from '@/domain/agreements/ports/AgreementRepositoryPort';
 import type { DocumentRepositoryPort } from '@/domain/documents/ports/DocumentRepositoryPort';
 import type {
   FilePickerPort,
@@ -152,6 +160,8 @@ import { InMemoryCircleMembershipRepository } from '@/infrastructure/circles/InM
 import { InMemoryCircleQuoteRepository } from '@/infrastructure/circles/InMemoryCircleQuoteRepository';
 import { InMemoryJoinConfigRepository } from '@/infrastructure/circles/InMemoryJoinConfigRepository';
 import { JoinConfigApiRepository } from '@/infrastructure/circles/JoinConfigApiRepository';
+import { AgreementApiRepository } from '@/infrastructure/agreements/AgreementApiRepository';
+import { InMemoryAgreementRepository } from '@/infrastructure/agreements/InMemoryAgreementRepository';
 import { DocumentApiRepository } from '@/infrastructure/documents/DocumentApiRepository';
 import {
   ExpoFilePicker,
@@ -222,6 +232,8 @@ export interface ContainerAdapters {
   cards: CardRepositoryPort;
   paymentTokenizer: PaymentTokenizerPort;
   documents: DocumentRepositoryPort;
+  /** Contrato y pagaré de cada membresía (COPAYNI-89). */
+  agreements: AgreementRepositoryPort;
   filePicker: FilePickerPort;
   fileUploader: FileUploaderPort;
   identityVerification: IdentityVerificationRepositoryPort;
@@ -309,6 +321,11 @@ export function createContainer(
       env.documentsApi === 'fake'
         ? new InMemoryDocumentRepository()
         : new DocumentApiRepository(http),
+    // La firma es parte de unirse a un círculo, así que sigue la bandera de los círculos.
+    agreements:
+      env.circlesApi === 'fake'
+        ? new InMemoryAgreementRepository()
+        : new AgreementApiRepository(http),
     filePicker: new ExpoFilePicker(),
     // Con documentos falsos no hay URL real a la que subir.
     fileUploader: env.documentsApi === 'fake' ? new FakeFileUploader() : new FetchFileUploader(),
@@ -428,6 +445,13 @@ export function createContainer(
       updatePersonalInfo: new UpdatePersonalInfoUseCase(adapters.userProfile),
       startContactChange: new StartContactChangeUseCase(adapters.userProfile),
       verifyContactChange: new VerifyContactChangeUseCase(adapters.userProfile),
+    },
+    agreements: {
+      list: new ListAgreementsUseCase(adapters.agreements),
+      pending: new ListPendingAgreementsUseCase(adapters.agreements),
+      readDocument: new ReadAgreementDocumentUseCase(adapters.agreements),
+      requestSignatureCode: new RequestSignatureCodeUseCase(adapters.agreements),
+      sign: new SignAgreementUseCase(adapters.agreements),
     },
     documents: {
       list: new ListDocumentsUseCase(adapters.documents),

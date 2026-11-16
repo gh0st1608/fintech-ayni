@@ -5,6 +5,7 @@ import {
 import { createContainer } from '@/bootstrap/container';
 import { parseEnv } from '@/bootstrap/env';
 
+import { InMemoryAgreementRepository } from '@/infrastructure/agreements/InMemoryAgreementRepository';
 import { InMemoryAuthApi } from '@/infrastructure/auth/InMemoryAuthApi';
 import { InMemoryPasscodeRepository } from '@/infrastructure/auth/InMemoryPasscodeRepository';
 import { InMemoryCircleMembershipRepository } from '@/infrastructure/circles/InMemoryCircleMembershipRepository';
@@ -63,6 +64,7 @@ interface TestAdapters {
   cards: InMemoryCardRepository;
   paymentTokenizer: FakePaymentTokenizer;
   documents: InMemoryDocumentRepository;
+  agreements: InMemoryAgreementRepository;
   filePicker: FakeFilePicker;
   fileUploader: FakeFileUploader;
   identityVerification: InMemoryIdentityVerificationRepository;
@@ -100,6 +102,7 @@ export function createTestContainer(overrides: Partial<TestAdapters> = {}) {
     cards: new InMemoryCardRepository({ latencyMs: 0 }),
     paymentTokenizer: new FakePaymentTokenizer({ latencyMs: 0 }),
     documents: new InMemoryDocumentRepository({ latencyMs: 0 }),
+    agreements: new InMemoryAgreementRepository({ latencyMs: 0 }),
     filePicker: new FakeFilePicker(),
     fileUploader: new FakeFileUploader(),
     identityVerification: new InMemoryIdentityVerificationRepository(0),

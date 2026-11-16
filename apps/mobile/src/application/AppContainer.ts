@@ -22,6 +22,13 @@ import type { RestoreSessionUseCase } from '@/application/auth/usecases/RestoreS
 import type { SignOutUseCase } from '@/application/auth/usecases/SignOutUseCase';
 import type { StartAuthenticationUseCase } from '@/application/auth/usecases/StartAuthenticationUseCase';
 import type { VerifyOtpUseCase } from '@/application/auth/usecases/VerifyOtpUseCase';
+import type {
+  ListAgreementsUseCase,
+  ListPendingAgreementsUseCase,
+  ReadAgreementDocumentUseCase,
+  RequestSignatureCodeUseCase,
+  SignAgreementUseCase,
+} from '@/application/agreements/usecases/agreementUseCases';
 import type { ConfirmSlotSelectionUseCase } from '@/application/circles/usecases/ConfirmSlotSelectionUseCase';
 import type { GetJoinConfigUseCase } from '@/application/circles/usecases/GetJoinConfigUseCase';
 import type { ListAvailableSlotsUseCase } from '@/application/circles/usecases/ListAvailableSlotsUseCase';
@@ -141,6 +148,14 @@ export interface AppContainer {
     listRecommended: ListRecommendedCirclesUseCase;
     listStartProposals: ListStartProposalsUseCase;
     respondStartProposal: RespondStartProposalUseCase;
+  };
+  /** Firma del contrato y del pagaré al unirse (COPAYNI-89). */
+  agreements: {
+    list: ListAgreementsUseCase;
+    pending: ListPendingAgreementsUseCase;
+    readDocument: ReadAgreementDocumentUseCase;
+    requestSignatureCode: RequestSignatureCodeUseCase;
+    sign: SignAgreementUseCase;
   };
   payments: {
     getSummary: GetPaymentSummaryUseCase;
