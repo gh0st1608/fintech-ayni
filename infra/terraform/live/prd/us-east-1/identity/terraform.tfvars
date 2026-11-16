@@ -5,5 +5,5 @@ aws_account_id = "079982009754"
 owner       = "plataforma-ayni"
 cost_center = "ayni-prd"
 
-# URL base del back-office. Cuando se defina el dominio real reemplazar este valor.
-backoffice_url = "https://backoffice.ayni.pe"
+# URL base del back-office (subdominio delegado desde GoDaddy a Route 53).
+backoffice_url = "https://backoffice.solutionserj.com"

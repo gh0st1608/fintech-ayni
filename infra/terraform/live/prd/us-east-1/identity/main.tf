@@ -68,14 +68,9 @@ resource "aws_ssoadmin_application" "backoffice" {
   tags = local.tags
 }
 
-# Ámbitos OAuth2 que el back-office solicita: identidad + email + perfil.
-resource "aws_ssoadmin_application_access_scope" "backoffice" {
-  for_each = toset(["openid", "profile", "email"])
-
-  # `arn` es el atributo no deprecado de aws_ssoadmin_application en provider 6.x
-  application_arn = aws_ssoadmin_application.backoffice.arn
-  scope           = each.value
-}
+# Los scopes OIDC (openid, profile, email) los solicita el cliente en runtime.
+# PutApplicationAccessScope en aplicaciones custom solo acepta scopes OAuth2 de AWS
+# (p. ej. sso:account:access); intentar registrar scopes OIDC devuelve ValidationException.
 
 # Solo los grupos asignados pueden iniciar sesión; lectores quedan excluidos.
 # aws_ssoadmin_application_assignment_configuration es el recurso correcto en provider 6.x.
@@ -105,13 +100,14 @@ resource "null_resource" "backoffice_grant" {
     redirect_uri = "${var.backoffice_url}/auth/callback"
   }
 
+  # interpreter bash: en Windows, cmd /C no soporta continuación con \ y falla.
   provisioner "local-exec" {
-    command = <<-CMD
+    interpreter = ["bash", "-c"]
+    command     = <<-CMD
       aws sso-admin put-application-grant \
-        --instance-arn "${local.instance_arn}" \
         --application-arn "${aws_ssoadmin_application.backoffice.arn}" \
         --grant-type "authorization_code" \
-        --grant "{\"authorizationCode\":{\"redirectUris\":[\"${var.backoffice_url}/auth/callback\"]}}"
+        --grant '{"AuthorizationCode":{"RedirectUris":["${var.backoffice_url}/auth/callback"]}}'
     CMD
   }
 
