@@ -11,6 +11,13 @@ export interface OidcEndpoints {
   end_session_endpoint?: string;
 }
 
+/** Lleva el navegador al proveedor; inyectable porque `window.location` no es verificable. */
+export type RedirectPort = (url: string) => void;
+
+const browserRedirect: RedirectPort = (url) => {
+  window.location.href = url;
+};
+
 const SESSION_VERIFIER_KEY = 'oidc_code_verifier';
 const SESSION_STATE_KEY = 'oidc_state';
 const SESSION_RETURN_TO_KEY = 'oidc_return_to';
@@ -51,17 +58,23 @@ export class OidcStaffAuth implements StaffAuthPort {
     private readonly redirectUri: string,
     private readonly http: HttpClientPort,
     private readonly tokens: TokenStore,
+    // Como en `FetchHttpClient`: se resuelve al llamarlo, porque jsdom no define `fetch`.
+    private readonly fetchFn: typeof fetch = (...args) => fetch(...args),
+    private readonly redirect: RedirectPort = browserRedirect,
   ) {}
 
   private getEndpoints(): Promise<OidcEndpoints> {
-    this.endpointsPromise ??= discoverOidcEndpoints(this.issuer);
+    this.endpointsPromise ??= discoverOidcEndpoints(this.issuer, this.fetchFn);
     return this.endpointsPromise;
   }
 
-  /** No aplica en modo OIDC: lanza si alguien la llama por error. */
+  /**
+   * No aplica en modo OIDC. Rechaza la promesa en vez de lanzar de forma sincrónica, porque el
+   * puerto declara `Promise` y quien la llame solo espera un rechazo.
+   */
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   signIn(_credentials: DevCredentials): Promise<StaffMember> {
-    throw new AppError('validation', 'Usa initiateFlow() en modo OIDC');
+    return Promise.reject(new AppError('validation', 'Usa initiateFlow() en modo OIDC'));
   }
 
   initiateFlow(returnTo?: string): void {
@@ -87,7 +100,7 @@ export class OidcStaffAuth implements StaffAuthPort {
         url.searchParams.set('code_challenge', challenge);
         url.searchParams.set('code_challenge_method', 'S256');
         url.searchParams.set('state', state);
-        window.location.href = url.toString();
+        this.redirect(url.toString());
       })
       .catch((err: unknown) => {
         console.error('[OidcStaffAuth] Error al iniciar flujo OIDC:', err);
@@ -120,7 +133,7 @@ export class OidcStaffAuth implements StaffAuthPort {
       code_verifier: verifier,
     });
 
-    const response = await fetch(endpoints.token_endpoint, {
+    const response = await this.fetchFn(endpoints.token_endpoint, {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: params.toString(),
@@ -161,7 +174,7 @@ export class OidcStaffAuth implements StaffAuthPort {
         if (endpoints.end_session_endpoint) {
           const url = new URL(endpoints.end_session_endpoint);
           url.searchParams.set('client_id', this.clientId);
-          window.location.href = url.toString();
+          this.redirect(url.toString());
         }
       })
       .catch(() => {
@@ -171,9 +184,12 @@ export class OidcStaffAuth implements StaffAuthPort {
 }
 
 /** Obtiene los endpoints OIDC del documento de descubrimiento del proveedor. */
-export async function discoverOidcEndpoints(issuer: string): Promise<OidcEndpoints> {
+export async function discoverOidcEndpoints(
+  issuer: string,
+  fetchFn: typeof fetch = (...args) => fetch(...args),
+): Promise<OidcEndpoints> {
   const wellKnown = `${issuer.replace(/\/$/, '')}/.well-known/openid-configuration`;
-  const response = await fetch(wellKnown);
+  const response = await fetchFn(wellKnown);
   if (!response.ok) throw new Error(`No se pudo obtener la configuración OIDC de ${issuer}`);
   const config = (await response.json()) as OidcEndpoints;
   if (!config.authorization_endpoint || !config.token_endpoint) {

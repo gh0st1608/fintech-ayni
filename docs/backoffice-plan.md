@@ -19,7 +19,7 @@ Así estaba el backend antes del back-office. Lo implementado desde entonces est
 | ----------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Autorización del personal           | `StaffGuard` y `@RequireStaff(rol, { stepUp })` en el backend, con roles `support`, `operations`, `finance`, `admin` y `super_admin`                                                   |
 | Autenticación reforzada (step-up)   | Las acciones críticas exigen haberse autenticado hace menos de `STAFF_STEP_UP_MAX_AGE_SECONDS` (300 s)                                                                                 |
-| Proveedor de identidad del personal | **En curso (fase 1):** `STAFF_AUTH_PROVIDER` admite `oidc` (Cognito u otro OIDC, validado con su JWKS) y `dev` (solo local). Falta crear el user pool (BO2) ([admin.md](api/admin.md)) |
+| Proveedor de identidad del personal | **En curso (fase 1):** `STAFF_AUTH_PROVIDER` admite `oidc` (cualquier OIDC estándar, validado con su JWKS, con los grupos traducidos a roles por `STAFF_OIDC_GROUPS_MAP`) y `dev` (solo local). El front tiene el flujo PKCE y la vuelta en `/auth/callback`. Falta un proveedor verificado de punta a punta (BO2, ver §7.2) ([admin.md](api/admin.md)) |
 | API de administración               | Solo `POST /admin/v1/circles/:id/pause` y `/resume` (COPAYNI-61), con rol `super_admin`, step-up y motivo                                                                              |
 | Auditoría                           | `circle_admin_events`, de solo inserción, para pausas y reanudaciones                                                                                                                  |
 | KYC sin proveedor                   | `KYC_PROVIDER=manual` deja cada documento **en revisión**; operaciones lo resuelve en la cola de KYC del back-office                                                                   |
@@ -130,7 +130,7 @@ El código ya define 5 roles. Propuesta para el MVP, sin agregar roles hasta que
 | Fase | Estado                                                                                                                                                                                                                                                   | Jira                 |
 | ---- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------- |
 | 0    | Decidido BO9 (React, Vite y TanStack Query en `apps/backoffice`). Siguen abiertas BO1–BO8                                                                                                                                                                | —                    |
-| 1    | **Parcial.** Hecho: `apps/backoffice` con CI, lint, pruebas y carga por sección; `staff_audit_log` de solo inserción; puerto de identidad con `oidc` y `dev`. Falta: el user pool y el login con MFA (BO2), y publicar el front y exponer `/admin` (BO8) | COPAYNI-65 · 72 y 74 |
+| 1    | **Parcial.** Hecho: `apps/backoffice` con CI, lint, pruebas y carga por sección; `staff_audit_log` de solo inserción; puerto de identidad con `oidc` y `dev`; login PKCE en el front y mapeo de grupos a roles en el backend. Falta: verificar el proveedor de punta a punta (BO2, §7.2) y publicar el front y exponer `/admin` (BO8) | COPAYNI-65 · 72 y 74 |
 | 2    | **Hecha.** Juntas con pausa y reanudación, cola y revisión de KYC, búsqueda de personas, acciones de soporte (sesiones, bloqueo, PII y notas) y ejecuciones del ciclo                                                                                    | COPAYNI-66 a 69 y 71 |
 | 3    | **Parcial.** Hecha la lectura de cuotas, pozos y fondo de garantía, y los movimientos del fondo con doble aprobación (`staff_approvals`, regla provisional hasta BO6). Falta mora y devoluciones, y la conciliación con la pasarela (T3)                 | COPAYNI-70 · 73      |
 | 4–6  | Sin empezar                                                                                                                                                                                                                                              | —                    |
@@ -150,6 +150,22 @@ El código ya define 5 roles. Propuesta para el MVP, sin agregar roles hasta que
 - **[H] Implementado, solo lectura:** `GET /admin/v1/finance/installments`, `/payouts` y `/guarantee-fund` ([admin.md](api/admin.md#finanzas-solo-lectura)). Lo que mueve dinero sigue pendiente de BO6
 - **[H] Implementado:** `POST /admin/v1/guarantee-fund/movements` (propone), `GET /admin/v1/approvals` y `POST /admin/v1/approvals/:id/approve` y `/reject` ([admin.md](api/admin.md#doble-aprobación-del-fondo-de-garantía)). Regla provisional: `finance` y `super_admin`, nunca la misma persona (BO6)
 - **[H] Implementado:** `GET /admin/v1/delinquency` (en gracia, expulsados, deudas y devoluciones; COPAYNI-94)
+
+### 7.2 Login del personal: qué está hecho y qué falta decidir (16 de noviembre de 2026)
+
+**[H] Hecho y probado** (COPAYNI-72, sin depender del proveedor):
+
+- **Backend (ST2):** `OidcStaffAuthenticator` valida el JWT del personal contra el JWKS del proveedor (firma RS256 o ES256, emisor, audiencia, vigencia con 60 s de tolerancia) y traduce los grupos a roles con `STAFF_OIDC_GROUPS_MAP`. `authenticatedAt` sale de `auth_time`, que es lo que exige el step-up.
+- **Front (ST3):** flujo de código con PKCE S256, `state` de un solo uso contra CSRF, vuelta en `/auth/callback` que respeta la página que se quiso abrir, token solo en memoria y cierre de sesión también en el proveedor cuando publica `end_session_endpoint`.
+- **Terraform (ST1):** aplicación OIDC en Identity Center, con acceso solo para los grupos `administradores`, `soporte` y `facturadores`, y la URI de vuelta registrada con `put-application-grant`.
+
+**[?] Riesgo abierto: Identity Center puede no servir como proveedor de login del back-office.** La documentación de AWS apunta en contra y hay que comprobarlo contra el tenant real **antes** de dar BO2 por cerrado:
+
+1. Su API de OIDC declara el `idToken` como **no soportado** y cubre sobre todo el *device authorization grant* del inicio de sesión de la CLI.
+2. Las aplicaciones *customer managed* están pensadas para **trusted identity propagation** (canje de JWT con `CreateTokenWithIAM`), no para que una SPA inicie sesión con el flujo de código.
+3. Está sin verificar que publique `/.well-known/openid-configuration` y un JWKS en el emisor, y **qué claim lleva los grupos** de la persona.
+
+Qué comprobar, en este orden: que el emisor devuelva el documento de descubrimiento; que el token de la vuelta sea un JWT verificable con su JWKS; y qué claim trae los grupos (para fijar `STAFF_OIDC_ROLES_CLAIM`). Si algo de eso falla, la alternativa es **Cognito con MFA obligatorio** (la recomendación original de BO2): el código no cambia, porque el adaptador es de OIDC estándar; cambian la configuración y el stack de Terraform.
 
 ## 8. Estimación preliminar
 
@@ -180,6 +196,7 @@ Story points relativos al backlog actual. **Confianza baja:** no hay diseño del
 | Un error del personal mueve dinero                                                         | Doble aprobación, motivo obligatorio y solo registros compensatorios  |
 | Exposición de PII o documentos                                                             | Enmascarado por defecto, revelado auditado, URLs cortas y red interna |
 | El front depende de un pipeline de despliegue que todavía no existe                        | La fase 1 comparte el trabajo del pipeline de la API                  |
+| Identity Center puede no servir de proveedor de login del back-office (§7.2)               | El adaptador es de OIDC estándar: si falla, se cambia a Cognito sin tocar el código |
 | Las reglas sin definir (R1, R4, R5) cambian después de construir la fase 4                 | La fase 4 va después del MVP; los parámetros se versionan             |
 
 ## 11. Decisiones pendientes
@@ -187,7 +204,7 @@ Story points relativos al backlog actual. **Confianza baja:** no hay diseño del
 | #   | Pregunta                                                                                         | Responsable |
 | --- | ------------------------------------------------------------------------------------------------ | ----------- |
 | BO1 | ¿Back-office propio para todo, o CMS headless solo para ayuda y legales?                         | PO / TL     |
-| BO2 | Proveedor de identidad del personal y política de MFA (recomendado: Cognito con MFA obligatorio) | TL          |
+| BO2 | Proveedor de identidad del personal y política de MFA. Se eligió Identity Center y su aplicación OIDC ya está en Terraform, pero su parte OIDC **está sin verificar** (§7.2); la alternativa sigue siendo Cognito con MFA obligatorio | TL          |
 | BO3 | Confirmar la matriz de roles de §5                                                               | PO / Legal  |
 | BO4 | Campos de "Popular Goals" y "Latest Offers" (Figma `55:8637`)                                    | UX          |
 | BO5 | ¿Las ofertas se segmentan por usuario?                                                           | PO          |

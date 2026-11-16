@@ -53,4 +53,24 @@ describe('configuración', () => {
     const container = createAppContainer(parseConfig(viteEnv));
     expect(Object.keys(container.circles)).toEqual(['list', 'get', 'setPause']);
   });
+
+  it('en modo dev no ofrece el flujo OIDC', () => {
+    const container = createAppContainer(parseConfig(viteEnv));
+    expect(container.auth.initiateFlow).toBeUndefined();
+    expect(container.auth.handleCallback).toBeUndefined();
+  });
+
+  it('en modo oidc ofrece el flujo OIDC en vez del login de desarrollo', () => {
+    const container = createAppContainer(
+      parseConfig({
+        VITE_API_URL: 'http://api.test',
+        VITE_AUTH_MODE: 'oidc',
+        VITE_OIDC_ISSUER: 'https://identitycenter.amazonaws.com/ssoins-1234567890abcdef',
+        VITE_OIDC_CLIENT_ID: 'apl-1234567890abcdef',
+        VITE_OIDC_REDIRECT_URI: 'https://backoffice.solutionserj.com/auth/callback',
+      }),
+    );
+    expect(container.auth.initiateFlow).toBeDefined();
+    expect(container.auth.handleCallback).toBeDefined();
+  });
 });
