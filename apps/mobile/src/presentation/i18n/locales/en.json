@@ -220,11 +220,13 @@
         "chooseSlot": "Choose another slot"
       },
       "success": {
-        "title": "You're part of the circle!",
+        "title": "Your slot is reserved",
         "payout": "You'll receive {{amount}} in {{month}} (slot {{position}} of {{months}}).",
         "firstInstallment": "Your first installment is {{amount}} in {{month}}.",
         "viewCircles": "View my circles",
-        "catchUp": "Your installments include {{amount}} to catch up on past months, until {{month}}."
+        "catchUp": "Your installments include {{amount}} to catch up on past months, until {{month}}.",
+        "pendingSignature": "You still need to sign the contract and the promissory note. If you do not sign in time, your slot is released and offered again.",
+        "sign": "Sign documents"
       },
       "retention": "{{amount}} of your payout will be withheld to pay your last {{count}} installments automatically.",
       "acceptTerms": "I accept the circle Terms, the payment policy and the late payment policy.",
@@ -1016,5 +1018,71 @@
     "approvedTitle": "Identity verified",
     "approvedBody": "Your ID {{document}} is verified.",
     "done": "Done"
+  },
+  "agreements": {
+    "headerTitle": "Document signing",
+    "status": {
+      "pending": "Pending",
+      "signed": "Signed",
+      "expired": "Expired"
+    },
+    "list": {
+      "title": "Contracts and promissory notes",
+      "intro": "The documents you signed when joining each circle.",
+      "item": "Circle · slot {{position}}",
+      "deadline": "You have until {{date}} to sign.",
+      "note": {
+        "signed": "Signed on {{date}}.",
+        "expired": "The deadline passed and the slot was released."
+      },
+      "emptyTitle": "No documents to sign",
+      "emptyDescription": "When you join a circle, its contract and promissory note will appear here."
+    },
+    "documents": {
+      "read": "Read",
+      "unread": "Pending",
+      "readAction": "Read document",
+      "readDone": "Got it",
+      "version": "Version {{version}}",
+      "provisional": "Draft text: the final version is under legal review.",
+      "contract": {
+        "title": "Circle contract",
+        "description": "Rules, slots, instalments and late payments."
+      },
+      "promissoryNote": {
+        "title": "Insurance note",
+        "description": "Backs the remaining instalments if you collect before finishing payments."
+      },
+      "unknown": "We could not find that document."
+    },
+    "sign": {
+      "intro": "Before joining, sign these documents",
+      "deadline": "If you do not sign before {{date}}, your slot is released and offered again.",
+      "openDocument": "Read {{document}}",
+      "codeTitle": "Sign with a code",
+      "codeIntro": "We will send you a code to sign both documents.",
+      "codeSentTo": "We sent a code to {{destination}} to sign both documents.",
+      "readFirst": "Read both documents to be able to sign them.",
+      "codeLabel": "Signing code",
+      "requestCode": "Send me the code",
+      "submit": "Sign and join",
+      "notReceived": "Didn't get it?",
+      "resend": "Resend",
+      "codeInvalid": "That code is not correct.",
+      "codeInvalidWithAttempts_one": "That code is not correct. {{count}} attempt left.",
+      "codeInvalidWithAttempts_other": "That code is not correct. {{count}} attempts left.",
+      "codeExpired": "The code expired. Request a new one.",
+      "attemptsExceeded": "You ran out of attempts. Request a new code.",
+      "notFound": "We could not find these documents.",
+      "done": "Back",
+      "signed": {
+        "title": "Documents signed",
+        "description": "Your slot in the circle is confirmed."
+      },
+      "expired": {
+        "title": "The signing deadline passed",
+        "description": "Your slot was released and offered again. You can join another circle."
+      }
+    }
   }
 }

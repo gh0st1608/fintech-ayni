@@ -48,6 +48,8 @@ interface JoinConfirmScreenProps {
   onIncreaseLimit?: () => void;
   /** Tras unirse: la ruta lleva a Circles > Active. */
   onDone: () => void;
+  /** Firma del contrato y del pagaré (D3, COPAYNI-89): sin ella el turno no queda firme. */
+  onSign: () => void;
 }
 
 /** Primer día del mes `YYYY-MM`, para formatearlo con el idioma activo. */
@@ -59,8 +61,10 @@ function periodDate(period: string): Date {
 /**
  * Confirmación de la unión (COPAYNI-31) con el diseño D2 aprobado (COPAYNI-86): resume el
  * borrador, muestra la retención y lo que recibe, y exige aceptar los términos vigentes, cuya
- * versión se envía al unirse. Traduce cada rechazo a un mensaje con su acción. La firma del
- * contrato y del pagaré (D3, COPAYNI-89) se agrega después de confirmar cuando exista.
+ * versión se envía al unirse. Traduce cada rechazo a un mensaje con su acción.
+ *
+ * Unirse **reserva** el turno pero no lo deja firme: falta firmar el contrato y el pagaré (D3,
+ * COPAYNI-89) dentro del plazo, o el turno se libera y vuelve a ofrecerse.
  */
 export function JoinConfirmScreen(props: JoinConfirmScreenProps) {
   const { t } = useTranslation();
@@ -69,7 +73,7 @@ export function JoinConfirmScreen(props: JoinConfirmScreenProps) {
 
   let body: React.ReactNode;
   if (join.data) {
-    body = <Joined circle={join.data} onDone={props.onDone} />;
+    body = <Joined circle={join.data} onDone={props.onDone} onSign={props.onSign} />;
   } else if (!draft.isComplete()) {
     body = (
       <View style={styles.center}>
@@ -283,7 +287,15 @@ function recoveryFor(
   return null;
 }
 
-function Joined({ circle, onDone }: { circle: JoinedCircle; onDone: () => void }) {
+function Joined({
+  circle,
+  onDone,
+  onSign,
+}: {
+  circle: JoinedCircle;
+  onDone: () => void;
+  onSign: () => void;
+}) {
   const { t } = useTranslation();
   const formatMoney = useFormatMoney();
   const formatDate = useFormatDate();
@@ -324,13 +336,24 @@ function Joined({ circle, onDone }: { circle: JoinedCircle; onDone: () => void }
             })}
           </AppText>
         )}
+        <AppText weight="semibold" style={styles.centerText} testID="join-pending-signature">
+          {t('join.confirm.success.pendingSignature')}
+        </AppText>
       </View>
-      <Button label={t('join.confirm.success.viewCircles')} onPress={onDone} />
+      <View style={styles.actions}>
+        <Button label={t('join.confirm.success.sign')} onPress={onSign} />
+        <Button
+          label={t('join.confirm.success.viewCircles')}
+          variant="secondary"
+          onPress={onDone}
+        />
+      </View>
     </>
   );
 }
 
 const styles = StyleSheet.create({
+  actions: { gap: spacing.sm },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: spacing.lg },
   centerText: { textAlign: 'center' },
   content: { gap: spacing.l, paddingVertical: spacing.l },

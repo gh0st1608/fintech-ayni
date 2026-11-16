@@ -220,11 +220,13 @@
         "chooseSlot": "Elegir otro turno"
       },
       "success": {
-        "title": "¡Ya eres parte de la junta!",
+        "title": "Reservamos tu turno",
         "payout": "Recibirás {{amount}} en {{month}} (turno {{position}} de {{months}}).",
         "firstInstallment": "Tu primera cuota es de {{amount}} en {{month}}.",
         "viewCircles": "Ver mis juntas",
-        "catchUp": "Tus cuotas incluyen {{amount}} de puesta al día de los meses ya transcurridos, hasta {{month}}."
+        "catchUp": "Tus cuotas incluyen {{amount}} de puesta al día de los meses ya transcurridos, hasta {{month}}.",
+        "pendingSignature": "Falta firmar el contrato y el pagaré. Si no los firmas a tiempo, tu turno se libera y vuelve a ofrecerse.",
+        "sign": "Firmar documentos"
       },
       "retention": "Se retendrán {{amount}} de tu pozo para pagar automáticamente tus últimas {{count}} cuotas.",
       "acceptTerms": "Acepto los Términos del círculo, la política de pagos y la política de mora.",
@@ -1016,5 +1018,71 @@
     "approvedTitle": "Identidad verificada",
     "approvedBody": "Tu DNI {{document}} quedó verificado.",
     "done": "Listo"
+  },
+  "agreements": {
+    "headerTitle": "Firma de documentos",
+    "status": {
+      "pending": "Pendiente",
+      "signed": "Firmado",
+      "expired": "Vencido"
+    },
+    "list": {
+      "title": "Contratos y pagarés",
+      "intro": "Los documentos que firmaste al unirte a cada junta.",
+      "item": "Junta · turno {{position}}",
+      "deadline": "Tienes plazo para firmar hasta el {{date}}.",
+      "note": {
+        "signed": "Firmado el {{date}}.",
+        "expired": "Venció el plazo y el turno se liberó."
+      },
+      "emptyTitle": "No tienes documentos por firmar",
+      "emptyDescription": "Cuando te unas a una junta, aquí verás su contrato y su pagaré."
+    },
+    "documents": {
+      "read": "Leído",
+      "unread": "Pendiente",
+      "readAction": "Leer documento",
+      "readDone": "Entendido",
+      "version": "Versión {{version}}",
+      "provisional": "Texto provisional: la versión final está en revisión legal.",
+      "contract": {
+        "title": "Contrato de la junta",
+        "description": "Reglas, turnos, cuotas y mora."
+      },
+      "promissoryNote": {
+        "title": "Pagaré de seguro",
+        "description": "Respalda las cuotas restantes si cobras antes de terminar de pagar."
+      },
+      "unknown": "No encontramos ese documento."
+    },
+    "sign": {
+      "intro": "Antes de unirte, firma estos documentos",
+      "deadline": "Si no firmas antes del {{date}}, tu turno se libera y vuelve a ofrecerse.",
+      "openDocument": "Leer {{document}}",
+      "codeTitle": "Firma con código",
+      "codeIntro": "Te enviaremos un código para firmar ambos documentos.",
+      "codeSentTo": "Te enviamos un código al {{destination}} para firmar ambos documentos.",
+      "readFirst": "Lee los dos documentos para poder firmarlos.",
+      "codeLabel": "Código de firma",
+      "requestCode": "Enviarme el código",
+      "submit": "Firmar y unirme",
+      "notReceived": "¿No te llegó?",
+      "resend": "Reenviar",
+      "codeInvalid": "El código no es correcto.",
+      "codeInvalidWithAttempts_one": "El código no es correcto. Te queda {{count}} intento.",
+      "codeInvalidWithAttempts_other": "El código no es correcto. Te quedan {{count}} intentos.",
+      "codeExpired": "El código venció. Pide uno nuevo.",
+      "attemptsExceeded": "Agotaste los intentos. Pide un código nuevo.",
+      "notFound": "No encontramos estos documentos.",
+      "done": "Volver",
+      "signed": {
+        "title": "Documentos firmados",
+        "description": "Tu turno quedó confirmado en la junta."
+      },
+      "expired": {
+        "title": "Venció el plazo para firmar",
+        "description": "Tu turno se liberó y volvió a ofrecerse. Puedes unirte a otra junta."
+      }
+    }
   }
 }

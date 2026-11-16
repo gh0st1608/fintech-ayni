@@ -17,6 +17,8 @@ interface DocumentsScreenProps {
   onOpen: Partial<Record<DocumentType, () => void>>;
   /** Verificación en línea con selfie (COPAYNI-92); sin valor, no se ofrece. */
   onVerifyIdentity?: () => void;
+  /** Contrato y pagaré de las juntas (COPAYNI-89); sin valor, no se ofrece. */
+  onOpenAgreements?: () => void;
 }
 
 const STATUS_ICON = {
@@ -44,7 +46,11 @@ const ICONS = {
  * acceso para enviarlo o reenviarlo. Los documentos adicionales del Figma (recibo de servicios,
  * licencia, carnés) se agrupan en una fila hasta tener su historia (COPAYNI-49).
  */
-export function DocumentsScreen({ onOpen, onVerifyIdentity }: DocumentsScreenProps) {
+export function DocumentsScreen({
+  onOpen,
+  onVerifyIdentity,
+  onOpenAgreements,
+}: DocumentsScreenProps) {
   const { t } = useTranslation();
   const documents = useDocuments();
   const identity = useIdentityVerification();
@@ -139,6 +145,15 @@ export function DocumentsScreen({ onOpen, onVerifyIdentity }: DocumentsScreenPro
             />
           );
         })}
+        {onOpenAgreements && (
+          <ListItem
+            title={t('agreements.list.title')}
+            description={t('agreements.list.intro')}
+            icon="reader-outline"
+            onPress={onOpenAgreements}
+            testID="document-agreements"
+          />
+        )}
       </ScrollView>
     </Screen>
   );

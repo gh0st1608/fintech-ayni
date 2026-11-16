@@ -4,12 +4,13 @@ import { colors, radius, spacing } from '@/presentation/theme/tokens';
 
 import { AppText } from './AppText';
 
-type Tone = 'primary' | 'success' | 'subtle';
+type Tone = 'primary' | 'success' | 'subtle' | 'successSubtle';
 
 const TONES: Record<Tone, { background: string; text: string }> = {
   primary: { background: colors.primary, text: colors.onPrimary },
   success: { background: colors.success, text: colors.onPrimary },
   subtle: { background: colors.primary100, text: colors.primary },
+  successSubtle: { background: colors.success100, text: colors.success },
 };
 
 interface BadgeProps {
@@ -17,7 +18,10 @@ interface BadgeProps {
   tone?: Tone;
 }
 
-/** Etiqueta corta del Figma: "No Charge" (primary), "New" (success), "Joined" (subtle). */
+/**
+ * Etiqueta corta del Figma: "No Charge" (primary), "New" (success), "Joined" (subtle) y
+ * "Leído" de la firma de documentos (successSubtle).
+ */
 export function Badge({ label, tone = 'primary' }: BadgeProps) {
   const { background, text } = TONES[tone];
   return (
