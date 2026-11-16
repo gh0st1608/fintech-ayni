@@ -30,6 +30,9 @@ export const DOCUMENT_STORAGES = ['simulated', 's3'] as const;
 /** Verificación de documentos (COPAYNI-42): simulada o revisión manual de operaciones. */
 export const KYC_PROVIDERS = ['simulated', 'manual', 'verificaid'] as const;
 
+/** Proveedor del aviso en el celular (COPAYNI-85, T7). */
+export const PUSH_PROVIDERS = ['fake', 'expo'] as const;
+
 /**
  * Payout máximo, en unidades menores, que se admite sin verificación biométrica de identidad
  * (P4 de pending-scope §3.2). Por encima, la exposición por impago supera lo que la revisión
@@ -348,6 +351,52 @@ export class EnvironmentVariables {
   @Min(1)
   @Max(15)
   NOTIFICATION_DUE_SOON_DAYS: number = 3;
+
+  /**
+   * Aviso en el celular (COPAYNI-85). `fake` solo registra el envío, para desarrollo y pruebas, y
+   * está prohibido en production; `expo` envía por Expo Push Service (T7).
+   */
+  @IsIn(PUSH_PROVIDERS)
+  PUSH_PROVIDER: (typeof PUSH_PROVIDERS)[number] = 'fake';
+
+  /** API de Expo Push Service. */
+  @IsUrl({ require_tld: false, require_protocol: true, protocols: ['https', 'http'] })
+  EXPO_PUSH_API_URL: string = 'https://exp.host/--/api/v2/push/send';
+
+  /**
+   * Token de acceso de Expo. Solo es obligatorio si el proyecto activa la seguridad reforzada de
+   * notificaciones. Es un secreto: nunca se registra.
+   */
+  @IsOptional()
+  @IsString()
+  @IsNotEmpty()
+  EXPO_ACCESS_TOKEN?: string;
+
+  @IsInt()
+  @Min(1000)
+  @Max(30_000)
+  PUSH_TIMEOUT_MS: number = 10_000;
+
+  /**
+   * Horas tras las que un aviso ya no se envía: interrumpir con algo de ayer molesta más de lo que
+   * ayuda. La notificación se queda en la bandeja igual.
+   */
+  @IsInt()
+  @Min(1)
+  @Max(72)
+  PUSH_MAX_AGE_HOURS: number = 12;
+
+  /** Notificaciones por corrida de la tarea; cada una puede ir a varios dispositivos. */
+  @IsInt()
+  @Min(1)
+  @Max(1000)
+  PUSH_BATCH_SIZE: number = 200;
+
+  /** Intentos antes de abandonar un aviso, para que uno roto no bloquee la cola. */
+  @IsInt()
+  @Min(1)
+  @Max(10)
+  PUSH_MAX_ATTEMPTS: number = 3;
 
   /** Horas que vive una propuesta de doble aprobación sin decidir (COPAYNI-73, BO6). */
   @IsInt()
@@ -885,6 +934,9 @@ export function validateEnvironment(config: Record<string, unknown>): Environmen
     throw new Error(
       'Configuración inválida:\n- STAFF_AUTH_PROVIDER: dev no se admite en production',
     );
+  }
+  if (env.NODE_ENV === 'production' && env.PUSH_PROVIDER === 'fake') {
+    throw new Error('Configuración inválida:\n- PUSH_PROVIDER: fake no se admite en production');
   }
   if (env.NODE_ENV === 'production' && env.PAYMENT_GATEWAY === 'fake') {
     throw new Error('Configuración inválida:\n- PAYMENT_GATEWAY: fake no se admite en production');

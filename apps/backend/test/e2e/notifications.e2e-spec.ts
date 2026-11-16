@@ -7,6 +7,7 @@ import request from 'supertest';
 import { DataSource } from 'typeorm';
 
 import { SyncNotificationsUseCase } from '@src/modules/notifications/application/notifications.use-cases';
+import { SendPendingPushUseCase } from '@src/modules/notifications/application/push.use-cases';
 import { LocalDate } from '@src/shared/domain/value-objects/local-date';
 import { createTestApp } from '@test/support/create-test-app';
 
@@ -181,6 +182,129 @@ describe('Notificaciones', () => {
       .send({ ids: ['no-es-uuid'] })
       .expect(400);
     await http().get('/v1/me/notifications').expect(401);
+  });
+
+  /** Aviso en el celular (COPAYNI-85). En pruebas el proveedor es el doble (`PUSH_PROVIDER=fake`). */
+  describe('push', () => {
+    const TOKEN = 'ExponentPushToken[eeeeeeeeeeeeeeeeeeeeee]';
+
+    const pendingPushOf = async (userId: string): Promise<number> => {
+      const rows = await database.query<{ count: number }[]>(
+        `SELECT count(*)::int AS count FROM notifications
+          WHERE user_id = $1 AND pushed_at IS NULL`,
+        [userId],
+      );
+      return rows[0]?.count ?? 0;
+    };
+
+    it('registra el dispositivo, envía una sola vez y no repite al día siguiente', async () => {
+      const juana = await member();
+      await circleWithInstallments(juana.userId);
+
+      await http()
+        .post('/v1/me/devices')
+        .set('Authorization', `Bearer ${juana.token}`)
+        .send({ token: TOKEN, platform: 'android' })
+        .expect(200);
+      // Registrar el mismo token otra vez no duplica el dispositivo.
+      const again = await http()
+        .post('/v1/me/devices')
+        .set('Authorization', `Bearer ${juana.token}`)
+        .send({ token: TOKEN, platform: 'android' })
+        .expect(200);
+      const devices = await database.query<{ count: number }[]>(
+        'SELECT count(*)::int AS count FROM user_push_devices WHERE token = $1',
+        [TOKEN],
+      );
+      expect(devices[0]?.count).toBe(1);
+      expect(again.body.data.deviceId).toBeDefined();
+
+      await app.get(SyncNotificationsUseCase).execute(juana.userId);
+      expect(await pendingPushOf(juana.userId)).toBeGreaterThan(0);
+
+      const run = await app.get(SendPendingPushUseCase).execute();
+      expect(run.sent).toBeGreaterThan(0);
+      expect(await pendingPushOf(juana.userId)).toBe(0);
+
+      // Una segunda corrida no vuelve a avisar lo mismo.
+      const second = await app.get(SendPendingPushUseCase).execute();
+      expect(second.sent).toBe(0);
+    });
+
+    it('con la categoría apagada no se envía, y la bandeja la sigue mostrando', async () => {
+      const juana = await member();
+      await circleWithInstallments(juana.userId);
+      await http()
+        .post('/v1/me/devices')
+        .set('Authorization', `Bearer ${juana.token}`)
+        .send({ token: 'ExponentPushToken[ffffffffffffffffffffff]', platform: 'ios' })
+        .expect(200);
+
+      const saved = await http()
+        .put('/v1/me/notification-preferences')
+        .set('Authorization', `Bearer ${juana.token}`)
+        .send({ categories: { payments: false } })
+        .expect(200);
+      expect(saved.body.data).toEqual({
+        pushEnabled: true,
+        categories: { payments: false, circles: true, account: true },
+      });
+
+      await app.get(SyncNotificationsUseCase).execute(juana.userId);
+      const run = await app.get(SendPendingPushUseCase).execute();
+      // Los avisos de pagos se descartan; los de la junta sí salen.
+      expect(run.skipped).toBeGreaterThan(0);
+      const inboxTypes = (
+        (await inbox(juana.token).expect(200)).body.data.items as {
+          type: string;
+        }[]
+      ).map((item) => item.type);
+      expect(inboxTypes).toContain('installment_due_today');
+    });
+
+    it('al cerrar sesión ese celular deja de recibir avisos', async () => {
+      const juana = await member();
+      const token = 'ExponentPushToken[gggggggggggggggggggggg]';
+      await http()
+        .post('/v1/me/devices')
+        .set('Authorization', `Bearer ${juana.token}`)
+        .send({ token, platform: 'android' })
+        .expect(200);
+      await http()
+        .delete(`/v1/me/devices/${encodeURIComponent(token)}`)
+        .set('Authorization', `Bearer ${juana.token}`)
+        .expect(204);
+      const rows = await database.query<{ disabled_reason: string | null }[]>(
+        'SELECT disabled_reason FROM user_push_devices WHERE token = $1',
+        [token],
+      );
+      expect(rows[0]?.disabled_reason).toBe('signed_out');
+    });
+
+    it('las preferencias empiezan todas activadas y exigen sesión', async () => {
+      const juana = await member();
+      const current = await http()
+        .get('/v1/me/notification-preferences')
+        .set('Authorization', `Bearer ${juana.token}`)
+        .expect(200);
+      expect(current.body.data).toEqual({
+        pushEnabled: true,
+        categories: { payments: true, circles: true, account: true },
+      });
+
+      await http().get('/v1/me/notification-preferences').expect(401);
+      await http().post('/v1/me/devices').send({ token: TOKEN, platform: 'android' }).expect(401);
+      await http()
+        .post('/v1/me/devices')
+        .set('Authorization', `Bearer ${juana.token}`)
+        .send({ token: 'fcm:abc', platform: 'android' })
+        .expect(400);
+      await http()
+        .post('/v1/me/devices')
+        .set('Authorization', `Bearer ${juana.token}`)
+        .send({ token: TOKEN, platform: 'web' })
+        .expect(400);
+    });
   });
 
   it('pagina de la más reciente a la más antigua', async () => {

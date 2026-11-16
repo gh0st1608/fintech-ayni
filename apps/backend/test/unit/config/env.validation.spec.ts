@@ -170,6 +170,8 @@ describe('validateEnvironment', () => {
       JWT_PRIVATE_KEY: '-----BEGIN PRIVATE KEY-----\nabc\n-----END PRIVATE KEY-----',
       OTP_PEPPER: 'p'.repeat(32),
       FIELD_ENCRYPTION_KEY: Buffer.alloc(32, 1).toString('base64'),
+      // El aviso al celular debe elegir proveedor: el doble solo vale en desarrollo (COPAYNI-85).
+      PUSH_PROVIDER: 'expo',
     };
 
     it('fuera de production no exige la clave JWT ni el secreto de los OTP', () => {
@@ -282,6 +284,24 @@ describe('validateEnvironment', () => {
       ).toThrow(/OTP_SMS_ORIGINATION_IDENTITY/);
     });
 
+    it('el aviso al celular exige proveedor real en production (COPAYNI-85)', () => {
+      // En desarrollo el doble es el valor por defecto: no hace falta un proyecto de Expo.
+      expect(validateEnvironment({ ...REQUIRED })).toMatchObject({
+        PUSH_PROVIDER: 'fake',
+        PUSH_MAX_AGE_HOURS: 12,
+        PUSH_MAX_ATTEMPTS: 3,
+      });
+      expect(() => validateEnvironment({ ...PRODUCTION, PUSH_PROVIDER: 'fake' })).toThrow(
+        /PUSH_PROVIDER: fake no se admite en production/,
+      );
+      expect(() => validateEnvironment({ ...REQUIRED, PUSH_PROVIDER: 'firebase' })).toThrow(
+        /PUSH_PROVIDER/,
+      );
+      expect(() => validateEnvironment({ ...REQUIRED, PUSH_MAX_AGE_HOURS: '0' })).toThrow(
+        /PUSH_MAX_AGE_HOURS/,
+      );
+    });
+
     it('los pagos simulados del ciclo mensual nunca se admiten en production (COPAYNI-56)', () => {
       expect(validateEnvironment({ ...REQUIRED, CIRCLE_PAYMENTS_ADAPTER: 'fake' })).toMatchObject({
         CIRCLE_PAYMENTS_ADAPTER: 'fake',
@@ -377,7 +397,13 @@ describe('validateEnvironment', () => {
         /PAYMENT_GATEWAY/,
       );
       expect(() =>
-        validateEnvironment({ ...REQUIRED, NODE_ENV: 'production', PAYMENT_GATEWAY: 'fake' }),
+        validateEnvironment({
+          ...REQUIRED,
+          NODE_ENV: 'production',
+          PAYMENT_GATEWAY: 'fake',
+          // El resto de production ya es válido, para que el error sea solo el de la pasarela.
+          PUSH_PROVIDER: 'expo',
+        }),
       ).toThrow(/PAYMENT_GATEWAY: fake no se admite/);
     });
 
