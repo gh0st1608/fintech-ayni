@@ -239,6 +239,21 @@ export class TypeOrmCircleRepository implements CircleRepositoryPort {
     }
   }
 
+  /**
+   * Libera el turno de una membresía sin firmar (COPAYNI-89). Solo borra si el círculo no empezó
+   * a cobrar: en uno en curso el turno ya tiene cuotas y payouts, y quitarlo rompería el ciclo.
+   */
+  async removeMembership(circleId: string, userId: string): Promise<boolean> {
+    if (!isUuid(circleId) || !isUuid(userId)) return false;
+    const [, removed] = await this.circles.manager.query<[unknown, number]>(
+      `DELETE FROM circle_memberships m
+         WHERE m.circle_id = $1 AND m.user_id = $2
+           AND NOT EXISTS (SELECT 1 FROM circle_installments i WHERE i.circle_id = m.circle_id)`,
+      [circleId, userId],
+    );
+    return removed === 1;
+  }
+
   private async insertCircle(circle: Circle): Promise<void> {
     await this.circles.manager.transaction(async (manager) => {
       await manager.insert(CircleEntity, {

@@ -31,6 +31,7 @@ import { CreateInstallmentPaymentMethods1764158400000 } from './1764158400000-cr
 import { CreateSavingSubscriptions1764244800000 } from './1764244800000-create-saving-subscriptions';
 import { AddContributionPaymentKey1764331200000 } from './1764331200000-add-contribution-payment-key';
 import { PeruPayoutMethods1764417600000 } from './1764417600000-peru-payout-methods';
+import { CreateMembershipAgreements1764504000000 } from './1764504000000-create-membership-agreements';
 
 /** Migraciones en orden. Se listan explícitamente: el build no depende de globs. */
 export const MIGRATIONS = [
@@ -67,4 +68,5 @@ export const MIGRATIONS = [
   CreateSavingSubscriptions1764244800000,
   AddContributionPaymentKey1764331200000,
   PeruPayoutMethods1764417600000,
+  CreateMembershipAgreements1764504000000,
 ];

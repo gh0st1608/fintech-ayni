@@ -5,7 +5,7 @@ import { PayoutEligibilityResponse } from '@src/modules/circles/presentation/htt
 import { LocalDate } from '@src/shared/domain/value-objects/local-date';
 import { Money } from '@src/shared/domain/value-objects/money';
 import { Period } from '@src/shared/domain/value-objects/period';
-import { ELIGIBLE, NO_DEBTS } from '@test/support/join-circle.fixture';
+import { ELIGIBLE, NO_AGREEMENTS, NO_DEBTS } from '@test/support/join-circle.fixture';
 
 const due = (status: DueInstallment['status']): DueInstallment => ({
   installmentId: 'i-1',
@@ -23,6 +23,8 @@ async function eligibilityOf(
   applicant: Partial<JoinApplicant> = {},
   dues: DueInstallment[] = [],
   debts = NO_DEBTS,
+  /** Le falta firmar el contrato y el pagaré (COPAYNI-89). */
+  unsigned = false,
 ) {
   const useCase = new GetPayoutEligibilityUseCase(
     { applicantFor: () => Promise.resolve({ ...ELIGIBLE, ...applicant }) },
@@ -34,19 +36,33 @@ async function eligibilityOf(
       installment: jest.fn(),
     },
     debts,
+    { ...NO_AGREEMENTS, hasUnsigned: () => Promise.resolve(unsigned) },
   );
   return PayoutEligibilityResponse.from(await useCase.execute({ userId: 'u-1' }));
 }
 
 describe('GetPayoutEligibilityUseCase (COPAYNI-36)', () => {
-  it('lista los requisitos en el orden del checklist; sin firma, contrato y pagaré no se cumplen', async () => {
+  it('lista los requisitos en el orden del checklist; firmados, se cumplen todos', async () => {
     await expect(eligibilityOf()).resolves.toEqual({
+      isEligible: true,
+      requirements: [
+        { requirement: 'national_id', status: 'met' },
+        { requirement: 'insurance_note', status: 'met' },
+        { requirement: 'payout_method', status: 'met' },
+        { requirement: 'contract', status: 'met' },
+        { requirement: 'due_payments', status: 'met' },
+      ],
+    });
+  });
+
+  it('sin firmar el contrato y el pagaré, los dos quedan pendientes (COPAYNI-89)', async () => {
+    await expect(eligibilityOf({}, [], NO_DEBTS, true)).resolves.toEqual({
       isEligible: false,
       requirements: [
         { requirement: 'national_id', status: 'met' },
-        { requirement: 'insurance_note', status: 'unavailable' },
+        { requirement: 'insurance_note', status: 'pending' },
         { requirement: 'payout_method', status: 'met' },
-        { requirement: 'contract', status: 'unavailable' },
+        { requirement: 'contract', status: 'pending' },
         { requirement: 'due_payments', status: 'met' },
       ],
     });

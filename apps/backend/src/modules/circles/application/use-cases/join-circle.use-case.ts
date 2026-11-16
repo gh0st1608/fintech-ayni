@@ -30,6 +30,10 @@ import {
 import { JOIN_ELIGIBILITY, type JoinEligibilityPort } from '../ports/join-eligibility.port';
 import { MEMBER_DEBTS, type MemberDebtsPort } from '../ports/member-debts.port';
 import { MEMBER_HISTORY, type MemberHistoryPort } from '../ports/member-history.port';
+import {
+  MEMBERSHIP_AGREEMENTS,
+  type MembershipAgreementsPort,
+} from '../ports/membership-agreements.port';
 import { CIRCLE_TERMS, type CircleTermsSettings } from './circle-terms';
 import { CIRCLE_CYCLE, type CircleCycleSettings } from './cycle-settings';
 import { TRUST_SETTINGS, type TrustSettings, trustProfileOf } from './trust';
@@ -116,11 +120,21 @@ export class JoinCircleUseCase {
     @Inject(CURRENCIES) private readonly currencies: CurrencySettings,
     @Inject(CLOCK) private readonly clock: ClockPort,
     @Inject(CIRCLE_TERMS) private readonly termsSettings: CircleTermsSettings,
+    @Inject(MEMBERSHIP_AGREEMENTS) private readonly agreements: MembershipAgreementsPort,
   ) {}
 
   async execute(command: JoinCircleCommand): Promise<JoinCircleResult> {
     const previous = await this.previousJoin(command);
-    if (previous) return previous;
+    if (previous) {
+      await this.openAgreements(
+        command.userId,
+        previous.circleId,
+        previous.terms,
+        previous.membership.position,
+        previous.quote,
+      );
+      return previous;
+    }
     // Unos términos que no son los vigentes no valen: la app debe mostrar los nuevos.
     if (command.termsVersion !== this.termsSettings.version) {
       throw new ValidationError('Acepta los términos vigentes del círculo', {
@@ -163,6 +177,8 @@ export class JoinCircleUseCase {
       throw new IdempotencyKeyReusedError();
     }
 
+    await this.openAgreements(userId, circle.id, circle.terms, position, quote);
+
     this.logger.log({
       event: 'circles.joined',
       userId,
@@ -172,6 +188,39 @@ export class JoinCircleUseCase {
       replacement: circle.isRunning(),
     });
     return { circleId: circle.id, terms: circle.terms, membership, quote, created: true };
+  }
+
+  /**
+   * Abre el contrato y el pagaré pendientes de firma (COPAYNI-89): el turno queda reservado y, si
+   * no firma dentro del plazo, la tarea diaria lo libera.
+   *
+   * El error **no se silencia**, y se vuelve a llamar al repetir una unión ya hecha. Sin acuerdo
+   * nadie le pediría la firma y, como el checklist de elegibilidad exime a quien se unió antes de
+   * COPAYNI-89 (no tiene acuerdos), lo daría por cumplido sin haber firmado nunca. Abrirlo es
+   * idempotente, así que el reintento sanea una unión cuyos acuerdos no se alcanzaron a abrir.
+   */
+  private openAgreements(
+    userId: string,
+    circleId: string,
+    terms: CircleTerms,
+    position: number,
+    quote: SlotQuote,
+  ): Promise<void> {
+    return this.agreements.openFor({
+      userId,
+      circleId,
+      position,
+      terms: {
+        payout: terms.payout,
+        months: terms.months,
+        position,
+        baseInstallment: terms.baseInstallment,
+        totalPaid: quote.totalPaid,
+        retention: quote.retention,
+        startsOn: terms.startsOn.toString(),
+        payoutPeriod: quote.payoutPeriod.toString(),
+      },
+    });
   }
 
   private async assertNotBlocked(userId: string): Promise<void> {

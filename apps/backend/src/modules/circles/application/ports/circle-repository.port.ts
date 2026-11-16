@@ -99,4 +99,10 @@ export interface CircleRepositoryPort {
    * ningún círculo a medias.
    */
   create(circle: Circle): Promise<void>;
+  /**
+   * Quita la membresía del usuario en ese círculo y libera su turno (COPAYNI-89): lo usa el
+   * vencimiento del plazo de firma. Devuelve `false` si ya no estaba. No toca un círculo en
+   * curso: solo se libera lo que todavía no empezó a cobrar.
+   */
+  removeMembership(circleId: string, userId: string): Promise<boolean>;
 }

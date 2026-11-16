@@ -196,6 +196,7 @@ function authPolicy(config: AppConfigService): AuthPolicy {
       },
     },
   ],
-  exports: [ACCESS_TOKEN_VERIFIER],
+  // Los puertos de OTP los reutiliza la firma del contrato y del pagaré (COPAYNI-89).
+  exports: [ACCESS_TOKEN_VERIFIER, AUTH_POLICY, OTP_GENERATOR, OTP_HASHER, OTP_SENDER],
 })
 export class AuthModule {}

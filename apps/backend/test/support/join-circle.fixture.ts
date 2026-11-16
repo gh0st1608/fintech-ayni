@@ -5,6 +5,7 @@ import {
 } from '@src/modules/circles/application/ports/join-config-repository.port';
 import { type CircleRepositoryPort } from '@src/modules/circles/application/ports/circle-repository.port';
 import { type MemberDebtsPort } from '@src/modules/circles/application/ports/member-debts.port';
+import { type MembershipAgreementsPort } from '@src/modules/circles/application/ports/membership-agreements.port';
 import { type MemberHistoryPort } from '@src/modules/circles/application/ports/member-history.port';
 import { type CircleAssignmentSettings } from '@src/modules/circles/application/use-cases/get-available-slots.use-case';
 import { JoinCircleUseCase } from '@src/modules/circles/application/use-cases/join-circle.use-case';
@@ -127,6 +128,7 @@ export function createJoinCircleUseCase(
     /** Círculos completados sin expulsión; por defecto 1, así puede tomar cualquier turno. */
     completedCircles?: number;
     currencies?: CurrencySettings;
+    agreements?: MembershipAgreementsPort;
   } = {},
 ): JoinCircleUseCase {
   const applicant = options.applicant ?? ELIGIBLE;
@@ -148,5 +150,14 @@ export function createJoinCircleUseCase(
     options.currencies ?? TEST_CURRENCIES,
     new TestClock(options.now ?? JOIN_NOW),
     { version: TEST_TERMS_VERSION },
+    options.agreements ?? NO_AGREEMENTS,
   );
 }
+
+/** Firma del contrato y del pagaré (COPAYNI-89): por defecto no estorba a las pruebas de unión. */
+export const NO_AGREEMENTS: MembershipAgreementsPort = {
+  openFor: () => Promise.resolve(),
+  signedFor: () => Promise.resolve(true),
+  hasUnsigned: () => Promise.resolve(false),
+  expire: () => Promise.resolve([]),
+};

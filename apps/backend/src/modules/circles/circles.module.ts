@@ -22,6 +22,7 @@ import { GetPaymentStreakUseCase } from './application/use-cases/get-payment-str
 import { GetTransactionUseCase } from './application/use-cases/get-transaction.use-case';
 import { ListTransactionsUseCase } from './application/use-cases/list-transactions.use-case';
 import { GetPayoutEligibilityUseCase } from './application/use-cases/get-payout-eligibility.use-case';
+import { ReleaseUnsignedMembershipsUseCase } from './application/use-cases/release-unsigned-memberships.use-case';
 import { PAYMENT_SETTINGS } from './application/ports/payment-settings.port';
 import {
   GetPaymentSettingsUseCase,
@@ -128,6 +129,7 @@ import {
 } from './application/use-cases/list-recommended-circles.use-case';
 import { SlotPricing } from './domain/services/slot-pricing';
 import { SlotPricingRules } from './domain/value-objects/slot-pricing-rules';
+import { AgreementsModule } from '../agreements/agreements.module';
 import { DocumentsModule } from '../documents/documents.module';
 import { ProvisionalJoinEligibility } from './infrastructure/eligibility/provisional-join-eligibility';
 import {
@@ -155,6 +157,7 @@ import { MyCirclesController } from './presentation/http/controllers/my-circles.
     PaymentsModule,
     ReferralsModule,
     DocumentsModule,
+    AgreementsModule,
   ],
   controllers: [
     CirclesController,
@@ -288,6 +291,7 @@ import { MyCirclesController } from './presentation/http/controllers/my-circles.
     },
     GetPaymentStreakUseCase,
     GetPayoutEligibilityUseCase,
+    ReleaseUnsignedMembershipsUseCase,
     GetPaymentSettingsUseCase,
     UpdatePaymentSettingsUseCase,
     TypeOrmPaymentSettings,

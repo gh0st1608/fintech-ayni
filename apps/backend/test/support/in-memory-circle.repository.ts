@@ -171,6 +171,17 @@ export class InMemoryCircleRepository implements CircleRepositoryPort {
     this.add(circle);
   }
 
+  /** Libera el turno de una membresía sin firmar (COPAYNI-89); no toca un círculo en curso. */
+  async removeMembership(circleId: string, userId: string): Promise<boolean> {
+    await roundTrip();
+    const stored = this.circles.get(circleId);
+    if (!stored || stored.running) return false;
+    const index = stored.memberships.findIndex((member) => member.userId === userId);
+    if (index === -1) return false;
+    stored.memberships.splice(index, 1);
+    return true;
+  }
+
   /** Índice único (usuario, clave) en todos los círculos. */
   private usedKey({ userId, idempotencyKey }: Membership): boolean {
     return [...this.circles.values()].some(({ memberships }) =>

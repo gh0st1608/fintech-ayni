@@ -157,9 +157,9 @@ Checklist de Payout Eligibility (COPAYNI-36, Figma 55:9892). El backend calcula 
   "isEligible": false,
   "requirements": [
     { "requirement": "national_id", "status": "met" },
-    { "requirement": "insurance_note", "status": "unavailable" },
+    { "requirement": "insurance_note", "status": "pending" },
     { "requirement": "payout_method", "status": "met" },
-    { "requirement": "contract", "status": "unavailable" },
+    { "requirement": "contract", "status": "pending" },
     { "requirement": "due_payments", "status": "met" }
   ]
 }
@@ -168,9 +168,9 @@ Checklist de Payout Eligibility (COPAYNI-36, Figma 55:9892). El backend calcula 
 | `requirement`    | Cumplido (`met`) cuando…                                                                                | Acción en la app |
 | ---------------- | ------------------------------------------------------------------------------------------------------- | ---------------- |
 | `national_id`    | El KYC aprobó el National ID, o lo asume `JOIN_IDENTITY_CHECK`                                          | Scan National ID |
-| `insurance_note` | Firmó el pagaré. **Sin firma electrónica todavía (D3, T9): siempre `unavailable`**                      | —                |
+| `insurance_note` | Firmó el pagaré (COPAYNI-89, [agreements.md](agreements.md)). `pending` mientras le falte firmar          | —                |
 | `payout_method`  | Eligió un método de cobro que sigue disponible (COPAYNI-37)                                             | Payout Method    |
-| `contract`       | Firmó el contrato. **Siempre `unavailable`, como el pagaré**                                            | —                |
+| `contract`       | Firmó el contrato (COPAYNI-89). `pending` mientras le falte firmar                                        | —                |
 | `due_payments`   | No tiene cuotas con el cobro fallido (`overdue`) ni deuda por impago. Una cuota por vencer no lo atrasa | Resumen de pagos |
 
 - `status`: `met`, `pending` (le falta y puede resolverlo) o `unavailable` (le falta, pero la app todavía no permite resolverlo).

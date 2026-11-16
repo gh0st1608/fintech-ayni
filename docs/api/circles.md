@@ -282,7 +282,7 @@ Cada unión queda registrada en el log como `circles.joined`, con el usuario, el
 | Elegibilidad             | 422  | `NATIONAL_ID_REQUIRED`, `MONTHLY_LIMIT_EXCEEDED`, `PAYOUT_METHOD_REQUIRED`, `PAYOUT_METHOD_LIMIT_EXCEEDED`.                                                                    |
 | `SLOT_NOT_ALLOWED`       | 422  | La regla de confianza no le permite ese tipo de turno (COPAYNI-60). `details.reason`: `trust_required`, `identity_required` o `income_required`.                               |
 
-Fuera de alcance, pendientes del diseño o del PO: la firma del contrato y del pagaré (D3, T9) y el primer pago (D1).
+La firma del contrato y del pagaré se hace al unirse (COPAYNI-89, [agreements.md](agreements.md)): el turno queda reservado 48 h hasta firmar. Fuera de alcance, pendiente del diseño: el primer pago (D1).
 
 ## `GET /v1/circles/recommended`
 
