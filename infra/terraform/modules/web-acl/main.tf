@@ -14,6 +14,20 @@ variable "rate_limit_per_5_minutes" {
   }
 }
 
+variable "path_rate_limits" {
+  description = "Topes más estrictos por prefijo de ruta, antes del tope general. Clave: nombre de la regla. Para /admin, que no tiene filtro de red (COPAYNI-74, BO8)."
+  type = map(object({
+    path_prefix              = string
+    rate_limit_per_5_minutes = number
+  }))
+  default = {}
+
+  validation {
+    condition     = alltrue([for rule in var.path_rate_limits : rule.rate_limit_per_5_minutes >= 100])
+    error_message = "WAF exige un mínimo de 100."
+  }
+}
+
 variable "log_retention_days" {
   description = "Retención de los logs de peticiones bloqueadas."
   type        = number
@@ -32,6 +46,13 @@ locals {
     AWSManagedRulesCommonRuleSet          = 2
     AWSManagedRulesKnownBadInputsRuleSet  = 3
     AWSManagedRulesAmazonIpReputationList = 4
+  }
+
+  # A partir de 10 para no chocar con las de arriba. El orden entre ellas no importa: cada una
+  # mira un prefijo distinto y la que no coincide deja pasar a la siguiente.
+  path_rate_limits = {
+    for index, name in sort(keys(var.path_rate_limits)) :
+    name => merge(var.path_rate_limits[name], { priority = 10 + index })
   }
 }
 
@@ -63,6 +84,49 @@ resource "aws_wafv2_web_acl" "this" {
       cloudwatch_metrics_enabled = true
       metric_name                = "${var.name}-rate-limit"
       sampled_requests_enabled   = true
+    }
+  }
+
+  # Tope propio de un prefijo (p. ej. /admin): se cuenta solo lo que entra por esa ruta.
+  dynamic "rule" {
+    for_each = local.path_rate_limits
+
+    content {
+      name     = rule.key
+      priority = rule.value.priority
+
+      action {
+        block {}
+      }
+
+      statement {
+        rate_based_statement {
+          limit              = rule.value.rate_limit_per_5_minutes
+          aggregate_key_type = "IP"
+
+          scope_down_statement {
+            byte_match_statement {
+              positional_constraint = "STARTS_WITH"
+              search_string         = rule.value.path_prefix
+
+              field_to_match {
+                uri_path {}
+              }
+
+              text_transformation {
+                priority = 0
+                type     = "LOWERCASE"
+              }
+            }
+          }
+        }
+      }
+
+      visibility_config {
+        cloudwatch_metrics_enabled = true
+        metric_name                = "${var.name}-${rule.key}"
+        sampled_requests_enabled   = true
+      }
     }
   }
 

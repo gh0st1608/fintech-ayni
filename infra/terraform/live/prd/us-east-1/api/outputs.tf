@@ -3,6 +3,21 @@ output "api_url" {
   value       = "https://${var.api_domain_name}"
 }
 
+output "backoffice_url" {
+  description = "Dirección del back-office."
+  value       = module.backoffice.url
+}
+
+output "backoffice_bucket" {
+  description = "Bucket al que el despliegue sube el back-office compilado."
+  value       = module.backoffice.bucket_name
+}
+
+output "backoffice_distribution_id" {
+  description = "Distribución del back-office, para invalidar la caché después de desplegar."
+  value       = module.backoffice.distribution_id
+}
+
 output "alb_dns_name" {
   description = "DNS del balanceador (el dominio apunta a él con un alias de Route 53)."
   value       = module.api.alb_dns_name

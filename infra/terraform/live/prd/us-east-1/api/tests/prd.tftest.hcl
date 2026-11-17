@@ -52,6 +52,32 @@ run "plan_de_prd" {
   }
 }
 
+# COPAYNI-74. BO8 se decidió sin filtro de red: el back-office y /admin quedan en internet, así que
+# lo que los protege tiene que estar puesto y comprobado.
+run "backoffice_publicado" {
+  command = plan
+
+  assert {
+    condition     = output.backoffice_url == "https://admin.backend-ayni.solutionserj.com"
+    error_message = "El back-office se publica en la zona delegada de la API, solo por HTTPS."
+  }
+
+  assert {
+    condition     = strcontains(module.backoffice.content_security_policy, "https://backend-ayni.solutionserj.com")
+    error_message = "Sin la API en connect-src, la CSP corta todas las llamadas del back-office."
+  }
+
+  assert {
+    condition     = !strcontains(module.backoffice.content_security_policy, "unsafe-inline")
+    error_message = "CSP estricta: el build no necesita scripts ni estilos en línea."
+  }
+
+  assert {
+    condition     = strcontains(var.app_config["CORS_ALLOWED_ORIGINS"], "https://admin.backend-ayni.solutionserj.com")
+    error_message = "La API debe aceptar al back-office como origen, o el navegador bloquea /admin."
+  }
+}
+
 # El adaptador real de cobros todavía no existe: el ciclo no puede quedar corriendo por defecto.
 run "ciclo_de_circulos_deshabilitado" {
   command = plan

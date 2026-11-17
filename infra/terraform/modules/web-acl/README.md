@@ -10,6 +10,13 @@ module "web_acl" {
 
   name                     = "ayni-prd-api"
   rate_limit_per_5_minutes = 1000
+
+  path_rate_limits = {
+    admin = {
+      path_prefix              = "/admin/"
+      rate_limit_per_5_minutes = 600
+    }
+  }
 }
 ```
 
@@ -19,6 +26,7 @@ module "web_acl" {
 | --- | --- | --- |
 | `name` | **sí** | Nombre de la web ACL. |
 | `rate_limit_per_5_minutes` | no | Peticiones por IP en 5 minutos antes de bloquear. Primera capa del rate limit; la API tiene la suya por tarea (ADR). |
+| `path_rate_limits` | no | Topes más estrictos por prefijo de ruta, evaluados antes del general. Para `/admin`, que se publica sin filtro de red (COPAYNI-74). |
 | `log_retention_days` | no | Retención de los logs de peticiones bloqueadas. |
 | `tags` | no | Etiquetas adicionales. |
 

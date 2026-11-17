@@ -141,6 +141,33 @@ module "web_acl" {
   source = "../../../../modules/web-acl"
 
   name = "${local.name}-api"
+
+  # /admin no tiene filtro de red (BO8, COPAYNI-74): esta es la primera contención, por IP y por
+  # delante de la aplicación. La segunda es ADMIN_RATE_LIMIT_MAX, dentro de la API.
+  path_rate_limits = {
+    admin = {
+      path_prefix              = "/admin/"
+      rate_limit_per_5_minutes = 600
+    }
+  }
+}
+
+# Back-office: sitio estático en CloudFront sobre un bucket privado, en la misma zona delegada que
+# la API. Sin filtro de red (BO8): la puerta es el login corporativo con MFA (COPAYNI-72).
+module "backoffice" {
+  source = "../../../../modules/static-site"
+
+  name        = "${local.name}-backoffice"
+  bucket_name = "${local.name}-backoffice-${var.aws_account_id}"
+  domain_name = var.backoffice_domain_name
+  route53     = { zone_id = aws_route53_zone.api.zone_id }
+  tags        = local.tags
+
+  # Sin estos orígenes la CSP corta las llamadas del sitio: la API y el proveedor de identidad.
+  connect_src = compact([
+    "https://${var.api_domain_name}",
+    var.backoffice_oidc_issuer,
+  ])
 }
 
 module "api" {
