@@ -57,6 +57,10 @@
         "late": "{{month}}: late",
         "pending": "{{month}}: still to pay"
       }
+    },
+    "content": {
+      "goalsTitle": "Popular goals",
+      "offersPage": "Offer {{page}} of {{total}}"
     }
   },
   "join": {

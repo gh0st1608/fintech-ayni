@@ -15,6 +15,12 @@ export default function HomeRoute() {
       onJoin={() => router.push('/join')}
       onOpenReferral={() => router.push('/profile/referral')}
       onOpenNotifications={() => router.push('/notifications')}
+      onOpenContent={{
+        // Destinos del contenido de Home (COPAYNI-25); unirse ya lo resuelve onJoinCircle.
+        savingsPlans: () => router.push('/join/saving-program'),
+        referral: () => router.push('/profile/referral'),
+        help: () => router.push('/payment/help'),
+      }}
     />
   );
 }

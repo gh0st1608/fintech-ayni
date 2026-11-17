@@ -26,9 +26,11 @@ import {
   SaveNotificationPreferencesUseCase,
   UnregisterPushDeviceUseCase,
 } from '@/application/notifications/pushUseCases';
+import type { HomeContentRepositoryPort } from '@/domain/home/HomeContentRepositoryPort';
 import type { NotificationRepositoryPort } from '@/domain/notifications/NotificationRepositoryPort';
 import type { PushNotifierPort, PushRepositoryPort } from '@/domain/notifications/PushPorts';
 import { GetHelpUseCase } from '@/application/help/helpUseCases';
+import { GetHomeContentUseCase } from '@/application/home/homeContentUseCases';
 import type { HelpRepositoryPort } from '@/domain/help/HelpRepositoryPort';
 import type { AppContainer } from '@/application/AppContainer';
 import { SessionEvents } from '@/application/auth/SessionEvents';
@@ -198,6 +200,10 @@ import { PaymentApiRepository } from '@/infrastructure/payments/PaymentApiReposi
 import { HelpApiRepository } from '@/infrastructure/help/HelpApiRepository';
 import { InMemoryHelpRepository } from '@/infrastructure/help/InMemoryHelpRepository';
 import { InMemoryNotificationRepository } from '@/infrastructure/notifications/InMemoryNotificationRepository';
+import {
+  HomeContentApiRepository,
+  InMemoryHomeContentRepository,
+} from '@/infrastructure/home/HomeContentApiRepository';
 import { NotificationApiRepository } from '@/infrastructure/notifications/NotificationApiRepository';
 import { ExpoPushNotifier } from '@/infrastructure/notifications/ExpoPushNotifier';
 import {
@@ -242,6 +248,8 @@ export interface ContainerAdapters {
   userProfile: UserProfileRepositoryPort;
   payoutMethods: PayoutMethodRepositoryPort;
   notifications: NotificationRepositoryPort;
+  /** Ofertas y metas de Home (COPAYNI-25). */
+  homeContent: HomeContentRepositoryPort;
   /** Dispositivos y preferencias de aviso (COPAYNI-85). */
   push: PushRepositoryPort;
   /** El celular: permisos y token del proveedor de push. */
@@ -314,6 +322,11 @@ export function createContainer(
         ? new InMemoryUserProfileRepository({ currency: env.defaultCurrency })
         : new UserProfileApiRepository(http),
     help: env.helpApi === 'fake' ? new InMemoryHelpRepository() : new HelpApiRepository(http),
+    // El contenido de Home lo gestiona el back-office, como la ayuda: sigue su bandera.
+    homeContent:
+      env.helpApi === 'fake'
+        ? new InMemoryHomeContentRepository()
+        : new HomeContentApiRepository(http),
     notifications:
       env.notificationsApi === 'fake'
         ? new InMemoryNotificationRepository(env.defaultCurrency)
@@ -508,6 +521,7 @@ export function createContainer(
       payContribution: new PaySavingContributionUseCase(adapters.savings),
     },
     help: { get: new GetHelpUseCase(adapters.help) },
+    homeContent: { get: new GetHomeContentUseCase(adapters.homeContent) },
     notifications: {
       list: new ListNotificationsUseCase(adapters.notifications),
       countUnread: new CountUnreadNotificationsUseCase(adapters.notifications),

@@ -60,6 +60,7 @@ import type {
   UpdatePaymentSettingsUseCase,
 } from '@/application/payments/usecases/paymentUseCases';
 import type { GetHelpUseCase } from '@/application/help/helpUseCases';
+import type { GetHomeContentUseCase } from '@/application/home/homeContentUseCases';
 import type {
   CountUnreadNotificationsUseCase,
   ListNotificationsUseCase,
@@ -217,6 +218,10 @@ export interface AppContainer {
   };
   help: {
     get: GetHelpUseCase;
+  };
+  /** Ofertas y metas populares de Home (COPAYNI-25). */
+  homeContent: {
+    get: GetHomeContentUseCase;
   };
   notifications: {
     list: ListNotificationsUseCase;
