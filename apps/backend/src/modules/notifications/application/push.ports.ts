@@ -24,6 +24,12 @@ export interface PushSettings {
   readonly maxAgeHours: number;
   /** Notificaciones por tanda, para no pasarse de los límites del proveedor. */
   readonly batchSize: number;
+  /**
+   * Tandas como máximo en una corrida. La corrida sigue pidiendo tandas hasta vaciar la cola:
+   * sin esto, una corrida diaria entregaría solo `batchSize` avisos y el resto moriría de viejo
+   * (`maxAgeHours`) antes de la siguiente. El tope evita dar vueltas si nada avanza.
+   */
+  readonly maxBatches: number;
   /** Intentos antes de rendirse con una notificación. */
   readonly maxAttempts: number;
 }

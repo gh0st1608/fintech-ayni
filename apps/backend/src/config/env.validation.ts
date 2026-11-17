@@ -463,6 +463,15 @@ export class EnvironmentVariables {
   @Max(1000)
   PUSH_BATCH_SIZE: number = 200;
 
+  /**
+   * Tandas como máximo en una corrida: el tope de avisos por corrida es este número por
+   * `PUSH_BATCH_SIZE`. La corrida se detiene antes si vacía la cola.
+   */
+  @IsInt()
+  @Min(1)
+  @Max(1000)
+  PUSH_MAX_BATCHES: number = 50;
+
   /** Intentos antes de abandonar un aviso, para que uno roto no bloquee la cola. */
   @IsInt()
   @Min(1)

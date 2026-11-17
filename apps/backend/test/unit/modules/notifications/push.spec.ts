@@ -50,16 +50,21 @@ const pending = (overrides: Partial<PendingPush> = {}): PendingPush => ({
   ...overrides,
 });
 
-const SETTINGS: PushSettings = { maxAgeHours: 12, batchSize: 50, maxAttempts: 3 };
+const SETTINGS: PushSettings = { maxAgeHours: 12, batchSize: 50, maxAttempts: 3, maxBatches: 10 };
 
 function setup(options: {
   pending?: PendingPush[];
+  /** Una entrada por tanda, para probar que la corrida vacía la cola. */
+  batches?: PendingPush[][];
   devices?: PushDevice[];
   preferences?: NotificationPreferences;
   results?: (sent: readonly { device: PushDevice }[]) => PushResult[];
 }) {
+  const queue = options.batches ? [...options.batches] : undefined;
   const notifications = {
-    pendingPush: jest.fn(() => Promise.resolve(options.pending ?? [])),
+    pendingPush: jest.fn(() =>
+      Promise.resolve(queue ? (queue.shift() ?? []) : (options.pending ?? [])),
+    ),
     markPushed: jest.fn(() => Promise.resolve(0)),
     markPushAttempt: jest.fn(() => Promise.resolve(0)),
   } as unknown as NotificationsPort;
@@ -349,6 +354,36 @@ describe('envío de los avisos pendientes', () => {
     await useCase.execute();
     expect(devices.activeOf).toHaveBeenCalledTimes(1);
     expect(preferences.of).toHaveBeenCalledTimes(1);
+  });
+
+  // Con una sola tanda por corrida, el excedente esperaba al día siguiente y para entonces ya
+  // habría pasado maxAgeHours: se habría descartado sin enviarse (COPAYNI-85).
+  it('sigue pidiendo tandas hasta vaciar la cola', async () => {
+    const llena = Array.from({ length: SETTINGS.batchSize }, (_, index) =>
+      pending({ notificationId: `n${index}` }),
+    );
+    const { useCase, notifications } = setup({
+      batches: [llena, [pending({ notificationId: 'ultima' })]],
+    });
+
+    const run = await useCase.execute();
+
+    expect(notifications.pendingPush).toHaveBeenCalledTimes(2);
+    expect(run.considered).toBe(SETTINGS.batchSize + 1);
+    expect(run.sent).toBe(SETTINGS.batchSize + 1);
+  });
+
+  it('para al llegar al tope de tandas, aunque la cola no avance', async () => {
+    const llena = Array.from({ length: SETTINGS.batchSize }, (_, index) =>
+      pending({ notificationId: `n${index}` }),
+    );
+    // Siempre devuelve una tanda llena: sin tope, la corrida no terminaría nunca.
+    const { useCase, notifications } = setup({ pending: llena });
+
+    const run = await useCase.execute();
+
+    expect(notifications.pendingPush).toHaveBeenCalledTimes(SETTINGS.maxBatches);
+    expect(run.considered).toBe(SETTINGS.batchSize * SETTINGS.maxBatches);
   });
 });
 

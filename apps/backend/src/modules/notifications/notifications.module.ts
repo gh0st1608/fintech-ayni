@@ -74,6 +74,7 @@ import { NotificationsController } from './presentation/notifications.controller
       useFactory: (config: AppConfigService): PushSettings => ({
         maxAgeHours: config.get('PUSH_MAX_AGE_HOURS', { infer: true }),
         batchSize: config.get('PUSH_BATCH_SIZE', { infer: true }),
+        maxBatches: config.get('PUSH_MAX_BATCHES', { infer: true }),
         maxAttempts: config.get('PUSH_MAX_ATTEMPTS', { infer: true }),
       }),
     },
