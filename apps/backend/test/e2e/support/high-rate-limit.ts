@@ -4,3 +4,4 @@
  * prueba en http-platform.e2e-spec.ts.
  */
 process.env.RATE_LIMIT_MAX = '1000';
+process.env.ADMIN_RATE_LIMIT_MAX = '1000';

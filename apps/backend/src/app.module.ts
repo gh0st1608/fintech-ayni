@@ -23,6 +23,7 @@ import { StaffAccessModule } from './shared/staff-access.module';
 import { TelemetryShutdown } from './shared/infrastructure/observability/telemetry-shutdown';
 import { AllExceptionsFilter } from './shared/presentation/filters/all-exceptions.filter';
 import { BearerAuthGuard } from './shared/presentation/guards/bearer-auth.guard';
+import { rateLimitOptions } from './shared/presentation/http/admin-rate-limit';
 import { ResponseEnvelopeInterceptor } from './shared/presentation/interceptors/response-envelope.interceptor';
 import { TimeoutInterceptor } from './shared/presentation/interceptors/timeout.interceptor';
 import { createValidationPipe } from './shared/presentation/pipes/validation.pipe';
@@ -34,12 +35,13 @@ import { createValidationPipe } from './shared/presentation/pipes/validation.pip
     // almacenamiento compartido (spike COPAYNI-11).
     ThrottlerModule.forRootAsync({
       inject: [ConfigService],
-      useFactory: (config: AppConfigService) => [
-        {
+      useFactory: (config: AppConfigService) =>
+        rateLimitOptions({
           ttl: config.get('RATE_LIMIT_TTL', { infer: true }),
-          limit: config.get('RATE_LIMIT_MAX', { infer: true }),
-        },
-      ],
+          max: config.get('RATE_LIMIT_MAX', { infer: true }),
+          adminTtl: config.get('ADMIN_RATE_LIMIT_TTL', { infer: true }),
+          adminMax: config.get('ADMIN_RATE_LIMIT_MAX', { infer: true }),
+        }),
     }),
     ClockModule,
     CurrencyModule,

@@ -12,6 +12,10 @@ export const TEST_ENV = {
   BODY_LIMIT: '1kb',
   RATE_LIMIT_TTL: '60000',
   RATE_LIMIT_MAX: '5',
+  // El tope de /admin se agrega para toda la API de administración (COPAYNI-74). Las e2e que
+  // hacen muchas llamadas de administración lo suben con high-rate-limit.ts.
+  ADMIN_RATE_LIMIT_TTL: '60000',
+  ADMIN_RATE_LIMIT_MAX: '2',
   ENABLE_SWAGGER: 'true',
   DEFAULT_CURRENCY: 'PEN',
   // PEN oficial y USD habilitada con un tipo de cambio fijo (pending-scope M2 y M6).

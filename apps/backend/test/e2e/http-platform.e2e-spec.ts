@@ -177,6 +177,18 @@ describe('plataforma HTTP', () => {
       expect(response.body.error.code).toBe('RATE_LIMITED');
       expect(Number(response.headers['retry-after'])).toBeGreaterThan(0);
     });
+
+    // COPAYNI-74: /admin queda en internet (BO8), así que lleva su propio tope, más estricto y
+    // compartido por toda la API de administración. Sin sesión del personal la respuesta es 401,
+    // pero el rate limit corre antes que la autenticación y ya cuenta esas peticiones.
+    it('limita /admin aparte, con un contador común a todas sus rutas', async () => {
+      await http().get('/admin/v1/users?query=ana@example.com').expect(401);
+      await http().get('/admin/v1/kyc/reviews').expect(401);
+
+      // Tercera petición, y a otra ruta distinta: el presupuesto no se multiplica por endpoint.
+      const limited = await http().get('/admin/v1/circles').expect(429);
+      expect(limited.body.error.code).toBe('RATE_LIMITED');
+    });
   });
 
   it('publica la documentación OpenAPI cuando ENABLE_SWAGGER está activo', async () => {
