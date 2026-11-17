@@ -1,3 +1,5 @@
+import { z } from 'zod';
+
 import type { CircleDetail, CirclesPage, PauseAction, PauseResult } from '@/domain/circles/Circle';
 import type {
   KycApproval,
@@ -21,9 +23,16 @@ import type {
   ApprovalsFilter,
   HelpRepositoryPort,
   DelinquencyFilter,
+  HomeContentRepositoryPort,
 } from '@/domain/ports';
 import type { DelinquencyPage } from '@/domain/finance/Delinquency';
 import type { HelpContent, HelpInput, HelpLanguage } from '@/domain/help/Help';
+import type {
+  ContentInput,
+  ContentItem,
+  ContentKind,
+  HomeContent,
+} from '@/domain/content/HomeContent';
 import { AppError } from '@/domain/shared/AppError';
 import type { StaffMember } from '@/domain/staff/Staff';
 import type {
@@ -68,7 +77,9 @@ import {
   payoutAccountsSchema,
   approvalSchema,
   approvalsPageSchema,
+  contentItemResponseSchema,
   helpContentSchema,
+  homeContentSchema,
   delinquencyPageSchema,
 } from './schemas';
 
@@ -338,6 +349,28 @@ export class HelpApiRepository implements HelpRepositoryPort {
       schema: helpContentSchema,
       body: input,
     });
+  }
+}
+
+/** Contenido de Home (COPAYNI-25): se publica al instante en la app. */
+export class HomeContentApiRepository implements HomeContentRepositoryPort {
+  constructor(private readonly http: HttpClientPort) {}
+
+  get(signal?: AbortSignal): Promise<HomeContent> {
+    return this.http.get('/admin/v1/home-content', { schema: homeContentSchema, signal });
+  }
+
+  save(kind: ContentKind, id: string | null, input: ContentInput): Promise<ContentItem> {
+    const path = `/admin/v1/home-content/${kind === 'offer' ? 'offers' : 'goals'}`;
+    const options = { schema: contentItemResponseSchema, body: input };
+    return id ? this.http.put(`${path}/${id}`, options) : this.http.post(path, options);
+  }
+
+  async remove(kind: ContentKind, id: string): Promise<void> {
+    await this.http.delete(
+      `/admin/v1/home-content/${kind === 'offer' ? 'offers' : 'goals'}/${id}`,
+      { schema: z.unknown() },
+    );
   }
 }
 

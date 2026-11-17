@@ -21,6 +21,7 @@ import type {
   CycleRunsRepositoryPort,
   ApprovalsFilter,
   HelpRepositoryPort,
+  HomeContentRepositoryPort,
   DelinquencyFilter,
 } from '@/domain/ports';
 import type { DelinquencyPage } from '@/domain/finance/Delinquency';
@@ -40,6 +41,13 @@ import {
   MAX_MOVEMENT_MINOR,
   parseAmount,
 } from '@/domain/finance/Approval';
+import {
+  contentProblem,
+  type ContentInput,
+  type ContentItem,
+  type ContentKind,
+  type HomeContent,
+} from '@/domain/content/HomeContent';
 import { AppError } from '@/domain/shared/AppError';
 import { can, type StaffMember } from '@/domain/staff/Staff';
 import {
@@ -488,6 +496,42 @@ export class ListDelinquencyUseCase {
 
   execute(filter: DelinquencyFilter, signal?: AbortSignal): Promise<DelinquencyPage> {
     return this.finance.delinquency(filter, signal);
+  }
+}
+
+/** Contenido de Home (COPAYNI-25): incluye lo apagado y lo vencido, para poder gestionarlo. */
+export class GetHomeContentUseCase {
+  constructor(private readonly content: HomeContentRepositoryPort) {}
+
+  execute(signal?: AbortSignal): Promise<HomeContent> {
+    return this.content.get(signal);
+  }
+}
+
+/** Crea o edita una tarjeta de Home; se publica al instante en la app. */
+export class SaveHomeContentUseCase {
+  constructor(private readonly content: HomeContentRepositoryPort) {}
+
+  execute(
+    staff: StaffMember,
+    kind: ContentKind,
+    id: string | null,
+    input: ContentInput,
+  ): Promise<ContentItem> {
+    assertCan(staff, 'help.edit');
+    const problem = contentProblem(kind, input);
+    if (problem) throw new AppError('validation', problem);
+    return this.content.save(kind, id, input);
+  }
+}
+
+/** Borra una tarjeta. Apagarla es lo normal; borrar es para lo que ya no va. */
+export class RemoveHomeContentUseCase {
+  constructor(private readonly content: HomeContentRepositoryPort) {}
+
+  execute(staff: StaffMember, kind: ContentKind, id: string): Promise<void> {
+    assertCan(staff, 'help.edit');
+    return this.content.remove(kind, id);
   }
 }
 

@@ -7,6 +7,7 @@ import { KYC_DOCUMENT_STATES, USER_STATUSES } from '@/domain/users/User';
 import { INSTALLMENT_STATUSES } from '@/domain/finance/Finance';
 import { APPROVAL_STATUSES, FUND_MOVEMENT_KINDS } from '@/domain/finance/Approval';
 import { HELP_LANGUAGES } from '@/domain/help/Help';
+import { CONTENT_TARGETS, ILLUSTRATIONS } from '@/domain/content/HomeContent';
 import {
   BANK_ACCOUNT_TYPES,
   PAYOUT_ACCOUNT_KINDS,
@@ -286,6 +287,32 @@ export const helpContentSchema = z.object({
   updatedAt: isoDate.nullable(),
   updatedBy: z.string().nullable(),
 });
+
+const contentTextSchema = z.object({ title: z.string(), subtitle: z.string().nullable() });
+
+const contentItemSchema = z.object({
+  id: z.uuid(),
+  texts: z.object({ es: contentTextSchema, en: contentTextSchema }),
+  illustration: z.enum(ILLUSTRATIONS),
+  background: z.string().min(1),
+  target: z.enum(CONTENT_TARGETS),
+  targetAmount: z.number().int().nullable(),
+  position: z.number().int(),
+  active: z.boolean(),
+  // Las metas no tienen vigencia: el campo no viene y se normaliza a null.
+  startsOn: isoDate.nullish().transform((value) => value ?? null),
+  endsOn: isoDate.nullish().transform((value) => value ?? null),
+  updatedAt: isoDate,
+  updatedBy: z.string().nullable(),
+});
+
+/** Contenido de Home del back-office (COPAYNI-25): incluye lo apagado y lo vencido. */
+export const homeContentSchema = z.object({
+  offers: z.array(contentItemSchema),
+  goals: z.array(contentItemSchema),
+});
+
+export const contentItemResponseSchema = contentItemSchema;
 
 export const payoutAccountSchema = z.object({
   id: z.uuid(),

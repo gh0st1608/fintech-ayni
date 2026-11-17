@@ -21,6 +21,7 @@ import {
 } from '@/infrastructure/documents/InMemoryDocumentRepository';
 
 import { FakeFilePicker } from './FakeFilePicker';
+import { InMemoryHomeContentRepository } from '@/infrastructure/home/HomeContentApiRepository';
 import { InMemoryHelpRepository } from '@/infrastructure/help/InMemoryHelpRepository';
 import { InMemoryNotificationRepository } from '@/infrastructure/notifications/InMemoryNotificationRepository';
 import {
@@ -66,6 +67,7 @@ interface TestAdapters {
   push: InMemoryPushRepository;
   pushNotifier: FakePushNotifier;
   help: InMemoryHelpRepository;
+  homeContent: InMemoryHomeContentRepository;
   payments: InMemoryPaymentRepository;
   cards: InMemoryCardRepository;
   paymentTokenizer: FakePaymentTokenizer;
@@ -106,6 +108,7 @@ export function createTestContainer(overrides: Partial<TestAdapters> = {}) {
     push: new InMemoryPushRepository(),
     pushNotifier: new FakePushNotifier(),
     help: new InMemoryHelpRepository(undefined, 0),
+    homeContent: new InMemoryHomeContentRepository(),
     payments: new InMemoryPaymentRepository('PEN', { latencyMs: 0 }),
     cards: new InMemoryCardRepository({ latencyMs: 0 }),
     paymentTokenizer: new FakePaymentTokenizer({ latencyMs: 0 }),
