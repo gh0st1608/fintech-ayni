@@ -80,6 +80,7 @@ resource "aws_cloudfront_distribution" "this" {
   #checkov:skip=CKV2_AWS_47:La regla de Log4j vive en el WAF, que aquí no hay. Un sitio estático no interpreta cabeceras.
   #checkov:skip=CKV_AWS_86:Logs de acceso pendientes del bucket de logs común, igual que el ALB. Lo que hace el personal queda en staff_audit_log.
   #checkov:skip=CKV_AWS_310:Sin origen de respaldo: el origen es S3, con la durabilidad de S3. Un segundo origen sería otra copia del mismo sitio.
+  #checkov:skip=CKV_AWS_374:Sin restricción geográfica por la misma decisión BO8: filtrar por país no es una barrera (se salta con una VPN) y sí deja fuera a quien viaja. La puerta es el login con MFA, y el contenido servido aquí es la aplicación, no los datos.
   enabled             = true
   comment             = var.domain_name
   aliases             = [var.domain_name]

@@ -252,6 +252,7 @@ module "api" {
 # despliegue puede aplicarla y migrar antes de actualizar el servicio.
 # Sin reglas de entrada: nadie se conecta a la tarea.
 resource "aws_security_group" "migrate" {
+  #checkov:skip=CKV2_AWS_5:No lo referencia ningún recurso porque la tarea no es un servicio: se lo pasa aws ecs run-task al lanzarla, desde el workflow de despliegue y desde el runbook.
   name        = "${local.name}-api-migrate"
   description = "Tarea de migraciones: sale a la base, a ECR y a Secrets Manager"
   vpc_id      = module.network.vpc_id
