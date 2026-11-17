@@ -53,6 +53,13 @@ resource "aws_db_parameter_group" "this" {
     value = "1000"
   }
 
+  # Explícito y no por omisión: con "ddl" o "all", el CREATE ROLE del usuario de aplicación
+  # dejaría su contraseña escrita en los logs de PostgreSQL (COPAYNI-12).
+  parameter {
+    name  = "log_statement"
+    value = "none"
+  }
+
   parameter {
     name  = "log_lock_waits"
     value = "1"

@@ -225,3 +225,73 @@ run "otp_por_email_y_sms" {
     error_message = "Con email y SMS, la API recibe las variables del envío y el permiso para enviar."
   }
 }
+
+# COPAYNI-12: sin estas variables la tarea arranca y se muere validando el entorno, y el health
+# check del despliegue falla sin decir por qué.
+run "la_api_recibe_la_base_y_sus_claves" {
+  command = plan
+
+  assert {
+    condition = alltrue([
+      for clave in ["DB_HOST", "DB_PORT", "DB_NAME", "DB_SSL", "DB_SSL_CA_FILE"] :
+      contains(keys(local.api_environment), clave)
+    ])
+    error_message = "La API necesita la base en el entorno: sin DB_HOST no arranca."
+  }
+
+  assert {
+    condition     = local.api_environment["DB_SSL"] == "true"
+    error_message = "La base exige TLS (rds.force_ssl): con DB_SSL en false no se puede conectar."
+  }
+
+  assert {
+    condition = alltrue([
+      for clave in ["DB_USERNAME", "DB_PASSWORD", "JWT_PRIVATE_KEY", "OTP_PEPPER", "FIELD_ENCRYPTION_KEY"] :
+      contains(keys(local.api_secrets), clave)
+    ])
+    error_message = "Las claves obligatorias en production llegan por secreto, no por entorno."
+  }
+
+  assert {
+    condition = alltrue([
+      for clave, valor in local.api_environment :
+      !can(regex("(?i)(password|secret|private_key|pepper)", clave))
+    ])
+    error_message = "Ningún secreto puede viajar como variable de entorno en claro."
+  }
+}
+
+run "la_migracion_usa_la_credencial_maestra_y_la_api_no" {
+  command = plan
+
+  assert {
+    condition = alltrue([
+      aws_secretsmanager_secret.database_app_user.name == "ayni-prd/db/app",
+      aws_secretsmanager_secret.api.name == "ayni-prd/api/secrets",
+    ])
+    error_message = "Dos secretos separados: la credencial de la base se rota sin tocar las claves."
+  }
+
+  assert {
+    condition     = local.migrate_environment["DB_APP_USERNAME"] == "ayni_app"
+    error_message = "La migración crea el usuario con el que luego se conecta la API."
+  }
+
+  assert {
+    condition     = !contains(keys(local.api_environment), "DB_APP_USERNAME")
+    error_message = "La API no gestiona roles: solo el runner de migraciones toca la base como maestro."
+  }
+
+  assert {
+    condition = alltrue([
+      for clave in ["DB_USERNAME", "DB_PASSWORD", "DB_APP_PASSWORD"] :
+      contains(keys(local.migrate_secrets), clave)
+    ])
+    error_message = "La migración necesita el maestro para el DDL y la contraseña del usuario de aplicación para crearlo."
+  }
+
+  assert {
+    condition     = module.migrate.family == "ayni-prd-api-migrate"
+    error_message = "El pipeline lanza la tarea por el nombre de su familia."
+  }
+}

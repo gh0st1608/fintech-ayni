@@ -65,7 +65,7 @@ module "database" {
   name                         = local.name
   vpc_id                       = module.network.vpc_id
   subnet_ids                   = module.network.private_subnet_ids
-  allowed_security_groups      = { api = module.api.security_group_id }
+  allowed_security_groups      = { api = module.api.security_group_id, migrate = aws_security_group.migrate.id }
   instance_class               = "db.t4g.small"
   allocated_storage            = 50
   max_allocated_storage        = 200
@@ -101,9 +101,50 @@ data "aws_secretsmanager_secret" "newrelic_license_key" {
   name = "${local.name}/newrelic/license-key"
 }
 
+# Secretos de la API. Igual que la license key de New Relic, Terraform crea el contenedor y el
+# valor se carga fuera del estado (README, scripts/load-app-secrets.sh). Son dos y no uno para que
+# la credencial de la base se pueda rotar sin tocar las claves criptográficas.
+resource "aws_secretsmanager_secret" "api" {
+  name        = "${local.name}/api/secrets"
+  description = "Claves de la API: {\"jwt_private_key\": \"...\", \"otp_pepper\": \"...\", \"field_encryption_key\": \"...\"}"
+  tags        = local.tags
+}
+
+# Usuario con el que la API se conecta a la base. Lo crea el runner de migraciones con la
+# credencial maestra; aquí solo vive su contraseña (COPAYNI-12).
+resource "aws_secretsmanager_secret" "database_app_user" {
+  name        = "${local.name}/db/app"
+  description = "Usuario de aplicación de PostgreSQL: {\"username\": \"...\", \"password\": \"...\"}"
+  tags        = local.tags
+}
+
+locals {
+  # La base exige TLS (rds.force_ssl) y la raíz de Amazon RDS no está en el almacén de Node: la
+  # imagen trae el bundle y la API lo lee de esta ruta.
+  database_environment = {
+    DB_HOST        = module.database.address
+    DB_PORT        = tostring(module.database.port)
+    DB_NAME        = module.database.database_name
+    DB_SSL         = "true"
+    DB_SSL_CA_FILE = "/app/certs/rds-ca.pem"
+  }
+
+  # La API nunca ve la credencial maestra: solo la del usuario de aplicación.
+  database_secrets = {
+    DB_USERNAME = "${aws_secretsmanager_secret.database_app_user.arn}:username::"
+    DB_PASSWORD = "${aws_secretsmanager_secret.database_app_user.arn}:password::"
+  }
+
+  app_secrets = {
+    JWT_PRIVATE_KEY      = "${aws_secretsmanager_secret.api.arn}:jwt_private_key::"
+    OTP_PEPPER           = "${aws_secretsmanager_secret.api.arn}:otp_pepper::"
+    FIELD_ENCRYPTION_KEY = "${aws_secretsmanager_secret.api.arn}:field_encryption_key::"
+  }
+}
+
 # La misma configuración para la API y sus tareas programadas.
 locals {
-  api_environment = merge(var.app_config, local.telemetry_environment, {
+  api_environment = merge(var.app_config, local.telemetry_environment, local.database_environment, {
     DEPLOYMENT_ENVIRONMENT = "prod"
     NODE_ENV               = "production"
     PORT                   = "3000"
@@ -116,9 +157,9 @@ locals {
     KYC_PROVIDER     = "manual"
     ENABLE_SWAGGER   = "false"
   }, module.otp_messaging.app_environment)
-  api_secrets = var.new_relic.enabled ? {
+  api_secrets = merge(local.database_secrets, local.app_secrets, var.new_relic.enabled ? {
     NEW_RELIC_LICENSE_KEY = "${data.aws_secretsmanager_secret.newrelic_license_key[0].arn}:api_key::"
-  } : {}
+  } : {})
 }
 
 # Zona delegada: en GoDaddy, el nombre backend-ayni apunta por NS a estos servidores (README).
@@ -198,6 +239,56 @@ module "api" {
   alb_deletion_protection = true
   log_retention_days      = 90
   wait_for_steady_state   = true
+}
+
+# Grupo propio y no el del servicio: así la tarea de migración no depende de la API y el
+# despliegue puede aplicarla y migrar antes de actualizar el servicio.
+# Sin reglas de entrada: nadie se conecta a la tarea.
+resource "aws_security_group" "migrate" {
+  name        = "${local.name}-api-migrate"
+  description = "Tarea de migraciones: sale a la base, a ECR y a Secrets Manager"
+  vpc_id      = module.network.vpc_id
+  tags        = local.tags
+}
+
+resource "aws_vpc_security_group_egress_rule" "migrate" {
+  security_group_id = aws_security_group.migrate.id
+  cidr_ipv4         = "0.0.0.0/0"
+  ip_protocol       = "-1"
+  description       = "Salida a la base y a los servicios de AWS"
+}
+
+locals {
+  # Exactamente la misma configuración que la API, con dos añadidos. Así la migración hace de
+  # canario: el runner valida el entorno al arrancar, de modo que una variable mal puesta detiene
+  # el despliegue aquí en vez de dejar al servicio reiniciándose en bucle.
+  migrate_environment = merge(local.api_environment, {
+    # Crea o actualiza el usuario con el que se conecta la API, y le da permisos sobre las tablas
+    # que acaban de migrarse.
+    DB_APP_USERNAME = var.database_app_username
+  })
+
+  # La credencial maestra pisa la del usuario de aplicación: migrar necesita DDL.
+  migrate_secrets = merge(local.api_secrets, {
+    DB_USERNAME     = "${module.database.master_user_secret_arn}:username::"
+    DB_PASSWORD     = "${module.database.master_user_secret_arn}:password::"
+    DB_APP_PASSWORD = "${aws_secretsmanager_secret.database_app_user.arn}:password::"
+  })
+}
+
+# Migraciones de la base (COPAYNI-12). El pipeline la lanza antes de actualizar el servicio: si
+# falla, el despliegue se detiene y la versión anterior sigue sirviendo. Es la única tarea que usa
+# la credencial maestra de RDS, y por eso tiene su propio rol de ejecución.
+module "migrate" {
+  source = "../../../../modules/one-off-task"
+
+  name    = "${local.name}-api-migrate"
+  image   = "${module.ecr.repository_url}:${var.image_tag}"
+  command = ["node", "dist/migrate.js"]
+  tags    = local.tags
+
+  environment = local.migrate_environment
+  secrets     = local.migrate_secrets
 }
 
 # Ciclo mensual de los círculos (COPAYNI-56). Deshabilitado hasta que exista el adaptador real de

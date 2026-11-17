@@ -226,17 +226,33 @@ Crea el trail, las alarmas de seguridad y la integración con New Relic. En New 
 
 La API se publica solo por HTTPS; HTTP redirige con un 301. Si se recrea el balanceador o el certificado, ya no hace falta tocar GoDaddy.
 
-**5. Stack api y despliegue.** Pipeline de COPAYNI-12, pendiente de la cuenta:
+**5. Claves de la API.** Igual que la license key, Terraform crea los secretos y nunca ve su contenido: así no quedan en el estado. El script los genera con el formato correcto y los sube.
 
-1. Build y push de la imagen con el SHA.
-2. Plan con el rol de plan: `terraform plan -var image_tag=<sha> -out=tfplan`.
-3. Aprobación del environment `prd`.
-4. Apply de ese plan exacto con el rol de apply.
-5. Smoke test de `/health/ready`.
+```bash
+terraform apply -target=aws_secretsmanager_secret.api -target=aws_secretsmanager_secret.database_app_user
+../../../../scripts/load-app-secrets.sh --env prd
+```
 
-No se aplica prd desde una laptop.
+| Secreto | Claves | Qué pasa si se rota |
+| --- | --- | --- |
+| `ayni-prd/api/secrets` | `jwt_private_key` (P-256 para ES256), `otp_pepper`, `field_encryption_key` (AES-256 en base64) | Rotar la del JWT cierra todas las sesiones. **Rotar la de cifrado deja ilegible lo ya guardado** (el CCI de las cuentas de cobro). |
+| `ayni-prd/db/app` | `username` y `password` del usuario con el que se conecta la API | La contraseña nueva se aplica en el siguiente despliegue, al correr las migraciones. |
 
-**6. SLO.** Cuando la API ya reportó a New Relic (después del primer despliegue), poner `slo = { enabled = true }` en `api/terraform.tfvars` y aplicar. El SLO se asocia a la entidad del servicio, que New Relic crea al recibir la primera telemetría.
+Por eso el script no pisa una clave que ya tenga valor salvo que se le pida: `--rotate otp_pepper`.
+
+**Usuario de aplicación de la base.** La API no usa la credencial maestra de RDS: se conecta con `ayni_app`, que lee y escribe filas pero no puede crear ni alterar tablas. Lo crea el runner de migraciones, el único que corre con la credencial maestra, y le renueva los permisos en cada despliegue para que las tablas nuevas queden cubiertas.
+
+**6. Despliegue** ([deploy.yml](../../.github/workflows/deploy.yml)). El merge a `main` lo encola y el environment `prd` exige aprobación. No se aplica prd desde una laptop.
+
+1. Build y push de la imagen con la etiqueta del SHA (inmutable: una etiqueta no se reutiliza).
+2. Apply dirigido a `module.migrate`, que no toca el servicio.
+3. **Migraciones como tarea ECS.** Si fallan, el despliegue se corta y la versión anterior sigue sirviendo. La tarea valida la misma configuración que la API, así que una variable mal puesta también detiene el despliegue aquí, en vez de dejar al servicio reiniciándose en bucle.
+4. Apply completo: el servicio pasa a la imagen nueva y el apply espera a que esté sano.
+5. Health check de `/health/ready` contra el dominio público.
+
+El rollback es volver a ejecutar el workflow a mano con el SHA anterior, y está en el [runbook](../../docs/runbooks/api.md#rollback) junto con qué hacer si falla cada paso.
+
+**7. SLO.** Cuando la API ya reportó a New Relic (después del primer despliegue), poner `slo = { enabled = true }` en `api/terraform.tfvars` y aplicar. El SLO se asocia a la entidad del servicio, que New Relic crea al recibir la primera telemetría.
 
 ## Calidad (job `infra` de CI)
 
@@ -262,11 +278,8 @@ docker run --rm -v "$PWD:/tf" -w /tf bridgecrew/checkov:3.3.28 --config-file /tf
 ## Pendiente
 
 - **Valores `CAMBIAR`:** la cuenta AWS dedicada (ADR, D2), la cuenta de New Relic de prd, el owner y el centro de costos.
-- **Workflow de despliegue de prd** (plan en PR, apply con aprobación), cuando exista la cuenta.
 - **Nombres de las métricas de AWS en New Relic:** las condiciones de infraestructura usan la convención `aws.<servicio>.<Métrica>` de los metric streams. Confirmar con los primeros datos y ajustar si New Relic los nombra distinto.
 - **DNSSEC** de la zona delegada: requiere publicar el registro DS en GoDaddy.
-- **Indicador de base de datos en `/health/ready` y migraciones como tarea ECS:** llegan con la persistencia de COPAYNI-24.
 - **Ciclo de los círculos en prd:** el módulo `scheduled-task` ya lo crea, pero deshabilitado (`circle_cycle_enabled`). Se habilita cuando exista el adaptador real de cobros (`CIRCLE_PAYMENTS_ADAPTER`, COPAYNI-34). La hora (06:00 de Lima) es provisional.
-- **Base de datos en las tareas ECS:** los stacks todavía no pasan `DB_*` ni `DB_PASSWORD`, que el backend exige para arrancar. Hay que crear un usuario de aplicación: la credencial maestra de RDS es solo para migraciones.
 - **Dashboards de mobile y negocio:** cuando la app y los pagos estén instrumentados.
 - **Access logs del ALB y replicación entre regiones:** ver las excepciones en `.checkov.yaml`.

@@ -136,3 +136,14 @@ variable "otp_messaging" {
   })
   default = {}
 }
+
+variable "database_app_username" {
+  description = "Usuario de PostgreSQL con el que se conecta la API. Lo crea el runner de migraciones con la credencial maestra; no tiene permisos de DDL (COPAYNI-12)."
+  type        = string
+  default     = "ayni_app"
+
+  validation {
+    condition     = can(regex("^[a-z_][a-z0-9_]{2,62}$", var.database_app_username))
+    error_message = "Tiene que ser un identificador PostgreSQL en minúsculas."
+  }
+}

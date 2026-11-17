@@ -52,3 +52,38 @@ output "alarm_topic_arn" {
   description = "Tópico de las alarmas."
   value       = module.observability.notification_topic_arn
 }
+
+output "migrate_task_family" {
+  description = "Familia de la task definition de migraciones: el pipeline la lanza con run-task antes de actualizar el servicio."
+  value       = module.migrate.family
+}
+
+output "api_secrets_name" {
+  description = "Secreto con las claves de la API, cuyo valor se carga fuera de Terraform."
+  value       = aws_secretsmanager_secret.api.name
+}
+
+output "database_app_secret_name" {
+  description = "Secreto con la credencial del usuario de aplicación de la base."
+  value       = aws_secretsmanager_secret.database_app_user.name
+}
+
+output "task_subnet_ids" {
+  description = "Subredes privadas donde el pipeline lanza la tarea de migraciones."
+  value       = module.network.private_subnet_ids
+}
+
+output "task_security_group_id" {
+  description = "Security group con el que la tarea de migraciones llega a la base."
+  value       = aws_security_group.migrate.id
+}
+
+output "migrate_cluster_name" {
+  description = "Cluster propio de las tareas de una sola vez, donde el pipeline lanza las migraciones."
+  value       = module.migrate.cluster_name
+}
+
+output "migrate_log_group_name" {
+  description = "Grupo de logs de la tarea de migraciones."
+  value       = module.migrate.log_group_name
+}

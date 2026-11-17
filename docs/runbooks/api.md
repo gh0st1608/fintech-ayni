@@ -13,6 +13,46 @@ Cada alerta enlaza a su sección. Los umbrales son iniciales: se ajustan con la 
 
 Toda acción correctiva sobre la infraestructura va por el pipeline (plan revisado y apply aprobado), no por la consola. La excepción es una emergencia documentada en el incidente.
 
+## Despliegue y rollback
+
+El workflow **Desplegar API** publica la imagen, migra la base y actualiza el servicio, en ese orden ([deploy.yml](../../.github/workflows/deploy.yml)). El environment `prd` exige aprobación.
+
+### Qué pasa si falla cada paso
+
+| Falla | Estado en el que queda prd | Qué hacer |
+| --- | --- | --- |
+| La imagen no compila | Intacto: no se tocó nada. | Arreglar y volver a desplegar. |
+| Las migraciones | **El servicio sigue con la versión anterior.** El lote de migraciones puede haber quedado a medias. | Leer el log de la tarea y decidir (ver abajo). |
+| El apply del servicio | ECS mantiene las tareas viejas mientras las nuevas no pasen el health check. | Revisar el motivo de las tareas detenidas en la consola de ECS. |
+| El health check | El servicio ya está en la versión nueva. | Rollback. |
+
+### Rollback
+
+Volver atrás es volver a desplegar la imagen anterior, que ya está en ECR y no se reconstruye:
+
+1. Buscar el SHA del último despliegue bueno (en el resumen de la ejecución del workflow, o con `aws ecr describe-images --repository-name ayni-prd/api`).
+2. Ejecutar **Desplegar API** a mano con ese SHA en `image_tag`.
+3. Aprobar el environment.
+
+El despliegue vuelve a correr las migraciones. Como cada una se registra en `schema_migrations`, las ya aplicadas no se repiten: el rollback de la imagen **no revierte el esquema**.
+
+> **Por eso las migraciones tienen que ser compatibles hacia atrás.** Añadir una columna que la versión anterior ignora es seguro; borrar o renombrar una que la versión anterior usa deja el rollback sin salida. Cuando haga falta un cambio destructivo, va en dos despliegues: primero el código que deja de usar la columna, después la migración que la borra.
+
+### Si fallan las migraciones
+
+Cada migración corre en su propia transacción, así que la que falló no dejó cambios a medias, pero las anteriores del mismo lote sí se aplicaron.
+
+1. Leer el log: grupo `/ecs/ayni-prd-api-migrate`, o el que imprime el propio workflow.
+2. Si el fallo es del código de la migración, corregirlo y desplegar de nuevo: las ya aplicadas se saltan solas.
+3. Si el esquema quedó en un estado que el código anterior no entiende, decidir con el equipo si se avanza (arreglar y desplegar) o se restaura la base desde el backup. La instancia tiene 30 días de retención y recuperación a un punto en el tiempo.
+
+### Ejecutar las migraciones sin desplegar
+
+```bash
+cd infra/terraform/live/prd/us-east-1/api
+aws ecs run-task   --cluster "$(terraform output -raw migrate_cluster_name)"   --task-definition "$(terraform output -raw migrate_task_family)"   --launch-type FARGATE   --network-configuration "awsvpcConfiguration={subnets=[$(terraform output -json task_subnet_ids | jq -r 'join(",")')],securityGroups=[$(terraform output -raw task_security_group_id)],assignPublicIp=DISABLED}"
+```
+
 ## Severidades
 
 | Severidad  | Significado                                       | Respuesta                    |
