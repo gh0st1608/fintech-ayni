@@ -193,15 +193,22 @@ module "web_acl" {
   }
 }
 
-# Back-office: sitio estático en CloudFront sobre un bucket privado, en la misma zona delegada que
-# la API. Sin filtro de red (BO8): la puerta es el login corporativo con MFA (COPAYNI-72).
+# Zona propia del back-office, creada por el stack dns y delegada desde GoDaddy. Se busca por
+# nombre para no acoplar este stack al estado del otro.
+data "aws_route53_zone" "backoffice" {
+  name         = var.backoffice_domain_name
+  private_zone = false
+}
+
+# Back-office: sitio estático en CloudFront sobre un bucket privado, en el ápice de su propia zona.
+# Sin filtro de red (BO8): la puerta es el login corporativo con MFA (COPAYNI-72).
 module "backoffice" {
   source = "../../../../modules/static-site"
 
   name        = "${local.name}-backoffice"
   bucket_name = "${local.name}-backoffice-${var.aws_account_id}"
   domain_name = var.backoffice_domain_name
-  route53     = { zone_id = aws_route53_zone.api.zone_id }
+  route53     = { zone_id = data.aws_route53_zone.backoffice.zone_id }
   tags        = local.tags
 
   # Sin estos orígenes la CSP corta las llamadas del sitio: la API y el proveedor de identidad.

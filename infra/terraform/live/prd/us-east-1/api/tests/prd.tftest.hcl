@@ -13,6 +13,11 @@ mock_provider "aws" {
     target = data.aws_secretsmanager_secret.newrelic_license_key[0]
     values = { arn = "arn:aws:secretsmanager:us-east-1:123456789012:secret:ayni-prd/newrelic/license-key-AbCdEf" }
   }
+  # Zona del back-office: la crea el stack dns, no este.
+  override_data {
+    target = data.aws_route53_zone.backoffice
+    values = { zone_id = "Z08963592LPBB80537PIS" }
+  }
 }
 
 mock_provider "newrelic" {}
@@ -58,8 +63,8 @@ run "backoffice_publicado" {
   command = plan
 
   assert {
-    condition     = output.backoffice_url == "https://admin.backend-ayni.solutionserj.com"
-    error_message = "El back-office se publica en la zona delegada de la API, solo por HTTPS."
+    condition     = output.backoffice_url == "https://backoffice.solutionserj.com"
+    error_message = "El back-office se publica en su propia zona delegada, solo por HTTPS."
   }
 
   assert {
@@ -73,7 +78,7 @@ run "backoffice_publicado" {
   }
 
   assert {
-    condition     = strcontains(var.app_config["CORS_ALLOWED_ORIGINS"], "https://admin.backend-ayni.solutionserj.com")
+    condition     = strcontains(var.app_config["CORS_ALLOWED_ORIGINS"], "https://backoffice.solutionserj.com")
     error_message = "La API debe aceptar al back-office como origen, o el navegador bloquea /admin."
   }
 }

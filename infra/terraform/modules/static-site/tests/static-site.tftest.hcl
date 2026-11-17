@@ -3,7 +3,7 @@ mock_provider "aws" {}
 variables {
   name        = "ayni-prd-backoffice"
   bucket_name = "ayni-prd-backoffice-000000000000"
-  domain_name = "admin.backend-ayni.example.com"
+  domain_name = "backoffice.example.com"
   connect_src = ["https://backend-ayni.example.com", "https://identitycenter.amazonaws.com"]
   route53     = { zone_id = "Z123" }
 }

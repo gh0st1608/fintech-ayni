@@ -12,7 +12,7 @@ module "backoffice" {
 
   name        = "ayni-prd-backoffice"
   bucket_name = "ayni-prd-backoffice-${var.aws_account_id}"
-  domain_name = "admin.backend-ayni.solutionserj.com"
+  domain_name = "backoffice.solutionserj.com"
   route53     = { zone_id = aws_route53_zone.api.zone_id }
 
   # La API y el proveedor de identidad: sin esto la CSP corta las llamadas del sitio.

@@ -217,14 +217,23 @@ terraform apply
 
 Crea el trail, las alarmas de seguridad y la integración con New Relic. En New Relic aparece la cuenta AWS vinculada por metric streams.
 
-**4. Dominio `backend-ayni.solutionserj.com`, delegado desde GoDaddy.** El resto de `solutionserj.com` sigue en GoDaddy; solo este nombre pasa a Route 53, y Terraform administra la validación del certificado y el alias al balanceador. Un solo paso es manual:
+**4. Dominios delegados desde GoDaddy.** El resto de `solutionserj.com` sigue en GoDaddy; solo estos dos nombres pasan a Route 53, cada uno con su zona. Terraform administra los certificados y los alias.
 
-1. Crear solo la zona: `terraform apply -target=aws_route53_zone.api`.
-2. En GoDaddy, en la zona DNS de `solutionserj.com`, crear **4 registros NS** con nombre `backend-ayni`, uno por cada servidor de `terraform output route53_name_servers`.
-3. Verificar con `dig NS backend-ayni.solutionserj.com +short`: tiene que devolver los servidores de Route 53.
-4. Hacer el apply completo. Espera la emisión del certificado, hasta 60 minutos.
+| Nombre | Zona | La crea | Apunta a |
+| --- | --- | --- | --- |
+| `backend-ayni` | `backend-ayni.solutionserj.com` | el stack `api` | el balanceador de la API |
+| `backoffice` | `backoffice.solutionserj.com` | el stack `dns`, que se aplica antes que `api` | la distribución de CloudFront del back-office |
 
-La API se publica solo por HTTPS; HTTP redirige con un 301. Si se recrea el balanceador o el certificado, ya no hace falta tocar GoDaddy.
+El paso manual es el mismo para los dos, y hay que hacerlo **antes** del apply completo: sin la delegación, ACM no puede validar y el apply se queda esperando hasta una hora.
+
+1. Crear solo la zona: `terraform apply -target=aws_route53_zone.api` en `api/`, y `terraform apply` en `dns/`.
+2. En GoDaddy, en la zona DNS de `solutionserj.com`, crear **4 registros NS** con el nombre corto (`backend-ayni` o `backoffice`), uno por cada servidor que devuelve el stack (`route53_name_servers` en `api/`, `name_servers` en `dns/`).
+3. Verificar con `dig NS backend-ayni.solutionserj.com +short` y `dig NS backoffice.solutionserj.com +short`: tienen que devolver los servidores de Route 53.
+4. Hacer el apply completo de `api/`. Espera la emisión de los certificados, hasta 60 minutos.
+
+El stack `api` busca la zona del back-office **por nombre**, no por el estado del stack `dns`: los dos stacks quedan independientes, pero `dns` tiene que estar aplicado antes.
+
+Todo se publica solo por HTTPS; en la API, HTTP redirige con un 301. Si se recrea el balanceador o un certificado, ya no hace falta tocar GoDaddy.
 
 **5. Claves de la API.** Igual que la license key, Terraform crea los secretos y nunca ve su contenido: así no quedan en el estado. El script los genera con el formato correcto y los sube.
 
