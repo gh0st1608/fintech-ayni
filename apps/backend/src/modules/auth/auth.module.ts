@@ -30,6 +30,39 @@ import {
 import { SessionIssuer } from './application/services/session-issuer';
 import { SqlAccountAccess } from './infrastructure/persistence/sql-account-access';
 import {
+  APPLE_WEB_FLOW,
+  EXTERNAL_IDENTITIES,
+  IDENTITY_PROVIDERS_PORT,
+  SOCIAL_AUTH_FLOWS,
+  SOCIAL_AUTH_SETTINGS,
+  type SocialAuthSettings,
+} from './application/ports/social-auth.ports';
+import {
+  CompleteAppleWebFlowUseCase,
+  ExchangeSocialCodeUseCase,
+  StartAppleWebFlowUseCase,
+} from './application/use-cases/apple-web-flow.use-cases';
+import {
+  LinkSocialIdentityUseCase,
+  ListSocialIdentitiesUseCase,
+  SocialLoginUseCase,
+  UnlinkSocialIdentityUseCase,
+} from './application/use-cases/social-login.use-cases';
+import {
+  AppleWebFlowAdapter,
+  parseApplePrivateKey,
+} from './infrastructure/social/apple-web-flow.adapter';
+import {
+  AppleIdentityAdapter,
+  GoogleIdentityAdapter,
+  IdentityProviders,
+} from './infrastructure/social/provider.adapters';
+import {
+  SqlExternalIdentities,
+  SqlSocialAuthFlows,
+} from './infrastructure/persistence/typeorm/sql-external-identities';
+import { HttpJwks } from '../../shared/infrastructure/crypto/http-jwks';
+import {
   ResendOtpUseCase,
   StartAuthenticationUseCase,
   VerifyOtpUseCase,
@@ -63,6 +96,10 @@ import { SqlPasscodeRepository } from './infrastructure/persistence/typeorm/sql-
 import { TypeOrmAuthChallengeRepository } from './infrastructure/persistence/typeorm/typeorm-auth-challenge.repository';
 import { TypeOrmRefreshTokenRepository } from './infrastructure/persistence/typeorm/typeorm-refresh-token.repository';
 import { AuthController } from './presentation/http/controllers/auth.controller';
+import {
+  SocialAuthController,
+  SocialIdentitiesController,
+} from './presentation/http/controllers/social-auth.controller';
 import { ContactChangeController } from './presentation/http/controllers/contact-change.controller';
 import { PasscodeController } from './presentation/http/controllers/passcode.controller';
 import {
@@ -73,6 +110,31 @@ import { SqlContactChangeRepository } from './infrastructure/persistence/typeorm
 
 const JWT_SETTINGS = Symbol('JWT_SETTINGS');
 const logger = new Logger('Auth');
+
+/** JWKS de los proveedores: se reutilizan 10 min y un `kid` nuevo no dispara más de 1 descarga/30 s. */
+const JWKS_CACHE_SECONDS = 600;
+const JWKS_MIN_REFRESH_SECONDS = 30;
+const GOOGLE_JWKS_URL = 'https://www.googleapis.com/oauth2/v3/certs';
+const APPLE_JWKS_URL = 'https://appleid.apple.com/auth/keys';
+
+/** Lista de client id separados por coma; vacío deja el proveedor apagado. */
+const audiences = (value: string | undefined): string[] =>
+  (value ?? '')
+    .split(',')
+    .map((id) => id.trim())
+    .filter((id) => id.length > 0);
+
+function socialAuthSettings(config: AppConfigService): SocialAuthSettings {
+  return {
+    flowTtlSeconds: config.get('SOCIAL_FLOW_TTL_SECONDS', { infer: true }),
+    apple: {
+      authorizationUrl: 'https://appleid.apple.com/auth/authorize',
+      serviceId: config.get('APPLE_SERVICE_ID', { infer: true }) ?? '',
+      redirectUri: config.get('APPLE_REDIRECT_URI', { infer: true }) ?? '',
+      appRedirectUri: config.get('SOCIAL_APP_REDIRECT_URI', { infer: true }),
+    },
+  };
+}
 
 function passcodePolicy(config: AppConfigService): PasscodePolicy {
   return {
@@ -119,7 +181,13 @@ function authPolicy(config: AppConfigService): AuthPolicy {
  */
 @Module({
   imports: [UsersModule, TypeOrmModule.forFeature([AuthChallengeEntity, RefreshTokenEntity])],
-  controllers: [AuthController, ContactChangeController, PasscodeController],
+  controllers: [
+    AuthController,
+    ContactChangeController,
+    PasscodeController,
+    SocialAuthController,
+    SocialIdentitiesController,
+  ],
   providers: [
     PasscodeChecker,
     GetPasscodeStatusUseCase,
@@ -135,6 +203,67 @@ function authPolicy(config: AppConfigService): AuthPolicy {
     { provide: CONTACT_CHANGES, useExisting: SqlContactChangeRepository },
     StartAuthenticationUseCase,
     VerifyOtpUseCase,
+    SocialLoginUseCase,
+    LinkSocialIdentityUseCase,
+    UnlinkSocialIdentityUseCase,
+    ListSocialIdentitiesUseCase,
+    StartAppleWebFlowUseCase,
+    CompleteAppleWebFlowUseCase,
+    ExchangeSocialCodeUseCase,
+    SqlExternalIdentities,
+    SqlSocialAuthFlows,
+    { provide: EXTERNAL_IDENTITIES, useExisting: SqlExternalIdentities },
+    { provide: SOCIAL_AUTH_FLOWS, useExisting: SqlSocialAuthFlows },
+    { provide: SOCIAL_AUTH_SETTINGS, inject: [ConfigService], useFactory: socialAuthSettings },
+    {
+      // Un proveedor sin client id configurados queda apagado y responde 503 (COPAYNI-91 §3).
+      provide: IDENTITY_PROVIDERS_PORT,
+      inject: [ConfigService, CLOCK],
+      useFactory: (config: AppConfigService, clock: ClockPort) =>
+        new IdentityProviders([
+          new GoogleIdentityAdapter(
+            { audiences: audiences(config.get('GOOGLE_CLIENT_IDS', { infer: true })) },
+            new HttpJwks(
+              {
+                url: GOOGLE_JWKS_URL,
+                cacheSeconds: JWKS_CACHE_SECONDS,
+                minRefreshSeconds: JWKS_MIN_REFRESH_SECONDS,
+              },
+              clock,
+            ),
+            clock,
+          ),
+          new AppleIdentityAdapter(
+            { audiences: audiences(config.get('APPLE_CLIENT_IDS', { infer: true })) },
+            new HttpJwks(
+              {
+                url: APPLE_JWKS_URL,
+                cacheSeconds: JWKS_CACHE_SECONDS,
+                minRefreshSeconds: JWKS_MIN_REFRESH_SECONDS,
+              },
+              clock,
+            ),
+            clock,
+          ),
+        ]),
+    },
+    {
+      provide: APPLE_WEB_FLOW,
+      inject: [ConfigService, CLOCK],
+      useFactory: (config: AppConfigService, clock: ClockPort) =>
+        new AppleWebFlowAdapter(
+          {
+            tokenUrl: 'https://appleid.apple.com/auth/token',
+            teamId: config.get('APPLE_TEAM_ID', { infer: true }) ?? '',
+            keyId: config.get('APPLE_KEY_ID', { infer: true }) ?? '',
+            serviceId: config.get('APPLE_SERVICE_ID', { infer: true }) ?? '',
+            redirectUri: config.get('APPLE_REDIRECT_URI', { infer: true }) ?? '',
+            privateKey: parseApplePrivateKey(config.get('APPLE_PRIVATE_KEY', { infer: true })),
+            timeoutMs: config.get('SOCIAL_TIMEOUT_MS', { infer: true }),
+          },
+          clock,
+        ),
+    },
     ResendOtpUseCase,
     RefreshSessionUseCase,
     LogoutUseCase,

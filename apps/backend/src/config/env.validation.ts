@@ -346,6 +346,64 @@ export class EnvironmentVariables {
   })
   SUPPORT_WHATSAPP_NUMBER?: string;
 
+  /**
+   * Login social (COPAYNI-91). Client id de Google admitidos como audiencia, separados por coma:
+   * Android, iOS y Web. Vacío apaga el login con Google en este ambiente.
+   */
+  @IsOptional()
+  @IsString()
+  GOOGLE_CLIENT_IDS?: string;
+
+  /**
+   * Audiencias de Apple: el bundle id de iOS y el Services ID del flujo web de Android. Vacío
+   * apaga el login con Apple.
+   */
+  @IsOptional()
+  @IsString()
+  APPLE_CLIENT_IDS?: string;
+
+  /** Services ID del flujo web de Apple en Android. */
+  @IsOptional()
+  @IsString()
+  APPLE_SERVICE_ID?: string;
+
+  @IsOptional()
+  @IsString()
+  APPLE_TEAM_ID?: string;
+
+  @IsOptional()
+  @IsString()
+  APPLE_KEY_ID?: string;
+
+  /**
+   * Clave `.p8` de Sign in with Apple, en PEM. **Es un secreto**: va en Secrets Manager, nunca en
+   * el repositorio ni en una variable `EXPO_PUBLIC_`. Sin ella, el flujo web de Android se apaga.
+   */
+  @IsOptional()
+  @IsString()
+  APPLE_PRIVATE_KEY?: string;
+
+  /** Callback HTTPS registrado en Apple para el flujo web. */
+  @IsOptional()
+  @IsUrl({ require_tld: false, protocols: ['https', 'http'] })
+  APPLE_REDIRECT_URI?: string;
+
+  /** Deep link por el que la app recibe el código interno de un solo uso. */
+  @IsString()
+  @IsNotEmpty()
+  SOCIAL_APP_REDIRECT_URI: string = 'ayni://auth/social';
+
+  /** Cuánto vive un intento del flujo web de Apple. */
+  @IsInt()
+  @Min(60)
+  @Max(1800)
+  SOCIAL_FLOW_TTL_SECONDS: number = 600;
+
+  @IsInt()
+  @Min(1000)
+  @Max(30_000)
+  SOCIAL_TIMEOUT_MS: number = 10_000;
+
   /** Días antes del vencimiento de una cuota en que se notifica, además del mismo día (COPAYNI-84). */
   @IsInt()
   @Min(1)

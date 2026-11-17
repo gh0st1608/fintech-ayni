@@ -50,6 +50,8 @@ export class TestClock implements ClockPort {
  * - `verifier: null` usa el verificador real de JWT (módulo auth).
  * - `clock` reemplaza el reloj del sistema.
  * - `staff` reemplaza la autenticación del personal (por defecto, la que rechaza todo).
+ * - `overrides` reemplaza cualquier otro proveedor por token (p. ej. los proveedores de identidad
+ *   social, para no salir a Google ni a Apple desde una prueba).
  */
 export async function createTestApp(
   options: {
@@ -57,6 +59,7 @@ export async function createTestApp(
     verifier?: AccessTokenVerifierPort | null;
     clock?: ClockPort;
     staff?: StaffAuthenticatorPort;
+    overrides?: { token: unknown; value: unknown }[];
   } = {},
 ): Promise<NestExpressApplication> {
   const builder = Test.createTestingModule({
@@ -67,6 +70,9 @@ export async function createTestApp(
   }
   if (options.clock) builder.overrideProvider(CLOCK).useValue(options.clock);
   if (options.staff) builder.overrideProvider(STAFF_AUTHENTICATOR).useValue(options.staff);
+  for (const { token, value } of options.overrides ?? []) {
+    builder.overrideProvider(token).useValue(value);
+  }
   const moduleRef = await builder.compile();
   const app = configureApp(moduleRef.createNestApplication<NestExpressApplication>(APP_OPTIONS));
   await app.init();
