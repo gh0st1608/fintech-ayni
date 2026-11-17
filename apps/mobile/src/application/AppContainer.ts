@@ -23,6 +23,13 @@ import type { SignOutUseCase } from '@/application/auth/usecases/SignOutUseCase'
 import type { StartAuthenticationUseCase } from '@/application/auth/usecases/StartAuthenticationUseCase';
 import type { VerifyOtpUseCase } from '@/application/auth/usecases/VerifyOtpUseCase';
 import type {
+  LinkSocialProviderUseCase,
+  ListAvailableProvidersUseCase,
+  ListSocialProvidersUseCase,
+  SignInWithProviderUseCase,
+  UnlinkSocialProviderUseCase,
+} from '@/application/auth/usecases/socialLoginUseCases';
+import type {
   ListAgreementsUseCase,
   ListPendingAgreementsUseCase,
   ReadAgreementDocumentUseCase,
@@ -141,6 +148,12 @@ export interface AppContainer {
     enableBiometricUnlock: EnableBiometricUnlockUseCase;
     disableBiometricUnlock: DisableBiometricUnlockUseCase;
     unlockWithBiometrics: UnlockWithBiometricsUseCase;
+    /** Entrar y vincular con Google o Apple (COPAYNI-91). */
+    signInWithProvider: SignInWithProviderUseCase;
+    availableProviders: ListAvailableProvidersUseCase;
+    linkProvider: LinkSocialProviderUseCase;
+    unlinkProvider: UnlinkSocialProviderUseCase;
+    linkedProviders: ListSocialProvidersUseCase;
     shouldRelock: ShouldRelockUseCase;
     getPasscodeStatus: GetPasscodeStatusUseCase;
     changePasscode: ChangePasscodeUseCase;

@@ -500,6 +500,12 @@
       "useCode": "Sign in with a code",
       "passcode": "Passcode",
       "usePasscode": "Unlock with passcode"
+    },
+    "social": {
+      "separator": "or continue with",
+      "google": "Continue with Google",
+      "apple": "Continue with Apple",
+      "unsupported": "That provider is not available on this phone."
     }
   },
   "payment": {

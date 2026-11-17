@@ -52,6 +52,13 @@ import { RestoreSessionUseCase } from '@/application/auth/usecases/RestoreSessio
 import { SignOutUseCase } from '@/application/auth/usecases/SignOutUseCase';
 import { StartAuthenticationUseCase } from '@/application/auth/usecases/StartAuthenticationUseCase';
 import { VerifyOtpUseCase } from '@/application/auth/usecases/VerifyOtpUseCase';
+import {
+  LinkSocialProviderUseCase,
+  ListAvailableProvidersUseCase,
+  ListSocialProvidersUseCase,
+  SignInWithProviderUseCase,
+  UnlinkSocialProviderUseCase,
+} from '@/application/auth/usecases/socialLoginUseCases';
 import { ConfirmSlotSelectionUseCase } from '@/application/circles/usecases/ConfirmSlotSelectionUseCase';
 import { GetJoinConfigUseCase } from '@/application/circles/usecases/GetJoinConfigUseCase';
 import { ListAvailableSlotsUseCase } from '@/application/circles/usecases/ListAvailableSlotsUseCase';
@@ -132,6 +139,7 @@ import type {
 } from '@/domain/auth/ports/BiometricPorts';
 import type { PasscodeRepositoryPort } from '@/domain/auth/ports/PasscodeRepositoryPort';
 import type { TokenStoragePort } from '@/domain/auth/ports/TokenStoragePort';
+import type { SocialAuthApiPort, SocialSignInPort } from '@/domain/auth/ports/SocialAuthPorts';
 import type { CircleMembershipRepositoryPort } from '@/domain/circles/ports/CircleMembershipRepositoryPort';
 import type { CircleQuoteRepositoryPort } from '@/domain/circles/ports/CircleQuoteRepositoryPort';
 import type { JoinConfigRepositoryPort } from '@/domain/circles/ports/JoinConfigRepositoryPort';
@@ -162,6 +170,8 @@ import type { SavingPlanRepositoryPort } from '@/domain/savings/ports/SavingPlan
 import type { UserProfileRepositoryPort } from '@/domain/profile/ports/UserProfileRepositoryPort';
 import type { IdGeneratorPort } from '@/domain/shared/ports/IdGeneratorPort';
 import { AuthApiRepository } from '@/infrastructure/auth/AuthApiRepository';
+import { ExpoSocialSignIn, FakeSocialSignIn } from '@/infrastructure/auth/ExpoSocialSignIn';
+import { SocialAuthApiRepository } from '@/infrastructure/auth/SocialAuthApiRepository';
 import { InMemoryAuthApi } from '@/infrastructure/auth/InMemoryAuthApi';
 import { InMemoryPasscodeRepository } from '@/infrastructure/auth/InMemoryPasscodeRepository';
 import { PasscodeApiRepository } from '@/infrastructure/auth/PasscodeApiRepository';
@@ -241,6 +251,9 @@ export interface ContainerAdapters {
   deviceLocale: DeviceLocalePort;
   layoutDirection: LayoutDirectionPort;
   authApi: AuthApiPort;
+  /** Login social: el API y el SDK del proveedor en el dispositivo (COPAYNI-91). */
+  socialAuthApi: SocialAuthApiPort;
+  socialSignIn: SocialSignInPort;
   passcodes: PasscodeRepositoryPort;
   joinConfig: JoinConfigRepositoryPort;
   circleQuote: CircleQuoteRepositoryPort;
@@ -300,6 +313,12 @@ export function createContainer(
     deviceLocale: new ExpoDeviceLocale(),
     layoutDirection: new ReactNativeLayoutDirection(),
     authApi: env.authApi === 'fake' ? new InMemoryAuthApi() : new AuthApiRepository(http),
+    socialAuthApi: new SocialAuthApiRepository(http),
+    // El SDK nativo exige un development build: en modo fake se usa el doble.
+    socialSignIn:
+      env.authApi === 'fake'
+        ? new FakeSocialSignIn()
+        : new ExpoSocialSignIn({ googleWebClientId: env.googleWebClientId, scheme: 'ayni' }, http),
     passcodes:
       env.authApi === 'fake' ? new InMemoryPasscodeRepository() : new PasscodeApiRepository(http),
     joinConfig:
@@ -443,6 +462,15 @@ export function createContainer(
       ),
       disableBiometricUnlock: new DisableBiometricUnlockUseCase(adapters.biometricPreference),
       unlockWithBiometrics: new UnlockWithBiometricsUseCase(adapters.biometrics),
+      signInWithProvider: new SignInWithProviderUseCase(
+        adapters.socialSignIn,
+        adapters.socialAuthApi,
+        adapters.tokenStorage,
+      ),
+      availableProviders: new ListAvailableProvidersUseCase(adapters.socialSignIn),
+      linkProvider: new LinkSocialProviderUseCase(adapters.socialSignIn, adapters.socialAuthApi),
+      unlinkProvider: new UnlinkSocialProviderUseCase(adapters.socialAuthApi),
+      linkedProviders: new ListSocialProvidersUseCase(adapters.socialAuthApi),
       shouldRelock: new ShouldRelockUseCase(adapters.biometricPreference),
       getPasscodeStatus: new GetPasscodeStatusUseCase(adapters.passcodes),
       changePasscode: new ChangePasscodeUseCase(adapters.passcodes),

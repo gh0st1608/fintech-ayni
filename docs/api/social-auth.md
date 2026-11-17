@@ -14,38 +14,38 @@ La cuenta se resuelve por `provider + sub`, nunca por correo: el correo cambia y
 
 ## Qué cambió respecto del plan, y por qué
 
-| Plan                                      | Aquí                                                                                                                  |
-| ----------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
-| `POST /auth/social/...`                   | `POST /v1/auth/social/...`: todas las rutas de la app van versionadas                                                 |
+| Plan                                        | Aquí                                                                                                                  |
+| ------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| `POST /auth/social/...`                     | `POST /v1/auth/social/...`: todas las rutas de la app van versionadas                                                 |
 | Respuesta con `user` y `onboardingRequired` | `{ accessToken, refreshToken }`, el mismo DTO del OTP. El perfil y el onboarding salen de `GET /v1/me`, que ya existe |
-| `google-auth-library` y `jose`            | El verificador de JWT con JWKS que ya trae el repositorio (login del personal, COPAYNI-72). Dos dependencias menos    |
-| MySQL o DynamoDB                          | PostgreSQL con TypeORM: `UNIQUE (provider, subject)` y una transacción para crear usuario e identidad                 |
-| Entidad `User` con email opcional         | `users` exige email **o** teléfono (`ck_users_identifier`); de ahí la regla de alta de abajo                           |
+| `google-auth-library` y `jose`              | El verificador de JWT con JWKS que ya trae el repositorio (login del personal, COPAYNI-72). Dos dependencias menos    |
+| MySQL o DynamoDB                            | PostgreSQL con TypeORM: `UNIQUE (provider, subject)` y una transacción para crear usuario e identidad                 |
+| Entidad `User` con email opcional           | `users` exige email **o** teléfono (`ck_users_identifier`); de ahí la regla de alta de abajo                          |
 
 ## Alta de cuenta: las tres respuestas posibles
 
 Cuando la identidad **no** existe todavía:
 
-| Situación                                      | Qué pasa                                                                                                 |
-| ---------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
-| El proveedor da un correo verificado y libre   | Se crean usuario (activo) e identidad en una transacción                                                  |
-| Ese correo ya es de otra cuenta                | **409 `SOCIAL_EMAIL_TAKEN`**. No se vincula sola: hay que iniciar sesión como siempre y vincular en el perfil |
-| El proveedor no da correo verificado           | **400 `VALIDATION_ERROR`**: sin correo no podemos escribirle a la persona, y la base exige email o teléfono |
+| Situación                                    | Qué pasa                                                                                                      |
+| -------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| El proveedor da un correo verificado y libre | Se crean usuario (activo) e identidad en una transacción                                                      |
+| Ese correo ya es de otra cuenta              | **409 `SOCIAL_EMAIL_TAKEN`**. No se vincula sola: hay que iniciar sesión como siempre y vincular en el perfil |
+| El proveedor no da correo verificado         | **400 `VALIDATION_ERROR`**: sin correo no podemos escribirle a la persona, y la base exige email o teléfono   |
 
 Un correo que el proveedor no declara verificado se trata como si no hubiera correo.
 
 ## Endpoints
 
-| Método y ruta                          | Uso                                                                      |
-| -------------------------------------- | ------------------------------------------------------------------------ |
-| `POST /v1/auth/social/google`          | Verifica el ID Token de Google y abre sesión                             |
-| `POST /v1/auth/social/apple`           | Igual, con el ID Token del flujo nativo de iOS                           |
-| `POST /v1/auth/social/apple/authorize` | Abre el intento web de Android: devuelve la URL de Apple con `state` y `nonce` |
-| `POST /v1/auth/social/apple/callback`  | Callback HTTPS de Apple; redirige al deep link con el código interno     |
-| `POST /v1/auth/social/apple/exchange`  | La app canjea el código interno por su sesión                            |
-| `GET /v1/me/social-identities`         | Proveedores vinculados (requiere sesión)                                 |
-| `POST /v1/me/social-identities/{provider}` | Vincula un proveedor a la cuenta con sesión                          |
-| `DELETE /v1/me/social-identities/{provider}` | Lo desvincula                                                      |
+| Método y ruta                                | Uso                                                                            |
+| -------------------------------------------- | ------------------------------------------------------------------------------ |
+| `POST /v1/auth/social/google`                | Verifica el ID Token de Google y abre sesión                                   |
+| `POST /v1/auth/social/apple`                 | Igual, con el ID Token del flujo nativo de iOS                                 |
+| `POST /v1/auth/social/apple/authorize`       | Abre el intento web de Android: devuelve la URL de Apple con `state` y `nonce` |
+| `POST /v1/auth/social/apple/callback`        | Callback HTTPS de Apple; redirige al deep link con el código interno           |
+| `POST /v1/auth/social/apple/exchange`        | La app canjea el código interno por su sesión                                  |
+| `GET /v1/me/social-identities`               | Proveedores vinculados (requiere sesión)                                       |
+| `POST /v1/me/social-identities/{provider}`   | Vincula un proveedor a la cuenta con sesión                                    |
+| `DELETE /v1/me/social-identities/{provider}` | Lo desvincula                                                                  |
 
 Cuerpo del login y del vínculo:
 
@@ -74,31 +74,40 @@ Si la persona cancela, Apple avisa y la app vuelve con `?error=cancelled`, sin s
 
 ## Errores
 
-| Error                   | HTTP | Cuándo                                                                         |
-| ----------------------- | ---- | -------------------------------------------------------------------------------- |
+| Error                   | HTTP | Cuándo                                                                                                              |
+| ----------------------- | ---- | ------------------------------------------------------------------------------------------------------------------- |
 | `UNAUTHORIZED`          | 401  | Firma, emisor, audiencia, vigencia o nonce que no cuadran; `state` o código interno inexistente, ya usado o vencido |
-| `VALIDATION_ERROR`      | 400  | Cuerpo inválido, o sin correo verificado para abrir la cuenta                     |
-| `SOCIAL_EMAIL_TAKEN`    | 409  | Ese correo ya es de otra cuenta                                                   |
-| `SOCIAL_IDENTITY_TAKEN` | 409  | Esa cuenta del proveedor ya está vinculada a otra persona                         |
-| `NOT_FOUND`             | 404  | Proveedor desconocido, o desvincular algo que no estaba vinculado                 |
-| `SERVICE_UNAVAILABLE`   | 503  | El proveedor no está configurado en este ambiente                                 |
+| `VALIDATION_ERROR`      | 400  | Cuerpo inválido, o sin correo verificado para abrir la cuenta                                                       |
+| `SOCIAL_EMAIL_TAKEN`    | 409  | Ese correo ya es de otra cuenta                                                                                     |
+| `SOCIAL_IDENTITY_TAKEN` | 409  | Esa cuenta del proveedor ya está vinculada a otra persona                                                           |
+| `NOT_FOUND`             | 404  | Proveedor desconocido, o desvincular algo que no estaba vinculado                                                   |
+| `SERVICE_UNAVAILABLE`   | 503  | El proveedor no está configurado en este ambiente                                                                   |
 
 El motivo exacto del rechazo de un token **nunca** sale en la respuesta: queda en el log (`reason`), para no ayudar a quien lo intenta.
 
 ## Configuración
 
-| Variable                  | Para qué                                                                 |
-| ------------------------- | ------------------------------------------------------------------------- |
-| `GOOGLE_CLIENT_IDS`       | Client id de Android, iOS y Web separados por coma: la lista cerrada de audiencias |
-| `APPLE_CLIENT_IDS`        | Bundle id de iOS y Services ID del flujo web                              |
-| `APPLE_SERVICE_ID`        | Services ID del flujo web de Android                                      |
-| `APPLE_TEAM_ID`, `APPLE_KEY_ID` | Identifican la clave de Sign in with Apple                          |
-| `APPLE_PRIVATE_KEY`       | La clave `.p8` en PEM. **Secreto**: Secrets Manager, nunca el repositorio ni `EXPO_PUBLIC_` |
-| `APPLE_REDIRECT_URI`      | Callback HTTPS registrado en Apple                                        |
-| `SOCIAL_APP_REDIRECT_URI` | Deep link por el que la app recibe el código interno                      |
-| `SOCIAL_FLOW_TTL_SECONDS` | Cuánto vive un intento del flujo web (10 min por defecto)                 |
+| Variable                        | Para qué                                                                                    |
+| ------------------------------- | ------------------------------------------------------------------------------------------- |
+| `GOOGLE_CLIENT_IDS`             | Client id de Android, iOS y Web separados por coma: la lista cerrada de audiencias          |
+| `APPLE_CLIENT_IDS`              | Bundle id de iOS y Services ID del flujo web                                                |
+| `APPLE_SERVICE_ID`              | Services ID del flujo web de Android                                                        |
+| `APPLE_TEAM_ID`, `APPLE_KEY_ID` | Identifican la clave de Sign in with Apple                                                  |
+| `APPLE_PRIVATE_KEY`             | La clave `.p8` en PEM. **Secreto**: Secrets Manager, nunca el repositorio ni `EXPO_PUBLIC_` |
+| `APPLE_REDIRECT_URI`            | Callback HTTPS registrado en Apple                                                          |
+| `SOCIAL_APP_REDIRECT_URI`       | Deep link por el que la app recibe el código interno                                        |
+| `SOCIAL_FLOW_TTL_SECONDS`       | Cuánto vive un intento del flujo web (10 min por defecto)                                   |
 
 **Una lista de client id vacía apaga ese proveedor** y su endpoint responde 503. Por eso esto se puede desplegar antes de tener las cuentas: sin configuración, el login social simplemente no se ofrece.
+
+## En la app
+
+- **Botones** en el ingreso, debajo del formulario de email o teléfono. Se ofrecen **solo los proveedores que el dispositivo puede usar**: sin client id de Google y sin build nativo no aparece nada, y el ingreso de siempre queda igual.
+- **Google con `expo-auth-session`**, no con el SDK nativo que proponía el plan. La [guía de Expo](https://docs.expo.dev/guides/google-authentication/) avisa de que el SDK antiguo de Android está descontinuado y de que su reemplazo (Credential Manager) va en la **oferta de pago** de esa librería. El backend solo necesita un ID Token con nonce, que este flujo entrega igual, y es un módulo de Expo, como pide `apps/mobile/AGENTS.md`. Cambiar al diálogo nativo después es **un adaptador**, porque el SDK vive detrás de `SocialSignInPort`.
+- **Apple nativo en iOS** con `expo-apple-authentication`; en Android, el flujo web que coordina el backend, abierto con `openAuthSessionAsync` y devuelto por deep link.
+- **El nonce lo genera la app** por intento (`expo-crypto`) y viaja con la credencial; en el flujo web de Android lo genera el backend.
+- **La credencial del proveedor no se guarda**: se cambia una vez por la sesión de Ayni, que es lo único que llega a SecureStore.
+- **Cancelar no es un error**: no se muestra ningún mensaje, que es lo que la persona espera al cerrar el diálogo.
 
 ## Pendiente [?]
 
