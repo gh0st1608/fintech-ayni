@@ -112,6 +112,7 @@ data "aws_iam_policy_document" "apply_services" {
       "acm:*",
       "application-autoscaling:*",
       "cloudtrail:*",
+      "cloudfront:*",
       "cloudwatch:*",
       "ec2:*",
       "ecr:*",
@@ -159,4 +160,33 @@ resource "aws_iam_role_policy" "apply_services" {
   name   = "prd-stack"
   role   = aws_iam_role.apply.id
   policy = data.aws_iam_policy_document.apply_services.json
+}
+
+# Publicación del back-office (COPAYNI-74): sube los archivos compilados e invalida la caché. No
+# es el rol de Terraform: no puede crear ni destruir nada, solo escribir en ese bucket.
+data "aws_iam_policy_document" "backoffice_deploy" {
+  statement {
+    sid       = "SyncSite"
+    actions   = ["s3:ListBucket", "s3:GetObject", "s3:PutObject", "s3:DeleteObject"]
+    resources = ["arn:aws:s3:::ayni-prd-backoffice-*", "arn:aws:s3:::ayni-prd-backoffice-*/*"]
+  }
+
+  statement {
+    sid       = "InvalidateCache"
+    actions   = ["cloudfront:CreateInvalidation", "cloudfront:GetInvalidation", "cloudfront:ListDistributions"]
+    resources = ["*"]
+  }
+}
+
+resource "aws_iam_role" "backoffice_deploy" {
+  name                 = "ayni-prd-backoffice-deploy"
+  description          = "Publica el back-office desde el GitHub Environment protegido"
+  assume_role_policy   = data.aws_iam_policy_document.apply_trust.json
+  max_session_duration = 3600
+}
+
+resource "aws_iam_role_policy" "backoffice_deploy" {
+  name   = "publicar-backoffice"
+  role   = aws_iam_role.backoffice_deploy.id
+  policy = data.aws_iam_policy_document.backoffice_deploy.json
 }

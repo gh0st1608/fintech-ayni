@@ -7,6 +7,8 @@ quiet: true
 skip-path:
   - .terraform
 
+# El módulo static-site lleva sus excepciones en línea (#checkov:skip=...), para que valgan solo
+# para él y no apaguen la misma regla en el resto del repositorio.
 skip-check:
   # --- Controlados por variables: prd los activa y live/prd/.../tests/prd.tftest.hcl lo afirma.
   #     checkov los marca porque también evalúa el stack dev (emulador descartable).

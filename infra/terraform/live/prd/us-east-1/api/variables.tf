@@ -39,6 +39,17 @@ variable "api_domain_name" {
   type        = string
 }
 
+variable "backoffice_domain_name" {
+  description = "Dominio del back-office. Dentro de la zona delegada de la API para no depender de otra delegación en GoDaddy (COPAYNI-74)."
+  type        = string
+}
+
+variable "backoffice_oidc_issuer" {
+  description = "Emisor OIDC del login del personal, para que la CSP del back-office deje hablar con él. Vacío hasta verificar el proveedor (COPAYNI-72)."
+  type        = string
+  default     = ""
+}
+
 variable "app_config" {
   description = "Configuración no secreta de la API (variables de entorno). Ver apps/backend/.env.example."
   type        = map(string)

@@ -10,6 +10,13 @@ cost_center = "ayni-prd"
 # Delegado desde GoDaddy a una zona de Route 53 de esta cuenta (README, dominio).
 api_domain_name = "backend-ayni.solutionserj.com"
 
+# Back-office dentro de la misma zona delegada: no hace falta tocar GoDaddy otra vez. Si se
+# prefiere backoffice.solutionserj.com, hay que delegar ese nombre igual que backend-ayni.
+backoffice_domain_name = "admin.backend-ayni.solutionserj.com"
+
+# CAMBIAR al verificar Identity Center (COPAYNI-72). Vacío: la CSP solo deja hablar con la API.
+backoffice_oidc_issuer = ""
+
 # CAMBIAR: cuenta de New Relic de prd (la misma del stack account).
 new_relic = {
   enabled    = true
@@ -28,12 +35,15 @@ app_config = {
   APP_NAME    = "ayni-api"
   APP_VERSION = "0.1.0"
   LOG_LEVEL   = "info"
-  # Todavía no hay frontend web (la app mobile no usa CORS): solo el propio dominio.
-  CORS_ALLOWED_ORIGINS = "https://backend-ayni.solutionserj.com"
+  # El back-office sí es un frontend web y llama a /admin desde su propio dominio.
+  CORS_ALLOWED_ORIGINS = "https://backend-ayni.solutionserj.com,https://admin.backend-ayni.solutionserj.com"
   REQUEST_TIMEOUT      = "30000"
   BODY_LIMIT           = "100kb"
   RATE_LIMIT_TTL       = "60000"
   RATE_LIMIT_MAX       = "100"
+  # Tope propio de /admin, agregado por IP para toda la API de administración (COPAYNI-74).
+  ADMIN_RATE_LIMIT_TTL = "60000"
+  ADMIN_RATE_LIMIT_MAX = "300"
 
 
   # Montos provisionales del Figma (pending-scope M1, M6, R15).

@@ -148,6 +148,19 @@ export class EnvironmentVariables {
   @Min(1)
   RATE_LIMIT_MAX: number = 100;
 
+  /** Ventana del rate limit de `/admin`, en milisegundos. */
+  @IsInt()
+  @Min(1000)
+  ADMIN_RATE_LIMIT_TTL: number = 60000;
+
+  /**
+   * Tope de `/admin` por IP y ventana, agregado para toda la API de administración. Más bajo que
+   * el público: lo usa el personal, no miles de personas (COPAYNI-74).
+   */
+  @IsInt()
+  @Min(1)
+  ADMIN_RATE_LIMIT_MAX: number = 300;
+
   @Transform(toBoolean)
   @IsBoolean()
   ENABLE_SWAGGER: boolean = false;

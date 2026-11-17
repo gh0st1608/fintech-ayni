@@ -1,0 +1,87 @@
+# Publica el back-office compilado en el bucket del sitio e invalida la caché de CloudFront
+# (COPAYNI-74). A mano: el pipeline de despliegue continuo sigue en pausa (COPAYNI-12).
+name: Publicar back-office
+
+on:
+  workflow_dispatch:
+    inputs:
+      api_url:
+        description: URL de la API
+        required: true
+        default: https://backend-ayni.solutionserj.com
+      auth_mode:
+        description: Modo de login del personal
+        required: true
+        default: oidc
+        type: choice
+        options: [oidc, dev]
+
+permissions:
+  contents: read
+
+jobs:
+  publicar:
+    name: publicar
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    # Protegido con aprobación: de aquí salen las variables del build y el rol de AWS.
+    environment: prd
+    permissions:
+      contents: read
+      id-token: write
+    defaults:
+      run:
+        working-directory: apps/backoffice
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: apps/backoffice/.nvmrc
+          cache: npm
+          cache-dependency-path: apps/backoffice/package-lock.json
+
+      - run: npm ci
+
+      # Las pruebas y el lint ya corrieron en CI; aquí se compila lo que se va a publicar.
+      - name: Compilar
+        env:
+          VITE_API_URL: ${{ inputs.api_url }}
+          VITE_AUTH_MODE: ${{ inputs.auth_mode }}
+          VITE_OIDC_ISSUER: ${{ vars.BACKOFFICE_OIDC_ISSUER }}
+          VITE_OIDC_CLIENT_ID: ${{ vars.BACKOFFICE_OIDC_CLIENT_ID }}
+          VITE_OIDC_REDIRECT_URI: ${{ vars.BACKOFFICE_OIDC_REDIRECT_URI }}
+        run: npm run build
+
+      # Los mapas de origen no se publican: el sitio es público y revelarían todo el código del
+      # back-office. Quedan en el artefacto de CI para depurar.
+      - name: Quitar los mapas de origen
+        run: rm -f dist/assets/*.map
+
+      - uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
+        with:
+          role-to-assume: ${{ secrets.AWS_BACKOFFICE_DEPLOY_ROLE_ARN }}
+          aws-region: us-east-1
+          role-session-name: publicar-backoffice
+
+      # Primero los archivos con hash en el nombre, que pueden cachearse para siempre; después
+      # index.html, para que nadie reciba un HTML que apunte a archivos que aún no están.
+      - name: Subir los archivos
+        env:
+          BUCKET: ${{ vars.BACKOFFICE_BUCKET }}
+        run: |
+          aws s3 sync dist/ "s3://$BUCKET/" --delete \
+            --exclude index.html \
+            --cache-control "public, max-age=31536000, immutable"
+          aws s3 cp dist/index.html "s3://$BUCKET/index.html" \
+            --cache-control "no-cache, must-revalidate"
+
+      - name: Invalidar la caché
+        env:
+          DISTRIBUTION: ${{ vars.BACKOFFICE_DISTRIBUTION_ID }}
+        run: |
+          id=$(aws cloudfront create-invalidation --distribution-id "$DISTRIBUTION" \
+            --paths "/index.html" --query Invalidation.Id --output text)
+          aws cloudfront wait invalidation-completed --distribution-id "$DISTRIBUTION" --id "$id"
