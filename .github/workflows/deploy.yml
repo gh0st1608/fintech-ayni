@@ -1,0 +1,192 @@
+# Despliegue de la API a prd (COPAYNI-12). El merge a main lo encola; el environment prd exige
+# aprobación, así que nada llega a producción sin que una persona lo apruebe viendo el plan.
+#
+# Orden, y el porqué de cada paso:
+#   1. Imagen con la etiqueta del commit (inmutable: nunca se reutiliza una etiqueta).
+#   2. Apply dirigido a la tarea de migraciones. No toca el servicio.
+#   3. Migraciones. Si fallan, se corta aquí y la versión anterior sigue sirviendo.
+#   4. Apply completo: el servicio pasa a la imagen nueva, con despliegue gradual.
+#   5. Health check contra el dominio público.
+#
+# Rollback: docs/runbooks/api.md#rollback
+name: Desplegar API
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - apps/backend/**
+      - infra/terraform/**
+      - .github/workflows/deploy.yml
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: SHA de una imagen ya publicada (para volver a una versión anterior)
+        required: false
+
+permissions:
+  contents: read
+
+concurrency:
+  # Nunca dos despliegues a la vez: el segundo esperaría al primero, no lo cancela a medias.
+  group: deploy-prd
+  cancel-in-progress: false
+
+env:
+  AWS_REGION: us-east-1
+  STACK: infra/terraform/live/prd/us-east-1/api
+
+jobs:
+  desplegar:
+    name: desplegar a prd
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    environment: prd
+    permissions:
+      contents: read
+      id-token: write
+    outputs:
+      image_tag: ${{ steps.tag.outputs.value }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Etiqueta de la imagen
+        id: tag
+        env:
+          REQUESTED: ${{ inputs.image_tag }}
+        run: echo "value=${REQUESTED:-$GITHUB_SHA}" >> "$GITHUB_OUTPUT"
+
+      - uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
+        with:
+          role-to-assume: ${{ secrets.AWS_APPLY_ROLE_ARN }}
+          aws-region: us-east-1
+          role-session-name: desplegar-api
+
+      - uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
+        with:
+          terraform_version: 1.13.0
+          terraform_wrapper: false
+
+      # Backend parcial: el bucket y la clave están en backend.hcl.
+      - name: terraform init
+        working-directory: ${{ env.STACK }}
+        run: terraform init -input=false -backend-config=backend.hcl
+
+      # --- 1. Imagen -----------------------------------------------------------------------------
+      # El repositorio primero y por separado: en el primer despliegue todavía no existe, y sin su
+      # URL no hay dónde publicar la imagen.
+      - name: Repositorio de imágenes
+        id: ecr
+        working-directory: ${{ env.STACK }}
+        env:
+          TF_VAR_image_tag: ${{ steps.tag.outputs.value }}
+        run: |
+          terraform apply -input=false -auto-approve -target=module.ecr
+          echo "url=$(terraform output -raw ecr_repository_url)" >> "$GITHUB_OUTPUT"
+
+      - name: Construir y publicar la imagen
+        id: imagen
+        env:
+          REPOSITORY: ${{ steps.ecr.outputs.url }}
+          TAG: ${{ steps.tag.outputs.value }}
+        run: |
+          set -euo pipefail
+          registry="${REPOSITORY%%/*}"
+          aws ecr get-login-password --region "$AWS_REGION" |
+            docker login --username AWS --password-stdin "$registry"
+
+          # Si la etiqueta ya existe (redespliegue de una versión anterior), no se reconstruye:
+          # el repositorio es inmutable y se despliega exactamente lo que ya se probó.
+          repo_name="${REPOSITORY#*/}"
+          if aws ecr describe-images --repository-name "$repo_name" --image-ids "imageTag=$TAG" >/dev/null 2>&1; then
+            echo "La imagen $TAG ya está publicada: se reutiliza."
+          else
+            docker build -t "$REPOSITORY:$TAG" apps/backend
+            docker push "$REPOSITORY:$TAG"
+          fi
+
+      # --- 2. Preparar la migración --------------------------------------------------------------
+      # Apply dirigido: crea o actualiza la tarea de migraciones (y lo que necesita: red, base y
+      # secretos) sin tocar el servicio, que sigue con la imagen anterior.
+      - name: Aplicar la tarea de migraciones
+        working-directory: ${{ env.STACK }}
+        env:
+          TF_VAR_image_tag: ${{ steps.tag.outputs.value }}
+        run: terraform apply -input=false -auto-approve -target=module.migrate
+
+      # --- 3. Migrar -----------------------------------------------------------------------------
+      - name: Migrar la base
+        working-directory: ${{ env.STACK }}
+        run: |
+          set -euo pipefail
+          cluster=$(terraform output -raw migrate_cluster_name)
+          family=$(terraform output -raw migrate_task_family)
+          group=$(terraform output -raw migrate_log_group_name)
+          subnets=$(terraform output -json task_subnet_ids | jq -r 'join(",")')
+          sg=$(terraform output -raw task_security_group_id)
+
+          arn=$(aws ecs run-task \
+            --cluster "$cluster" \
+            --task-definition "$family" \
+            --launch-type FARGATE \
+            --network-configuration "awsvpcConfiguration={subnets=[$subnets],securityGroups=[$sg],assignPublicIp=DISABLED}" \
+            --query 'tasks[0].taskArn' --output text)
+          echo "Tarea: $arn"
+
+          aws ecs wait tasks-stopped --cluster "$cluster" --tasks "$arn"
+
+          # run-task no devuelve el resultado del contenedor: hay que leerlo.
+          read -r code reason < <(aws ecs describe-tasks --cluster "$cluster" --tasks "$arn" \
+            --query 'tasks[0].containers[0].[exitCode,reason]' --output text)
+
+          stream="$(terraform output -raw migrate_task_family)/task/${arn##*/}"
+          aws logs get-log-events --log-group-name "$group" --log-stream-name "$stream" \
+            --query 'events[].message' --output text || true
+
+          if [ "$code" != "0" ]; then
+            echo "::error::Las migraciones fallaron (código $code, $reason). El servicio sigue con la versión anterior."
+            exit 1
+          fi
+
+      # --- 4. Servicio ---------------------------------------------------------------------------
+      # wait_for_steady_state hace que el apply espere a que el servicio esté sano. ECS mantiene
+      # las tareas viejas hasta que las nuevas pasan el health check del balanceador.
+      - name: Aplicar el resto del stack
+        working-directory: ${{ env.STACK }}
+        env:
+          TF_VAR_image_tag: ${{ steps.tag.outputs.value }}
+        run: terraform apply -input=false -auto-approve
+
+      # --- 5. Comprobación -----------------------------------------------------------------------
+      - name: Health check
+        working-directory: ${{ env.STACK }}
+        run: |
+          set -euo pipefail
+          url="$(terraform output -raw api_url)/health/ready"
+          for intento in $(seq 1 10); do
+            code=$(curl -fsS -o /tmp/health.json -w '%{http_code}' "$url" || echo 000)
+            if [ "$code" = "200" ]; then
+              echo "Health check en verde:"; cat /tmp/health.json; exit 0
+            fi
+            echo "Intento $intento: $code"
+            sleep 15
+          done
+          echo "::error::El health check no pasó. Rollback: docs/runbooks/api.md#rollback"
+          exit 1
+
+      - name: Resumen
+        if: always()
+        working-directory: ${{ env.STACK }}
+        env:
+          TAG: ${{ steps.tag.outputs.value }}
+        run: |
+          {
+            echo "## Despliegue de prd"
+            echo ""
+            echo "- Imagen: \`$TAG\`"
+            echo "- API: $(terraform output -raw api_url 2>/dev/null || echo 'sin aplicar')"
+            echo ""
+            echo "Para volver atrás: ejecutar este workflow a mano con el SHA anterior en \`image_tag\`."
+          } >> "$GITHUB_STEP_SUMMARY"

@@ -14,7 +14,7 @@ variable "bucket_name" {
 }
 
 variable "domain_name" {
-  description = "Dominio público del sitio (p. ej. admin.backend-ayni.solutionserj.com)."
+  description = "Dominio público del sitio (p. ej. backoffice.solutionserj.com). Puede ser el ápice de su zona."
   type        = string
 }
 

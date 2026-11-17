@@ -821,6 +821,33 @@ export class EnvironmentVariables {
   @IsNotEmpty()
   DB_SSL_CA?: string;
 
+  /**
+   * Ruta del bundle de CA dentro del contenedor, cuando el PEM no cabe cómodo en una variable de
+   * entorno. La imagen trae el de Amazon RDS en `/app/certs/rds-ca.pem`, cuya raíz no está en el
+   * almacén de Node: sin él, `DB_SSL=true` no puede verificar a RDS. Tiene prioridad `DB_SSL_CA`.
+   */
+  @IsOptional()
+  @IsString()
+  @IsNotEmpty()
+  DB_SSL_CA_FILE?: string;
+
+  /**
+   * Usuario de aplicación con el que se conecta la API. Lo crea o actualiza el runner de
+   * migraciones (`migrate.ts`), que es el único que usa la credencial maestra de RDS: la API
+   * nunca recibe permisos de DDL. Sin valor, el runner no toca ningún rol.
+   */
+  @IsOptional()
+  @Matches(/^[a-z_][a-z0-9_]{2,62}$/, {
+    message: 'DB_APP_USERNAME debe ser un identificador PostgreSQL en minúsculas',
+  })
+  DB_APP_USERNAME?: string;
+
+  /** Contraseña del usuario de aplicación. Es un secreto: llega del gestor de secretos. */
+  @ValidateIf((env: EnvironmentVariables) => env.DB_APP_USERNAME !== undefined)
+  @IsString()
+  @MinLength(16)
+  DB_APP_PASSWORD?: string;
+
   /** Conexiones máximas del pool por instancia de la API. */
   @IsInt()
   @Min(1)

@@ -487,4 +487,49 @@ describe('validateEnvironment', () => {
       );
     });
   });
+
+  describe('usuario de aplicación de la base (COPAYNI-12)', () => {
+    it('sin DB_APP_USERNAME no exige contraseña: el runner no toca roles', () => {
+      const env = validateEnvironment({ ...REQUIRED });
+
+      expect(env.DB_APP_USERNAME).toBeUndefined();
+      expect(env.DB_APP_PASSWORD).toBeUndefined();
+    });
+
+    it('con usuario exige una contraseña de al menos 16 caracteres', () => {
+      expect(() =>
+        validateEnvironment({ ...REQUIRED, DB_APP_USERNAME: 'ayni_app', DB_APP_PASSWORD: 'corta' }),
+      ).toThrow('DB_APP_PASSWORD');
+    });
+
+    it('rechaza un usuario que no sea un identificador PostgreSQL', () => {
+      expect(() =>
+        validateEnvironment({
+          ...REQUIRED,
+          DB_APP_USERNAME: 'App"; DROP TABLE users',
+          DB_APP_PASSWORD: 'una-contrasena-bien-larga',
+        }),
+      ).toThrow('DB_APP_USERNAME');
+    });
+
+    it('acepta el par completo', () => {
+      const env = validateEnvironment({
+        ...REQUIRED,
+        DB_APP_USERNAME: 'ayni_app',
+        DB_APP_PASSWORD: 'una-contrasena-bien-larga',
+      });
+
+      expect(env.DB_APP_USERNAME).toBe('ayni_app');
+    });
+
+    it('acepta la ruta del bundle de CA que trae la imagen', () => {
+      const env = validateEnvironment({
+        ...REQUIRED,
+        DB_SSL: 'true',
+        DB_SSL_CA_FILE: '/app/certs/rds-ca.pem',
+      });
+
+      expect(env).toMatchObject({ DB_SSL: true, DB_SSL_CA_FILE: '/app/certs/rds-ca.pem' });
+    });
+  });
 });

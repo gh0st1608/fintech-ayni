@@ -2,7 +2,7 @@
 
 Cómo se publica el back-office, cómo se vuelve atrás y qué lo protege. La infraestructura está en [`live/prd/us-east-1/api`](../../infra/terraform/live/prd/us-east-1/api) (módulo [`static-site`](../../infra/terraform/modules/static-site)); el front, en [`apps/backoffice`](../../apps/backoffice).
 
-**Dirección:** `https://admin.backend-ayni.solutionserj.com`, dentro de la zona delegada de la API.
+**Dirección:** `https://backoffice.solutionserj.com`, en su propia zona delegada desde GoDaddy (stack `dns`).
 
 ## Cómo está expuesto
 
