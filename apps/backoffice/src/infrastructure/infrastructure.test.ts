@@ -2,7 +2,12 @@ import { z } from 'zod';
 
 import { AppError } from '@/domain/shared/AppError';
 
-import { CirclesApiRepository, DevStaffAuth, KycApiRepository } from './api/adapters';
+import {
+  CirclesApiRepository,
+  DevStaffAuth,
+  HomeContentApiRepository,
+  KycApiRepository,
+} from './api/adapters';
 import { FetchHttpClient } from './http/FetchHttpClient';
 import { TokenStore } from './http/TokenStore';
 
@@ -278,5 +283,60 @@ describe('KycApiRepository', () => {
       ok({ url: 'javascript:alert(1)', expiresAt: '2026-11-09T15:01:00.000Z' }),
     ]);
     await expect(new KycApiRepository(http).pageUrl(id, 1)).rejects.toBeInstanceOf(Error);
+  });
+});
+
+/** Contenido de Home (COPAYNI-25). */
+describe('HomeContentApiRepository', () => {
+  const ITEM = {
+    id: '11111111-1111-4111-8111-111111111111',
+    texts: { es: { title: 'Ahorro', subtitle: null }, en: { title: '', subtitle: null } },
+    illustration: 'piggy-bank',
+    background: 'primary',
+    target: 'savings_plans',
+    targetAmount: null,
+    position: 0,
+    active: true,
+    updatedAt: '2026-11-16T15:00:00.000Z',
+    updatedBy: 'ops@ayni.local',
+  };
+
+  const input = {
+    texts: { es: { title: 'Ahorro', subtitle: null }, en: { title: '', subtitle: null } },
+    illustration: 'piggy-bank' as const,
+    background: 'primary',
+    target: 'savings_plans' as const,
+    targetAmount: null,
+    position: 0,
+    active: true,
+    startsOn: null,
+    endsOn: null,
+  };
+
+  it('lee las dos listas y normaliza la vigencia ausente de las metas', async () => {
+    const { calls, http } = setup([ok({ offers: [], goals: [ITEM] })]);
+    const content = await new HomeContentApiRepository(http).get();
+    expect(calls[0]?.url).toContain('/admin/v1/home-content');
+    expect(content.goals[0]).toMatchObject({ id: ITEM.id, startsOn: null, endsOn: null });
+    expect(content.goals[0]?.updatedAt).toBeInstanceOf(Date);
+  });
+
+  it('crea con POST y edita con PUT, en la ruta de su tipo', async () => {
+    const { calls, http } = setup([ok(ITEM), ok(ITEM)]);
+    const repository = new HomeContentApiRepository(http);
+    await repository.save('goal', null, input);
+    await repository.save('offer', ITEM.id, input);
+    expect(calls[0]?.init.method).toBe('POST');
+    expect(calls[0]?.url).toContain('/admin/v1/home-content/goals');
+    expect(calls[1]?.init.method).toBe('PUT');
+    expect(calls[1]?.url).toContain(`/admin/v1/home-content/offers/${ITEM.id}`);
+  });
+
+  it('borrar usa DELETE y no espera cuerpo', async () => {
+    const { calls, http } = setup([{ status: 204, body: null }]);
+    await expect(
+      new HomeContentApiRepository(http).remove('offer', ITEM.id),
+    ).resolves.toBeUndefined();
+    expect(calls[0]?.init.method).toBe('DELETE');
   });
 });

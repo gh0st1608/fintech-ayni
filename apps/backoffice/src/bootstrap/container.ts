@@ -9,6 +9,9 @@ import {
   GetPayoutAccountsUseCase,
   ListApprovalsUseCase,
   GetHelpUseCase,
+  GetHomeContentUseCase,
+  SaveHomeContentUseCase,
+  RemoveHomeContentUseCase,
   ListDelinquencyUseCase,
   SaveHelpUseCase,
   ProposeFundMovementUseCase,
@@ -40,6 +43,7 @@ import type {
   FinanceRepositoryPort,
   CycleRunsRepositoryPort,
   HelpRepositoryPort,
+  HomeContentRepositoryPort,
 } from '@/domain/ports';
 import {
   CirclesApiRepository,
@@ -49,6 +53,7 @@ import {
   FinanceApiRepository,
   CycleRunsApiRepository,
   HelpApiRepository,
+  HomeContentApiRepository,
 } from '@/infrastructure/api/adapters';
 import { OidcStaffAuth } from '@/infrastructure/auth/OidcStaffAuth';
 import { FetchHttpClient } from '@/infrastructure/http/FetchHttpClient';
@@ -94,6 +99,12 @@ export interface AppContainer {
     get: GetHelpUseCase;
     save: SaveHelpUseCase;
   };
+  /** Ofertas y metas de Home (COPAYNI-25). */
+  homeContent: {
+    get: GetHomeContentUseCase;
+    save: SaveHomeContentUseCase;
+    remove: RemoveHomeContentUseCase;
+  };
   finance: {
     installments: ListInstallmentsUseCase;
     payouts: ListPayoutsUseCase;
@@ -113,6 +124,7 @@ export interface ContainerAdapters {
   finance: FinanceRepositoryPort;
   cycleRuns: CycleRunsRepositoryPort;
   help: HelpRepositoryPort;
+  homeContent: HomeContentRepositoryPort;
 }
 
 /** Casos de uso sobre los adaptadores dados; las pruebas pasan dobles. */
@@ -159,6 +171,11 @@ export function createContainer(adapters: ContainerAdapters): AppContainer {
       get: new GetHelpUseCase(adapters.help),
       save: new SaveHelpUseCase(adapters.help),
     },
+    homeContent: {
+      get: new GetHomeContentUseCase(adapters.homeContent),
+      save: new SaveHomeContentUseCase(adapters.homeContent),
+      remove: new RemoveHomeContentUseCase(adapters.homeContent),
+    },
     finance: {
       installments: new ListInstallmentsUseCase(adapters.finance),
       payouts: new ListPayoutsUseCase(adapters.finance),
@@ -193,5 +210,6 @@ export function createAppContainer(config: AppConfig): AppContainer {
     finance: new FinanceApiRepository(http),
     cycleRuns: new CycleRunsApiRepository(http),
     help: new HelpApiRepository(http),
+    homeContent: new HomeContentApiRepository(http),
   });
 }

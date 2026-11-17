@@ -19,6 +19,7 @@ import type { BlockResult, SupportNote, UserContact, UserDetail, UserSummary } f
 import type { CycleRunsPage } from './circles/CycleRun';
 import type { PayoutAccount, PayoutAccountForm, PayoutAccounts } from './payouts/PayoutAccount';
 import type { HelpContent, HelpInput, HelpLanguage } from './help/Help';
+import type { ContentInput, ContentItem, ContentKind, HomeContent } from './content/HomeContent';
 import type { DelinquencyPage, DelinquencyView } from './finance/Delinquency';
 import type {
   Approval,
@@ -142,6 +143,14 @@ export interface HelpRepositoryPort {
   get(language: HelpLanguage, signal?: AbortSignal): Promise<HelpContent>;
   /** Reemplaza todo el contenido del idioma; se publica al instante. */
   save(language: HelpLanguage, input: HelpInput): Promise<HelpContent>;
+}
+
+/** Contenido de Home: ofertas y metas populares (docs/api/home.md, COPAYNI-25). */
+export interface HomeContentRepositoryPort {
+  get(signal?: AbortSignal): Promise<HomeContent>;
+  /** Sin `id` crea; con `id` edita. Se publica al instante en la app. */
+  save(kind: ContentKind, id: string | null, input: ContentInput): Promise<ContentItem>;
+  remove(kind: ContentKind, id: string): Promise<void>;
 }
 
 /** Ejecuciones de la tarea diaria del ciclo mensual (docs/api/admin.md). */

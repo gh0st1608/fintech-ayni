@@ -1,9 +1,11 @@
 import { fillRatio, pauseActionFor } from '@/domain/circles/Circle';
 import { AppError } from '@/domain/shared/AppError';
 import { can, type StaffMember } from '@/domain/staff/Staff';
+import type { ContentInput } from '@/domain/content/HomeContent';
 import {
   circle,
   InMemoryCircles,
+  InMemoryHomeContent,
   InMemoryKyc,
   InMemoryStaffAuth,
   kycReview,
@@ -15,6 +17,8 @@ import {
   GetKycPageUrlUseCase,
   MAX_REASON_LENGTH,
   RejectKycUseCase,
+  RemoveHomeContentUseCase,
+  SaveHomeContentUseCase,
   SetCirclePauseUseCase,
   SignInUseCase,
 } from './usecases';
@@ -168,5 +172,92 @@ describe('revisión de KYC', () => {
     expect(() => pageUrl.execute(staff(['support']), 'x', 1)).toThrow('Solo operaciones');
     await pageUrl.execute(staff(['operations']), 'x', 1);
     expect(kyc.viewed).toEqual([{ id: 'x', page: 1 }]);
+  });
+});
+
+/** Contenido de Home (COPAYNI-25): lo que impide guardar y quién puede hacerlo. */
+describe('contenido de Home', () => {
+  const input = (overrides: Partial<ContentInput> = {}): ContentInput => ({
+    texts: { es: { title: 'Ahorro', subtitle: null }, en: { title: '', subtitle: null } },
+    illustration: 'piggy-bank',
+    background: 'primary',
+    target: 'savings_plans',
+    targetAmount: null,
+    position: 0,
+    active: true,
+    startsOn: null,
+    endsOn: null,
+    ...overrides,
+  });
+
+  const setup = () => {
+    const content = new InMemoryHomeContent();
+    return {
+      content,
+      save: new SaveHomeContentUseCase(content),
+      remove: new RemoveHomeContentUseCase(content),
+    };
+  };
+
+  it('guarda cuando el contenido es válido', async () => {
+    const { save, content } = setup();
+    await save.execute(staff(['operations']), 'goal', null, input());
+    expect(content.saves).toHaveLength(1);
+  });
+
+  it.each([
+    [
+      'sin título en español',
+      input({
+        texts: { es: { title: '  ', subtitle: null }, en: { title: 'Savings', subtitle: null } },
+      }),
+      /título en español/,
+    ],
+    [
+      'con un título que no entra en la tarjeta',
+      input({
+        texts: { es: { title: 'a'.repeat(25), subtitle: null }, en: { title: '', subtitle: null } },
+      }),
+      /24 caracteres/,
+    ],
+    [
+      'con un subtítulo demasiado largo',
+      input({
+        texts: {
+          es: { title: 'Ahorro', subtitle: 'b'.repeat(33) },
+          en: { title: '', subtitle: null },
+        },
+      }),
+      /32 caracteres/,
+    ],
+    [
+      'con monto en un destino que no lo usa',
+      input({ target: 'help', targetAmount: 1000 }),
+      /monto solo aplica/,
+    ],
+    [
+      'con un monto que no es positivo',
+      input({ target: 'join_circle', targetAmount: 0 }),
+      /mayor que cero/,
+    ],
+    [
+      'con la vigencia invertida',
+      input({ startsOn: '2026-12-01', endsOn: '2026-11-01' }),
+      /termina antes/,
+    ],
+  ])('no deja guardar %s', (_caso, value, message) => {
+    const { save, content } = setup();
+    expect(() => save.execute(staff(['operations']), 'goal', null, value)).toThrow(message);
+    expect(content.saves).toHaveLength(0);
+  });
+
+  it('solo quien edita contenido puede guardar o borrar', async () => {
+    const { save, remove, content } = setup();
+    expect(() => save.execute(staff(['support']), 'goal', null, input())).toThrow(AppError);
+    expect(() => remove.execute(staff(['finance']), 'goal', 'g-1')).toThrow(AppError);
+    expect(content.saves).toHaveLength(0);
+    expect(content.removed).toHaveLength(0);
+    await remove.execute(staff(['super_admin']), 'goal', 'g-1');
+    expect(content.removed).toEqual([{ kind: 'goal', id: 'g-1' }]);
   });
 });

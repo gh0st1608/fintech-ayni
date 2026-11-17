@@ -16,6 +16,8 @@ export interface HttpClientPort {
   get<T>(path: string, options: RequestOptions<T>): Promise<T>;
   post<T>(path: string, options: RequestOptions<T>): Promise<T>;
   put<T>(path: string, options: RequestOptions<T>): Promise<T>;
+  /** Un 204 no trae cuerpo: usa `z.unknown()` como esquema. */
+  delete<T>(path: string, options: RequestOptions<T>): Promise<T>;
 }
 
 type Fetch = typeof fetch;
@@ -61,6 +63,10 @@ export class FetchHttpClient implements HttpClientPort {
 
   put<T>(path: string, options: RequestOptions<T>): Promise<T> {
     return this.request('PUT', path, options);
+  }
+
+  delete<T>(path: string, options: RequestOptions<T>): Promise<T> {
+    return this.request('DELETE', path, options);
   }
 
   private async request<T>(method: string, path: string, options: RequestOptions<T>): Promise<T> {

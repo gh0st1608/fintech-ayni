@@ -25,6 +25,7 @@ import type {
   InstallmentsFilter,
   ApprovalsFilter,
   HelpRepositoryPort,
+  HomeContentRepositoryPort,
   DelinquencyFilter,
   CycleRunsRepositoryPort,
 } from '@/domain/ports';
@@ -35,6 +36,12 @@ import type {
   PayoutAccounts,
 } from '@/domain/payouts/PayoutAccount';
 import type { HelpContent, HelpInput, HelpLanguage } from '@/domain/help/Help';
+import type {
+  ContentInput,
+  ContentItem,
+  ContentKind,
+  HomeContent,
+} from '@/domain/content/HomeContent';
 import type { DelinquencyPage } from '@/domain/finance/Delinquency';
 import { AppError } from '@/domain/shared/AppError';
 import type { StaffMember } from '@/domain/staff/Staff';
@@ -581,5 +588,85 @@ export class InMemoryHelp implements HelpRepositoryPort {
       updatedBy: 'ops@ayni.local',
     };
     return this.get(language);
+  }
+}
+
+/** Contenido de Home en memoria (COPAYNI-25). */
+export class InMemoryHomeContent implements HomeContentRepositoryPort {
+  readonly saves: { kind: ContentKind; id: string | null; input: ContentInput }[] = [];
+  readonly removed: { kind: ContentKind; id: string }[] = [];
+  content: HomeContent = {
+    offers: [
+      {
+        id: 'o-1',
+        texts: {
+          es: { title: 'Nuevas ofertas', subtitle: 'Mira lo nuevo' },
+          en: { title: '', subtitle: null },
+        },
+        illustration: 'megaphone',
+        background: 'cream',
+        target: 'referral',
+        targetAmount: null,
+        position: 0,
+        active: true,
+        startsOn: null,
+        endsOn: null,
+        updatedAt: NOW,
+        updatedBy: 'ops@ayni.local',
+      },
+    ],
+    goals: [
+      {
+        id: 'g-1',
+        texts: {
+          es: { title: 'Ahorro', subtitle: 'Gana cashback al ahorrar' },
+          en: { title: 'Savings', subtitle: null },
+        },
+        illustration: 'piggy-bank',
+        background: 'primary',
+        target: 'savings_plans',
+        targetAmount: null,
+        position: 0,
+        active: true,
+        startsOn: null,
+        endsOn: null,
+        updatedAt: NOW,
+        updatedBy: null,
+      },
+    ],
+  };
+
+  get(): Promise<HomeContent> {
+    return Promise.resolve(structuredClone(this.content));
+  }
+
+  save(kind: ContentKind, id: string | null, input: ContentInput): Promise<ContentItem> {
+    this.saves.push({ kind, id, input });
+    const item: ContentItem = {
+      id: id ?? `${kind}-nuevo`,
+      texts: input.texts,
+      illustration: input.illustration,
+      background: input.background,
+      target: input.target,
+      targetAmount: input.targetAmount,
+      position: input.position,
+      active: input.active,
+      startsOn: input.startsOn ? new Date(input.startsOn) : null,
+      endsOn: input.endsOn ? new Date(input.endsOn) : null,
+      updatedAt: NOW,
+      updatedBy: 'ops@ayni.local',
+    };
+    const list = kind === 'offer' ? this.content.offers : this.content.goals;
+    const index = list.findIndex((current) => current.id === item.id);
+    if (index >= 0) list[index] = item;
+    else list.push(item);
+    return Promise.resolve(item);
+  }
+
+  remove(kind: ContentKind, id: string): Promise<void> {
+    this.removed.push({ kind, id });
+    if (kind === 'offer') this.content.offers = this.content.offers.filter((o) => o.id !== id);
+    else this.content.goals = this.content.goals.filter((g) => g.id !== id);
+    return Promise.resolve();
   }
 }

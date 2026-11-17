@@ -36,6 +36,7 @@ const USERS = () => import('../users/UsersScreen').then((m) => m.UsersScreen);
 const USER_DETAIL = () => import('../users/UserDetailScreen').then((m) => m.UserDetailScreen);
 const FINANCE = () => import('../finance/FinanceScreen').then((m) => m.FinanceScreen);
 const HELP = () => import('../help/HelpEditorScreen').then((m) => m.HelpEditorScreen);
+const CONTENT = () => import('../content/HomeContentScreen').then((m) => m.HomeContentScreen);
 const DELINQUENCY = () => import('../finance/DelinquencyScreen').then((m) => m.DelinquencyScreen);
 
 /** Mientras se descarga la primera pantalla de la sesión. */
@@ -112,6 +113,11 @@ function Layout() {
               {can(staff, 'help.read') && (
                 <NavLink to="/help" className={navClass}>
                   Ayuda
+                </NavLink>
+              )}
+              {can(staff, 'help.read') && (
+                <NavLink to="/content" className={navClass}>
+                  Contenido
                 </NavLink>
               )}
             </nav>
@@ -195,7 +201,11 @@ export const routes: RouteObject[] = [
       },
       {
         element: <RequirePermission permission="help.read" />,
-        children: [{ path: '/help', ...screen(HELP) }],
+        children: [
+          { path: '/help', ...screen(HELP) },
+          // El contenido de Home lo edita quien edita la ayuda: es el mismo trabajo (COPAYNI-25).
+          { path: '/content', ...screen(CONTENT) },
+        ],
       },
       { path: '*', element: <EmptyState title="No encontramos esta página" /> },
     ],
