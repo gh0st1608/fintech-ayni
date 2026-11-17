@@ -44,6 +44,9 @@ app_config = {
   # Tope propio de /admin, agregado por IP para toda la API de administración (COPAYNI-74).
   ADMIN_RATE_LIMIT_TTL = "60000"
   ADMIN_RATE_LIMIT_MAX = "300"
+  # Sin esto la API no arranca: el valor por defecto es fake y production lo prohíbe (COPAYNI-85).
+  # Expo Push Service no pide credenciales salvo que se active su seguridad reforzada.
+  PUSH_PROVIDER = "expo"
 
 
   # Montos provisionales del Figma (pending-scope M1, M6, R15).

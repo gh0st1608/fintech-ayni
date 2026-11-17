@@ -112,6 +112,20 @@ run "controles_de_prd" {
     condition     = module.api.settings.https_enabled && module.api.settings.waf_enabled
     error_message = "HTTPS con redirección desde HTTP y WAF asociado."
   }
+
+  # La API se niega a arrancar en production con un proveedor simulado, y varios tienen ese valor
+  # por defecto. Si falta uno aquí, el fallo aparece recién en el primer despliegue.
+  assert {
+    condition = alltrue([
+      for valor in values(var.app_config) : !contains(["fake", "simulated", "dev"], valor)
+    ])
+    error_message = "Ningún proveedor simulado en prd: la API no arrancaría."
+  }
+
+  assert {
+    condition     = lookup(var.app_config, "PUSH_PROVIDER", "fake") == "expo"
+    error_message = "PUSH_PROVIDER por defecto es fake, y production lo prohíbe."
+  }
 }
 
 run "rechaza_la_cuenta_de_ejemplo" {
