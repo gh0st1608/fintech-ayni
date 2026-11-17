@@ -11,7 +11,9 @@
       "supportsTablet": false,
       "infoPlist": {
         "CFBundleAllowMixedLocalizations": true
-      }
+      },
+      "bundleIdentifier": "com.ayni.mobile",
+      "usesAppleSignIn": true
     },
     "android": {
       "adaptiveIcon": {
@@ -19,7 +21,8 @@
         "foregroundImage": "./assets/android-icon-foreground.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "package": "com.ayni.mobile"
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -63,6 +66,7 @@
           "microphonePermission": false
         }
       ],
+      "expo-apple-authentication",
       "expo-notifications",
       "expo-sharing",
       "expo-web-browser"

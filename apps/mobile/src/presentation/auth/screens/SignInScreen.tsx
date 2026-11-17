@@ -17,6 +17,7 @@ import { Wordmark } from '@/presentation/shared/components/Wordmark';
 import { colors, spacing } from '@/presentation/theme/tokens';
 
 import { AuthSheet } from '../components/AuthSheet';
+import { SocialLoginButtons } from '../components/SocialLoginButtons';
 import { useStartAuthentication } from '../hooks/useStartAuthentication';
 
 interface SignInScreenProps {
@@ -141,6 +142,8 @@ export function SignInScreen({ onChallengeStarted }: SignInScreenProps) {
           />
           <FieldError message={requestError} />
         </View>
+
+        <SocialLoginButtons disabled={startAuthentication.isPending} />
       </View>
 
       <AppText variant="caption" style={[styles.centered, styles.legal]}>

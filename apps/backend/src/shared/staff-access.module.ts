@@ -18,7 +18,8 @@ import {
 } from './presentation/guards/staff.guard';
 import { StaffAuditInterceptor } from './presentation/interceptors/staff-audit.interceptor';
 import { DEV_STAFF_TOKENS, DevStaffTokens } from './infrastructure/staff/dev-staff-tokens';
-import { HttpJwks, OidcStaffAuthenticator } from './infrastructure/staff/oidc-staff-authenticator';
+import { HttpJwks } from './infrastructure/crypto/http-jwks';
+import { OidcStaffAuthenticator } from './infrastructure/staff/oidc-staff-authenticator';
 import { SqlStaffAuditLog } from './infrastructure/staff/sql-staff-audit-log';
 import { UnconfiguredStaffAuthenticator } from './infrastructure/staff/unconfigured-staff-authenticator';
 

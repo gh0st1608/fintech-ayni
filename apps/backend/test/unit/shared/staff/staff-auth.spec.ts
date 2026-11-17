@@ -4,10 +4,8 @@ import { Logger } from '@nestjs/common';
 
 import { maskEmail, maskName, maskPhone } from '@src/shared/domain/services/mask-pii';
 import { DevStaffTokens } from '@src/shared/infrastructure/staff/dev-staff-tokens';
-import {
-  HttpJwks,
-  OidcStaffAuthenticator,
-} from '@src/shared/infrastructure/staff/oidc-staff-authenticator';
+import { HttpJwks } from '@src/shared/infrastructure/crypto/http-jwks';
+import { OidcStaffAuthenticator } from '@src/shared/infrastructure/staff/oidc-staff-authenticator';
 import { TestClock } from '@test/support/create-test-app';
 
 const NOW = new Date('2026-11-09T15:00:00Z');

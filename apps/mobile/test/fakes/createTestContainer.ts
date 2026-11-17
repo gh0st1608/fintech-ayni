@@ -7,6 +7,8 @@ import { parseEnv } from '@/bootstrap/env';
 
 import { InMemoryAgreementRepository } from '@/infrastructure/agreements/InMemoryAgreementRepository';
 import { InMemoryAuthApi } from '@/infrastructure/auth/InMemoryAuthApi';
+import { FakeSocialSignIn } from '@/infrastructure/auth/ExpoSocialSignIn';
+import { InMemorySocialAuthApi } from '@/infrastructure/auth/InMemorySocialAuthApi';
 import { InMemoryPasscodeRepository } from '@/infrastructure/auth/InMemoryPasscodeRepository';
 import { InMemoryCircleMembershipRepository } from '@/infrastructure/circles/InMemoryCircleMembershipRepository';
 import { InMemoryCircleQuoteRepository } from '@/infrastructure/circles/InMemoryCircleQuoteRepository';
@@ -57,6 +59,8 @@ interface TestAdapters {
   deviceLocale: FakeDeviceLocale;
   layoutDirection: FakeLayoutDirection;
   authApi: InMemoryAuthApi;
+  socialAuthApi: InMemorySocialAuthApi;
+  socialSignIn: FakeSocialSignIn;
   passcodes: InMemoryPasscodeRepository;
   joinConfig: InMemoryJoinConfigRepository;
   circleQuote: InMemoryCircleQuoteRepository;
@@ -98,6 +102,8 @@ export function createTestContainer(overrides: Partial<TestAdapters> = {}) {
     deviceLocale: new FakeDeviceLocale(),
     layoutDirection: new FakeLayoutDirection(),
     authApi: new InMemoryAuthApi({ latencyMs: 0 }),
+    socialAuthApi: new InMemorySocialAuthApi(),
+    socialSignIn: new FakeSocialSignIn(),
     passcodes: new InMemoryPasscodeRepository({ latencyMs: 0 }),
     joinConfig: new InMemoryJoinConfigRepository('PEN', { latencyMs: 0 }),
     circleQuote: new InMemoryCircleQuoteRepository({ latencyMs: 0 }),
