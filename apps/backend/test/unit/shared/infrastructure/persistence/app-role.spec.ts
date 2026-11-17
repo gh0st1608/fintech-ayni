@@ -133,6 +133,16 @@ describe('ensureApplicationRole', () => {
     );
   });
 
+  it('falla claro si PostgreSQL no devuelve la sentencia, en vez de ejecutar algo vacío', async () => {
+    const executor: SqlExecutor = {
+      query: (sql: string) => Promise.resolve(sql.startsWith('SELECT format(') ? [{}] : []),
+    };
+
+    await expect(ensureApplicationRole(executor, role)).rejects.toThrow(
+      'PostgreSQL no devolvió la sentencia a ejecutar',
+    );
+  });
+
   it('rechaza un usuario que no sea un identificador válido', async () => {
     const { executor, executed } = fakeDatabase();
 

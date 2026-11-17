@@ -1,6 +1,7 @@
 # Bucket privado: nadie llega a S3 por su cuenta. El único lector es esta distribución de
 # CloudFront, autenticada con Origin Access Control (SigV4).
 resource "aws_s3_bucket" "this" {
+  #checkov:skip=CKV_AWS_145:Cifrado de S3 y no clave propia: aquí solo hay archivos que el navegador descarga en claro. Los documentos de KYC sí usan KMS. El cifrado está en aws_s3_bucket_server_side_encryption_configuration.
   bucket        = var.bucket_name
   force_destroy = var.force_destroy
   tags          = var.tags

@@ -1,0 +1,8 @@
+[
+  {
+    "id": "GHSA-fc5q-39xc-vjpf",
+    "package": "picomatch",
+    "expires": "2027-02-28",
+    "reason": "ReDoS con un patrón glob malicioso. No hay versión corregida: el aviso cubre <=4.0.7, que es la última publicada. Llega solo por herramientas de desarrollo (vite, jest, eslint) y no entra en el bundle. Los patrones son constantes del repositorio, nunca entrada de nadie. Revisar cuando picomatch publique la corrección."
+  }
+]

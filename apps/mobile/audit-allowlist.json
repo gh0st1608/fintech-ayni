@@ -4,5 +4,11 @@
     "package": "zod",
     "reason": "Solo en @expo/cli (herramienta de build, no va en el bundle), que depende de zod 3. La app usa zod 4.6.7, ya corregido. npm audit fix propone bajar a Expo 54. Revisar al actualizar Expo.",
     "expires": "2027-01-31"
+  },
+  {
+    "id": "GHSA-fc5q-39xc-vjpf",
+    "package": "picomatch",
+    "expires": "2027-02-28",
+    "reason": "ReDoS con un patrón glob malicioso. No hay versión corregida: el aviso cubre <=4.0.7, que es la última publicada. Llega por expo, expo-router y react-native, que lo usan en el bundler (Metro) y en la CLI, no en el código que corre en el teléfono. Los patrones son constantes del repositorio. Revisar cuando picomatch publique la corrección."
   }
 ]

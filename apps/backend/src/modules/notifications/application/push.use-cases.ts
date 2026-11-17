@@ -101,6 +101,10 @@ export interface PushRun {
  * diaria justo después de sincronizar, así los recordatorios de vencimiento salen aunque nadie
  * abra la app.
  *
+ * La cola se vacía por tandas dentro de la misma corrida (`maxBatches`). Entregar una sola tanda
+ * dejaría el resto para el día siguiente, y para entonces ya habría pasado `maxAgeHours`: los
+ * avisos se descartarían sin enviarse en cuanto hubiera más de `batchSize` en un día.
+ *
  * Reglas que hacen esto seguro de repetir:
  * - Cada notificación se marca enviada en cuanto el proveedor la acepta, así que una segunda
  *   corrida no vuelve a avisar lo mismo.
@@ -123,6 +127,25 @@ export class SendPendingPushUseCase {
   ) {}
 
   async execute(): Promise<PushRun> {
+    const total: PushRun = { considered: 0, sent: 0, skipped: 0, failed: 0, unregistered: 0 };
+
+    for (let batch = 0; batch < this.settings.maxBatches; batch += 1) {
+      const run = await this.sendBatch();
+      total.considered += run.considered;
+      total.sent += run.sent;
+      total.skipped += run.skipped;
+      total.failed += run.failed;
+      total.unregistered += run.unregistered;
+      // Una tanda incompleta significa que no quedaba nada más que revisar. Si la tanda vino
+      // llena pero todo falló, las notificaciones siguen pendientes: el tope corta la vuelta.
+      if (run.considered < this.settings.batchSize) break;
+    }
+
+    if (total.considered > 0) this.logger.log({ event: 'push.sent', ...total });
+    return total;
+  }
+
+  private async sendBatch(): Promise<PushRun> {
     const now = this.clock.now();
     const pending = await this.notifications.pendingPush({
       limit: this.settings.batchSize,
@@ -200,8 +223,6 @@ export class SendPendingPushUseCase {
     if (failed.size > 0) await this.notifications.markPushAttempt([...failed]);
     run.sent = sent.size;
     run.failed = failed.size;
-
-    this.logger.log({ event: 'push.sent', ...run });
     return run;
   }
 }
