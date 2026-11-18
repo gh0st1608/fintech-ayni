@@ -61,6 +61,31 @@ describe('SignInScreen', () => {
     expect(screen.queryByText(INVALID_IDENTIFIER)).toBeNull();
   });
 
+  it('sin proveedor de SMS no deja pedir el codigo al telefono y lo dice (T6)', async () => {
+    const setup = createTestContainer();
+    const spy = jest.spyOn(setup.adapters.authApi, 'startAuthentication');
+    // Lo que responde el backend mientras el SMS no tenga identidad de origen; lo consulta la
+    // ruta y se lo pasa a la pantalla.
+    await renderWithProviders(
+      <SignInScreen channels={['email']} onChallengeStarted={jest.fn()} />,
+      setup,
+    );
+
+    await fireEvent.changeText(screen.getByLabelText(IDENTIFIER_LABEL), '+51987654321');
+    await waitFor(() =>
+      expect(screen.getByRole('alert')).toHaveTextContent(
+        'Por ahora solo puedes entrar con tu email.',
+      ),
+    );
+
+    await fireEvent.press(screen.getByRole('button', { name: 'Continuar' }));
+    expect(spy).not.toHaveBeenCalled();
+
+    // El correo sigue sirviendo.
+    await fireEvent.changeText(screen.getByLabelText(IDENTIFIER_LABEL), 'ana@mail.com');
+    await waitFor(() => expect(screen.queryByRole('alert')).toBeNull());
+  });
+
   it('un número local se completa con el país del dispositivo, y se puede cambiar (D14)', async () => {
     const setup = createTestContainer();
     const spy = jest.spyOn(setup.adapters.authApi, 'startAuthentication');
