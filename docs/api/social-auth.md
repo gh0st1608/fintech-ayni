@@ -38,11 +38,13 @@ Un correo que el proveedor no declara verificado se trata como si no hubiera cor
 
 | Método y ruta                                | Uso                                                                            |
 | -------------------------------------------- | ------------------------------------------------------------------------------ |
-| `POST /v1/auth/social/google`                | Verifica el ID Token de Google y abre sesión                                   |
+| `POST /v1/auth/social/google`                | Verifica un ID Token de Google y abre sesión (no lo usa la app; ver abajo)     |
 | `POST /v1/auth/social/apple`                 | Igual, con el ID Token del flujo nativo de iOS                                 |
+| `POST /v1/auth/social/google/authorize`      | Abre el intento web de Google: devuelve la URL con `state`, `nonce` y PKCE     |
+| `GET /v1/auth/social/google/callback`        | Callback HTTPS de Google; redirige al deep link con el código interno          |
 | `POST /v1/auth/social/apple/authorize`       | Abre el intento web de Android: devuelve la URL de Apple con `state` y `nonce` |
 | `POST /v1/auth/social/apple/callback`        | Callback HTTPS de Apple; redirige al deep link con el código interno           |
-| `POST /v1/auth/social/apple/exchange`        | La app canjea el código interno por su sesión                                  |
+| `POST /v1/auth/social/apple/exchange`        | La app canjea el código interno por su sesión (sirve a los dos proveedores)    |
 | `GET /v1/me/social-identities`               | Proveedores vinculados (requiere sesión)                                       |
 | `POST /v1/me/social-identities/{provider}`   | Vincula un proveedor a la cuenta con sesión                                    |
 | `DELETE /v1/me/social-identities/{provider}` | Lo desvincula                                                                  |
@@ -60,6 +62,24 @@ Respuesta: `{ "accessToken": "…", "refreshToken": "…" }`, como `POST /v1/aut
 **Siempre se exige.** La app genera un valor aleatorio por intento, se lo pasa al SDK del proveedor y manda el mismo valor aquí. El backend acepta que el claim traiga el valor tal cual o su **SHA-256 en hexadecimal**, porque algunos SDK envían el hash al proveedor y conservan el original en el dispositivo; en ambos casos hay que conocer el nonce original, así que un token obtenido en otra sesión no pasa.
 
 En el flujo web de Android el nonce lo genera **el backend** y queda guardado con el intento: el dispositivo no lo elige.
+
+### Por qué Google también pasa por el navegador
+
+El plan daba por hecho que la app obtendría el ID Token de Google por su cuenta. **No se puede**, por dos reglas de Google:
+
+- un cliente OAuth de tipo **Web** solo admite `redirect_uri` **HTTPS**; un esquema propio como `ayni://` ni siquiera se puede registrar en la consola;
+- en apps instaladas Google exige **`response_type=code` con PKCE**, no el flujo implícito (`id_token`).
+
+Así que el `redirect_uri` es el callback HTTPS de la API y el canje ocurre en el backend, con el client secret del cliente Web, que nunca viaja al dispositivo. Es el mismo patrón que Apple en Android, con una diferencia: Google redirige por **GET** y Apple por `form_post`.
+
+1. La app pide `google/authorize`; el backend guarda `state`, `nonce` y el `code_verifier` de PKCE, y devuelve la URL.
+2. La app abre esa URL en el navegador del sistema.
+3. Google redirige al callback HTTPS con `code` y `state`.
+4. El backend consume el `state` (**de un solo uso**), canjea el código con el `code_verifier` guardado y verifica el ID Token con el nonce del intento.
+5. Redirige al deep link con un **código interno opaco de un solo uso**, nunca con tokens.
+6. La app lo canjea en `apple/exchange` y recibe su sesión.
+
+**PKCE** no lo exige Google para un cliente confidencial, pero se usa igual: el `code` viaja en la query del callback, que puede quedar en registros de acceso, y sin el `code_verifier` —que nunca sale del servidor— ese código no se puede canjear.
 
 ### Flujo web de Apple en Android
 
@@ -89,7 +109,10 @@ El motivo exacto del rechazo de un token **nunca** sale en la respuesta: queda e
 
 | Variable                        | Para qué                                                                                    |
 | ------------------------------- | ------------------------------------------------------------------------------------------- |
-| `GOOGLE_CLIENT_IDS`             | Client id de Android, iOS y Web separados por coma: la lista cerrada de audiencias          |
+| `GOOGLE_CLIENT_IDS`             | Client id separados por coma: la lista cerrada de audiencias del ID Token                   |
+| `GOOGLE_WEB_CLIENT_ID`          | Cliente **Web**: el único tipo con `redirect_uri` HTTPS. Debe estar en `GOOGLE_CLIENT_IDS`  |
+| `GOOGLE_CLIENT_SECRET`          | Client secret de ese cliente. **Secreto**: Secrets Manager, nunca el repositorio            |
+| `GOOGLE_REDIRECT_URI`           | Callback HTTPS registrado en Google Cloud Console                                           |
 | `APPLE_CLIENT_IDS`              | Bundle id de iOS y Services ID del flujo web                                                |
 | `APPLE_SERVICE_ID`              | Services ID del flujo web de Android                                                        |
 | `APPLE_TEAM_ID`, `APPLE_KEY_ID` | Identifican la clave de Sign in with Apple                                                  |
@@ -102,16 +125,19 @@ El motivo exacto del rechazo de un token **nunca** sale en la respuesta: queda e
 
 ## En la app
 
-- **Botones** en el ingreso, debajo del formulario de email o teléfono. Se ofrecen **solo los proveedores que el dispositivo puede usar**: sin client id de Google y sin build nativo no aparece nada, y el ingreso de siempre queda igual.
-- **Google con `expo-auth-session`**, no con el SDK nativo que proponía el plan. La [guía de Expo](https://docs.expo.dev/guides/google-authentication/) avisa de que el SDK antiguo de Android está descontinuado y de que su reemplazo (Credential Manager) va en la **oferta de pago** de esa librería. El backend solo necesita un ID Token con nonce, que este flujo entrega igual, y es un módulo de Expo, como pide `apps/mobile/AGENTS.md`. Cambiar al diálogo nativo después es **un adaptador**, porque el SDK vive detrás de `SocialSignInPort`.
+- **Botones** en el ingreso, debajo del formulario de email o teléfono. Se ofrecen **solo los proveedores que el dispositivo puede usar**; sin build nativo no aparece nada y el ingreso de siempre queda igual. Google se ofrece siempre: si el backend no tiene credenciales, `google/authorize` responde 503.
+- **La app no lleva ninguna credencial de Google.** No hay `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID`: el client id y el secreto viven en el backend, que es quien coordina el flujo. Cambiar al diálogo nativo después es **un adaptador**, porque todo esto vive detrás de `SocialSignInPort`.
 - **Apple nativo en iOS** con `expo-apple-authentication`; en Android, el flujo web que coordina el backend, abierto con `openAuthSessionAsync` y devuelto por deep link.
-- **El nonce lo genera la app** por intento (`expo-crypto`) y viaja con la credencial; en el flujo web de Android lo genera el backend.
+- **El nonce lo genera la app** por intento (`expo-crypto`) y viaja con la credencial; en los flujos web lo genera el backend.
+- **Vincular desde el perfil solo funciona donde hay credencial directa**, o sea Apple en iOS. Los flujos por navegador abren sesión en vez de devolver una credencial, así que vincular Google o Apple-en-Android responde `unsupported`. Darles soporte pide un modo "vincular" en el intento, que está pendiente.
 - **La credencial del proveedor no se guarda**: se cambia una vez por la sesión de Ayni, que es lo único que llega a SecureStore.
 - **Cancelar no es un error**: no se muestra ningún mensaje, que es lo que la persona espera al cerrar el diálogo.
 
 ## Pendiente [?]
 
-- **Cuentas de proveedor:** proyecto de Google Cloud con los tres client id, y membresía de Apple Developer con App ID, Services ID, clave `.p8` y dominio del callback verificado. Hasta entonces no se puede probar contra los proveedores reales (QA-01, QA-02 y QA-03).
-- **Dominio del callback:** `APPLE_REDIRECT_URI` necesita el dominio público de la API, que depende del despliegue (COPAYNI-12).
+- **Cuentas de proveedor:** proyecto de Google Cloud con el cliente Web (client id y secreto) y membresía de Apple Developer con App ID, Services ID, clave `.p8` y dominio del callback verificado. Hasta entonces no se puede probar contra los proveedores reales (QA-01, QA-02 y QA-03).
+- **Dominio del callback:** `APPLE_REDIRECT_URI` y `GOOGLE_REDIRECT_URI` necesitan el dominio público de la API, que depende del despliegue (COPAYNI-12).
+- **Verificación del dominio en Apple:** el Services ID exige servir `apple-developer-domain-association.txt` bajo `/.well-known/`, que la API todavía no sirve.
+- **Vincular por flujo web:** hoy responde `unsupported`; falta el modo "vincular" del intento.
 - **Limpieza de intentos vencidos:** `social_auth_flows` guarda los intentos; conviene borrar los vencidos en la tarea diaria cuando el volumen lo justifique.
 - **App:** los SDK, la configuración nativa y los botones son la otra mitad de la historia.
