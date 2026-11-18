@@ -1,9 +1,6 @@
-import { createHash, randomBytes } from 'node:crypto';
-
 import { Inject, Injectable, Logger } from '@nestjs/common';
 
 import { CLOCK, type ClockPort } from '../../../../shared/application/ports/clock.port';
-import { UnauthorizedError } from '../../../../shared/errors/app-error';
 import {
   APPLE_WEB_FLOW,
   type AppleWebFlowPort,
@@ -13,15 +10,8 @@ import {
   type SocialAuthSettings,
 } from '../ports/social-auth.ports';
 import { type AuthTokens } from '../services/session-issuer';
+import { invalidFlow, secret, sha256 } from './social-flow.helpers';
 import { SocialLoginUseCase } from './social-login.use-cases';
-
-/** Valor aleatorio de 32 bytes en base64url: 43 caracteres, los que guarda la base. */
-const secret = (): string => randomBytes(32).toString('base64url');
-const sha256 = (value: string): string => createHash('sha256').update(value).digest('hex');
-
-/** El intento no existe, ya se usó o venció. Siempre se responde lo mismo. */
-const invalidFlow = (): UnauthorizedError =>
-  new UnauthorizedError('El inicio de sesión no se pudo completar. Vuelve a intentarlo.');
 
 /**
  * Apple en Android (COPAYNI-91 §9): Android no tiene Sign in with Apple nativo, así que el inicio
@@ -40,7 +30,7 @@ export class StartAppleWebFlowUseCase {
     const state = secret();
     const nonce = secret();
     const expiresAt = new Date(this.clock.now().getTime() + this.settings.flowTtlSeconds * 1000);
-    await this.flows.create({ state, nonce, provider: 'apple', expiresAt });
+    await this.flows.create({ state, nonce, provider: 'apple', expiresAt, codeVerifier: null });
 
     const url = new URL(this.settings.apple.authorizationUrl);
     url.searchParams.set('response_type', 'code id_token');
@@ -76,7 +66,8 @@ export class CompleteAppleWebFlowUseCase {
   async execute(input: { state: string; code?: string; idToken?: string }): Promise<string> {
     const now = this.clock.now();
     const flow = await this.flows.consumeState(input.state, now);
-    if (!flow) {
+    // El proveedor se comprueba: un intento abierto para Google no se completa por aquí.
+    if (!flow || flow.provider !== 'apple') {
       this.logger.warn({ event: 'auth.social_state_rejected', provider: 'apple' });
       throw invalidFlow();
     }

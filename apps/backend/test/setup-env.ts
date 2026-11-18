@@ -41,6 +41,10 @@ export const TEST_ENV = {
   // Sin proveedor de OTP (T6): las pruebas usan el código fijo de desarrollo. La clave JWT y el
   // secreto de los OTP se generan al arrancar.
   OTP_DEV_CODE: '1234',
+  // Flujo web de Google (COPAYNI-91 §9): credenciales de mentira; el canje se reemplaza por un
+  // doble en las pruebas, así que nunca se sale a Google.
+  GOOGLE_WEB_CLIENT_ID: '123-de-prueba.apps.googleusercontent.com',
+  GOOGLE_REDIRECT_URI: 'https://api.ayni.test/v1/auth/social/google/callback',
 } as const;
 
 Object.assign(process.env, TEST_ENV);

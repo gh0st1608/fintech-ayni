@@ -52,6 +52,29 @@ export class AppleCallbackRequest {
   error?: string;
 }
 
+/**
+ * Vuelta de Google: llega por GET con los parámetros en la query, que es como redirige Google.
+ * El `code` nunca se registra en logs ni se devuelve a la app.
+ */
+export class GoogleCallbackQuery {
+  @ApiProperty()
+  @IsString()
+  @MaxLength(128)
+  state!: string;
+
+  @ApiPropertyOptional({ description: 'Código de autorización de Google' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(MAX_TOKEN)
+  code?: string;
+
+  @ApiPropertyOptional({ description: 'Google avisa aquí si la persona canceló' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(256)
+  error?: string;
+}
+
 export class ExchangeSocialCodeRequest {
   @ApiProperty({ description: 'Código interno de un solo uso que la app recibió por deep link' })
   @IsString()
@@ -60,8 +83,8 @@ export class ExchangeSocialCodeRequest {
   code!: string;
 }
 
-export class AppleAuthorizeResponse {
-  @ApiProperty({ description: 'URL de Apple que la app abre en el navegador del sistema' })
+export class SocialAuthorizeResponse {
+  @ApiProperty({ description: 'URL del proveedor que la app abre en el navegador del sistema' })
   authorizationUrl!: string;
 
   @ApiProperty({ description: 'Identifica el intento; la app no necesita guardarlo' })

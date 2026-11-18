@@ -1,12 +1,14 @@
 import './support/high-rate-limit';
 
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 
 import { type NestExpressApplication } from '@nestjs/platform-express';
 import request from 'supertest';
 import { DataSource } from 'typeorm';
 
 import {
+  GOOGLE_WEB_FLOW,
+  type GoogleWebFlowPort,
   IDENTITY_PROVIDERS_PORT,
   type IdentityProviderPort,
   type IdentityProvidersPort,
@@ -45,16 +47,36 @@ class FakeProviders implements IdentityProvidersPort {
   }
 }
 
+/** Canje con Google: guarda lo que se le pasó para comprobar que viaja el verifier del intento. */
+class FakeGoogleWebFlow implements GoogleWebFlowPort {
+  readonly exchanges: { code: string; codeVerifier: string }[] = [];
+  fail = false;
+
+  isConfigured(): boolean {
+    return true;
+  }
+
+  exchange(input: { code: string; codeVerifier: string }): Promise<string> {
+    this.exchanges.push(input);
+    if (this.fail) return Promise.reject(new UnauthorizedError('Google rechazó el canje'));
+    return Promise.resolve(ID_TOKEN);
+  }
+}
+
 describe('Login social', () => {
   let app: NestExpressApplication;
   let database: DataSource;
   const providers = new FakeProviders();
+  const googleWebFlow = new FakeGoogleWebFlow();
   const http = () => request(app.getHttpServer());
 
   beforeAll(async () => {
     app = await createTestApp({
       verifier: null,
-      overrides: [{ token: IDENTITY_PROVIDERS_PORT, value: providers }],
+      overrides: [
+        { token: IDENTITY_PROVIDERS_PORT, value: providers },
+        { token: GOOGLE_WEB_FLOW, value: googleWebFlow },
+      ],
     });
     database = app.get(DataSource);
   });
@@ -318,6 +340,102 @@ describe('Login social', () => {
       const response = await http()
         .post('/v1/auth/social/apple/callback')
         .send({ state: start.body.data.state, error: 'user_cancelled_authorize' })
+        .expect(302);
+      expect(response.headers.location).toContain('error=cancelled');
+    });
+  });
+
+  describe('flujo web de Google', () => {
+    it('abre el intento con state, nonce y PKCE, y la URL apunta a Google', async () => {
+      const response = await http().post('/v1/auth/social/google/authorize').expect(200);
+      const url = new URL(response.body.data.authorizationUrl);
+
+      expect(url.origin + url.pathname).toBe('https://accounts.google.com/o/oauth2/v2/auth');
+      // Google no admite el flujo implícito en apps instaladas: siempre código con PKCE.
+      expect(url.searchParams.get('response_type')).toBe('code');
+      expect(url.searchParams.get('code_challenge_method')).toBe('S256');
+      expect(url.searchParams.get('state')).toBe(response.body.data.state);
+      // El redirect es el callback HTTPS de la API, no un esquema propio de la app.
+      expect(url.searchParams.get('redirect_uri')).toMatch(/^https:/);
+
+      const rows = await database.query<{ nonce: string; code_verifier: string }[]>(
+        'SELECT nonce, code_verifier FROM social_auth_flows WHERE state = $1',
+        [response.body.data.state],
+      );
+      // El nonce y el verifier los elige el servidor; el dispositivo no los ve.
+      expect(rows[0]?.nonce).toBe(url.searchParams.get('nonce'));
+      expect(rows[0]?.code_verifier).toEqual(expect.any(String));
+      // Al navegador solo viaja el reto, nunca el verifier.
+      const challenge = createHash('sha256')
+        .update(rows[0]?.code_verifier ?? '')
+        .digest('base64url');
+      expect(url.searchParams.get('code_challenge')).toBe(challenge);
+      expect(response.body.data.authorizationUrl).not.toContain(rows[0]?.code_verifier);
+    });
+
+    it('la vuelta canjea con el verifier del intento y devuelve un código interno', async () => {
+      const value = identity({ provider: 'google', subject: `google-${randomUUID()}` });
+      const start = await http().post('/v1/auth/social/google/authorize').expect(200);
+      providers.next = value;
+      const [row] = await database.query<{ code_verifier: string }[]>(
+        'SELECT code_verifier FROM social_auth_flows WHERE state = $1',
+        [start.body.data.state],
+      );
+
+      const callback = await http()
+        .get('/v1/auth/social/google/callback')
+        .query({ state: start.body.data.state, code: 'codigo-de-google' })
+        .expect(302);
+      const location = String(callback.headers.location);
+      expect(new URL(location).protocol).toBe('ayni:');
+      expect(location).not.toMatch(/accessToken|refreshToken/);
+      expect(googleWebFlow.exchanges.at(-1)).toEqual({
+        code: 'codigo-de-google',
+        codeVerifier: row?.code_verifier,
+      });
+
+      const code = new URL(location).searchParams.get('code') ?? '';
+      const exchanged = await http()
+        .post('/v1/auth/social/apple/exchange')
+        .send({ code })
+        .expect(200);
+      expect(exchanged.body.data.accessToken).toEqual(expect.any(String));
+      await http().post('/v1/auth/social/apple/exchange').send({ code }).expect(401);
+    });
+
+    it('QA-17 un state desconocido o repetido no completa el inicio', async () => {
+      providers.next = identity({ provider: 'google', subject: `google-${randomUUID()}` });
+      await http()
+        .get('/v1/auth/social/google/callback')
+        .query({ state: 'state-que-nadie-abrio', code: 'codigo' })
+        .expect(401);
+
+      const start = await http().post('/v1/auth/social/google/authorize').expect(200);
+      await http()
+        .get('/v1/auth/social/google/callback')
+        .query({ state: start.body.data.state, code: 'codigo' })
+        .expect(302);
+      await http()
+        .get('/v1/auth/social/google/callback')
+        .query({ state: start.body.data.state, code: 'codigo' })
+        .expect(401);
+    });
+
+    it('un intento abierto para Google no se completa por el callback de Apple', async () => {
+      providers.next = identity({ provider: 'google', subject: `google-${randomUUID()}` });
+      const start = await http().post('/v1/auth/social/google/authorize').expect(200);
+
+      await http()
+        .post('/v1/auth/social/apple/callback')
+        .send({ state: start.body.data.state, id_token: ID_TOKEN })
+        .expect(401);
+    });
+
+    it('QA-13 si la persona cancela, vuelve a la app sin sesión', async () => {
+      const start = await http().post('/v1/auth/social/google/authorize').expect(200);
+      const response = await http()
+        .get('/v1/auth/social/google/callback')
+        .query({ state: start.body.data.state, error: 'access_denied' })
         .expect(302);
       expect(response.headers.location).toContain('error=cancelled');
     });

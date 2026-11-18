@@ -368,6 +368,28 @@ export class EnvironmentVariables {
   GOOGLE_CLIENT_IDS?: string;
 
   /**
+   * Client ID del cliente **Web** de Google: el único tipo al que Google admite un `redirect_uri`
+   * HTTPS propio, que es lo que exige el flujo que coordina el backend. Debe estar también en
+   * `GOOGLE_CLIENT_IDS`, porque es la audiencia del ID Token que llega.
+   */
+  @IsOptional()
+  @IsString()
+  GOOGLE_WEB_CLIENT_ID?: string;
+
+  /**
+   * Client secret de ese cliente Web. **Es un secreto**: va en Secrets Manager, nunca en el
+   * repositorio ni en una variable `EXPO_PUBLIC_`. Sin él, el inicio con Google se apaga.
+   */
+  @IsOptional()
+  @IsString()
+  GOOGLE_CLIENT_SECRET?: string;
+
+  /** Callback HTTPS registrado en Google Cloud Console para el cliente Web. */
+  @IsOptional()
+  @IsUrl({ require_tld: false, protocols: ['https', 'http'] })
+  GOOGLE_REDIRECT_URI?: string;
+
+  /**
    * Audiencias de Apple: el bundle id de iOS y el Services ID del flujo web de Android. Vacío
    * apaga el login con Apple.
    */

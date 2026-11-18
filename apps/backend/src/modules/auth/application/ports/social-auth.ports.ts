@@ -9,10 +9,13 @@ export const EXTERNAL_IDENTITIES = Symbol('EXTERNAL_IDENTITIES');
 export const SOCIAL_AUTH_FLOWS = Symbol('SOCIAL_AUTH_FLOWS');
 export const SOCIAL_AUTH_SETTINGS = Symbol('SOCIAL_AUTH_SETTINGS');
 export const APPLE_WEB_FLOW = Symbol('APPLE_WEB_FLOW');
+export const GOOGLE_WEB_FLOW = Symbol('GOOGLE_WEB_FLOW');
 
 export interface SocialAuthSettings {
   /** Cuánto vive un intento del flujo web: lo justo para ir al navegador y volver. */
   readonly flowTtlSeconds: number;
+  /** Deep link al que vuelve la app con el código interno. Común a los dos proveedores. */
+  readonly appRedirectUri: string;
   readonly apple: {
     /** `https://appleid.apple.com/auth/authorize`. */
     readonly authorizationUrl: string;
@@ -20,8 +23,14 @@ export interface SocialAuthSettings {
     readonly serviceId: string;
     /** Callback HTTPS registrado en Apple. */
     readonly redirectUri: string;
-    /** Deep link al que vuelve la app con el código interno. */
-    readonly appRedirectUri: string;
+  };
+  readonly google: {
+    /** `https://accounts.google.com/o/oauth2/v2/auth`. */
+    readonly authorizationUrl: string;
+    /** Client ID **Web**: el único tipo al que Google admite un redirect HTTPS propio. */
+    readonly clientId: string;
+    /** Callback HTTPS registrado en Google Cloud Console. */
+    readonly redirectUri: string;
   };
 }
 
@@ -33,6 +42,17 @@ export interface AppleWebFlowPort {
   isConfigured(): boolean;
   /** Devuelve el `id_token` que Apple entrega a cambio del código. */
   exchange(code: string): Promise<string>;
+}
+
+/**
+ * Canje del `authorization code` con Google. Google no admite esquemas propios (`ayni://`) ni el
+ * flujo implícito en apps instaladas, así que el canje lo hace el backend con el client secret del
+ * cliente Web, que nunca viaja al dispositivo, y con el `code_verifier` de PKCE del intento.
+ */
+export interface GoogleWebFlowPort {
+  isConfigured(): boolean;
+  /** Devuelve el `id_token` que Google entrega a cambio del código. */
+  exchange(input: { code: string; codeVerifier: string }): Promise<string>;
 }
 
 /**
@@ -90,6 +110,8 @@ export interface SocialAuthFlow {
   userId: string | null;
   exchangeCodeHash: string | null;
   consumedAt: Date | null;
+  /** `code_verifier` de PKCE; solo lo usa Google. Nulo en los intentos de Apple. */
+  codeVerifier: string | null;
 }
 
 export interface SocialAuthFlowsPort {

@@ -136,6 +136,7 @@ interface FlowRow {
   exchange_code_hash: string | null;
   expires_at: Date;
   consumed_at: Date | null;
+  code_verifier: string | null;
 }
 
 const toFlow = (row: FlowRow): SocialAuthFlow => ({
@@ -146,12 +147,14 @@ const toFlow = (row: FlowRow): SocialAuthFlow => ({
   exchangeCodeHash: row.exchange_code_hash,
   expiresAt: new Date(row.expires_at),
   consumedAt: row.consumed_at ? new Date(row.consumed_at) : null,
+  codeVerifier: row.code_verifier,
 });
 
-const FLOW_COLUMNS = 'state, provider, nonce, user_id, exchange_code_hash, expires_at, consumed_at';
+const FLOW_COLUMNS =
+  'state, provider, nonce, user_id, exchange_code_hash, expires_at, consumed_at, code_verifier';
 
 /**
- * Intentos del flujo web de Apple en Android. `state` y el código interno se consumen con un
+ * Intentos de los flujos web (Apple en Android y Google en ambas plataformas). `state` y el código interno se consumen con un
  * `UPDATE ... WHERE ... IS NULL` que devuelve la fila: la base garantiza que solo el primero gana,
  * así que un callback repetido o un código reutilizado no abren sesión (QA-14 y QA-17).
  */
@@ -163,9 +166,9 @@ export class SqlSocialAuthFlows implements SocialAuthFlowsPort {
     flow: Omit<SocialAuthFlow, 'userId' | 'exchangeCodeHash' | 'consumedAt'>,
   ): Promise<void> {
     await this.dataSource.query(
-      `INSERT INTO social_auth_flows (state, provider, nonce, expires_at)
-            VALUES ($1, $2, $3, $4)`,
-      [flow.state, flow.provider, flow.nonce, flow.expiresAt],
+      `INSERT INTO social_auth_flows (state, provider, nonce, expires_at, code_verifier)
+            VALUES ($1, $2, $3, $4, $5)`,
+      [flow.state, flow.provider, flow.nonce, flow.expiresAt, flow.codeVerifier],
     );
   }
 
