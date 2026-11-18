@@ -137,6 +137,12 @@ variable "otp_messaging" {
   default = {}
 }
 
+variable "dmarc_report_email" {
+  description = "Buzón que recibe los informes agregados de DMARC (rua). null: política sin informes."
+  type        = string
+  default     = null
+}
+
 variable "database_app_username" {
   description = "Usuario de PostgreSQL con el que se conecta la API. Lo crea el runner de migraciones con la credencial maestra; no tiene permisos de DDL (COPAYNI-12)."
   type        = string

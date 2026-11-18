@@ -194,10 +194,31 @@ run "sin_new_relic" {
   }
 }
 
-# Envío real del OTP (pending-scope T6): apagado hasta definir el dominio remitente y registrar la
-# identidad de SMS. Sin él, la API responde 503 al pedir un código, nunca da uno por enviado.
-run "otp_sin_envio_por_defecto" {
+# Envío real del OTP (pending-scope T6). El correo ya tiene dominio remitente; el SMS sigue sin
+# identidad de origen, que es un trámite por país, así que ese canal responde 503.
+run "otp_por_correo_y_sin_sms" {
   command = plan
+
+  assert {
+    condition = (
+      local.otp_enabled &&
+      local.api_environment["OTP_DELIVERY"] == "aws" &&
+      local.api_environment["OTP_EMAIL_FROM"] == "Ayni <no-reply@backend-ayni.solutionserj.com>" &&
+      !contains(keys(local.api_environment), "OTP_SMS_ORIGINATION_IDENTITY") &&
+      contains(keys(local.api_task_policies), "otp")
+    )
+    error_message = "El correo queda configurado y el SMS no, que es lo que hay hoy."
+  }
+}
+
+# Sin configuración no se crea nada y la API responde 503 al pedir un código: nunca da uno por
+# enviado. Es el estado de cualquier ambiente nuevo.
+run "otp_sin_envio_si_no_se_configura" {
+  command = plan
+
+  variables {
+    otp_messaging = {}
+  }
 
   assert {
     condition = (

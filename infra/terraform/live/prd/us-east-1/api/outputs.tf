@@ -28,6 +28,11 @@ output "route53_name_servers" {
   value       = aws_route53_zone.api.name_servers
 }
 
+output "route53_zone_id" {
+  description = "ID de la zona delegada. Se copia a otp_messaging.email.route53_zone_id del tfvars."
+  value       = aws_route53_zone.api.zone_id
+}
+
 output "newrelic_dashboard_url" {
   description = "Dashboard de la API en New Relic."
   value       = module.newrelic.dashboard_url
