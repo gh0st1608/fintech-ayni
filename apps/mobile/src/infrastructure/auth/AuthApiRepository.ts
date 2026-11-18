@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-import type { AuthChallenge } from '@/domain/auth/AuthChallenge';
+import type { AuthChallenge, OtpChannel } from '@/domain/auth/AuthChallenge';
 import {
   OtpVerificationError,
   type OtpRejectionReason,
@@ -11,6 +11,9 @@ import type { LoginIdentifier } from '@/domain/auth/value-objects/LoginIdentifie
 import type { OtpCode } from '@/domain/auth/value-objects/OtpCode';
 import { AppError } from '@/domain/shared/errors/AppError';
 import type { HttpClientPort } from '@/domain/shared/ports/HttpClientPort';
+
+/** Canales con proveedor en este ambiente (/auth/channels). */
+const channelsDto = z.object({ channels: z.array(z.enum(['email', 'sms'])) });
 
 /** DTO del desafío OTP en /auth/start y /auth/resend (docs/api/auth.md). */
 export const challengeDto = z.object({
@@ -53,6 +56,16 @@ export function toOtpRejection(error: unknown): unknown {
 /** Adaptador HTTP de la API de autenticación del backend NestJS. */
 export class AuthApiRepository implements AuthApiPort {
   constructor(private readonly http: HttpClientPort) {}
+
+  async availableChannels(signal?: AbortSignal): Promise<OtpChannel[]> {
+    const dto = await this.http.get('/auth/channels', {
+      signal,
+      // Se consulta en el ingreso, sin sesión: un 401 no debe disparar una renovación.
+      skipSessionRefresh: true,
+      parse: (data) => channelsDto.parse(data),
+    });
+    return dto.channels;
+  }
 
   async startAuthentication(
     identifier: LoginIdentifier,

@@ -472,6 +472,8 @@
       "identifierLabel": "Email/Phone",
       "identifierPlaceholder": "Enter your Email or Phone",
       "invalidIdentifier": "Enter a valid email or your phone number.",
+      "smsUnavailable": "For now you can only sign in with your email.",
+      "emailUnavailable": "For now you can only sign in with your phone number.",
       "legal": "By clicking Continue, you agree to {{appName}} <terms>Terms of Use</terms> and <privacy>Privacy Policy</privacy>.",
       "phoneCountry": "Phone from {{flag}} {{country}} ({{code}})",
       "changeCountry": "Change country"

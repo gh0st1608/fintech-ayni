@@ -20,6 +20,7 @@ import type { RefreshSessionUseCase } from '@/application/auth/usecases/RefreshS
 import type { ResendOtpUseCase } from '@/application/auth/usecases/ResendOtpUseCase';
 import type { RestoreSessionUseCase } from '@/application/auth/usecases/RestoreSessionUseCase';
 import type { SignOutUseCase } from '@/application/auth/usecases/SignOutUseCase';
+import type { ListAvailableChannelsUseCase } from '@/application/auth/usecases/ListAvailableChannelsUseCase';
 import type { StartAuthenticationUseCase } from '@/application/auth/usecases/StartAuthenticationUseCase';
 import type { VerifyOtpUseCase } from '@/application/auth/usecases/VerifyOtpUseCase';
 import type {
@@ -151,6 +152,7 @@ export interface AppContainer {
     /** Entrar y vincular con Google o Apple (COPAYNI-91). */
     signInWithProvider: SignInWithProviderUseCase;
     availableProviders: ListAvailableProvidersUseCase;
+    availableChannels: ListAvailableChannelsUseCase;
     linkProvider: LinkSocialProviderUseCase;
     unlinkProvider: UnlinkSocialProviderUseCase;
     linkedProviders: ListSocialProvidersUseCase;

@@ -50,6 +50,7 @@ import { RefreshSessionUseCase } from '@/application/auth/usecases/RefreshSessio
 import { ResendOtpUseCase } from '@/application/auth/usecases/ResendOtpUseCase';
 import { RestoreSessionUseCase } from '@/application/auth/usecases/RestoreSessionUseCase';
 import { SignOutUseCase } from '@/application/auth/usecases/SignOutUseCase';
+import { ListAvailableChannelsUseCase } from '@/application/auth/usecases/ListAvailableChannelsUseCase';
 import { StartAuthenticationUseCase } from '@/application/auth/usecases/StartAuthenticationUseCase';
 import { VerifyOtpUseCase } from '@/application/auth/usecases/VerifyOtpUseCase';
 import {
@@ -449,6 +450,7 @@ export function createContainer(
       signOut,
       refreshSession,
       sessionEvents,
+      availableChannels: new ListAvailableChannelsUseCase(adapters.authApi),
       startAuthentication: new StartAuthenticationUseCase(adapters.authApi),
       verifyOtp: new VerifyOtpUseCase(adapters.authApi, adapters.tokenStorage),
       resendOtp: new ResendOtpUseCase(adapters.authApi),
