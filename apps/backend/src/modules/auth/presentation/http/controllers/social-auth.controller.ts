@@ -40,6 +40,7 @@ import {
   CompleteGoogleWebFlowUseCase,
   StartGoogleWebFlowUseCase,
 } from '../../../application/use-cases/google-web-flow.use-cases';
+import { ListConfiguredProvidersUseCase } from '../../../application/use-cases/social-providers.use-cases';
 import {
   LinkSocialIdentityUseCase,
   ListSocialIdentitiesUseCase,
@@ -55,6 +56,7 @@ import {
   SocialAuthorizeResponse,
   SocialIdentitiesResponse,
   SocialLoginRequest,
+  SocialProvidersResponse,
 } from '../dto/social-auth.dto';
 
 const ENVELOPE = 'Envuelto en { success, data, traceId }';
@@ -78,8 +80,20 @@ export class SocialAuthController {
     @Inject(CompleteGoogleWebFlowUseCase)
     private readonly completeGoogle: CompleteGoogleWebFlowUseCase,
     @Inject(ExchangeSocialCodeUseCase) private readonly exchangeCode: ExchangeSocialCodeUseCase,
+    @Inject(ListConfiguredProvidersUseCase)
+    private readonly configuredProviders: ListConfiguredProvidersUseCase,
     @Inject(SOCIAL_AUTH_SETTINGS) private readonly settings: SocialAuthSettings,
   ) {}
+
+  /**
+   * Qué proveedores ofrecer. Lo decide el servidor para que activar o apagar uno sea cambiar una
+   * variable, sin publicar una versión nueva en las tiendas.
+   */
+  @Get('providers')
+  @ApiOkResponse({ type: SocialProvidersResponse, description: ENVELOPE })
+  providers(): SocialProvidersResponse {
+    return { providers: this.configuredProviders.execute() };
+  }
 
   @Post('google')
   @HttpCode(HttpStatus.OK)

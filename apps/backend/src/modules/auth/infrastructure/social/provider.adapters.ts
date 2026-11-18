@@ -124,6 +124,10 @@ export class IdentityProviders implements IdentityProvidersPort {
 
   constructor(private readonly adapters: readonly IdentityProviderPort[]) {}
 
+  configured(): readonly IdentityProvider[] {
+    return this.adapters.filter((a) => a.isConfigured()).map((a) => a.provider);
+  }
+
   of(provider: IdentityProvider): IdentityProviderPort {
     const adapter = this.adapters.find((candidate) => candidate.provider === provider);
     if (!adapter) throw new NotFoundError(`Proveedor ${provider} no disponible`);

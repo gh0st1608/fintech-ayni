@@ -38,6 +38,7 @@ Un correo que el proveedor no declara verificado se trata como si no hubiera cor
 
 | Método y ruta                                | Uso                                                                            |
 | -------------------------------------------- | ------------------------------------------------------------------------------ |
+| `GET /v1/auth/social/providers`              | Qué proveedores ofrecer; la app lo consulta antes de pintar los botones        |
 | `POST /v1/auth/social/google`                | Verifica un ID Token de Google y abre sesión (no lo usa la app; ver abajo)     |
 | `POST /v1/auth/social/apple`                 | Igual, con el ID Token del flujo nativo de iOS                                 |
 | `POST /v1/auth/social/google/authorize`      | Abre el intento web de Google: devuelve la URL con `state`, `nonce` y PKCE     |
@@ -123,9 +124,23 @@ El motivo exacto del rechazo de un token **nunca** sale en la respuesta: queda e
 
 **Una lista de client id vacía apaga ese proveedor** y su endpoint responde 503. Por eso esto se puede desplegar antes de tener las cuentas: sin configuración, el login social simplemente no se ofrece.
 
+### Qué proveedores ofrecer lo decide el servidor
+
+`GET /v1/auth/social/providers` responde, por proveedor, dos banderas:
+
+```json
+{ "providers": [ { "provider": "google", "native": true, "web": true },
+                 { "provider": "apple", "native": false, "web": false } ] }
+```
+
+- `native`: hay audiencias configuradas, así que un ID Token del SDK del dispositivo se puede verificar (Apple en iOS).
+- `web`: además está configurado el flujo por navegador que coordina la API.
+
+La app cruza esto con lo que admite el aparato. **La decisión vive en el servidor a propósito:** activar o apagar un proveedor es cambiar una variable de entorno, mientras que un cambio en la app exige publicar una versión y esperar la revisión de la tienda.
+
 ## En la app
 
-- **Botones** en el ingreso, debajo del formulario de email o teléfono. Se ofrecen **solo los proveedores que el dispositivo puede usar**; sin build nativo no aparece nada y el ingreso de siempre queda igual. Google se ofrece siempre: si el backend no tiene credenciales, `google/authorize` responde 503.
+- **Botones** en el ingreso, debajo del formulario de email o teléfono. Se ofrece un proveedor solo si **el backend lo tiene configurado y el aparato lo admite**; si no hay ninguno, la sección no se muestra y el ingreso de siempre queda igual. Si la consulta de proveedores falla, no se ofrece ninguno: más vale no pintar un botón que llevar a una pantalla de error del proveedor.
 - **La app no lleva ninguna credencial de Google.** No hay `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID`: el client id y el secreto viven en el backend, que es quien coordina el flujo. Cambiar al diálogo nativo después es **un adaptador**, porque todo esto vive detrás de `SocialSignInPort`.
 - **Apple nativo en iOS** con `expo-apple-authentication`; en Android, el flujo web que coordina el backend, abierto con `openAuthSessionAsync` y devuelto por deep link.
 - **El nonce lo genera la app** por intento (`expo-crypto`) y viaja con la credencial; en los flujos web lo genera el backend.

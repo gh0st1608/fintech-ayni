@@ -102,7 +102,7 @@ describe('vincular desde el perfil', () => {
       link: new LinkSocialProviderUseCase(signIn, api),
       unlink: new UnlinkSocialProviderUseCase(api),
       list: new ListSocialProvidersUseCase(api),
-      available: new ListAvailableProvidersUseCase(signIn),
+      available: new ListAvailableProvidersUseCase(signIn, api),
     };
   }
 
@@ -134,7 +134,19 @@ describe('vincular desde el perfil', () => {
 
   it('solo ofrece los proveedores que el dispositivo admite', async () => {
     const signIn = new FakeSocialSignIn({ available: ['apple'] });
-    const available = new ListAvailableProvidersUseCase(signIn);
+    const available = new ListAvailableProvidersUseCase(signIn, new InMemorySocialAuthApi());
     await expect(available.execute(['google', 'apple'])).resolves.toEqual(['apple']);
+  });
+
+  it('no ofrece un proveedor sin credenciales en el backend, aunque el aparato lo admita', async () => {
+    const api = new InMemorySocialAuthApi();
+    // El caso del lanzamiento: Apple queda en standby y su botón no se pinta.
+    api.available = [
+      { provider: 'google', native: true, web: true },
+      { provider: 'apple', native: false, web: false },
+    ];
+    const available = new ListAvailableProvidersUseCase(new FakeSocialSignIn(), api);
+
+    await expect(available.execute(['google', 'apple'])).resolves.toEqual(['google']);
   });
 });

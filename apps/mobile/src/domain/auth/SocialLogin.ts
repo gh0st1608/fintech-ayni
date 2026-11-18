@@ -6,6 +6,18 @@
 export const SOCIAL_PROVIDERS = ['google', 'apple'] as const;
 export type SocialProvider = (typeof SOCIAL_PROVIDERS)[number];
 
+/**
+ * Lo que el backend puede ofrecer de cada proveedor en este ambiente. Lo decide el servidor:
+ * activar o apagar un proveedor no exige publicar una versión nueva en las tiendas.
+ */
+export interface SocialProviderStatus {
+  provider: SocialProvider;
+  /** El SDK nativo del dispositivo sirve (Apple en iOS). */
+  native: boolean;
+  /** El flujo por navegador que coordina el backend está configurado. */
+  web: boolean;
+}
+
 /** Lo que el SDK del proveedor entrega y el backend verifica. */
 export interface SocialCredential {
   provider: SocialProvider;

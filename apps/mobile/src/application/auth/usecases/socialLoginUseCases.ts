@@ -37,15 +37,25 @@ export class SignInWithProviderUseCase {
   }
 }
 
-/** Qué proveedores puede ofrecer este dispositivo (Apple nativo solo existe en iOS). */
+/**
+ * Qué proveedores ofrecer. Hacen falta las dos mitades: lo que el backend tiene configurado y lo
+ * que admite el dispositivo (Apple nativo solo existe en iOS). Si el backend no responde, no se
+ * ofrece ninguno: más vale no pintar un botón que llevar a una pantalla de error del proveedor.
+ */
 export class ListAvailableProvidersUseCase {
-  constructor(private readonly signIn: SocialSignInPort) {}
+  constructor(
+    private readonly signIn: SocialSignInPort,
+    private readonly api: SocialAuthApiPort,
+  ) {}
 
   async execute(providers: readonly SocialProvider[]): Promise<SocialProvider[]> {
+    const statuses = await this.api.providers();
     const available = await Promise.all(
-      providers.map(async (provider) =>
-        (await this.signIn.isAvailable(provider)) ? provider : null,
-      ),
+      providers.map(async (provider) => {
+        const status = statuses.find((candidate) => candidate.provider === provider);
+        if (!status) return null;
+        return (await this.signIn.isAvailable(provider, status)) ? provider : null;
+      }),
     );
     return available.filter((provider) => provider !== null);
   }

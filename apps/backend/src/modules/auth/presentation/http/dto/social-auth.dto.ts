@@ -91,6 +91,23 @@ export class SocialAuthorizeResponse {
   state!: string;
 }
 
+/** Lo que la app consulta antes de pintar los botones (COPAYNI-91 §3). */
+export class ProviderAvailabilityResponse {
+  @ApiProperty({ enum: IDENTITY_PROVIDERS })
+  provider!: IdentityProvider;
+
+  @ApiProperty({ description: 'El SDK nativo del dispositivo sirve (Apple en iOS)' })
+  native!: boolean;
+
+  @ApiProperty({ description: 'El flujo por navegador que coordina la API está configurado' })
+  web!: boolean;
+}
+
+export class SocialProvidersResponse {
+  @ApiProperty({ type: [ProviderAvailabilityResponse] })
+  providers!: ProviderAvailabilityResponse[];
+}
+
 export class SocialIdentityResponse {
   @ApiProperty({ enum: IDENTITY_PROVIDERS })
   provider!: IdentityProvider;

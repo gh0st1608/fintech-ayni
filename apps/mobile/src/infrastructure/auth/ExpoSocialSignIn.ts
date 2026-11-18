@@ -4,7 +4,11 @@ import { openAuthSessionAsync } from 'expo-web-browser';
 import { Platform } from 'react-native';
 
 import type { SocialSignInPort } from '@/domain/auth/ports/SocialAuthPorts';
-import type { SocialProvider, SocialSignInResult } from '@/domain/auth/SocialLogin';
+import type {
+  SocialProvider,
+  SocialProviderStatus,
+  SocialSignInResult,
+} from '@/domain/auth/SocialLogin';
 import type { HttpClientPort } from '@/domain/shared/ports/HttpClientPort';
 
 export interface SocialSignInSettings {
@@ -33,13 +37,12 @@ export class ExpoSocialSignIn implements SocialSignInPort {
     private readonly http: HttpClientPort,
   ) {}
 
-  async isAvailable(provider: SocialProvider): Promise<boolean> {
-    // Los flujos por navegador están en todas partes; si el backend no tiene credenciales para
-    // ese proveedor, responde 503 al abrir el intento.
-    if (provider === 'google') return true;
-    // Apple nativo solo existe en iOS; en Android se ofrece por el navegador.
-    if (Platform.OS !== 'ios') return true;
-    return AppleAuthentication.isAvailableAsync();
+  async isAvailable(provider: SocialProvider, status: SocialProviderStatus): Promise<boolean> {
+    // Google siempre va por el navegador, también en iOS.
+    if (provider === 'google') return status.web;
+    // Apple nativo solo existe en iOS; en el resto se ofrece por el navegador.
+    if (Platform.OS !== 'ios') return status.web;
+    return status.native && (await AppleAuthentication.isAvailableAsync());
   }
 
   signIn(provider: SocialProvider): Promise<SocialSignInResult> {
@@ -111,8 +114,9 @@ export class FakeSocialSignIn implements SocialSignInPort {
 
   readonly attempts: SocialProvider[] = [];
 
-  isAvailable(provider: SocialProvider): Promise<boolean> {
-    return Promise.resolve((this.state.available ?? ['google', 'apple']).includes(provider));
+  isAvailable(provider: SocialProvider, status: SocialProviderStatus): Promise<boolean> {
+    const admitted = (this.state.available ?? ['google', 'apple']).includes(provider);
+    return Promise.resolve(admitted && (status.native || status.web));
   }
 
   signIn(provider: SocialProvider): Promise<SocialSignInResult> {

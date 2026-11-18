@@ -32,6 +32,11 @@ const ID_TOKEN = 'cabecera.contenido.firma-de-prueba';
 class FakeProviders implements IdentityProvidersPort {
   next: VerifiedIdentity | null = null;
   fail = false;
+  available: IdentityProvider[] = ['google', 'apple'];
+
+  configured(): readonly IdentityProvider[] {
+    return this.available;
+  }
 
   of(provider: IdentityProvider): IdentityProviderPort {
     return {
@@ -342,6 +347,35 @@ describe('Login social', () => {
         .send({ state: start.body.data.state, error: 'user_cancelled_authorize' })
         .expect(302);
       expect(response.headers.location).toContain('error=cancelled');
+    });
+  });
+
+  describe('qué proveedores se ofrecen', () => {
+    it('Google queda disponible por navegador y Apple no, por no tener su clave', async () => {
+      const response = await http().get('/v1/auth/social/providers').expect(200);
+      const providers = response.body.data.providers as {
+        provider: string;
+        native: boolean;
+        web: boolean;
+      }[];
+
+      // Es el caso del lanzamiento: se entra con Google y el botón de Apple no se pinta.
+      expect(providers).toContainEqual({ provider: 'google', native: true, web: true });
+      expect(providers).toContainEqual({ provider: 'apple', native: true, web: false });
+    });
+
+    it('sin audiencias configuradas el proveedor no ofrece ninguna vía', async () => {
+      providers.available = ['apple'];
+      try {
+        const response = await http().get('/v1/auth/social/providers').expect(200);
+        expect(response.body.data.providers).toContainEqual({
+          provider: 'google',
+          native: false,
+          web: false,
+        });
+      } finally {
+        providers.available = ['google', 'apple'];
+      }
     });
   });
 
