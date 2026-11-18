@@ -73,6 +73,12 @@
     ],
     "experiments": {
       "typedRoutes": true
-    }
+    },
+    "extra": {
+      "eas": {
+        "projectId": "25f21c88-b888-4c0a-90f7-6d009a08777e"
+      }
+    },
+    "owner": "erickdev1608"
   }
 }
