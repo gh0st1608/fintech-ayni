@@ -31,6 +31,23 @@ slo = {
 
 alert_emails = []
 
+# Envio del codigo de verificacion por correo (pending-scope T6). El remitente vive en la zona de
+# la API, que ya esta delegada desde GoDaddy, asi que Terraform publica solo los 3 CNAME de DKIM.
+#
+# CAMBIAR route53_zone_id por el id real de aws_route53_zone.api. Tiene que ser un valor literal:
+# si se tomara del recurso, su id no se conoce durante el plan y el count de los registros DKIM
+# queda indeterminado. Se obtiene con:
+#   terraform apply -target=aws_route53_zone.api && terraform output route53_zone_id
+# CAMBIAR tambien el buzon que recibira los informes de DMARC (null: politica sin informes).
+otp_messaging = {
+  email = {
+    domain          = "backend-ayni.solutionserj.com"
+    from_address    = "Ayni <no-reply@backend-ayni.solutionserj.com>"
+    route53_zone_id = "ZCAMBIARPORELIDREAL"
+  }
+}
+dmarc_report_email = null
+
 app_config = {
   APP_NAME    = "ayni-api"
   APP_VERSION = "0.1.0"

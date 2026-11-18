@@ -59,6 +59,21 @@ module "otp_messaging" {
   tags  = local.tags
 }
 
+# DMARC del remitente de los códigos. Arranca en `p=none`: primero se observa qué se firma bien y
+# solo después se endurece. La alineación la da DKIM, así que no hace falta SPF.
+resource "aws_route53_record" "dmarc" {
+  count   = var.otp_messaging.email == null ? 0 : 1
+  zone_id = aws_route53_zone.api.zone_id
+  name    = "_dmarc.${var.otp_messaging.email.domain}"
+  type    = "TXT"
+  ttl     = 300
+  records = [
+    var.dmarc_report_email == null
+    ? "v=DMARC1; p=none"
+    : "v=DMARC1; p=none; rua=mailto:${var.dmarc_report_email}"
+  ]
+}
+
 module "database" {
   source = "../../../../modules/database"
 
