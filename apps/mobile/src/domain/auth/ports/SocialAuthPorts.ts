@@ -1,14 +1,22 @@
 import type { AuthTokens } from '@/domain/auth/value-objects/AuthTokens';
 
-import type { SocialCredential, SocialProvider, SocialSignInResult } from '../SocialLogin';
+import type {
+  SocialCredential,
+  SocialProvider,
+  SocialProviderStatus,
+  SocialSignInResult,
+} from '../SocialLogin';
 
 /**
  * El SDK del proveedor en el dispositivo (COPAYNI-91 §9). Vive detrás de un puerto porque exige
  * un development build: en las pruebas y en el modo fake se usa un doble.
  */
 export interface SocialSignInPort {
-  /** Si se puede ofrecer aquí: Apple nativo solo en iOS, y nada sin configuración del proveedor. */
-  isAvailable(provider: SocialProvider): Promise<boolean>;
+  /**
+   * Si se puede ofrecer aquí. Hacen falta las dos mitades: lo que admite el dispositivo (Apple
+   * nativo solo existe en iOS) y lo que el backend tiene configurado.
+   */
+  isAvailable(provider: SocialProvider, status: SocialProviderStatus): Promise<boolean>;
   /** Abre el diálogo del proveedor. Cancelar no es un error. */
   signIn(provider: SocialProvider): Promise<SocialSignInResult>;
 }
@@ -24,4 +32,6 @@ export interface SocialAuthApiPort {
   unlink(provider: SocialProvider): Promise<void>;
   /** Proveedores vinculados, para mostrarlos en el perfil. */
   list(signal?: AbortSignal): Promise<SocialProvider[]>;
+  /** Qué ofrece el backend de cada proveedor; sin sesión, antes de pintar los botones. */
+  providers(signal?: AbortSignal): Promise<SocialProviderStatus[]>;
 }

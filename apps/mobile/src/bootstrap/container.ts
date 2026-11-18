@@ -467,7 +467,10 @@ export function createContainer(
         adapters.socialAuthApi,
         adapters.tokenStorage,
       ),
-      availableProviders: new ListAvailableProvidersUseCase(adapters.socialSignIn),
+      availableProviders: new ListAvailableProvidersUseCase(
+        adapters.socialSignIn,
+        adapters.socialAuthApi,
+      ),
       linkProvider: new LinkSocialProviderUseCase(adapters.socialSignIn, adapters.socialAuthApi),
       unlinkProvider: new UnlinkSocialProviderUseCase(adapters.socialAuthApi),
       linkedProviders: new ListSocialProvidersUseCase(adapters.socialAuthApi),

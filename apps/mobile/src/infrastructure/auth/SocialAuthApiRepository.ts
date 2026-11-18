@@ -1,13 +1,27 @@
 import { z } from 'zod';
 
 import type { SocialAuthApiPort } from '@/domain/auth/ports/SocialAuthPorts';
-import type { SocialCredential, SocialProvider } from '@/domain/auth/SocialLogin';
+import type {
+  SocialCredential,
+  SocialProvider,
+  SocialProviderStatus,
+} from '@/domain/auth/SocialLogin';
 import { AuthTokens } from '@/domain/auth/value-objects/AuthTokens';
 import type { HttpClientPort } from '@/domain/shared/ports/HttpClientPort';
 
 const tokensDto = z.object({
   accessToken: z.string().min(1),
   refreshToken: z.string().min(1),
+});
+
+const providersDto = z.object({
+  providers: z.array(
+    z.object({
+      provider: z.enum(['google', 'apple']),
+      native: z.boolean(),
+      web: z.boolean(),
+    }),
+  ),
 });
 
 const identitiesDto = z.object({
@@ -48,6 +62,16 @@ export class SocialAuthApiRepository implements SocialAuthApiPort {
 
   async unlink(provider: SocialProvider): Promise<void> {
     await this.http.delete(`/me/social-identities/${provider}`, { parse: () => undefined });
+  }
+
+  async providers(signal?: AbortSignal): Promise<SocialProviderStatus[]> {
+    const dto = await this.http.get('/auth/social/providers', {
+      signal,
+      // Se consulta en el ingreso, sin sesión: un 401 no debe disparar una renovación.
+      skipSessionRefresh: true,
+      parse: (data) => providersDto.parse(data),
+    });
+    return dto.providers;
   }
 
   async list(signal?: AbortSignal): Promise<SocialProvider[]> {
