@@ -48,6 +48,8 @@ otp_messaging = {
 }
 dmarc_report_email = null
 
+# Configuración no secreta de la API en prd: solo lo que cambia respecto de los valores de
+# producto, que viven una sola vez en modules/app-config.
 app_config = {
   APP_NAME    = "ayni-api"
   APP_VERSION = "0.1.0"
@@ -64,13 +66,4 @@ app_config = {
   # Sin esto la API no arranca: el valor por defecto es fake y production lo prohíbe (COPAYNI-85).
   # Expo Push Service no pide credenciales salvo que se active su seguridad reforzada.
   PUSH_PROVIDER = "expo"
-
-
-  # Montos provisionales del Figma (pending-scope M1, M6, R15).
-  DEFAULT_CURRENCY        = "PEN"
-  JOIN_PAYOUT_MIN         = "300000"
-  JOIN_PAYOUT_MAX         = "12000000"
-  JOIN_PAYOUT_STEP        = "50000"
-  SAVING_PROGRAM_MAX      = "100000000"
-  CIRCLE_DURATION_OPTIONS = "6,10,12"
 }
