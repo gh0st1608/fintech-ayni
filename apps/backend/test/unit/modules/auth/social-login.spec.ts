@@ -207,7 +207,7 @@ describe('inicio de sesión social', () => {
       isConfigured: () => true,
       verify: jest.fn(() => Promise.resolve(options.verified ?? verified)),
     };
-    const providers: IdentityProvidersPort = { of: () => adapter };
+    const providers: IdentityProvidersPort = { of: () => adapter, configured: () => ['google'] };
     const identities = {
       find: jest.fn(() => Promise.resolve(options.existing ?? null)),
       ofUser: jest.fn(() => Promise.resolve([])),

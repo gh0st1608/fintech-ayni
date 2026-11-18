@@ -74,6 +74,8 @@ export interface IdentityProviderPort {
 /** Catálogo de proveedores; resuelve el adaptador que corresponde. */
 export interface IdentityProvidersPort {
   of(provider: IdentityProvider): IdentityProviderPort;
+  /** Cuáles tienen credenciales en este ambiente. No lanza: es una consulta, no un uso. */
+  configured(): readonly IdentityProvider[];
 }
 
 export interface ExternalIdentitiesPort {

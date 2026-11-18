@@ -47,6 +47,7 @@ import {
   CompleteGoogleWebFlowUseCase,
   StartGoogleWebFlowUseCase,
 } from './application/use-cases/google-web-flow.use-cases';
+import { ListConfiguredProvidersUseCase } from './application/use-cases/social-providers.use-cases';
 import {
   LinkSocialIdentityUseCase,
   ListSocialIdentitiesUseCase,
@@ -220,6 +221,7 @@ function authPolicy(config: AppConfigService): AuthPolicy {
     LinkSocialIdentityUseCase,
     UnlinkSocialIdentityUseCase,
     ListSocialIdentitiesUseCase,
+    ListConfiguredProvidersUseCase,
     StartAppleWebFlowUseCase,
     CompleteAppleWebFlowUseCase,
     StartGoogleWebFlowUseCase,
