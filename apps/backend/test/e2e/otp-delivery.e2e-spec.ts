@@ -55,6 +55,13 @@ describe('Envío del OTP por email (floci)', () => {
   });
   afterAll(() => app.close());
 
+  it('solo se ofrece el correo: el SMS no tiene identidad de origen', async () => {
+    const response = await http().get('/v1/auth/channels').expect(200);
+
+    // La app pinta solo estos canales; pedir un código por SMS responderia 503.
+    expect(response.body.data.channels).toEqual(['email']);
+  });
+
   it('el código llega por email y abre la sesión; el código fijo de desarrollo no sirve', async () => {
     const identifier = `otp-${randomUUID().slice(0, 8)}@correo.pe`;
     const started = await http()

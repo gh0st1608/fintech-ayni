@@ -31,6 +31,22 @@ Base: `/v1`. Las fechas van en ISO 8601 con zona horaria.
 | `expiresAt`         | datetime             | Vencimiento del código actual.                                                    |
 | `resendAvailableAt` | datetime             | A partir de cuándo se permite `resend`. La app calcula el contador con este dato. |
 
+## `GET /v1/auth/channels`
+
+Por dónde puede llegar el código en este ambiente. Público y sin cuerpo.
+
+```json
+{ "channels": ["email"] }
+```
+
+Un canal aparece solo si tiene proveedor configurado: `email` con `OTP_EMAIL_FROM` y `sms` con
+`OTP_SMS_ORIGINATION_IDENTITY`. Una lista vacía significa que no hay envío y no se puede entrar con
+código. Con `OTP_DEV_CODE` se devuelven los dos, porque el código fijo sirve para ambos.
+
+**La app consulta esto antes de dejar escribir el identificador** y avisa en el propio campo si ese
+canal no está disponible, en vez de pedir un código que iba a responder 503. La decisión vive en el
+servidor para que activar un canal sea configuración, no una versión nueva en las tiendas.
+
 ## `POST /v1/auth/start`
 
 Envía un OTP de 4 dígitos. Si el usuario no existe, lo crea en estado pendiente de verificación.

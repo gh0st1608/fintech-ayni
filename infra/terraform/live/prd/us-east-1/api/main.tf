@@ -50,6 +50,10 @@ locals {
   )
 }
 
+module "app_config" {
+  source = "../../../../modules/app-config"
+}
+
 module "otp_messaging" {
   source = "../../../../modules/otp-messaging"
 
@@ -159,7 +163,8 @@ locals {
 
 # La misma configuración para la API y sus tareas programadas.
 locals {
-  api_environment = merge(var.app_config, local.telemetry_environment, local.database_environment, {
+  # Los valores de producto van primero: el tfvars de este ambiente puede sobrescribir cualquiera.
+  api_environment = merge(module.app_config.defaults, var.app_config, local.telemetry_environment, local.database_environment, {
     DEPLOYMENT_ENVIRONMENT = "prod"
     NODE_ENV               = "production"
     PORT                   = "3000"

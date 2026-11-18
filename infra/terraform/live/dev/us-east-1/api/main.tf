@@ -12,6 +12,10 @@ locals {
   }
 }
 
+module "app_config" {
+  source = "../../../../modules/app-config"
+}
+
 module "network" {
   source = "../../../../modules/network"
 
@@ -87,7 +91,8 @@ module "api" {
   image         = "${module.ecr.repository_url}:${var.image_tag}"
   task_policies = { documents = module.documents.read_write_policy_json }
 
-  environment = merge(var.app_config, local.telemetry_environment, {
+  # Los valores de producto van primero: el tfvars de este ambiente puede sobrescribir cualquiera.
+  environment = merge(module.app_config.defaults, var.app_config, local.telemetry_environment, {
     DEPLOYMENT_ENVIRONMENT = "dev"
     NODE_ENV               = "production"
     PORT                   = "3000"

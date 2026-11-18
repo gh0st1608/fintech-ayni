@@ -13,6 +13,7 @@ import {
   AUTH_CHALLENGE_REPOSITORY,
   AUTH_POLICY,
   CONTACT_CHANGES,
+  OTP_CHANNELS,
   OTP_GENERATOR,
   OTP_HASHER,
   OTP_SENDER,
@@ -20,7 +21,12 @@ import {
   ACCOUNT_ACCESS,
   REFRESH_TOKEN_SECRETS,
   type AuthPolicy,
+  type OtpSenderPort,
 } from './application/ports/auth.ports';
+import {
+  OTP_CHANNELS_VALUES,
+  type OtpChannel,
+} from '../users/domain/value-objects/login-identifier';
 import {
   PASSCODE_HASHER,
   PASSCODE_POLICY,
@@ -116,6 +122,8 @@ import {
 import { SqlContactChangeRepository } from './infrastructure/persistence/typeorm/sql-contact-change.repository';
 
 const JWT_SETTINGS = Symbol('JWT_SETTINGS');
+/** Interno: el envío y los canales salen de la misma elección, que solo se hace una vez. */
+const OTP_DELIVERY = Symbol('OTP_DELIVERY');
 const logger = new Logger('Auth');
 
 /** JWKS de los proveedores: se reutilizan 10 min y un `kid` nuevo no dispara más de 1 descarga/30 s. */
@@ -334,13 +342,14 @@ function authPolicy(config: AppConfigService): AuthPolicy {
       },
     },
     {
-      provide: OTP_SENDER,
+      provide: OTP_DELIVERY,
       inject: [ConfigService],
       // Envío real con OTP_DELIVERY=aws (T6). OTP_DEV_CODE solo se admite fuera de production.
       useFactory: (config: AppConfigService) => {
+        const devCode = config.get('OTP_DEV_CODE', { infer: true });
         const { sender, activeChannels } = selectOtpSender({
           delivery: config.get('OTP_DELIVERY', { infer: true }),
-          devCode: config.get('OTP_DEV_CODE', { infer: true }),
+          devCode,
           region: config.get('AWS_REGION', { infer: true }),
           codeTtlSeconds: config.get('OTP_CODE_TTL_SECONDS', { infer: true }),
           emailFrom: config.get('OTP_EMAIL_FROM', { infer: true }),
@@ -350,11 +359,30 @@ function authPolicy(config: AppConfigService): AuthPolicy {
           smsConfigurationSet: config.get('OTP_SMS_CONFIGURATION_SET', { infer: true }),
         });
         logger.log({ event: 'auth.otp_delivery', channels: activeChannels });
-        return sender;
+        // Con el código fijo de desarrollo no se envía nada, pero los dos canales valen: la app
+        // debe seguir ofreciendo correo y teléfono.
+        return { sender, channels: devCode ? [...OTP_CHANNELS_VALUES] : activeChannels };
       },
+    },
+    {
+      provide: OTP_SENDER,
+      inject: [OTP_DELIVERY],
+      useFactory: (delivery: { sender: OtpSenderPort }) => delivery.sender,
+    },
+    {
+      provide: OTP_CHANNELS,
+      inject: [OTP_DELIVERY],
+      useFactory: (delivery: { channels: OtpChannel[] }) => delivery.channels,
     },
   ],
   // Los puertos de OTP los reutiliza la firma del contrato y del pagaré (COPAYNI-89).
-  exports: [ACCESS_TOKEN_VERIFIER, AUTH_POLICY, OTP_GENERATOR, OTP_HASHER, OTP_SENDER],
+  exports: [
+    ACCESS_TOKEN_VERIFIER,
+    AUTH_POLICY,
+    OTP_CHANNELS,
+    OTP_GENERATOR,
+    OTP_HASHER,
+    OTP_SENDER,
+  ],
 })
 export class AuthModule {}

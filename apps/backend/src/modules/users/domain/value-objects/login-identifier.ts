@@ -4,7 +4,8 @@ export const LOGIN_IDENTIFIER_TYPES = ['email', 'phone'] as const;
 export type LoginIdentifierType = (typeof LOGIN_IDENTIFIER_TYPES)[number];
 
 /** Canal por el que se envía el OTP a cada tipo de identificador. */
-export type OtpChannel = 'email' | 'sms';
+export const OTP_CHANNELS_VALUES = ['email', 'sms'] as const;
+export type OtpChannel = (typeof OTP_CHANNELS_VALUES)[number];
 
 // Mismo criterio que LoginIdentifier en mobile: forma razonable, no la RFC completa.
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
