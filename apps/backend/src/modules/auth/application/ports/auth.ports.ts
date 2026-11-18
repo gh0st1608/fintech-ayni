@@ -7,6 +7,9 @@ export const REFRESH_TOKEN_REPOSITORY = Symbol('REFRESH_TOKEN_REPOSITORY');
 export const OTP_GENERATOR = Symbol('OTP_GENERATOR');
 export const OTP_HASHER = Symbol('OTP_HASHER');
 export const OTP_SENDER = Symbol('OTP_SENDER');
+/** Canales por los que este ambiente puede entregar un código; la app solo ofrece esos. */
+export const OTP_CHANNELS = Symbol('OTP_CHANNELS');
+
 export const ACCESS_TOKEN_ISSUER = Symbol('ACCESS_TOKEN_ISSUER');
 export const REFRESH_TOKEN_SECRETS = Symbol('REFRESH_TOKEN_SECRETS');
 export const AUTH_POLICY = Symbol('AUTH_POLICY');

@@ -37,6 +37,13 @@ describe('Autenticación /v1/auth', () => {
     return (response.body as { data: { accessToken: string; refreshToken: string } }).data;
   }
 
+  it('con el código fijo de desarrollo se ofrecen los dos canales', async () => {
+    const response = await http().get('/v1/auth/channels').expect(200);
+
+    // No se envía nada, pero cualquiera de los dos identificadores sirve para entrar.
+    expect(response.body.data.channels).toEqual(['email', 'sms']);
+  });
+
   it('start devuelve el AuthChallenge con el destino enmascarado y los plazos', async () => {
     const response = await start('Ana.Perez@Mail.com').expect(200);
 

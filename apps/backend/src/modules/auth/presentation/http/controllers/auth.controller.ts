@@ -1,4 +1,4 @@
-import { Body, Controller, Headers, HttpCode, HttpStatus, Inject, Post } from '@nestjs/common';
+import { Body, Controller, Get, Headers, HttpCode, HttpStatus, Inject, Post } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
   ApiNoContentResponse,
@@ -12,6 +12,8 @@ import {
 } from '@nestjs/swagger';
 
 import { Public } from '../../../../../shared/presentation/decorators/public.decorator';
+import { OTP_CHANNELS } from '../../../application/ports/auth.ports';
+import { type OtpChannel } from '../../../../users/domain/value-objects/login-identifier';
 import {
   ResendOtpUseCase,
   StartAuthenticationUseCase,
@@ -23,6 +25,7 @@ import {
 } from '../../../application/use-cases/session.use-cases';
 import {
   AuthChallengeResponse,
+  AuthChannelsResponse,
   AuthTokensResponse,
   RefreshTokenRequest,
   ResendOtpRequest,
@@ -43,7 +46,18 @@ export class AuthController {
     @Inject(ResendOtpUseCase) private readonly resendOtp: ResendOtpUseCase,
     @Inject(RefreshSessionUseCase) private readonly refreshSession: RefreshSessionUseCase,
     @Inject(LogoutUseCase) private readonly logoutSession: LogoutUseCase,
+    @Inject(OTP_CHANNELS) private readonly channels: OtpChannel[],
   ) {}
+
+  /**
+   * Qué canales ofrecer. Lo decide el servidor: mientras un canal no tenga proveedor, la app no
+   * debe pedir por él un código que nunca va a llegar.
+   */
+  @Get('channels')
+  @ApiOkResponse({ type: AuthChannelsResponse, description: ENVELOPE })
+  availableChannels(): AuthChannelsResponse {
+    return { channels: this.channels };
+  }
 
   @Post('start')
   @HttpCode(HttpStatus.OK)
