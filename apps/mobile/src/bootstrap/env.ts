@@ -52,11 +52,6 @@ const envSchema = z
     helpApi: z.enum(['http', 'fake']).default('http'),
     termsUrl: optionalHttpsUrl,
     privacyUrl: optionalHttpsUrl,
-    /**
-     * Client id **Web** de Google (COPAYNI-91): es el que pide el ID Token que valida el backend.
-     * Es público, no un secreto. Sin valor, no se ofrece entrar con Google.
-     */
-    googleWebClientId: z.string().optional().default(''),
   })
   .refine((env) => env.authApi === 'http' || env.appEnv === 'dev', {
     path: ['authApi'],
@@ -134,7 +129,6 @@ export function loadEnv(): Env {
     defaultCurrency: process.env.EXPO_PUBLIC_DEFAULT_CURRENCY,
     httpTimeoutMs: process.env.EXPO_PUBLIC_HTTP_TIMEOUT_MS,
     authApi: process.env.EXPO_PUBLIC_AUTH_API,
-    googleWebClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
     circlesApi: process.env.EXPO_PUBLIC_CIRCLES_API,
     profileApi: process.env.EXPO_PUBLIC_PROFILE_API,
     payoutsApi: process.env.EXPO_PUBLIC_PAYOUTS_API,

@@ -32,6 +32,7 @@ import { SqlAccountAccess } from './infrastructure/persistence/sql-account-acces
 import {
   APPLE_WEB_FLOW,
   EXTERNAL_IDENTITIES,
+  GOOGLE_WEB_FLOW,
   IDENTITY_PROVIDERS_PORT,
   SOCIAL_AUTH_FLOWS,
   SOCIAL_AUTH_SETTINGS,
@@ -43,6 +44,10 @@ import {
   StartAppleWebFlowUseCase,
 } from './application/use-cases/apple-web-flow.use-cases';
 import {
+  CompleteGoogleWebFlowUseCase,
+  StartGoogleWebFlowUseCase,
+} from './application/use-cases/google-web-flow.use-cases';
+import {
   LinkSocialIdentityUseCase,
   ListSocialIdentitiesUseCase,
   SocialLoginUseCase,
@@ -52,6 +57,7 @@ import {
   AppleWebFlowAdapter,
   parseApplePrivateKey,
 } from './infrastructure/social/apple-web-flow.adapter';
+import { GoogleWebFlowAdapter } from './infrastructure/social/google-web-flow.adapter';
 import {
   AppleIdentityAdapter,
   GoogleIdentityAdapter,
@@ -115,6 +121,8 @@ const logger = new Logger('Auth');
 const JWKS_CACHE_SECONDS = 600;
 const JWKS_MIN_REFRESH_SECONDS = 30;
 const GOOGLE_JWKS_URL = 'https://www.googleapis.com/oauth2/v3/certs';
+const GOOGLE_AUTHORIZATION_URL = 'https://accounts.google.com/o/oauth2/v2/auth';
+const GOOGLE_TOKEN_URL = 'https://oauth2.googleapis.com/token';
 const APPLE_JWKS_URL = 'https://appleid.apple.com/auth/keys';
 
 /** Lista de client id separados por coma; vacío deja el proveedor apagado. */
@@ -127,11 +135,16 @@ const audiences = (value: string | undefined): string[] =>
 function socialAuthSettings(config: AppConfigService): SocialAuthSettings {
   return {
     flowTtlSeconds: config.get('SOCIAL_FLOW_TTL_SECONDS', { infer: true }),
+    appRedirectUri: config.get('SOCIAL_APP_REDIRECT_URI', { infer: true }),
     apple: {
       authorizationUrl: 'https://appleid.apple.com/auth/authorize',
       serviceId: config.get('APPLE_SERVICE_ID', { infer: true }) ?? '',
       redirectUri: config.get('APPLE_REDIRECT_URI', { infer: true }) ?? '',
-      appRedirectUri: config.get('SOCIAL_APP_REDIRECT_URI', { infer: true }),
+    },
+    google: {
+      authorizationUrl: GOOGLE_AUTHORIZATION_URL,
+      clientId: config.get('GOOGLE_WEB_CLIENT_ID', { infer: true }) ?? '',
+      redirectUri: config.get('GOOGLE_REDIRECT_URI', { infer: true }) ?? '',
     },
   };
 }
@@ -209,6 +222,8 @@ function authPolicy(config: AppConfigService): AuthPolicy {
     ListSocialIdentitiesUseCase,
     StartAppleWebFlowUseCase,
     CompleteAppleWebFlowUseCase,
+    StartGoogleWebFlowUseCase,
+    CompleteGoogleWebFlowUseCase,
     ExchangeSocialCodeUseCase,
     SqlExternalIdentities,
     SqlSocialAuthFlows,
@@ -263,6 +278,18 @@ function authPolicy(config: AppConfigService): AuthPolicy {
           },
           clock,
         ),
+    },
+    {
+      provide: GOOGLE_WEB_FLOW,
+      inject: [ConfigService],
+      useFactory: (config: AppConfigService) =>
+        new GoogleWebFlowAdapter({
+          tokenUrl: GOOGLE_TOKEN_URL,
+          clientId: config.get('GOOGLE_WEB_CLIENT_ID', { infer: true }) ?? '',
+          clientSecret: config.get('GOOGLE_CLIENT_SECRET', { infer: true }) ?? '',
+          redirectUri: config.get('GOOGLE_REDIRECT_URI', { infer: true }) ?? '',
+          timeoutMs: config.get('SOCIAL_TIMEOUT_MS', { infer: true }),
+        }),
     },
     ResendOtpUseCase,
     RefreshSessionUseCase,

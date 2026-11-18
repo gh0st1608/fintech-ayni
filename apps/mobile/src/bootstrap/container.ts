@@ -318,7 +318,7 @@ export function createContainer(
     socialSignIn:
       env.authApi === 'fake'
         ? new FakeSocialSignIn()
-        : new ExpoSocialSignIn({ googleWebClientId: env.googleWebClientId, scheme: 'ayni' }, http),
+        : new ExpoSocialSignIn({ scheme: 'ayni' }, http),
     passcodes:
       env.authApi === 'fake' ? new InMemoryPasscodeRepository() : new PasscodeApiRepository(http),
     joinConfig:

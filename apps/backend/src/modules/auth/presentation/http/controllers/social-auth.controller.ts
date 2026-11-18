@@ -8,6 +8,7 @@ import {
   Inject,
   Param,
   Post,
+  Query,
   Res,
 } from '@nestjs/common';
 import { type Response } from 'express';
@@ -36,6 +37,10 @@ import {
   StartAppleWebFlowUseCase,
 } from '../../../application/use-cases/apple-web-flow.use-cases';
 import {
+  CompleteGoogleWebFlowUseCase,
+  StartGoogleWebFlowUseCase,
+} from '../../../application/use-cases/google-web-flow.use-cases';
+import {
   LinkSocialIdentityUseCase,
   ListSocialIdentitiesUseCase,
   SocialLoginUseCase,
@@ -43,10 +48,11 @@ import {
 } from '../../../application/use-cases/social-login.use-cases';
 import { AuthTokensResponse } from '../dto/auth.dto';
 import {
-  AppleAuthorizeResponse,
   AppleCallbackRequest,
   ExchangeSocialCodeRequest,
+  GoogleCallbackQuery,
   ProviderParam,
+  SocialAuthorizeResponse,
   SocialIdentitiesResponse,
   SocialLoginRequest,
 } from '../dto/social-auth.dto';
@@ -68,6 +74,9 @@ export class SocialAuthController {
     @Inject(StartAppleWebFlowUseCase) private readonly startApple: StartAppleWebFlowUseCase,
     @Inject(CompleteAppleWebFlowUseCase)
     private readonly completeApple: CompleteAppleWebFlowUseCase,
+    @Inject(StartGoogleWebFlowUseCase) private readonly startGoogle: StartGoogleWebFlowUseCase,
+    @Inject(CompleteGoogleWebFlowUseCase)
+    private readonly completeGoogle: CompleteGoogleWebFlowUseCase,
     @Inject(ExchangeSocialCodeUseCase) private readonly exchangeCode: ExchangeSocialCodeUseCase,
     @Inject(SOCIAL_AUTH_SETTINGS) private readonly settings: SocialAuthSettings,
   ) {}
@@ -95,9 +104,9 @@ export class SocialAuthController {
 
   @Post('apple/authorize')
   @HttpCode(HttpStatus.OK)
-  @ApiOkResponse({ type: AppleAuthorizeResponse, description: `${ENVELOPE}. Android` })
+  @ApiOkResponse({ type: SocialAuthorizeResponse, description: `${ENVELOPE}. Android` })
   @ApiServiceUnavailableResponse({ description: 'Apple no configurado en este ambiente' })
-  async authorizeApple(): Promise<AppleAuthorizeResponse> {
+  async authorizeApple(): Promise<SocialAuthorizeResponse> {
     return this.startApple.execute();
   }
 
@@ -115,18 +124,39 @@ export class SocialAuthController {
     @Body() body: AppleCallbackRequest,
     @Res() response: Response,
   ): Promise<void> {
-    const base = this.settings.apple.appRedirectUri;
     // La persona canceló en Apple: vuelve a la app sin código y sin sesión (QA-13).
-    if (body.error) {
-      response.redirect(HttpStatus.FOUND, `${base}?error=cancelled`);
-      return;
-    }
+    if (body.error) return this.cancelled(response);
     const code = await this.completeApple.execute({
       state: body.state,
       code: body.code,
       idToken: body.id_token,
     });
-    response.redirect(HttpStatus.FOUND, `${base}?code=${encodeURIComponent(code)}`);
+    this.backToApp(response, code);
+  }
+
+  /**
+   * Google no admite un esquema propio (`ayni://`) como `redirect_uri` ni el flujo implícito en
+   * apps instaladas, así que el inicio también pasa por aquí: la API es el `redirect_uri` HTTPS
+   * registrado y canjea el código con el client secret, que nunca viaja al dispositivo.
+   */
+  @Post('google/authorize')
+  @HttpCode(HttpStatus.OK)
+  @ApiOkResponse({ type: SocialAuthorizeResponse, description: ENVELOPE })
+  @ApiServiceUnavailableResponse({ description: 'Google no configurado en este ambiente' })
+  async authorizeGoogle(): Promise<SocialAuthorizeResponse> {
+    return this.startGoogle.execute();
+  }
+
+  /** Vuelta de Google: redirige por GET, a diferencia del `form_post` de Apple. */
+  @Get('google/callback')
+  @ApiOkResponse({ description: 'Redirección al deep link de la app con el código interno' })
+  async googleCallback(
+    @Query() query: GoogleCallbackQuery,
+    @Res() response: Response,
+  ): Promise<void> {
+    if (query.error || !query.code) return this.cancelled(response);
+    const code = await this.completeGoogle.execute({ state: query.state, code: query.code });
+    this.backToApp(response, code);
   }
 
   @Post('apple/exchange')
@@ -135,6 +165,16 @@ export class SocialAuthController {
   @ApiUnauthorizedResponse({ description: 'Código inexistente, ya usado o vencido' })
   async exchange(@Body() body: ExchangeSocialCodeRequest): Promise<AuthTokensResponse> {
     return AuthTokensResponse.from(await this.exchangeCode.execute(body.code));
+  }
+
+  /** Al deep link solo viaja el código interno de un solo uso, nunca un token de sesión. */
+  private backToApp(response: Response, code: string): void {
+    const base = this.settings.appRedirectUri;
+    response.redirect(HttpStatus.FOUND, `${base}?code=${encodeURIComponent(code)}`);
+  }
+
+  private cancelled(response: Response): void {
+    response.redirect(HttpStatus.FOUND, `${this.settings.appRedirectUri}?error=cancelled`);
   }
 }
 

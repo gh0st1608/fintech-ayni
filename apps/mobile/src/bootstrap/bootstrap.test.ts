@@ -23,8 +23,6 @@ describe('parseEnv', () => {
       savingsApi: 'http',
       notificationsApi: 'http',
       helpApi: 'http',
-      // Sin client id de Google no se ofrece entrar con Google (COPAYNI-91).
-      googleWebClientId: '',
     });
   });
 
