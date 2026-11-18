@@ -1,10 +1,4 @@
 import * as AppleAuthentication from 'expo-apple-authentication';
-import {
-  AuthRequest,
-  makeRedirectUri,
-  ResponseType,
-  type AuthSessionResult,
-} from 'expo-auth-session';
 import * as Crypto from 'expo-crypto';
 import { openAuthSessionAsync } from 'expo-web-browser';
 import { Platform } from 'react-native';
@@ -14,26 +8,23 @@ import type { SocialProvider, SocialSignInResult } from '@/domain/auth/SocialLog
 import type { HttpClientPort } from '@/domain/shared/ports/HttpClientPort';
 
 export interface SocialSignInSettings {
-  /** Client id **Web** de Google: es el que pide el ID Token que valida el backend. */
-  googleWebClientId: string;
   /** Esquema de la app para la vuelta del navegador (`ayni://`). */
   scheme: string;
 }
-
-const GOOGLE_AUTHORIZATION_ENDPOINT = 'https://accounts.google.com/o/oauth2/v2/auth';
 
 /** Nonce de este intento: aleatorio y de un solo uso. */
 const newNonce = (): string =>
   Crypto.randomUUID().replace(/-/g, '') + Crypto.randomUUID().replace(/-/g, '');
 
 /**
- * SDK de los proveedores en el dispositivo (COPAYNI-91 §9 y §10). Necesita un **development
- * build**: en Expo Go no hay módulo nativo de Apple y la vuelta del navegador no llega a la app.
+ * Inicio de sesión con los proveedores (COPAYNI-91 §9 y §10). Necesita un **development build**:
+ * en Expo Go no hay módulo nativo de Apple y la vuelta del navegador no llega a la app.
  *
- * Google se resuelve con `expo-auth-session`, el módulo de Expo, en vez de un SDK nativo de
- * terceros: la propia documentación de Expo avisa de que el SDK antiguo de Android está
- * descontinuado y de que su reemplazo (Credential Manager) va en la oferta de pago de esa
- * librería. El backend solo necesita un ID Token con nonce, que este flujo entrega igual.
+ * Solo Apple en iOS usa un SDK nativo. Google y Apple-en-Android pasan por el navegador con un
+ * flujo que coordina el backend, porque Google no admite un esquema propio (`ayni://`) como
+ * `redirect_uri` ni el flujo implícito en apps instaladas: el `redirect_uri` es el callback HTTPS
+ * de la API y el canje ocurre allí, con un client secret que nunca llega al dispositivo. A la app
+ * vuelve solo un código interno de un solo uso, nunca un token.
  */
 export class ExpoSocialSignIn implements SocialSignInPort {
   constructor(
@@ -43,37 +34,17 @@ export class ExpoSocialSignIn implements SocialSignInPort {
   ) {}
 
   async isAvailable(provider: SocialProvider): Promise<boolean> {
-    if (provider === 'google') return this.settings.googleWebClientId.length > 0;
+    // Los flujos por navegador están en todas partes; si el backend no tiene credenciales para
+    // ese proveedor, responde 503 al abrir el intento.
+    if (provider === 'google') return true;
     // Apple nativo solo existe en iOS; en Android se ofrece por el navegador.
     if (Platform.OS !== 'ios') return true;
     return AppleAuthentication.isAvailableAsync();
   }
 
   signIn(provider: SocialProvider): Promise<SocialSignInResult> {
-    if (provider === 'google') return this.google();
-    return Platform.OS === 'ios' ? this.appleNative() : this.appleWeb();
-  }
-
-  /** Google: flujo de código con `response_type=id_token`, que es lo que el backend verifica. */
-  private async google(): Promise<SocialSignInResult> {
-    if (!this.settings.googleWebClientId) return { status: 'unsupported' };
-    const nonce = newNonce();
-    const request = new AuthRequest({
-      clientId: this.settings.googleWebClientId,
-      redirectUri: makeRedirectUri({ scheme: this.settings.scheme }),
-      responseType: ResponseType.IdToken,
-      scopes: ['openid', 'profile', 'email'],
-      // Google devuelve el nonce tal cual en el token; así se ata a este intento.
-      extraParams: { nonce },
-    });
-
-    const result: AuthSessionResult = await request.promptAsync({
-      authorizationEndpoint: GOOGLE_AUTHORIZATION_ENDPOINT,
-    });
-    if (result.type !== 'success') return { status: 'cancelled' };
-    const idToken = result.params.id_token;
-    if (!idToken) return { status: 'cancelled' };
-    return { status: 'credential', credential: { provider: 'google', idToken, nonce } };
+    if (provider === 'google') return this.webFlow('google');
+    return Platform.OS === 'ios' ? this.appleNative() : this.webFlow('apple');
   }
 
   /** Apple en iOS: diálogo nativo. El nonce viaja tal cual y vuelve en el token. */
@@ -100,13 +71,14 @@ export class ExpoSocialSignIn implements SocialSignInPort {
   }
 
   /**
-   * Apple en Android: el backend abre el intento (guarda `state` y `nonce`), la persona autoriza
-   * en el navegador y Apple vuelve al callback del backend, que redirige a la app con un código
-   * interno de un solo uso. Por el deep link no viaja ningún token.
+   * Flujo por navegador: el backend abre el intento (guarda `state`, `nonce` y, en Google, el
+   * `code_verifier` de PKCE), la persona autoriza y el proveedor vuelve al callback del backend,
+   * que redirige a la app con un código interno de un solo uso. Por el deep link no viaja ningún
+   * token.
    */
-  private async appleWeb(): Promise<SocialSignInResult> {
+  private async webFlow(provider: SocialProvider): Promise<SocialSignInResult> {
     const { authorizationUrl } = await this.http.post<{ authorizationUrl: string }>(
-      '/auth/social/apple/authorize',
+      `/auth/social/${provider}/authorize`,
       { skipSessionRefresh: true, parse: (data) => data as { authorizationUrl: string } },
     );
     const returnUrl = `${this.settings.scheme}://auth/social`;
