@@ -40,6 +40,43 @@ Otro código descuenta intentos; el reenvío se habilita a los 30 s.
 | `npm run doctor`                            | `expo-doctor`                                                       |
 | `npm run validate`                          | lint + typecheck + format:check + test:coverage (lo que ejecuta CI) |
 
+## Builds y publicación (eas.json)
+
+`eas.json` es JSON estricto y no admite comentarios, así que los perfiles se explican aquí.
+
+| Perfil        | Para qué                                                              | Android    |
+| ------------- | --------------------------------------------------------------------- | ---------- |
+| `development` | Development build con `expo-dev-client`, para trabajar en dispositivo | —          |
+| `preview`     | Repartir a testers por enlace, sin pasar por las tiendas              | APK        |
+| `production`  | Lo que se sube a App Store y Play                                     | App Bundle |
+
+```bash
+npx eas-cli@latest build --profile preview --platform android
+npx eas-cli@latest build --profile production --platform all
+npx eas-cli@latest submit --profile production --platform android
+```
+
+**Versiones:** `cli.appVersionSource` es `remote`, así que el `versionCode` y el `buildNumber` los lleva EAS en sus servidores y `autoIncrement` los sube en cada build de `production`. El `version` visible sigue en `app.json`.
+
+**Variables de entorno:** una build de `production` o `preview` corre en modo producción, así que toma `.env.production`, no `.env.local`, que es de desarrollo. Ahí vive `EXPO_PUBLIC_API_URL` apuntando al backend de prd.
+
+**Credenciales de envío.** `submit.production` no guarda ningún dato de cuenta en el repositorio: los toma del entorno de quien ejecuta el envío.
+
+| Variable                          | De dónde sale                                        |
+| --------------------------------- | ---------------------------------------------------- |
+| `GOOGLE_SERVICE_ACCOUNT_KEY_PATH` | Ruta al JSON de la cuenta de servicio de Google Play |
+| `EXPO_APPLE_ID`                   | Apple ID de la cuenta de desarrollador               |
+| `EXPO_ASC_APP_ID`                 | Apple ID numérico de la app en App Store Connect     |
+| `EXPO_APPLE_TEAM_ID`              | Team ID de Apple Developer                           |
+
+El `track` de Android es `internal` a propósito: la primera subida va a pruebas internas, no directo a producción. Pasarlo a `production` es una decisión, no un valor por omisión.
+
+**Pendientes para poder publicar:**
+
+- Cuenta de Google Play con la organización verificada, y cuenta de Apple Developer.
+- `EXPO_PUBLIC_PRIVACY_URL` está vacío y Google Play exige la política de privacidad publicada; lo mismo con `EXPO_PUBLIC_TERMS_URL`.
+- No hay actualizaciones por aire: `expo-updates` no está instalado y por eso los perfiles no declaran `channel`. Si se decide usarlas, hay que instalarlo, definir `runtimeVersion` y recién entonces agregar el canal.
+
 ## Arquitectura hexagonal
 
 Capas organizadas por módulo de negocio (`auth`, `i18n`, `shared`…). Las capas internas no dependen de las externas: los puertos viven en `domain` y los adaptadores de `infrastructure` los implementan.
