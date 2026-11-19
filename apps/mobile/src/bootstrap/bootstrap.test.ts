@@ -1,3 +1,6 @@
+import { readFileSync } from 'fs';
+import { join } from 'path';
+
 import { FAKE_OTP_CODE } from '@/infrastructure/auth/InMemoryAuthApi';
 import { createTestContainer } from '@test/fakes/createTestContainer';
 
@@ -131,5 +134,50 @@ describe('createContainer', () => {
       }),
     ).toBe(false);
     expect(sandboxOf({ paymentTokenizer: 'unconfigured' })).toBe(false);
+  });
+});
+
+/**
+ * Las variables del perfil `preview` de eas.json son la única configuración de ese APK: los
+ * archivos .env están fuera del repositorio y no llegan a un build en la nube. Si no pasaran esta
+ * validación, el APK compilaría y moriría al arrancar.
+ */
+describe('perfil preview de eas.json', () => {
+  const easEnv = (): Record<string, string> => {
+    const path = join(__dirname, '..', '..', 'eas.json');
+    const eas = JSON.parse(readFileSync(path, 'utf8')) as {
+      build: { preview: { env: Record<string, string> } };
+    };
+    return Object.fromEntries(
+      Object.entries(eas.build.preview.env).map(([name, value]) => [
+        name
+          .replace('EXPO_PUBLIC_', '')
+          .toLowerCase()
+          .replace(/_(.)/g, (_, letter: string) => letter.toUpperCase()),
+        value,
+      ]),
+    );
+  };
+
+  it('arranca sin ningún archivo .env', () => {
+    expect(parseEnv(easEnv()).appEnv).toBe('dev');
+  });
+
+  it('no deja ningún adaptador apuntando a un backend real', () => {
+    const env = parseEnv(easEnv());
+    const adapters = [
+      'authApi',
+      'circlesApi',
+      'profileApi',
+      'payoutsApi',
+      'paymentsApi',
+      'documentsApi',
+      'referralsApi',
+      'savingsApi',
+      'notificationsApi',
+      'helpApi',
+    ] as const;
+    for (const key of adapters) expect(env[key]).toBe('fake');
+    expect(env.paymentTokenizer).toBe('fake');
   });
 });

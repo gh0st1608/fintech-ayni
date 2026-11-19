@@ -44,21 +44,60 @@ Otro código descuenta intentos; el reenvío se habilita a los 30 s.
 
 `eas.json` es JSON estricto y no admite comentarios, así que los perfiles se explican aquí.
 
-| Perfil        | Para qué                                                              | Android    |
-| ------------- | --------------------------------------------------------------------- | ---------- |
-| `development` | Development build con `expo-dev-client`, para trabajar en dispositivo | —          |
-| `preview`     | Repartir a testers por enlace, sin pasar por las tiendas              | APK        |
-| `production`  | Lo que se sube a App Store y Play                                     | App Bundle |
+| Perfil        | Para qué                                                   | De dónde sale su configuración               | Android           |
+| ------------- | ---------------------------------------------------------- | -------------------------------------------- | ----------------- |
+| `development` | Desarrollar en un teléfono, contra tu backend local        | `.env.local` de tu máquina, en vivo          | APK de depuración |
+| `preview`     | Un APK que se instala y funciona solo, con datos simulados | el bloque `env` del propio `eas.json`        | APK               |
+| `production`  | Lo que se sube a App Store y Play                          | variables guardadas en los servidores de EAS | App Bundle        |
+
+### Por qué cada perfil trae su configuración
+
+Todo build de EAS corre en **modo producción**, así que Expo busca `.env.production.local`, `.env.local`, `.env.production` y `.env`, en ese orden, y desde el SDK 58 ningún otro archivo. Pero los cuatro están en `.gitignore`, y lo que no está en el repositorio **no llega a un build en la nube**.
+
+Un perfil sin variables compila y produce una app que no abre: `EXPO_PUBLIC_API_URL` no tiene valor por defecto y `loadEnv` corta con `Invalid configuration: apiUrl` (`bootstrap/env.ts`). Por eso `preview` lleva sus valores en el propio `eas.json` —ninguno es secreto— y `production` los toma de EAS.
+
+### Probar en dev
+
+**Con el backend local**, que es lo normal para desarrollar. Ese APK solo trae el cliente de desarrollo: el JavaScript y las variables los sirve tu máquina, así que `.env.local` se aplica sin reconstruir nada.
+
+```bash
+npx eas-cli@latest build --profile development --platform android
+npx expo start   # con el APK ya instalado, escanear el QR
+```
+
+Para que el teléfono alcance la API de tu máquina hace falta el túnel: [docs/dev-environment.md](../../docs/dev-environment.md).
+
+**Sin backend**, para que otra persona lo pruebe. `preview` deja todos los adaptadores en `fake`, así que el APK funciona solo, sin servidor ni túnel ni cuenta:
 
 ```bash
 npx eas-cli@latest build --profile preview --platform android
+```
+
+- OTP `1234`; tarjeta aprobada `4509 9535 6623 3704`, rechazada `4000 0000 0000 0002`; Yape con código `123456`.
+- Los datos viven en memoria: se reinician al cerrar la app, y el ciclo mensual no corre.
+- Con `appEnv` en `dev` también aparece Perfil → "Catálogo de componentes (dev)", útil para revisar el design system con UX.
+
+Ese bloque `env` lo valida un test de `bootstrap.test.ts` con el mismo esquema que usa la app: si queda incompleto falla la suite, no el APK en el teléfono.
+
+**iOS todavía no.** `distribution: internal` en iOS exige cuenta de Apple Developer y los dispositivos registrados de antemano. Hasta tenerla, Android.
+
+### Antes del primer build de production
+
+`production` declara `environment: "production"`, o sea las variables guardadas en EAS. Hay que crearlas una vez, y ahí va la URL real de la API:
+
+```bash
+npx eas-cli@latest env:set --name EXPO_PUBLIC_API_URL --value https://…/v1 \
+  --environment production --visibility plaintext
+```
+
+Lo mismo con `EXPO_PUBLIC_APP_ENV=prod` y las demás de `.env.example` que no deban quedarse en su valor por defecto. También se administran en expo.dev. Ninguna es secreta —`EXPO_PUBLIC_*` viaja dentro del bundle— pero tampoco se commitean, porque cambian según el ambiente.
+
+```bash
 npx eas-cli@latest build --profile production --platform all
 npx eas-cli@latest submit --profile production --platform android
 ```
 
 **Versiones:** `cli.appVersionSource` es `remote`, así que el `versionCode` y el `buildNumber` los lleva EAS en sus servidores y `autoIncrement` los sube en cada build de `production`. El `version` visible sigue en `app.json`.
-
-**Variables de entorno:** una build de `production` o `preview` corre en modo producción, así que toma `.env.production`, no `.env.local`, que es de desarrollo. Ahí vive `EXPO_PUBLIC_API_URL` apuntando al backend de prd.
 
 **Credenciales de envío.** `submit.production` no guarda ningún dato de cuenta en el repositorio: los toma del entorno de quien ejecuta el envío.
 
@@ -74,6 +113,7 @@ El `track` de Android es `internal` a propósito: la primera subida va a pruebas
 **Pendientes para poder publicar:**
 
 - Cuenta de Google Play con la organización verificada, y cuenta de Apple Developer.
+- Las variables de `production` en EAS, que hoy no existen.
 - `EXPO_PUBLIC_PRIVACY_URL` está vacío y Google Play exige la política de privacidad publicada; lo mismo con `EXPO_PUBLIC_TERMS_URL`.
 - No hay actualizaciones por aire: `expo-updates` no está instalado y por eso los perfiles no declaran `channel`. Si se decide usarlas, hay que instalarlo, definir `runtimeVersion` y recién entonces agregar el canal.
 

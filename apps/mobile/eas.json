@@ -12,10 +12,26 @@
       "distribution": "internal",
       "android": {
         "buildType": "apk"
+      },
+      "env": {
+        "EXPO_PUBLIC_APP_ENV": "dev",
+        "EXPO_PUBLIC_API_URL": "http://localhost:3000/v1",
+        "EXPO_PUBLIC_AUTH_API": "fake",
+        "EXPO_PUBLIC_CIRCLES_API": "fake",
+        "EXPO_PUBLIC_PROFILE_API": "fake",
+        "EXPO_PUBLIC_PAYOUTS_API": "fake",
+        "EXPO_PUBLIC_PAYMENTS_API": "fake",
+        "EXPO_PUBLIC_PAYMENT_TOKENIZER": "fake",
+        "EXPO_PUBLIC_DOCUMENTS_API": "fake",
+        "EXPO_PUBLIC_REFERRALS_API": "fake",
+        "EXPO_PUBLIC_SAVINGS_API": "fake",
+        "EXPO_PUBLIC_NOTIFICATIONS_API": "fake",
+        "EXPO_PUBLIC_HELP_API": "fake"
       }
     },
     "production": {
       "autoIncrement": true,
+      "environment": "production",
       "android": {
         "buildType": "app-bundle"
       }
