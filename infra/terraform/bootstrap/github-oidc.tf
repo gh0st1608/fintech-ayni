@@ -1,6 +1,17 @@
 locals {
   oidc_host = "token.actions.githubusercontent.com"
-  repo      = "repo:${var.github_repository}"
+
+  github_owner = split("/", var.github_repository)[0]
+  github_name  = split("/", var.github_repository)[1]
+
+  # Desde julio de 2026 GitHub emite el sub con los IDs numéricos del dueño y del repositorio
+  # intercalados: repo:<owner>@<owner_id>/<nombre>@<repo_id>:... Los nombres se pueden reciclar y
+  # los IDs no, así que comparar contra los IDs es a la vez lo que exige el token actual y lo más
+  # seguro: un repositorio que reutilice el nombre no puede asumir estos roles.
+  #
+  # Si se recreara el repositorio, los IDs cambian y hay que actualizarlos aquí. Se leen del propio
+  # token, o con: gh repo view <owner>/<nombre> --json id,owner
+  repo = "repo:${local.github_owner}@${var.github_owner_id}/${local.github_name}@${var.github_repository_id}"
 }
 
 # GitHub Actions obtiene credenciales temporales: no hay claves de acceso permanentes.
