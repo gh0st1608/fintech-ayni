@@ -1,0 +1,54 @@
+# Qué se sube a EAS Build al construir la app mobile.
+#
+# EAS arma el tarball desde la raíz del repositorio, no desde apps/mobile. Y en cuanto existe este
+# archivo, EAS deja de leer todos los .gitignore del repositorio y solo mira este: lo que no esté
+# aquí se sube. Por eso repite las reglas de los .gitignore en lugar de complementarlas.
+#
+# Comprobar qué queda dentro, sin construir nada:
+#   npx eas-cli@latest build:inspect --profile preview --stage archive --output <carpeta vacía>
+
+# --- Variables de entorno: nunca salen de la máquina -----------------------------------------
+# apps/backend/.env lleva la clave privada de firma de JWT, y los .env.local de la app y del
+# back-office llevan configuración de cada persona. El build no necesita ninguno: `development`
+# toma las variables de Metro, `preview` las trae en eas.json y `production` las guarda EAS.
+.env
+.env.*
+!.env.example
+
+# --- Claves y certificados de firma -----------------------------------------------------------
+*.jks
+*.p8
+*.p12
+*.key
+*.pem
+*.mobileprovision
+
+# --- Dependencias y artefactos de compilación -------------------------------------------------
+node_modules/
+dist/
+web-build/
+coverage/
+*.tsbuildinfo
+*.log
+.DS_Store
+.husky/_/
+
+# --- Expo y React Native ----------------------------------------------------------------------
+.expo/
+expo-env.d.ts
+.metro-health-check*
+.kotlin/
+*.orig.*
+# Carpetas nativas generadas (CNG): EAS las regenera en el build.
+/apps/mobile/ios/
+/apps/mobile/android/
+
+# --- Lo que no participa del build de la app --------------------------------------------------
+# Terraform es el caso grave: los providers de .terraform/ pesan unos 820 MB por stack y llenaron
+# el disco al copiar el proyecto. El estado y los planes además llevan datos sensibles.
+/infra/
+/apps/backend/
+/apps/backoffice/
+/qa/
+/docs/
+*.code-workspace
