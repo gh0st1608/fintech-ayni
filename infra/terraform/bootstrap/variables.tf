@@ -30,6 +30,30 @@ variable "github_repository" {
   default     = "gh0st1608/fintech-ayni"
 }
 
+# Los dos IDs viajan en el sub del token OIDC desde julio de 2026 (github-oidc.tf). Son inmutables:
+# solo cambian si se recrea la cuenta o el repositorio.
+variable "github_owner_id" {
+  description = "ID numérico del dueño del repositorio, tal como aparece en el sub del token OIDC."
+  type        = string
+  default     = "64746806"
+
+  validation {
+    condition     = can(regex("^[0-9]+$", var.github_owner_id))
+    error_message = "github_owner_id son solo dígitos."
+  }
+}
+
+variable "github_repository_id" {
+  description = "ID numérico del repositorio, tal como aparece en el sub del token OIDC."
+  type        = string
+  default     = "1433646405"
+
+  validation {
+    condition     = can(regex("^[0-9]+$", var.github_repository_id))
+    error_message = "github_repository_id son solo dígitos."
+  }
+}
+
 variable "deploy_environment" {
   description = "GitHub Environment protegido (con aprobación) que puede asumir el rol de apply."
   type        = string
