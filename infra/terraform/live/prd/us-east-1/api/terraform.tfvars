@@ -17,10 +17,10 @@ backoffice_domain_name = "backoffice.solutionserj.com"
 # CAMBIAR al verificar Identity Center (COPAYNI-72). Vacío: la CSP solo deja hablar con la API.
 backoffice_oidc_issuer = ""
 
-# CAMBIAR: cuenta de New Relic de prd (la misma del stack account).
+# Cuenta de New Relic de prd, la misma del stack account.
 new_relic = {
   enabled    = true
-  account_id = 0
+  account_id = 8067917
   region     = "US"
 }
 
@@ -34,16 +34,16 @@ alert_emails = []
 # Envio del codigo de verificacion por correo (pending-scope T6). El remitente vive en la zona de
 # la API, que ya esta delegada desde GoDaddy, asi que Terraform publica solo los 3 CNAME de DKIM.
 #
-# CAMBIAR route53_zone_id por el id real de aws_route53_zone.api. Tiene que ser un valor literal:
-# si se tomara del recurso, su id no se conoce durante el plan y el count de los registros DKIM
-# queda indeterminado. Se obtiene con:
+# route53_zone_id es el id de aws_route53_zone.api, y tiene que ser un valor literal: si se tomara
+# del recurso, su id no se conoce durante el plan y el count de los registros DKIM queda
+# indeterminado. Si alguna vez se recrea la zona, el nuevo id se obtiene con:
 #   terraform apply -target=aws_route53_zone.api && terraform output route53_zone_id
-# CAMBIAR tambien el buzon que recibira los informes de DMARC (null: politica sin informes).
+# CAMBIAR el buzon que recibira los informes de DMARC (null: politica sin informes).
 otp_messaging = {
   email = {
     domain          = "backend-ayni.solutionserj.com"
     from_address    = "Ayni <no-reply@backend-ayni.solutionserj.com>"
-    route53_zone_id = "ZCAMBIARPORELIDREAL"
+    route53_zone_id = "Z0628311B0DF39706VFE"
   }
 }
 dmarc_report_email = null

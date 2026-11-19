@@ -5,10 +5,10 @@ aws_account_id = "079982009754"
 owner       = "plataforma-ayni"
 cost_center = "ayni-prd"
 
-# CAMBIAR: cuenta de New Relic de prd. Con account_id = 0 y enabled = true, el plan falla a propósito.
+# Cuenta de New Relic de prd. La User API key no va aquí: llega por TF_VAR_new_relic_api_key.
 new_relic = {
   enabled    = true
-  account_id = 0
+  account_id = 8067917
   region     = "US"
 }
 

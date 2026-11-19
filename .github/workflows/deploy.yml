@@ -82,6 +82,8 @@ jobs:
         working-directory: ${{ env.STACK }}
         env:
           TF_VAR_image_tag: ${{ steps.tag.outputs.value }}
+          # Configura el provider de New Relic. Efimera: no queda en el estado ni en el plan.
+          TF_VAR_new_relic_api_key: ${{ secrets.NEW_RELIC_API_KEY }}
         run: |
           terraform apply -input=false -auto-approve -target=module.ecr
           echo "url=$(terraform output -raw ecr_repository_url)" >> "$GITHUB_OUTPUT"
@@ -114,6 +116,7 @@ jobs:
         working-directory: ${{ env.STACK }}
         env:
           TF_VAR_image_tag: ${{ steps.tag.outputs.value }}
+          TF_VAR_new_relic_api_key: ${{ secrets.NEW_RELIC_API_KEY }}
         run: terraform apply -input=false -auto-approve -target=module.migrate
 
       # --- 3. Migrar -----------------------------------------------------------------------------
@@ -157,6 +160,7 @@ jobs:
         working-directory: ${{ env.STACK }}
         env:
           TF_VAR_image_tag: ${{ steps.tag.outputs.value }}
+          TF_VAR_new_relic_api_key: ${{ secrets.NEW_RELIC_API_KEY }}
         run: terraform apply -input=false -auto-approve
 
       # --- 5. Comprobación -----------------------------------------------------------------------
