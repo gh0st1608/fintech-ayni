@@ -129,14 +129,22 @@ data "aws_iam_policy_document" "apply_services" {
       "ecr:*",
       "ecs:*",
       "elasticloadbalancing:*",
+      # Tarea programada del ciclo mensual de los círculos (COPAYNI-56): el scheduler la lanza, la
+      # regla de EventBridge detecta que terminó mal y la cola recoge las dos formas de fallar.
+      # Cada uno lleva su propio prefijo, y el de las reglas no es cloudwatch sino events.
+      "events:*",
       "firehose:*",
       "kms:*",
       "logs:*",
       "rds:*",
       "route53:*",
       "s3:*",
+      "scheduler:*",
       "secretsmanager:*",
+      # Envío del código de verificación por correo (pending-scope T6). SESv2 usa el prefijo ses.
+      "ses:*",
       "sns:*",
+      "sqs:*",
       "ssm:GetParameter*",
       "wafv2:*",
     ]
