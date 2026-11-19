@@ -1,4 +1,4 @@
-import type { AuthChallenge } from '@/domain/auth/AuthChallenge';
+import type { AuthChallenge, OtpChannel } from '@/domain/auth/AuthChallenge';
 import { OtpVerificationError } from '@/domain/auth/errors/OtpVerificationError';
 import type { AuthApiPort } from '@/domain/auth/ports/AuthApiPort';
 import { AuthTokens } from '@/domain/auth/value-objects/AuthTokens';
@@ -51,6 +51,12 @@ export class InMemoryAuthApi implements AuthApiPort {
   private readonly otpTtlSeconds: number;
   private readonly maxAttempts: number;
   private readonly now: () => Date;
+  /** Lo que diría el backend; en el modo fake los dos canales sirven. */
+  channels: OtpChannel[] = ['email', 'sms'];
+
+  availableChannels(): Promise<OtpChannel[]> {
+    return Promise.resolve(this.channels);
+  }
 
   constructor(options: InMemoryAuthApiOptions = {}) {
     this.latencyMs = options.latencyMs ?? 600;

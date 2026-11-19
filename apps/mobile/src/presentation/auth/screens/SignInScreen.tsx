@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
 import { Linking, Pressable, StyleSheet, View } from 'react-native';
 
-import type { AuthChallenge } from '@/domain/auth/AuthChallenge';
+import type { AuthChallenge, OtpChannel } from '@/domain/auth/AuthChallenge';
 import { looksLikeLocalPhone, toInternational } from '@/domain/auth/countries';
 import { LoginIdentifier } from '@/domain/auth/value-objects/LoginIdentifier';
 import { errorMessage } from '@/presentation/i18n/errorMessageKey';
@@ -23,6 +23,11 @@ import { useStartAuthentication } from '../hooks/useStartAuthentication';
 interface SignInScreenProps {
   /** Se llama cuando el backend envió el OTP; la ruta navega a la verificación. */
   onChallengeStarted: (challenge: AuthChallenge) => void;
+  /**
+   * Canales con proveedor en este ambiente; los consulta la ruta. Sin valor no se bloquea nada:
+   * mientras no se sepa, el formulario deja intentar.
+   */
+  channels?: OtpChannel[];
 }
 
 /** Enlace legal; sin URL configurada se muestra como texto (pending-scope L4). */
@@ -49,7 +54,7 @@ function LegalLink({ url, children }: { url?: string; children?: React.ReactNode
 }
 
 /** Ingreso o registro con email o teléfono (Figma 55:10724): un mismo formulario sirve para ambos. */
-export function SignInScreen({ onChallengeStarted }: SignInScreenProps) {
+export function SignInScreen({ onChallengeStarted, channels }: SignInScreenProps) {
   const { t } = useTranslation();
   const { legal } = useContainer().config;
   const startAuthentication = useStartAuthentication();
@@ -63,10 +68,19 @@ export function SignInScreen({ onChallengeStarted }: SignInScreenProps) {
   const resolved = localPhone ? toInternational(country, identifier) : identifier;
   const countryLabel = t(`countries.${country.regionCode}`);
 
+  const login = LoginIdentifier.tryCreate(resolved);
+  // Canal sin proveedor en este ambiente (pending-scope T6): se avisa aquí en vez de dejar que el
+  // backend responda 503 después de enviar. Mientras no se sepa, no se bloquea nada.
+  const unavailableChannel =
+    login !== null && channels !== undefined && !channels.includes(login.channel);
+
   // Tras el primer intento, el error del campo se recalcula en vivo con la regla del dominio.
-  const fieldError =
-    submitted && !LoginIdentifier.isValid(resolved)
+  const fieldError = !login
+    ? submitted
       ? t('auth.signIn.invalidIdentifier')
+      : undefined
+    : unavailableChannel
+      ? t(`auth.signIn.${login.channel === 'sms' ? 'smsUnavailable' : 'emailUnavailable'}`)
       : undefined;
   const requestError = startAuthentication.error
     ? errorMessage(t, startAuthentication.error)
@@ -75,7 +89,7 @@ export function SignInScreen({ onChallengeStarted }: SignInScreenProps) {
   const submit = () => {
     if (startAuthentication.isPending) return;
     setSubmitted(true);
-    if (!LoginIdentifier.isValid(resolved)) return;
+    if (!login || unavailableChannel) return;
     startAuthentication.mutate(resolved, { onSuccess: onChallengeStarted });
   };
 
