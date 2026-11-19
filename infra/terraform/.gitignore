@@ -3,6 +3,8 @@
 *.tfstate
 *.tfstate.*
 *.tfplan
+# Un plan guardado sin extension: terraform plan -out=tfplan es la forma documentada.
+tfplan
 .terraform.tfstate.lock.info
 crash.log
 crash.*.log
