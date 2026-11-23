@@ -84,7 +84,7 @@ async function run(rules: SlotPricing) {
     clock,
   );
   for (let month = 0; month < 10; month += 1) {
-    clock.set(at(`${TERMS.startsOn.addMonths(month).toString()}-05`));
+    clock.set(at(`${TERMS.startsOnPeriod.addMonths(month).toString()}-05`));
     await useCase.execute();
   }
   return { cycles, collected, disbursed };

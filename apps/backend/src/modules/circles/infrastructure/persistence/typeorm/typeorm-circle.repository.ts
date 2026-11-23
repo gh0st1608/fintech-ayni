@@ -4,6 +4,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { type Repository } from 'typeorm';
 
+import { LocalDate } from '../../../../../shared/domain/value-objects/local-date';
 import { Money } from '../../../../../shared/domain/value-objects/money';
 import { Period } from '../../../../../shared/domain/value-objects/period';
 import { NotFoundError } from '../../../../../shared/errors/app-error';
@@ -88,7 +89,6 @@ function decodeCursor(cursor: string): Keyset {
   }
   throw new InvalidCursorError();
 }
-const toPeriod = (startsOn: string): Period => Period.parse(startsOn.slice(0, 7));
 
 /** CircleRepositoryPort sobre PostgreSQL. Las entidades no salen de este adaptador. */
 @Injectable()
@@ -133,7 +133,7 @@ export class TypeOrmCircleRepository implements CircleRepositoryPort {
     const rows = await this.memberships.query<MemberCircleRow[]>(
       `SELECT m.id AS membership_id, m.created_at::text AS joined_at, m.position, m.price,
               m.expelled_at IS NOT NULL AS expelled, c.id AS circle_id, c.payout_amount::text AS payout_amount, c.currency, c.months,
-              to_char(c.starts_on, 'YYYY-MM') AS starts_on
+              to_char(c.starts_on, 'YYYY-MM-DD') AS starts_on
          FROM circle_memberships m
          JOIN circles c ON c.id = m.circle_id
         WHERE m.user_id = $1
@@ -152,7 +152,7 @@ export class TypeOrmCircleRepository implements CircleRepositoryPort {
         terms: CircleTerms.create({
           payout: Money.of(Number(row.payout_amount), row.currency),
           months: row.months,
-          startsOn: Period.parse(row.starts_on),
+          startsOn: LocalDate.parse(row.starts_on),
         }),
         position: row.position,
         ...(row.price && { price: fromStoredPrice(row.price) }),
@@ -261,7 +261,7 @@ export class TypeOrmCircleRepository implements CircleRepositoryPort {
         payoutAmount: circle.terms.payout.amount,
         currency: circle.terms.currency,
         months: circle.terms.months,
-        startsOn: toStartsOn(circle.terms.startsOn),
+        startsOn: circle.terms.startsOn.toString(),
       });
       if (circle.memberships.length > 0) {
         await manager.insert(
@@ -322,7 +322,7 @@ export class TypeOrmCircleRepository implements CircleRepositoryPort {
       terms: CircleTerms.create({
         payout: Money.of(row.payoutAmount, row.currency),
         months: row.months,
-        startsOn: toPeriod(row.startsOn),
+        startsOn: LocalDate.parse(row.startsOn),
       }),
       memberships: (row.memberships ?? [])
         .filter(({ expelledAt }) => expelledAt === null)

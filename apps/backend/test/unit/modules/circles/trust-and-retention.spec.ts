@@ -199,7 +199,7 @@ describe('Retención del payout (COPAYNI-60)', () => {
     );
     const runAll = async () => {
       for (let month = 0; month < 10; month += 1) {
-        const period = TERMS.startsOn.addMonths(month).toString();
+        const period = TERMS.startsOnPeriod.addMonths(month).toString();
         for (const day of ['05', '09']) {
           clock.set(at(`${period}-${day}`));
           await useCase.execute();

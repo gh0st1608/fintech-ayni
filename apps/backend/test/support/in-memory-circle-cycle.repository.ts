@@ -93,7 +93,7 @@ export class InMemoryCircleCycleRepository implements CircleCycleRepositoryPort 
           ({ state, terms }) =>
             state === 'contributing' ||
             state === 'approving' ||
-            (state === 'collecting' && !terms.startsOn.isAfter(today)),
+            (state === 'collecting' && !terms.startsOnPeriod.isAfter(today)),
         )
         .map(({ circleId }) => circleId),
     );

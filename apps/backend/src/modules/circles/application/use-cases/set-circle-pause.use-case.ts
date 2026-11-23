@@ -71,7 +71,7 @@ export class SetCirclePauseUseCase {
         result = {
           state: cycle.state,
           changed,
-          startsOn: cycle.terms.startsOn.toString(),
+          startsOn: cycle.terms.startsOnPeriod.toString(),
           endsOn: cycle.terms.endsOn.toString(),
         };
         return Promise.resolve(cycle);

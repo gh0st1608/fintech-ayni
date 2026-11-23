@@ -156,7 +156,8 @@ export class GetAvailableSlotsUseCase {
     const now = this.clock.now();
     if (!circle.isRunning()) {
       const currentPeriod = Period.fromDate(now, this.assignment.timeZone);
-      if (!circle.terms.startsOn.isAfter(currentPeriod)) throw new CircleAlreadyStartedError();
+      if (!circle.terms.startsOnPeriod.isAfter(currentPeriod))
+        throw new CircleAlreadyStartedError();
       return { circleId, terms: circle.terms, slots: this.regularSlots(circle) };
     }
     const today = LocalDate.fromDate(now, this.assignment.timeZone);

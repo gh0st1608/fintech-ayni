@@ -128,7 +128,7 @@ describe('reducción de un círculo incompleto (COPAYNI-62)', () => {
     expect(stored.state).toBe('contributing');
     expect(stored.terms.months).toBe(7);
     expect(stored.terms.payout.amount).toBe(21_000);
-    expect(stored.terms.startsOn.toString()).toBe('2026-11');
+    expect(stored.terms.startsOnPeriod.toString()).toBe('2026-11');
     expect(stored.members.map(({ position }) => position).sort()).toEqual([1, 2, 3, 4, 5, 6, 7]);
     const first = stored.members.find(({ userId }) => userId === 'u-2')!;
     expect(first.position).toBe(1);
@@ -144,7 +144,7 @@ describe('reducción de un círculo incompleto (COPAYNI-62)', () => {
     await useCase.execute();
 
     const stored = cycles.get(CIRCLE)!;
-    expect(stored.terms.startsOn.toString()).toBe('2026-12');
+    expect(stored.terms.startsOnPeriod.toString()).toBe('2026-12');
     expect(stored.currentPeriod?.toString()).toBe('2026-12');
     expect(stored.installments.every(({ status }) => status === 'pending')).toBe(true);
   });

@@ -402,7 +402,7 @@ describe('AdvanceCircleCyclesUseCase', () => {
        */
       const runAll = async (beforeMonth?: (month: number) => void) => {
         for (let month = 0; month < 10; month += 1) {
-          const period = EXAMPLE.startsOn.addMonths(month).toString();
+          const period = EXAMPLE.startsOnPeriod.addMonths(month).toString();
           beforeMonth?.(month);
           if (month === 4) for (const prefix of prefixes) payments.failing.add(`${prefix}u-7`);
           clock.set(at(`${period}-05`));

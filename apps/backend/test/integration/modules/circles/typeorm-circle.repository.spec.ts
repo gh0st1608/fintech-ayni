@@ -79,7 +79,7 @@ describe('TypeOrmCircleRepository', () => {
     const circle = await repository.findById(circleId);
     expect(circle?.terms.payout).toMatchObject({ amount: 2_400_000, currency: 'PEN' });
     expect(circle?.terms.months).toBe(MONTHS);
-    expect(circle?.terms.startsOn.toString()).toBe('2026-11');
+    expect(circle?.terms.startsOnPeriod.toString()).toBe('2026-11');
     expect(circle?.memberships).toEqual([
       {
         userId: ana,
@@ -417,7 +417,7 @@ describe('TypeOrmCircleRepository', () => {
       const first = await list(ana, 'active');
       expect(first.items.map(({ circleId }) => circleId)).toEqual([upcoming, started]);
       expect(first.items[0]).toMatchObject({ position: 2 });
-      expect(first.items[0]?.terms.startsOn).toEqual(Period.of(2026, 12));
+      expect(first.items[0]?.terms.startsOnPeriod).toEqual(Period.of(2026, 12));
       expect(first.items[0]?.terms.payout).toEqual(Money.of(1_200_000, 'PEN'));
       expect(first.items[0]?.joinedAt).toBeInstanceOf(Date);
       expect(first.nextCursor).toEqual(expect.any(String));

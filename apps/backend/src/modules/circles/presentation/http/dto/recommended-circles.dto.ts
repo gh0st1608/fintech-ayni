@@ -24,6 +24,14 @@ export class RecommendedCircleResponse {
   @ApiProperty({ example: '2026-11', description: 'Primer mes (YYYY-MM)' })
   startsOn!: string;
 
+  @ApiProperty({
+    example: '2026-11-01',
+    description:
+      'Fecha real del primer turno (YYYY-MM-DD). En cadencia mensual es el día 1 y coincide ' +
+      'con startsOn; en las demás es el día que toca, y startsOn solo da su mes (COPAYNI-106).',
+  })
+  startsOnDate!: string;
+
   @ApiProperty({ example: '2027-08', description: 'Último mes (YYYY-MM)' })
   endsOn!: string;
 
@@ -57,7 +65,8 @@ export class RecommendedCirclesResponse {
         circleId,
         payout: MoneyResponse.from(terms.payout),
         months: terms.months,
-        startsOn: terms.startsOn.toString(),
+        startsOn: terms.startsOnPeriod.toString(),
+        startsOnDate: terms.startsOn.toString(),
         endsOn: terms.endsOn.toString(),
         baseInstallment: MoneyResponse.from(terms.baseInstallment),
         adminFee: MoneyResponse.from(adminFee),

@@ -134,6 +134,7 @@ Queda abierto en R2: si los círculos los arma un administrador y el tamaño má
 {
   "circleId": null,
   "startsOn": "2026-11",
+  "startsOnDate": "2026-11-01",
   "payout": { "amount": 3000000, "currency": "PEN" },
   "months": 10,
   "slots": [
@@ -156,7 +157,8 @@ Queda abierto en R2: si los círculos los arma un administrador y el tamaño má
 | Campo              | Notas                                                                          |
 | ------------------ | ------------------------------------------------------------------------------ |
 | `circleId`         | Círculo ofrecido; `null` si es uno nuevo. Se envía igual a `POST /join`.       |
-| `startsOn`         | Mes de inicio del círculo (`YYYY-MM`).                                         |
+| `startsOn`         | Mes de inicio del círculo (`YYYY-MM`). En cadencia mensual, su día 1.          |
+| `startsOnDate`     | Fecha real del primer turno (`YYYY-MM-DD`); la que manda fuera de lo mensual.  |
 | `position`         | 1 = cobra el primer mes. Un slot por mes del círculo.                          |
 | `payoutPeriod`     | Mes de cobro en formato `YYYY-MM`.                                             |
 | `type`             | `fastest_payout`, `lowest_fees` o `highest_return` (`SLOT_TYPES` del dominio). |
@@ -210,6 +212,7 @@ Cabeceras:
 {
   "circleId": "6f1c…",
   "startsOn": "2026-11",
+  "startsOnDate": "2026-11-01",
   "payout": { "amount": 3000000, "currency": "PEN" },
   "months": 10,
   "position": 3,
@@ -305,6 +308,7 @@ Criterio (coherente con la asignación `fill_oldest`, R2; pendiente con el PO):
       "payout": { "amount": 3000000, "currency": "PEN" },
       "months": 10,
       "startsOn": "2026-11",
+      "startsOnDate": "2026-11-01",
       "endsOn": "2027-08",
       "baseInstallment": { "amount": 300000, "currency": "PEN" },
       "adminFee": { "amount": 360000, "currency": "PEN" },
@@ -343,6 +347,7 @@ Mis círculos, de la unión más reciente a la más antigua, paginados por curso
       "payout": { "amount": 3000000, "currency": "PEN" },
       "months": 10,
       "startsOn": "2026-11",
+      "startsOnDate": "2026-11-01",
       "endsOn": "2027-08",
       "position": 3,
       "payoutPeriod": "2027-01",
@@ -378,6 +383,7 @@ Mis círculos, de la unión más reciente a la más antigua, paginados por curso
   "payout": { "amount": 3000000, "currency": "PEN" },
   "months": 10,
   "startsOn": "2026-11",
+  "startsOnDate": "2026-11-01",
   "endsOn": "2027-08",
   "currentPeriod": "2027-01",
   "currentMonth": 3,

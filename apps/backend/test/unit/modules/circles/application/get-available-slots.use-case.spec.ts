@@ -83,7 +83,7 @@ describe('GetAvailableSlotsUseCase', () => {
 
     expect(result.circleId).toBeNull();
     // En Lima es octubre: empieza en noviembre, aunque en UTC ya sea noviembre.
-    expect(result.terms.startsOn.toString()).toBe('2026-11');
+    expect(result.terms.startsOnPeriod.toString()).toBe('2026-11');
     expect(result.slots.every(({ available }) => available)).toBe(true);
   });
 
@@ -118,7 +118,7 @@ describe('GetAvailableSlotsUseCase', () => {
     const result = await slotsOf(useCase);
 
     expect(result.circleId).toBe('c-oldest');
-    expect(result.terms.startsOn.toString()).toBe('2027-01');
+    expect(result.terms.startsOnPeriod.toString()).toBe('2027-01');
     expect(
       result.slots.filter(({ available }) => !available).map(({ position }) => position),
     ).toEqual([1, 9]);
@@ -145,7 +145,7 @@ describe('GetAvailableSlotsUseCase', () => {
 
     const result = await slotsOf(useCase);
     expect(result.circleId).toBeNull();
-    expect(result.terms.startsOn.toString()).toBe('2026-12');
+    expect(result.terms.startsOnPeriod.toString()).toBe('2026-12');
   });
 
   it('rechaza una duración no ofrecida y un payout fuera del rango', async () => {

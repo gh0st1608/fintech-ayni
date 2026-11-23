@@ -145,7 +145,7 @@ describe('Pausa del ciclo (COPAYNI-61)', () => {
     cycle.resume(day('2026-12-10'), BY);
 
     expect(cycle.calendarShift).toBe(1);
-    expect(cycle.terms.startsOn).toEqual(Period.of(2026, 12));
+    expect(cycle.terms.startsOnPeriod).toEqual(Period.of(2026, 12));
     expect(cycle.terms.endsOn).toEqual(Period.of(2027, 2));
     expect(cycle.currentPeriod).toEqual(Period.of(2026, 12));
     // Vencen el 5 del mes nuevo, pero no antes de reanudar.
