@@ -170,10 +170,72 @@ describe('SlotPricing', () => {
     expect(quotes.every(({ fee, discount }) => fee.isZero() && discount.isZero())).toBe(true);
   });
 
-  it('con pocos slots, los grupos se redondean hacia abajo', () => {
-    expect(pricing().tiers(2)).toEqual({ fastest: 0, highest: 0 });
+  it('con pocos slots, cada grupo con proporción conserva al menos un slot (COPAYNI-124)', () => {
+    // Antes esto daba { fastest: 0, highest: 0 }, y entonces los dos slots eran Lowest Fees:
+    // el único tipo que exige ingreso declarado, así que la junta era inconstruible.
+    expect(pricing().tiers(2)).toEqual({ fastest: 1, highest: 1 });
+    expect(pricing().tiers(3)).toEqual({ fastest: 1, highest: 1 });
     expect(pricing().tiers(4)).toEqual({ fastest: 1, highest: 1 });
   });
+
+  it('no cambia el reparto de las duraciones que hay en producción', () => {
+    // CIRCLE_DURATION_OPTIONS es 6,10,12 en dev y en prd: su reparto debe quedar intacto.
+    expect(pricing().tiers(6)).toEqual({ fastest: 1, highest: 1 });
+    expect(pricing().tiers(8)).toEqual({ fastest: 2, highest: 2 });
+    expect(pricing().tiers(10)).toEqual({ fastest: 2, highest: 2 });
+    expect(pricing().tiers(12)).toEqual({ fastest: 3, highest: 3 });
+  });
+
+  it('respeta una proporción configurada en cero en lugar de forzarle un slot', () => {
+    expect(pricing({ fastestShareBps: 0 }).tiers(2)).toEqual({ fastest: 0, highest: 1 });
+    expect(pricing({ highestShareBps: 0 }).tiers(2)).toEqual({ fastest: 1, highest: 0 });
+    expect(pricing({ fastestShareBps: 0, highestShareBps: 0 }).tiers(10)).toEqual({
+      fastest: 0,
+      highest: 0,
+    });
+  });
+
+  it('cuando los dos grupos no caben, cede el rápido y sobrevive el de retorno', () => {
+    // El grupo rápido exige confianza previa, así que conservar el de retorno es lo que mantiene
+    // la junta abierta a una cuenta nueva.
+    const extreme = pricing({ fastestShareBps: 10_000, highestShareBps: 0 });
+    expect(extreme.tiers(2)).toEqual({ fastest: 2, highest: 0 });
+
+    const both = pricing({ fastestShareBps: 9_000, highestShareBps: 1_000 });
+    const { fastest, highest } = both.tiers(2);
+    expect(fastest + highest).toBeLessThanOrEqual(2);
+    expect(highest).toBe(1);
+  });
+
+  it('una junta de 2 slots se puede cotizar de punta a punta (COPAYNI-124)', () => {
+    const short = terms(2_400_000, 2);
+    const first = pricing().quote(short, 1);
+    const last = pricing().quote(short, 2);
+
+    expect(first.type).toBe('fastest_payout');
+    expect(last.type).toBe('highest_return');
+    // El único slot rápido está en el extremo de su grupo, así que paga el fee máximo.
+    expect(first.fee.amount).toBe(short.payout.percentage(RULES.maxFeeBps).amount);
+    expect(first.discount.amount).toBe(0);
+    expect(last.discount.amount).toBe(short.payout.percentage(RULES.maxDiscountBps).amount);
+    expect(last.fee.amount).toBe(0);
+    expect(first.installments).toHaveLength(2);
+  });
+
+  it.each([2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12])(
+    'con %i slots todo slot tiene un único tipo y existe uno sin exigencia de ingreso',
+    (slots) => {
+      const types = Array.from({ length: slots }, (_unused, index) =>
+        pricing().typeOf(index + 1, slots),
+      );
+
+      expect(types).toHaveLength(slots);
+      expect(types.filter((type) => type === 'fastest_payout').length).toBeGreaterThanOrEqual(1);
+      expect(types.filter((type) => type === 'highest_return').length).toBeGreaterThanOrEqual(1);
+      // Highest Return solo pide identidad verificada: es la puerta de entrada de una cuenta nueva.
+      expect(types).toContain('highest_return');
+    },
+  );
 
   it.each([0, 13, 1.5])('rechaza el slot %p fuera de rango', (position) => {
     expect(() => pricing().quote(terms(), position)).toThrow(

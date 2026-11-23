@@ -30,6 +30,11 @@ export class LocalDate {
     return new LocalDate(period, day);
   }
 
+  /** Último día de `period`: 28, 29, 30 o 31 según el mes y el año. */
+  static lastDayOf(period: Period): number {
+    return daysIn(period);
+  }
+
   static parse(value: string): LocalDate {
     const match = LOCAL_DATE_FORMAT.exec(value);
     if (!match) throw new InvalidLocalDateError('La fecha debe tener el formato YYYY-MM-DD');
