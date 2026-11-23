@@ -217,7 +217,7 @@ export class JoinCircleUseCase {
         baseInstallment: terms.baseInstallment,
         totalPaid: quote.totalPaid,
         retention: quote.retention,
-        startsOn: terms.startsOn.toString(),
+        startsOn: terms.startsOnPeriod.toString(),
         payoutPeriod: quote.payoutPeriod.toString(),
       },
     });
@@ -293,7 +293,7 @@ export class JoinCircleUseCase {
     }
     // En un círculo ya iniciado, el cobro de los primeros slots ya pasó: solo se toman sus
     // vacantes mientras está en curso (COPAYNI-59).
-    if (!circle.isRunning() && !circle.terms.startsOn.isAfter(currentPeriod)) {
+    if (!circle.isRunning() && !circle.terms.startsOnPeriod.isAfter(currentPeriod)) {
       throw new CircleAlreadyStartedError();
     }
     return { circle, isNew: false };

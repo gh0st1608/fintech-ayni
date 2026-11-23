@@ -85,7 +85,7 @@ describe('JoinCircleUseCase', () => {
     const result = await useCase.execute(NEW_CIRCLE);
 
     expect(result).toMatchObject({ created: true, membership: { userId: 'ana', position: 3 } });
-    expect(result.terms.startsOn).toEqual(Period.of(2026, 11));
+    expect(result.terms.startsOnPeriod).toEqual(Period.of(2026, 11));
     expect(result.terms.payout).toEqual(pen(30_000));
     expect(result.quote).toEqual(TEST_PRICING.quote(result.terms, 3));
     // El precio queda congelado con la membresía (COPAYNI-55).

@@ -81,11 +81,11 @@ export class GetMyCircleUseCase {
     const current = calendar.currentPeriod;
     const currentPeriod = current === null ? null : Period.parse(current);
     const currentMonth =
-      currentPeriod === null ? null : terms.startsOn.monthsUntil(currentPeriod) + 1;
+      currentPeriod === null ? null : terms.startsOnPeriod.monthsUntil(currentPeriod) + 1;
     const paid = new Set(calendar.paidPeriods);
     const turns = Array.from({ length: terms.months }, (_, index): CircleTurn => {
       const position = index + 1;
-      const period = terms.startsOn.addMonths(index);
+      const period = terms.startsOnPeriod.addMonths(index);
       const member = calendar.members.find((candidate) => candidate.position === position);
       const status: TurnStatus = paid.has(period.toString())
         ? 'paid'

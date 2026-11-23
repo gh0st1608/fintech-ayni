@@ -158,7 +158,7 @@ describe('settlePeriod', () => {
       const settlement = settlePeriod({
         circleId: `c-${run}`,
         terms,
-        period: terms.startsOn,
+        period: terms.startsOnPeriod,
         paid,
         receiver,
         fundBalance: fundStart,

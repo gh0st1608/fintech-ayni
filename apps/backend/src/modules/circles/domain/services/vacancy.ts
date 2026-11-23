@@ -18,7 +18,7 @@ export function vacancyJoinMonth(
   today: LocalDate,
   dueDay: number,
 ): number | null {
-  const month = terms.startsOn.monthsUntil(today.period);
+  const month = terms.startsOnPeriod.monthsUntil(today.period);
   if (month < 0) return null;
   const beforeDue = LocalDate.of(today.period, dueDay).isAfter(today);
   const joinMonth = beforeDue ? month : month + 1;

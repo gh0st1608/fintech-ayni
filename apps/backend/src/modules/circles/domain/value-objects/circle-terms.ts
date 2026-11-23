@@ -19,7 +19,7 @@ export const MIN_CIRCLE_MONTHS = MIN_CIRCLE_TURNS;
 
 /**
  * Condiciones de un Game'ya: cada turno se paga `payout` a un miembro, durante `turns` turnos
- * desde `startsOn`, con la frecuencia que indique `cadence`. Hay tantos miembros como turnos
+ * desde la fecha `startsOn`, con la frecuencia que indique `cadence`. Hay tantos miembros como turnos
  * (un slot por turno) y la cuota base es `payout / turns`.
  *
  * El turno es un **ordinal**, no un mes (COPAYNI-100). Antes ambas cosas coincidían porque solo
@@ -34,7 +34,7 @@ export class CircleTerms {
     readonly payout: Money,
     readonly turns: number,
     readonly cadence: Cadence,
-    readonly startsOn: Period,
+    readonly startsOn: LocalDate,
     readonly baseInstallment: Money,
   ) {}
 
@@ -44,15 +44,22 @@ export class CircleTerms {
    *
    * Sin `cadence` se asume mensual, que es la cadencia de todos los círculos creados antes de
    * COPAYNI-100: así un círculo existente recorre exactamente el mismo código que antes.
+   *
+   * `startsOn` es la fecha real de arranque (COPAYNI-106). Se admite todavía un `Period`, y
+   * entonces se toma su día 1, que es el día en que empiezan todos los círculos creados hasta
+   * ahora: la base de datos lo garantiza con `CHECK (extract(day FROM starts_on) = 1)`. Así la
+   * conversión es exacta y quien construye condiciones a partir de un mes no cambia.
    */
   static create(props: {
     payout: Money;
     turns?: number;
     months?: number;
     cadence?: Cadence;
-    startsOn: Period;
+    startsOn: LocalDate | Period;
   }): CircleTerms {
-    const { payout, startsOn } = props;
+    const { payout } = props;
+    const startsOn =
+      props.startsOn instanceof LocalDate ? props.startsOn : LocalDate.of(props.startsOn, 1);
     const turns = props.turns ?? props.months;
     const cadence = props.cadence ?? Cadence.default;
 
@@ -91,6 +98,18 @@ export class CircleTerms {
   }
 
   /**
+   * Mes de arranque del círculo, para informes, agregados y para el contrato público, que habla
+   * en `YYYY-MM`.
+   *
+   * Es una proyección sin pérdida mientras el círculo empiece un día 1, que es el caso de todos
+   * los existentes. Fuera de eso pierde el día, así que **no** sirve para calcular vencimientos:
+   * para eso está `startsOn`, que es la fecha real.
+   */
+  get startsOnPeriod(): Period {
+    return this.startsOn.period;
+  }
+
+  /**
    * Duración aproximada en meses calendario, para mostrar y para informes.
    *
    * Es **aproximada** fuera de la cadencia mensual: 4 turnos semanales son 28 días, que no son
@@ -123,17 +142,15 @@ export class CircleTerms {
    * `CircleTerms` no repite la aritmética: la delega aquí, para que una cadencia nueva o un
    * ajuste de fechas se toque en un solo sitio (COPAYNI-104).
    *
-   * El ancla es el **día 1** del mes de inicio, porque `startsOn` es todavía un mes y no una
-   * fecha. Es un supuesto provisional que desaparece en COPAYNI-106, cuando el círculo guarde su
-   * fecha real de arranque; en cadencia mensual el día del ancla no altera el mes resultante, de
-   * modo que los círculos existentes dan exactamente el mismo cronograma que antes.
+   * Arranca en la fecha real del círculo (COPAYNI-106), de modo que una junta que empieza un
+   * jueves 12 vence los jueves.
    *
-   * Proyectar el turno a su mes es además una operación con pérdida fuera de la cadencia
-   * mensual: cuatro turnos semanales caen en el mismo mes, así que el mes deja de identificar un
-   * turno. Lo que se muestra y lo que vence lo da `TurnSchedule` con fechas reales; estos
-   * getters quedan para quien todavía habla en meses.
+   * Proyectar el turno a su mes es una operación con pérdida fuera de la cadencia mensual:
+   * cuatro turnos semanales caen en el mismo mes, así que el mes deja de identificar un turno.
+   * Lo que se muestra y lo que vence lo da `TurnSchedule` con fechas reales; los getters que
+   * devuelven meses quedan para quien todavía habla en meses.
    */
   private schedule(): TurnSchedule {
-    return new TurnSchedule(LocalDate.of(this.startsOn, 1), this.cadence, this.turns);
+    return new TurnSchedule(this.startsOn, this.cadence, this.turns);
   }
 }

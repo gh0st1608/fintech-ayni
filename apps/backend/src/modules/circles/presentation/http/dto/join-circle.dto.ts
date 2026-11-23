@@ -71,6 +71,14 @@ export class JoinCircleResponse {
   @ApiProperty({ example: '2026-12', description: 'Mes de inicio del círculo' })
   startsOn!: string;
 
+  @ApiProperty({
+    example: '2026-11-01',
+    description:
+      'Fecha real del primer turno (YYYY-MM-DD). En cadencia mensual es el día 1 y coincide ' +
+      'con startsOn; en las demás es el día que toca, y startsOn solo da su mes (COPAYNI-106).',
+  })
+  startsOnDate!: string;
+
   @ApiProperty({ type: MoneyResponse })
   payout!: MoneyResponse;
 
@@ -115,7 +123,8 @@ export class JoinCircleResponse {
   static from({ circleId, terms, quote, created }: JoinCircleResult): JoinCircleResponse {
     return {
       circleId,
-      startsOn: terms.startsOn.toString(),
+      startsOn: terms.startsOnPeriod.toString(),
+      startsOnDate: terms.startsOn.toString(),
       payout: MoneyResponse.from(terms.payout),
       months: terms.months,
       position: quote.position,

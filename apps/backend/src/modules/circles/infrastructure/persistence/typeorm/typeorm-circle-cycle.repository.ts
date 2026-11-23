@@ -158,7 +158,7 @@ export class TypeOrmCircleCycleRepository implements CircleCycleRepositoryPort {
   private async load(manager: EntityManager, circleId: string): Promise<StoredCycle> {
     const [circle] = await manager.query<CircleRow[]>(
       `SELECT payout_amount::text AS payout_amount, currency, months, cycle_state,
-              to_char(starts_on, 'YYYY-MM') AS starts_on,
+              to_char(starts_on, 'YYYY-MM-DD') AS starts_on,
               to_char(current_period, 'YYYY-MM') AS current_period,
               to_char(paused_on, 'YYYY-MM-DD') AS paused_on
          FROM circles WHERE id = $1`,
@@ -198,7 +198,7 @@ export class TypeOrmCircleCycleRepository implements CircleCycleRepositoryPort {
     const terms = CircleTerms.create({
       payout: Money.of(Number(circle.payout_amount), circle.currency),
       months: circle.months,
-      startsOn: Period.parse(circle.starts_on),
+      startsOn: LocalDate.parse(circle.starts_on),
     });
     return {
       circleId,
@@ -242,7 +242,7 @@ export class TypeOrmCircleCycleRepository implements CircleCycleRepositoryPort {
         cycle.state,
         cycle.currentPeriod ? toDate(cycle.currentPeriod) : null,
         cycle.pausedOn?.toString() ?? null,
-        toDate(cycle.terms.startsOn),
+        cycle.terms.startsOn.toString(),
         cycle.terms.payout.amount,
         cycle.terms.months,
       ],

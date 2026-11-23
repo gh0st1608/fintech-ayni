@@ -163,8 +163,8 @@ export class AdvanceCircleCyclesUseCase {
 
   /** Si el primer vencimiento del mes ya pasó, empieza el mes siguiente: nadie paga atrasado. */
   private startReduced(cycle: CircleCycle, approval: StartApproval, today: LocalDate): void {
-    const startsOn = approval.terms.startsOn.isAfter(today.period)
-      ? approval.terms.startsOn
+    const startsOn = approval.terms.startsOnPeriod.isAfter(today.period)
+      ? approval.terms.startsOnPeriod
       : today.period;
     const late = LocalDate.of(startsOn, this.settings.dueDay).isBefore(today);
     const terms = CircleTerms.create({

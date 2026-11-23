@@ -4,7 +4,6 @@ import { DataSource } from 'typeorm';
 
 import { LocalDate } from '../../../../../shared/domain/value-objects/local-date';
 import { Money } from '../../../../../shared/domain/value-objects/money';
-import { Period } from '../../../../../shared/domain/value-objects/period';
 import { NotFoundError } from '../../../../../shared/errors/app-error';
 import { startProposalChanged } from '../../../application/use-cases/start-proposal-errors';
 import { isUuid } from '../../../../../shared/infrastructure/persistence/postgres-errors';
@@ -38,7 +37,7 @@ export class SqlStartProposalsRepository implements CircleStartProposalsPort {
     const rows = await this.dataSource.query<ProposalRow[]>(
       `SELECT c.id AS circle_id, p.round, c.payout_amount::text AS payout_amount, c.currency, c.months,
               p.payout_amount::text AS proposed_payout, p.months AS proposed_months,
-              to_char(c.starts_on, 'YYYY-MM') AS starts_on,
+              to_char(c.starts_on, 'YYYY-MM-DD') AS starts_on,
               to_char(p.respond_by, 'YYYY-MM-DD') AS respond_by, r.decision
          FROM circle_memberships m
          JOIN circles c ON c.id = m.circle_id AND c.cycle_state = 'approving'
@@ -59,7 +58,7 @@ export class SqlStartProposalsRepository implements CircleStartProposalsPort {
     const positions = newPositions(
       members.map((member) => ({ userId: member.user_id, position: member.position })),
     );
-    const startsOn = Period.parse(row.starts_on);
+    const startsOn = LocalDate.parse(row.starts_on);
     return {
       circleId: row.circle_id,
       round: row.round,
