@@ -1,6 +1,6 @@
 import { type LocalDate } from '../../../../shared/domain/value-objects/local-date';
 import { Money } from '../../../../shared/domain/value-objects/money';
-import { CircleTerms, MIN_CIRCLE_MONTHS } from '../value-objects/circle-terms';
+import { CircleTerms, MIN_CIRCLE_TURNS } from '../value-objects/circle-terms';
 
 /** Respuesta de un miembro a la propuesta de reducir el círculo (COPAYNI-62). */
 export const START_DECISIONS = ['accepted', 'withdrawn'] as const;
@@ -27,7 +27,7 @@ export type StartOutcome =
  * ticket): se mantiene la cuota base y baja el pozo. `null` si no alcanzan para un círculo.
  */
 export function reducedTerms(terms: CircleTerms, members: number): CircleTerms | null {
-  if (members < MIN_CIRCLE_MONTHS) return null;
+  if (members < MIN_CIRCLE_TURNS) return null;
   return CircleTerms.create({
     payout: Money.of(terms.baseInstallment.amount * members, terms.currency),
     months: members,
@@ -57,6 +57,6 @@ export function resolveStart(
   if (pending.length > 0 && !approval.respondBy.isBefore(today)) return { status: 'wait' };
   const staying = memberIds.filter((userId) => approval.decisions.get(userId) === 'accepted');
   if (staying.length === memberIds.length) return { status: 'start' };
-  if (staying.length < MIN_CIRCLE_MONTHS) return { status: 'cancel' };
+  if (staying.length < MIN_CIRCLE_TURNS) return { status: 'cancel' };
   return { status: 'reopen', staying };
 }

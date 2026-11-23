@@ -1,7 +1,7 @@
 import { DomainError } from '../../../../shared/errors/app-error';
 import { type ExchangeRates } from '../../../../shared/domain/value-objects/exchange-rates';
 import { Money } from '../../../../shared/domain/value-objects/money';
-import { MIN_CIRCLE_MONTHS } from '../value-objects/circle-terms';
+import { MIN_CIRCLE_TURNS } from '../value-objects/circle-terms';
 import { minorPerUnit, type PayoutRange } from '../value-objects/payout-range';
 
 export class InvalidJoinConfigError extends DomainError {
@@ -42,10 +42,10 @@ export class JoinConfig {
     }
     if (
       durationOptions.length === 0 ||
-      durationOptions.some((months) => !Number.isInteger(months) || months < MIN_CIRCLE_MONTHS)
+      durationOptions.some((months) => !Number.isInteger(months) || months < MIN_CIRCLE_TURNS)
     ) {
       throw new InvalidJoinConfigError(
-        `Las duraciones deben ser enteros de al menos ${MIN_CIRCLE_MONTHS} meses`,
+        `Las duraciones deben ser enteros de al menos ${MIN_CIRCLE_TURNS} turnos`,
       );
     }
     const durations = [...new Set(durationOptions)].sort((a, b) => a - b);

@@ -1,5 +1,5 @@
 import { type Money } from '../../../../shared/domain/value-objects/money';
-import { CircleTerms, MIN_CIRCLE_MONTHS } from '../value-objects/circle-terms';
+import { CircleTerms, MIN_CIRCLE_TURNS } from '../value-objects/circle-terms';
 
 export interface InstallmentOption {
   months: number;
@@ -16,7 +16,7 @@ export function installmentOptions(
   durations: readonly number[],
 ): InstallmentOption[] {
   return [...new Set(durations)]
-    .filter((months) => months >= MIN_CIRCLE_MONTHS && CircleTerms.divides(payout, months))
+    .filter((months) => months >= MIN_CIRCLE_TURNS && CircleTerms.divides(payout, months))
     .sort((a, b) => a - b)
     .map((months) => ({ months, installment: payout.allocate(months)[0]! }));
 }

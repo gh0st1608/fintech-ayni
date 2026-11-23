@@ -41,6 +41,16 @@ const AVISO_PROVISIONAL = [
   'Ver docs/pending-scope.md §3.3 (PG1 a PG5).',
 ].join('\n');
 
+/**
+ * `months` llega del número de turnos del círculo, y este texto lo lee como meses y como
+ * periodicidad de la cuota. Es correcto en cadencia mensual, la única que existía al redactarlo,
+ * y deja de serlo en cuanto la junta es semanal o quincenal: diez turnos semanales no son diez
+ * meses ni diez cuotas mensuales (COPAYNI-105).
+ *
+ * No se corrige aquí a propósito. El contrato y el pagaré son texto provisional pendiente de
+ * redacción legal, y la versión por cadencia es COPAYNI-119: cambiar la prosa antes de esa
+ * revisión daría un documento igual de inexacto, pero con apariencia de aprobado.
+ */
 const contractText = (data: AgreementData): string =>
   [
     "CONTRATO DE PARTICIPACIÓN EN CÍRCULO DE AHORRO (GAME'YA)",
