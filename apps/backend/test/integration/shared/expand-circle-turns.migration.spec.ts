@@ -40,9 +40,12 @@ describe('Migración de expansión de turnos (COPAYNI-107)', () => {
   const expand = (): Promise<void> => migration.up(runner);
 
   beforeAll(async () => {
-    dataSource = new DataSource(dataSourceOptions(validateEnvironment({ ...TEST_ENV })));
+    const options = dataSourceOptions(validateEnvironment({ ...TEST_ENV }));
+    // Pool de una sola conexión: este archivo trabaja entero sobre el runner, y la corrida
+    // completa abre muchas a la vez contra el mismo PostgreSQL. No reservar las que no se usan.
+    dataSource = new DataSource({ ...options, extra: { ...options.extra, max: 1 } });
     await dataSource.initialize();
-    // Una sola conexión: `search_path` es ajuste de sesión y no vale para otra del pool.
+    // `search_path` es ajuste de sesión: no vale para otra conexión del pool.
     runner = dataSource.createQueryRunner();
     await runner.connect();
     await runner.query(`CREATE SCHEMA "${schema}"`);
