@@ -107,13 +107,25 @@ export const catchUpTotal = (quote: Pick<SlotQuote, 'catchUp' | 'netPayout'>): M
 export class SlotPricing {
   constructor(private readonly rules: SlotPricingRules) {}
 
-  /** Cuántos slots son Fastest Payout y cuántos Highest Return para `months` slots. */
+  /**
+   * Cuántos slots son Fastest Payout y cuántos Highest Return para `months` slots.
+   *
+   * Un grupo con proporción configurada mayor que cero recibe **al menos un slot** (COPAYNI-124).
+   * El reparto proporcional a secas dejaba los dos grupos en cero con 2 o 3 slots, y entonces
+   * todos los slots eran Lowest Fees, el único tipo que exige ingreso declarado: la junta quedaba
+   * inconstruible para una cuenta nueva. Una proporción de cero sí se respeta, porque significa
+   * que no se quiere ese tipo de slot.
+   *
+   * Cuando los dos grupos no caben, cede el rápido: es el que exige confianza previa, así que
+   * conservar el de retorno es lo que mantiene la junta abierta a cuentas nuevas.
+   */
   tiers(months: number): { fastest: number; highest: number } {
     const { fastestShareBps, highestShareBps } = this.rules.props;
-    return {
-      fastest: Math.floor((months * fastestShareBps) / 10_000),
-      highest: Math.floor((months * highestShareBps) / 10_000),
-    };
+    const share = (bps: number): number =>
+      bps > 0 ? Math.max(1, Math.floor((months * bps) / 10_000)) : 0;
+
+    const highest = Math.min(share(highestShareBps), months);
+    return { fastest: Math.min(share(fastestShareBps), months - highest), highest };
   }
 
   typeOf(position: number, months: number): SlotType {
