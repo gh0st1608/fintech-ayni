@@ -6,6 +6,7 @@ import { CLOCK, type ClockPort } from '../../../../shared/application/ports/cloc
 import { LocalDate } from '../../../../shared/domain/value-objects/local-date';
 import { CircleCycle, type PeriodClose } from '../../domain/entities/circle-cycle';
 import { type SlotPricing } from '../../domain/services/slot-pricing';
+import { TurnSchedule } from '../../domain/services/turn-schedule';
 import {
   newPositions,
   reducedTerms,
@@ -161,16 +162,31 @@ export class AdvanceCircleCyclesUseCase {
     return true;
   }
 
-  /** Si el primer vencimiento del mes ya pasó, empieza el mes siguiente: nadie paga atrasado. */
+  /**
+   * Si el primer vencimiento ya pasó, el círculo arranca un turno después: nadie paga atrasado.
+   *
+   * El retraso se mide contra el vencimiento real del primer turno, que da el cronograma
+   * (COPAYNI-126): en cadencia mensual es el día de cobro del mes, como siempre, y en una semanal
+   * es el día en que arranca. Antes se medía contra el día de cobro del mes, que fuera de la
+   * cadencia mensual no corresponde a ningún turno.
+   */
   private startReduced(cycle: CircleCycle, approval: StartApproval, today: LocalDate): void {
-    const startsOn = approval.terms.startsOnPeriod.isAfter(today.period)
-      ? approval.terms.startsOnPeriod
-      : today.period;
-    const late = LocalDate.of(startsOn, this.settings.dueDay).isBefore(today);
+    const { cadence, turns, payout } = approval.terms;
+    // Una fecha de arranque que ya pasó no vale: la junta arranca desde el presente. En cadencia
+    // mensual, desde el día 1 del mes en curso, que es el día en que arrancan los mensuales.
+    const floor = cadence.isMonthly() ? LocalDate.of(today.period, 1) : today;
+    const startsOn = approval.terms.startsOn.isBefore(floor) ? floor : approval.terms.startsOn;
+    const firstDue = TurnSchedule.forCollection({
+      startsOn,
+      cadence,
+      turns,
+      dueDay: this.settings.dueDay,
+    }).dueOn(1);
     const terms = CircleTerms.create({
-      payout: approval.terms.payout,
-      months: approval.terms.months,
-      startsOn: late ? startsOn.addMonths(1) : startsOn,
+      payout,
+      turns,
+      cadence,
+      startsOn: firstDue.isBefore(today) ? cadence.advance(startsOn, 1) : startsOn,
     });
     const positions = newPositions(cycle.members);
     const members = cycle.members.map((member) => {
@@ -248,6 +264,8 @@ export class AdvanceCircleCyclesUseCase {
       }
       if (!cycle.isPeriodSettled(today)) break;
 
+      // Los eventos siguen nombrando el mes, que es el contrato que ya consume el back-office.
+      // Nombrar el turno en los logs es un cambio de ese contrato y va por su cuenta.
       const period = cycle.currentPeriod!.toString();
       const disbursement = cycle.closePeriod(today, randomUUID);
       if (disbursement) {

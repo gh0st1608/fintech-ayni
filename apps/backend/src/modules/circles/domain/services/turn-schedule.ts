@@ -1,5 +1,5 @@
 import { DomainError } from '../../../../shared/errors/app-error';
-import { type LocalDate } from '../../../../shared/domain/value-objects/local-date';
+import { LocalDate } from '../../../../shared/domain/value-objects/local-date';
 import { type Cadence } from '../value-objects/cadence';
 
 export class InvalidTurnError extends DomainError {
@@ -36,6 +36,37 @@ export class TurnSchedule {
     if (!Number.isInteger(turns) || turns < 1) {
       throw new InvalidTurnError('Una junta tiene al menos un turno');
     }
+  }
+
+  /**
+   * Cronograma de cobro de una junta en curso, que es el que usa el motor de ciclo.
+   *
+   * Se diferencia del cronograma a secas en una cosa: **en cadencia mensual la cuota vence el día
+   * del mes que fija la política** (`dueDay`, pending-scope R19), no el día en que arrancó la
+   * junta. Esa regla es la que rige hoy a todos los círculos y no se puede perder; fuera de la
+   * cadencia mensual no significa nada, porque un turno semanal no tiene «día del mes», y
+   * entonces el turno vence el día que le toca por calendario.
+   *
+   * Si el día de cobro del mes de arranque ya pasó cuando la junta empieza, el primer
+   * vencimiento es el del mes siguiente: una cuota no nace vencida. Con los círculos que existen
+   * hoy no ocurre, porque todos arrancan el día 1 y el día de cobro es posterior.
+   */
+  static forCollection(props: {
+    startsOn: LocalDate;
+    cadence: Cadence;
+    turns: number;
+    dueDay: number;
+  }): TurnSchedule {
+    const { startsOn, cadence, turns, dueDay } = props;
+    if (!cadence.isMonthly()) return new TurnSchedule(startsOn, cadence, turns);
+    // Un día que no existe en el mes se cobra el último: el 31 de cada mes es el 28 en febrero.
+    const day = Math.min(dueDay, LocalDate.lastDayOf(startsOn.period));
+    const first = LocalDate.of(startsOn.period, day);
+    return new TurnSchedule(
+      first.isBefore(startsOn) ? cadence.advance(first, 1) : first,
+      cadence,
+      turns,
+    );
   }
 
   /** Día en que vence la cuota del turno `turn`. */

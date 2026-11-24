@@ -78,6 +78,19 @@ export class Cadence {
     return LocalDate.of(target, Math.min(from.day, LocalDate.lastDayOf(target)));
   }
 
+  /**
+   * Pasos enteros de esta cadencia que separan `from` de `to`, negativos si `to` es anterior.
+   *
+   * Es lo que necesita quien corre el cronograma por haber estado detenido (la pausa del ciclo,
+   * COPAYNI-61). Cuenta en la unidad de la cadencia, y no en días para todas, porque un paso
+   * calendario no mide días: de noviembre a diciembre hay un paso aunque medien cuatro días, y
+   * así se contaba la pausa cuando la única cadencia era la mensual.
+   */
+  stepsBetween(from: LocalDate, to: LocalDate): number {
+    if (this.stepDays !== null) return Math.trunc(from.daysUntil(to) / this.stepDays);
+    return Math.trunc(from.period.monthsUntil(to.period) / this.stepMonths!);
+  }
+
   /** Cuántos turnos abarca un año, para dimensionar riesgo y carga operativa. */
   turnsPerYear(): number {
     return this.stepDays !== null ? Math.floor(365 / this.stepDays) : 12 / this.stepMonths!;
