@@ -78,6 +78,9 @@ describe('GET /v1/circles/recommended', () => {
         payout: { amount: expect.any(Number), currency },
         months: expect.any(Number),
         startsOn: expect.stringMatching(/^\d{4}-\d{2}$/),
+        // En cadencia mensual la fecha real del primer turno es el día 1 de ese mes
+        // (COPAYNI-106). El campo existe para las cadencias en que mes y turno no coinciden.
+        startsOnDate: expect.stringMatching(/^\d{4}-\d{2}-01$/),
         endsOn: expect.stringMatching(/^\d{4}-\d{2}$/),
         baseInstallment: { amount: expect.any(Number), currency },
         adminFee: { amount: expect.any(Number), currency },
