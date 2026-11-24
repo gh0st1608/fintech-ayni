@@ -154,6 +154,17 @@ describe('CircleTerms con turnos y cadencia (COPAYNI-105)', () => {
     }
   });
 
+  it('la divisibilidad depende del número de turnos, no de la cadencia (COPAYNI-113)', () => {
+    // La regla es `payout % turnos === 0`, sin consultar la cadencia: el mismo monto y los
+    // mismos turnos dan la misma respuesta en las tres.
+    for (const cadence of Cadence.all()) {
+      expect(() => terms({ payout: pen(1_200_000), turns: 7, cadence, startsOn: nov })).toThrow(
+        expect.objectContaining({ code: 'INVALID_CIRCLE_TERMS' }),
+      );
+      expect(terms({ payout: pen(1_200_000), turns: 8, cadence, startsOn: nov }).turns).toBe(8);
+    }
+  });
+
   it('rechaza menos turnos que el mínimo, y falta de turnos', () => {
     expect(MIN_CIRCLE_TURNS).toBe(2);
 

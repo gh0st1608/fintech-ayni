@@ -14,9 +14,6 @@ export class InvalidCircleTermsError extends DomainError {
 /** Un círculo necesita al menos dos miembros para que haya a quién pagarle cada turno. */
 export const MIN_CIRCLE_TURNS = 2;
 
-/** @deprecated Usar `MIN_CIRCLE_TURNS`: el mínimo es de turnos, no de meses. */
-export const MIN_CIRCLE_MONTHS = MIN_CIRCLE_TURNS;
-
 /**
  * Condiciones de un Game'ya: cada turno se paga `payout` a un miembro, durante `turns` turnos
  * desde la fecha `startsOn`, con la frecuencia que indique `cadence`. Hay tantos miembros como turnos

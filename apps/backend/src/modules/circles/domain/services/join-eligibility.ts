@@ -1,6 +1,7 @@
 import { type ExchangeRates } from '../../../../shared/domain/value-objects/exchange-rates';
 import { type Money } from '../../../../shared/domain/value-objects/money';
 import { DomainError } from '../../../../shared/errors/app-error';
+import { monthOverLimit, type MonthlyPayIn } from './monthly-pay-in';
 
 export class NationalIdRequiredError extends DomainError {
   constructor() {
@@ -9,8 +10,19 @@ export class NationalIdRequiredError extends DomainError {
 }
 
 export class MonthlyLimitExceededError extends DomainError {
-  constructor() {
-    super('MONTHLY_LIMIT_EXCEEDED', 'Las cuotas de ese slot superan tu límite mensual de pay-in');
+  /** Nombra el mes y lo que se pasa: sin eso, la persona no sabe qué ajustar (COPAYNI-110). */
+  constructor(month: string, total: Money, excess: Money) {
+    super(
+      'MONTHLY_LIMIT_EXCEEDED',
+      `Tus cuotas de ${month} suman ${total.amount} ${total.currency} y superan tu límite ` +
+        `mensual de pay-in en ${excess.amount} ${excess.currency}`,
+      {
+        month,
+        total: String(total.amount),
+        excess: String(excess.amount),
+        currency: excess.currency,
+      },
+    );
   }
 }
 
@@ -62,18 +74,22 @@ export function applicantIn(
  * Requisitos visibles en el diseño para unirse a un Game'ya (COPAYNI-31), en el orden en que la
  * app los resuelve: National ID, límite mensual y método de cobro.
  *
- * Supuesto provisional (pending-scope R5): el límite se compara con cada cuota del slot elegido,
- * sin sumar las de otros círculos del usuario.
+ * `payIn` es lo que la persona pagaría **cada mes calendario** contando este slot y los círculos
+ * en los que ya participa, todo en la moneda del límite. El límite es mensual, así que se compara
+ * contra la suma del mes (COPAYNI-110): antes se comparaba contra cada cuota por separado, que
+ * coincidía solo porque había una cuota por mes, y en una junta semanal habría dejado
+ * comprometerse por cuatro o cinco veces el límite declarado.
  */
 export function assertCanJoin(
   applicant: JoinApplicant,
   payout: Money,
-  installments: readonly Money[],
+  payIn: readonly MonthlyPayIn[],
 ): void {
   if (!applicant.identityVerified) throw new NationalIdRequiredError();
   const limit = applicant.monthlyPayInLimit;
-  if (limit && installments.some((installment) => installment.subtract(limit).isPositive())) {
-    throw new MonthlyLimitExceededError();
+  const over = limit && monthOverLimit(payIn, limit);
+  if (over) {
+    throw new MonthlyLimitExceededError(over.period.toString(), over.total, over.excess);
   }
   const method = applicant.payoutMethod;
   if (!method) throw new PayoutMethodRequiredError();
