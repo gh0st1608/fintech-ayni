@@ -16,6 +16,7 @@ import {
   type NotificationType,
 } from '../domain/notification';
 import { pushLanguageOf } from '../domain/push-message';
+import { turnDateSql } from '../../circles/infrastructure/persistence/typeorm/turn-date.sql';
 
 /**
  * Cada fuente es un `SELECT` de (user_id, type, category, data, dedupe_key, occurred_at) sobre los
@@ -54,18 +55,22 @@ const SOURCES: readonly string[] = [
           'failed:' || i.id, (i.due_on + 1)::timestamp AT TIME ZONE 'UTC'
      FROM circle_installments i
     WHERE i.status IN ('overdue', 'defaulted') AND ${ME('i.user_id')}`,
-  // Turno de cobro: el mes en que le toca el pozo, y el pozo entregado.
+  // Turno de cobro: cuándo le toca el pozo, y el pozo entregado. El día del turno lo da la
+  // cadencia de la junta (COPAYNI-120): sumar meses a la posición solo acierta en la mensual, y
+  // en una semanal habría avisado a tres de cada cuatro miembros en el mes equivocado. El aviso
+  // sigue hablando en meses, que es lo que el cliente muestra hoy; adaptar los textos y el
+  // momento a cada cadencia es el resto de COPAYNI-120.
   `SELECT m.user_id, 'payout_turn', 'payments',
           jsonb_build_object('circleId', c.id, 'amount', ${MONEY('c.payout_amount', 'c.currency')},
-                             'period', to_char(t.period, 'YYYY-MM')),
-          'payout_turn:' || c.id || ':' || to_char(t.period, 'YYYY-MM'),
-          t.period::timestamp AT TIME ZONE 'UTC'
+                             'period', to_char(t.turn_on, 'YYYY-MM')),
+          'payout_turn:' || c.id || ':' || to_char(t.turn_on, 'YYYY-MM'),
+          t.turn_on::timestamp AT TIME ZONE 'UTC'
      FROM circle_memberships m
      JOIN circles c ON c.id = m.circle_id
-     CROSS JOIN LATERAL (SELECT (c.starts_on + make_interval(months => m.position - 1))::date
-                           AS period) t
+     CROSS JOIN LATERAL (SELECT ${turnDateSql('c', 'm.position')} AS turn_on) t
     WHERE c.cycle_state IN ('contributing', 'paused') AND m.expelled_at IS NULL
-      AND date_trunc('month', $2::date) = t.period AND ${ME('m.user_id')}`,
+      AND date_trunc('month', $2::date) = date_trunc('month', t.turn_on)
+      AND ${ME('m.user_id')}`,
   `SELECT p.user_id, 'payout_disbursed', 'payments',
           jsonb_build_object('circleId', p.circle_id, 'amount', ${MONEY('p.amount', 'p.currency')},
                              'period', to_char(p.period, 'YYYY-MM')),

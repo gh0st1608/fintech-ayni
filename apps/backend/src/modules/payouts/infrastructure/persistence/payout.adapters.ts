@@ -8,6 +8,7 @@ import {
   type PayoutSchedulePort,
 } from '../../application/ports/payout.ports';
 import { type PayoutMethodType } from '../../domain/payout-method';
+import { turnMonthSql } from '../../../circles/infrastructure/persistence/typeorm/turn-date.sql';
 
 /** Método elegido por usuario, en `user_payout_methods`. */
 @Injectable()
@@ -32,8 +33,10 @@ export class SqlPayoutMethodRepository implements PayoutMethodRepositoryPort {
 }
 
 /**
- * Meses de cobro del usuario: lectura sobre las tablas de círculos (mes de inicio + posición - 1).
- * Es una consulta de solo lectura; las escrituras de círculos siguen en su módulo.
+ * Meses de cobro del usuario: lectura sobre las tablas de círculos. El día del turno lo da la
+ * cadencia de cada junta (`turnDateSql`, COPAYNI-120); sumar meses a la posición solo acierta en
+ * cadencia mensual, y de este dato depende que no se pueda cambiar la cuenta de cobro en el mes
+ * en que se cobra. Es una consulta de solo lectura; las escrituras de círculos siguen en su módulo.
  */
 @Injectable()
 export class SqlPayoutSchedule implements PayoutSchedulePort {
@@ -41,7 +44,7 @@ export class SqlPayoutSchedule implements PayoutSchedulePort {
 
   async payoutPeriodsOf(userId: string): Promise<Period[]> {
     const rows = await this.dataSource.query<{ period: string }[]>(
-      `SELECT to_char(c.starts_on + make_interval(months => m.position - 1), 'YYYY-MM') AS period
+      `SELECT to_char(${turnMonthSql('c', 'm.position')}, 'YYYY-MM') AS period
          FROM circle_memberships m
          JOIN circles c ON c.id = m.circle_id
         WHERE m.user_id::text = $1`,
