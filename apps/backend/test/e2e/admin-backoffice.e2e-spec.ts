@@ -46,7 +46,7 @@ describe('API del back-office', () => {
       [userId, `juana.${userId}@mail.com`, phone],
     );
     await database.query(
-      `INSERT INTO circles (id, payout_amount, currency, months, starts_on, cycle_state)
+      `INSERT INTO circles (id, payout_amount, currency, turns, starts_on, cycle_state)
        VALUES ($1, 600000, 'PEN', 6, '2026-12-01', $2)`,
       [circleId, state],
     );
@@ -78,13 +78,17 @@ describe('API del back-office', () => {
     await request(app.getHttpServer()).get('/admin/v1/me').expect(401);
   });
 
+  // Los archivos de e2e comparten la base, y el listado es global y ordenado del más nuevo al más
+  // antiguo: la paginación se prueba sobre un estado que ningún otro archivo escribe, porque si
+  // otro crea un círculo del mismo estado mientras corre este caso, el primero de la página es el
+  // suyo. Antes era `approving`, que también crea el archivo de propuestas de inicio.
   it('lista por estado con paginación por cursor', async () => {
-    const ids = [await circleWithMember('approving'), await circleWithMember('approving')];
+    const ids = [await circleWithMember('cancelled'), await circleWithMember('cancelled')];
     const token = await session(['support']);
-    const first = await get('/admin/v1/circles?state=approving&limit=1', token).expect(200);
+    const first = await get('/admin/v1/circles?state=cancelled&limit=1', token).expect(200);
     expect(first.body.data.items).toHaveLength(1);
     expect(first.body.data.items[0]).toMatchObject({
-      state: 'approving',
+      state: 'cancelled',
       payout: { amount: 600000, currency: 'PEN' },
       months: 6,
       startsOn: '2026-12',
@@ -92,7 +96,7 @@ describe('API del back-office', () => {
     });
     const cursor = first.body.data.nextCursor as string;
     expect(cursor).toEqual(expect.any(String));
-    const second = await get(`/admin/v1/circles?state=approving&limit=1&cursor=${cursor}`, token);
+    const second = await get(`/admin/v1/circles?state=cancelled&limit=1&cursor=${cursor}`, token);
     const seen = [first.body.data.items[0].circleId, second.body.data.items[0].circleId];
     expect(seen[0]).not.toBe(seen[1]);
     // Del más nuevo al más antiguo: las dos recién creadas son las primeras.

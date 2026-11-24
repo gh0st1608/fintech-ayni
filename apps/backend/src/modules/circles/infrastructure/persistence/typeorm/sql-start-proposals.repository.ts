@@ -35,7 +35,8 @@ export class SqlStartProposalsRepository implements CircleStartProposalsPort {
   async listFor(userId: string): Promise<MemberStartProposal[]> {
     if (!isUuid(userId)) return [];
     const rows = await this.dataSource.query<ProposalRow[]>(
-      `SELECT c.id AS circle_id, p.round, c.payout_amount::text AS payout_amount, c.currency, c.months,
+      `SELECT c.id AS circle_id, p.round, c.payout_amount::text AS payout_amount, c.currency,
+              c.turns AS months,
               p.payout_amount::text AS proposed_payout, p.months AS proposed_months,
               to_char(c.starts_on, 'YYYY-MM-DD') AS starts_on,
               to_char(p.respond_by, 'YYYY-MM-DD') AS respond_by, r.decision

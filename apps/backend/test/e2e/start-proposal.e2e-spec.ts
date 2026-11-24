@@ -45,7 +45,7 @@ describe('/v1/me/circles/.../start-proposal', () => {
     const id = randomUUID();
     const database = app.get(DataSource);
     await database.query(
-      `INSERT INTO circles (id, payout_amount, currency, months, starts_on, cycle_state)
+      `INSERT INTO circles (id, payout_amount, currency, turns, starts_on, cycle_state)
        VALUES ($1, 600000, 'PEN', 6, '2026-11-01', 'approving')`,
       [id],
     );

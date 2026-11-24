@@ -42,7 +42,7 @@ describe('API del back-office: finanzas', () => {
       [userId, `lucia.${userId.slice(0, 8)}@mail.com`],
     );
     await database.query(
-      `INSERT INTO circles (id, payout_amount, currency, months, starts_on, cycle_state)
+      `INSERT INTO circles (id, payout_amount, currency, turns, starts_on, cycle_state)
        VALUES ($1, 600000, 'PEN', 6, $2::date, 'contributing')`,
       [circleId, `${PERIOD}-01`],
     );
@@ -53,16 +53,16 @@ describe('API del back-office: finanzas', () => {
       [3, 'pending'],
     ] as const) {
       await database.query(
-        `INSERT INTO circle_installments (id, circle_id, user_id, position, period, due_on, amount,
-                                          currency, status, paid_at)
-         VALUES ($1, $2, $3, $4, $5::date, $5::date, 100000, 'PEN', $6::varchar,
+        `INSERT INTO circle_installments (id, circle_id, user_id, position, turn, period, due_on,
+                                          amount, currency, status, paid_at)
+         VALUES ($1, $2, $3, $4, 1, $5::date, $5::date, 100000, 'PEN', $6::varchar,
                  CASE WHEN $6::varchar = 'paid' THEN now() END)`,
         [randomUUID(), circleId, userId, position, `${PERIOD}-01`, status],
       );
     }
     await database.query(
-      `INSERT INTO circle_payouts (circle_id, period, user_id, position, amount, currency)
-       VALUES ($1, $2::date, $3, 1, 600000, 'PEN')`,
+      `INSERT INTO circle_payouts (circle_id, turn, period, user_id, position, amount, currency)
+       VALUES ($1, 1, $2::date, $3, 1, 600000, 'PEN')`,
       [circleId, `${PERIOD}-01`, userId],
     );
     // Capital semilla: la transacción y sus dos asientos, que deben cuadrar al confirmar.

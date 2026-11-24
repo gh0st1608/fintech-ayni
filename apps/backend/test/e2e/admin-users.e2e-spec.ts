@@ -56,7 +56,7 @@ describe('API del back-office: personas', () => {
       [userId],
     );
     await database.query(
-      `INSERT INTO circles (id, payout_amount, currency, months, starts_on, cycle_state)
+      `INSERT INTO circles (id, payout_amount, currency, turns, starts_on, cycle_state)
        VALUES ($1, 600000, 'PEN', 6, '2026-12-01', 'collecting')`,
       [circleId],
     );

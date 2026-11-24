@@ -17,12 +17,20 @@ interface CircleTurnRow {
 /**
  * La migración de expansión del turno (COPAYNI-107) contra PostgreSQL real.
  *
- * Se prueba en un **esquema propio**, construido aquí con la cadena completa de migraciones, y no
- * en el `public` que comparte el resto de la suite. La razón es que para probar un backfill hay
+ * Se prueba en un **esquema propio**, construido aquí con la cadena de migraciones **hasta la
+ * expansión incluida**, y no en el `public` que comparte el resto de la suite. La cadena se corta
+ * ahí porque es el estado en que esta migración se aplica de verdad; aplicando la cadena entera,
+ * lo que se probaría es la expansión sobre un esquema ya contraído (COPAYNI-109), que no existe. La razón es que para probar un backfill hay
  * que volver al esquema anterior, sembrar datos mensuales y volver a expandir, y eso toma
  * candados exclusivos sobre `circles`: hacerlo en el esquema compartido bloquearía a los demás
  * archivos, que corren en paralelo. Aislado no estorba a nadie, y además prueba la cadena entera.
  */
+/** La cadena hasta la expansión, que es el esquema sobre el que esta migración se aplica. */
+const CHAIN_UP_TO_EXPANSION = MIGRATIONS.slice(
+  0,
+  MIGRATIONS.indexOf(ExpandCircleTurns1764936000000) + 1,
+);
+
 describe('Migración de expansión de turnos (COPAYNI-107)', () => {
   const schema = `mig_turnos_${randomUUID().replaceAll('-', '').slice(0, 12)}`;
   const migration = new ExpandCircleTurns1764936000000();
@@ -50,7 +58,7 @@ describe('Migración de expansión de turnos (COPAYNI-107)', () => {
     await runner.connect();
     await runner.query(`CREATE SCHEMA "${schema}"`);
     await runner.query(`SET search_path TO "${schema}"`);
-    for (const Migration of MIGRATIONS) await new Migration().up(runner);
+    for (const Migration of CHAIN_UP_TO_EXPANSION) await new Migration().up(runner);
   }, 120_000);
 
   afterAll(async () => {

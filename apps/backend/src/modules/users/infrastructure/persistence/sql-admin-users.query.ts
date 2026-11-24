@@ -90,7 +90,7 @@ export class SqlAdminUsersQuery implements AdminUsersQueryPort {
       }[]
     >(
       `SELECT c.id AS circle_id, c.cycle_state, c.payout_amount::text AS payout_amount, c.currency,
-              c.months, m.position, m.created_at, m.expelled_at
+              c.turns AS months, m.position, m.created_at, m.expelled_at
          FROM circle_memberships m JOIN circles c ON c.id = m.circle_id
         WHERE m.user_id = $1
         ORDER BY m.created_at DESC, c.id`,

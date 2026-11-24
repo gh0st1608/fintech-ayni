@@ -60,7 +60,7 @@ describe('Comprobante de un movimiento', () => {
     const installmentId = randomUUID();
     const payoutId = randomUUID();
     await database.query(
-      `INSERT INTO circles (id, payout_amount, currency, months, starts_on, cycle_state)
+      `INSERT INTO circles (id, payout_amount, currency, turns, starts_on, cycle_state)
        VALUES ($1, 600000, 'PEN', 6, '2026-11-01', 'contributing')`,
       [circleId],
     );
@@ -71,8 +71,9 @@ describe('Comprobante de un movimiento', () => {
     );
     await database.query(
       `INSERT INTO circle_installments
-         (id, circle_id, user_id, position, period, due_on, amount, currency, status, paid_at)
-       VALUES ($1, $2, $3, 1, '2026-11-01', '2026-11-01', 100000, 'PEN', 'paid',
+         (id, circle_id, user_id, position, turn, period, due_on, amount, currency, status,
+          paid_at)
+       VALUES ($1, $2, $3, 1, 1, '2026-11-01', '2026-11-01', 100000, 'PEN', 'paid',
                '2026-11-01T15:00:00Z')`,
       [installmentId, circleId, userId],
     );
@@ -88,9 +89,9 @@ describe('Comprobante de un movimiento', () => {
       [randomUUID(), userId],
     );
     await database.query(
-      `INSERT INTO circle_payouts (id, circle_id, period, user_id, position, amount, currency,
+      `INSERT INTO circle_payouts (id, circle_id, turn, period, user_id, position, amount, currency,
          disbursed_at)
-       VALUES ($1, $2, '2026-11-01', $3, 1, 580000, 'PEN', '2026-11-20T15:00:00Z')`,
+       VALUES ($1, $2, 1, '2026-11-01', $3, 1, 580000, 'PEN', '2026-11-20T15:00:00Z')`,
       [payoutId, circleId, userId],
     );
     return { installmentId, payoutId };

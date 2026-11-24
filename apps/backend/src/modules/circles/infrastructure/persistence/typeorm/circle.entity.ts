@@ -20,10 +20,11 @@ export class CircleEntity {
   @Column('char', { length: 3 })
   currency!: string;
 
+  /** Número de turnos, y por tanto de puestos. Se llamaba `months` (COPAYNI-109). */
   @Column('smallint')
-  months!: number;
+  turns!: number;
 
-  /** Primer día del mes de inicio (`YYYY-MM-01`). */
+  /** Fecha real de arranque; día 1 del mes en cadencia mensual (COPAYNI-106). */
   @Column('date', { name: 'starts_on' })
   startsOn!: string;
 

@@ -81,7 +81,7 @@ describe('Referidos', () => {
     const db = app.get(DataSource);
     const circleId = randomUUID();
     await db.query(
-      `INSERT INTO circles (id, payout_amount, currency, months, starts_on)
+      `INSERT INTO circles (id, payout_amount, currency, turns, starts_on)
        VALUES ($1, 600000, 'PEN', 6, '2040-01-01')`,
       [circleId],
     );
@@ -120,7 +120,7 @@ describe('Referidos', () => {
     const db = app.get(DataSource);
     const circleId = randomUUID();
     await db.query(
-      `INSERT INTO circles (id, payout_amount, currency, months, starts_on, cycle_state, current_period)
+      `INSERT INTO circles (id, payout_amount, currency, turns, starts_on, cycle_state, current_period)
        VALUES ($1, 600000, 'PEN', 6, '2026-11-01', 'contributing', '2026-11-01')`,
       [circleId],
     );
@@ -130,8 +130,9 @@ describe('Referidos', () => {
       [randomUUID(), circleId, first.userId],
     );
     await db.query(
-      `INSERT INTO circle_installments (id, circle_id, user_id, position, period, due_on, amount, currency, status, paid_at)
-       VALUES ($1, $2, $3, 1, '2026-11-01', '2026-11-05', 100000, 'PEN', 'paid', now())`,
+      `INSERT INTO circle_installments (id, circle_id, user_id, position, turn, period, due_on,
+         amount, currency, status, paid_at)
+       VALUES ($1, $2, $3, 1, 1, '2026-11-01', '2026-11-05', 100000, 'PEN', 'paid', now())`,
       [randomUUID(), circleId, first.userId],
     );
 

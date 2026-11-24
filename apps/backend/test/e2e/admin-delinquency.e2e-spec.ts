@@ -55,7 +55,7 @@ describe('API del back-office: mora', () => {
       );
     }
     await database.query(
-      `INSERT INTO circles (id, payout_amount, currency, months, starts_on, cycle_state)
+      `INSERT INTO circles (id, payout_amount, currency, turns, starts_on, cycle_state)
        VALUES ($1, 600000, 'PEN', 6, '2026-11-01', 'contributing')`,
       [circleId],
     );
@@ -66,9 +66,10 @@ describe('API del back-office: mora', () => {
     );
     const installmentId = randomUUID();
     await database.query(
-      `INSERT INTO circle_installments (id, circle_id, user_id, position, period, due_on, amount,
-         currency, status)
-       VALUES ($1, $2, $3, 1, date_trunc('month', $4::date), $4::date, 100000, 'PEN', 'overdue')`,
+      `INSERT INTO circle_installments (id, circle_id, user_id, position, turn, period, due_on,
+         amount, currency, status)
+       VALUES ($1, $2, $3, 1, 1, date_trunc('month', $4::date), $4::date, 100000, 'PEN',
+               'overdue')`,
       [installmentId, circleId, rosa, day(-1)],
     );
     const expulsionId = randomUUID();
