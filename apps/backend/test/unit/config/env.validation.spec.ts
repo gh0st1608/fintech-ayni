@@ -141,6 +141,35 @@ describe('validateEnvironment', () => {
       );
     });
   });
+  describe('CIRCLE_CADENCES_ENABLED (COPAYNI-121)', () => {
+    it('por defecto solo habilita la mensual, que es como se comportaba antes de la épica', () => {
+      expect(validateEnvironment(REQUIRED).CIRCLE_CADENCES_ENABLED).toEqual(['monthly']);
+    });
+
+    it('habilita las que se indiquen, y solo esas', () => {
+      expect(
+        validateEnvironment({ ...REQUIRED, CIRCLE_CADENCES_ENABLED: 'monthly, weekly' })
+          .CIRCLE_CADENCES_ENABLED,
+      ).toEqual(['monthly', 'weekly']);
+    });
+
+    it('no arranca si se deshabilita la mensual: es la de todos los círculos que existen', () => {
+      expect(() =>
+        validateEnvironment({ ...REQUIRED, CIRCLE_CADENCES_ENABLED: 'weekly,biweekly' }),
+      ).toThrow(/CIRCLE_CADENCES_ENABLED: monthly no se puede deshabilitar/);
+    });
+
+    it.each([
+      ['desconocida', 'monthly,diaria'],
+      ['vacía', ''],
+      ['con repetidos', 'monthly,monthly'],
+    ])('no arranca con una lista %s en lugar de ignorarla', (_case, value) => {
+      expect(() => validateEnvironment({ ...REQUIRED, CIRCLE_CADENCES_ENABLED: value })).toThrow(
+        /CIRCLE_CADENCES_ENABLED/,
+      );
+    });
+  });
+
   describe('base de datos', () => {
     it('aplica los valores por defecto de puerto, TLS y pool', () => {
       expect(validateEnvironment({ ...REQUIRED })).toMatchObject({

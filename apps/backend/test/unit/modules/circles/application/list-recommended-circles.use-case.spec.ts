@@ -5,6 +5,7 @@ import { Money } from '@src/shared/domain/value-objects/money';
 import { Period } from '@src/shared/domain/value-objects/period';
 import { TestClock } from '@test/support/create-test-app';
 import { InMemoryCircleRepository } from '@test/support/in-memory-circle.repository';
+import { Cadence } from '@src/modules/circles/domain/value-objects/cadence';
 import {
   joinConfigsFor,
   TEST_CURRENCIES,
@@ -23,7 +24,12 @@ function setup(limit = 5, currencies = TEST_CURRENCIES) {
     joinConfigsFor(currencies),
     circles,
     TEST_PRICING,
-    { strategy: 'fill_oldest', startOffsetMonths: 1, timeZone: 'America/Lima' },
+    {
+      strategy: 'fill_oldest',
+      cadences: [Cadence.monthly],
+      startOffsetMonths: 1,
+      timeZone: 'America/Lima',
+    },
     { limit },
     { dueDay: 5 },
     currencies,

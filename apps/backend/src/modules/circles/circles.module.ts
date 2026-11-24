@@ -127,6 +127,7 @@ import {
   RECOMMENDATIONS,
   type RecommendationSettings,
 } from './application/use-cases/list-recommended-circles.use-case';
+import { Cadence } from './domain/value-objects/cadence';
 import { SlotPricing } from './domain/services/slot-pricing';
 import { SlotPricingRules } from './domain/value-objects/slot-pricing-rules';
 import { AgreementsModule } from '../agreements/agreements.module';
@@ -367,6 +368,9 @@ import { MyCirclesController } from './presentation/http/controllers/my-circles.
       inject: [ConfigService],
       useFactory: (config: AppConfigService): CircleAssignmentSettings => ({
         strategy: config.get('CIRCLE_ASSIGNMENT_STRATEGY', { infer: true }),
+        cadences: config
+          .get('CIRCLE_CADENCES_ENABLED', { infer: true })
+          .map((id) => Cadence.parse(id)),
         startOffsetMonths: config.get('CIRCLE_START_OFFSET_MONTHS', { infer: true }),
         timeZone: config.get('BUSINESS_TIME_ZONE', { infer: true }),
       }),

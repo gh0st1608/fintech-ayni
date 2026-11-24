@@ -1,6 +1,7 @@
 import { Column, CreateDateColumn, Entity, OneToMany, PrimaryColumn } from 'typeorm';
 
 import { type CycleState } from '../../../domain/entities/circle-cycle';
+import { type CadenceId } from '../../../domain/value-objects/cadence';
 import { CircleMembershipEntity } from './circle-membership.entity';
 
 /** bigint llega como string desde pg; los montos en céntimos caben en un entero seguro. */
@@ -20,10 +21,15 @@ export class CircleEntity {
   @Column('char', { length: 3 })
   currency!: string;
 
+  /** Número de turnos, y por tanto de puestos. Se llamaba `months` (COPAYNI-109). */
   @Column('smallint')
-  months!: number;
+  turns!: number;
 
-  /** Primer día del mes de inicio (`YYYY-MM-01`). */
+  /** Cada cuánto le toca un turno (COPAYNI-100). `monthly` en todos los anteriores. */
+  @Column({ type: 'varchar', length: 16 })
+  cadence!: CadenceId;
+
+  /** Fecha real de arranque; día 1 del mes en cadencia mensual (COPAYNI-106). */
   @Column('date', { name: 'starts_on' })
   startsOn!: string;
 

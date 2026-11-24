@@ -70,7 +70,7 @@ describe('GET /v1/circles/slots', () => {
     const circleId = randomUUID();
     // 45.000 en 10 meses, lejos en el futuro: no se cruza con otras pruebas.
     await dataSource.query(
-      `INSERT INTO circles (id, payout_amount, currency, months, starts_on)
+      `INSERT INTO circles (id, payout_amount, currency, turns, starts_on)
        VALUES ($1, 4500000, 'PEN', 10, '2040-01-01')`,
       [circleId],
     );
@@ -96,7 +96,7 @@ describe('GET /v1/circles/slots', () => {
     const current = Period.fromDate(new Date(), 'America/Lima');
     const startsOn = current.addMonths(-2);
     await dataSource.query(
-      `INSERT INTO circles (id, payout_amount, currency, months, starts_on, cycle_state, current_period)
+      `INSERT INTO circles (id, payout_amount, currency, turns, starts_on, cycle_state, current_period)
        VALUES ($1, 3000000, 'PEN', 10, $2, 'contributing', $3)`,
       [circleId, `${startsOn.toString()}-01`, `${current.toString()}-01`],
     );

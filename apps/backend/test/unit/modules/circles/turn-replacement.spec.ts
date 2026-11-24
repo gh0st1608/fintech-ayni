@@ -12,6 +12,7 @@ import { Money } from '@src/shared/domain/value-objects/money';
 import { Period } from '@src/shared/domain/value-objects/period';
 import { TestClock } from '@test/support/create-test-app';
 import { InMemoryCircleRepository } from '@test/support/in-memory-circle.repository';
+import { Cadence } from '@src/modules/circles/domain/value-objects/cadence';
 import {
   createJoinCircleUseCase,
   ELIGIBLE,
@@ -199,6 +200,7 @@ describe('Unirse a una vacante', () => {
 describe('Vacantes en slots y recomendados', () => {
   const assignment = {
     strategy: 'fill_oldest' as const,
+    cadences: [Cadence.monthly],
     startOffsetMonths: 1,
     timeZone: 'America/Lima',
   };

@@ -60,7 +60,7 @@ describe('Notificaciones', () => {
   async function circleWithInstallments(userId: string): Promise<string> {
     const circleId = randomUUID();
     await database.query(
-      `INSERT INTO circles (id, payout_amount, currency, months, starts_on, cycle_state)
+      `INSERT INTO circles (id, payout_amount, currency, turns, starts_on, cycle_state)
        VALUES ($1, 600000, 'PEN', 6, $2, 'contributing')`,
       [circleId, monthStart(TODAY)],
     );
@@ -69,12 +69,23 @@ describe('Notificaciones', () => {
        VALUES ($1, $2, $3, 1, $4)`,
       [randomUUID(), circleId, userId, randomUUID()],
     );
+    // El turno va con el mes: la junta empezó este mes, así que el desplazamiento lo ordena.
     const installment = (offset: number, dueOn: string, status: string, paidAt: Date | null) =>
       database.query(
         `INSERT INTO circle_installments
-           (id, circle_id, user_id, position, period, due_on, amount, currency, status, paid_at)
-         VALUES ($1, $2, $3, 1, $4, $5, 100000, 'PEN', $6, $7)`,
-        [randomUUID(), circleId, userId, monthStart(TODAY, offset), dueOn, status, paidAt],
+           (id, circle_id, user_id, position, turn, period, due_on, amount, currency, status,
+            paid_at)
+         VALUES ($1, $2, $3, 1, $4, $5, $6, 100000, 'PEN', $7, $8)`,
+        [
+          randomUUID(),
+          circleId,
+          userId,
+          offset + 3,
+          monthStart(TODAY, offset),
+          dueOn,
+          status,
+          paidAt,
+        ],
       );
     await installment(1, day(2), 'pending', null); // vence en 2 días
     await installment(2, TODAY, 'pending', null); // vence hoy

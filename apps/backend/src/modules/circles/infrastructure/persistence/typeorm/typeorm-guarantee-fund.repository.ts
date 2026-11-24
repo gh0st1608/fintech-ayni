@@ -25,7 +25,7 @@ export class TypeOrmGuaranteeFund implements GuaranteeFundPort {
         SELECT currency, sum(amount) AS balance
           FROM ledger_entries WHERE account = 'guarantee_fund' GROUP BY currency
       ), active AS (
-        SELECT currency, count(*) AS circles, sum(ceil(payout_amount::numeric / months)) AS base
+        SELECT currency, count(*) AS circles, sum(ceil(payout_amount::numeric / turns)) AS base
           FROM circles WHERE cycle_state = 'contributing' GROUP BY currency
       )
       SELECT COALESCE(b.currency, a.currency) AS currency,

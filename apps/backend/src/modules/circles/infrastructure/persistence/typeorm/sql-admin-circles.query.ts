@@ -51,7 +51,9 @@ interface ProposalRow {
 }
 
 const SUMMARY_COLUMNS = `
-  c.id, c.cycle_state, c.payout_amount::text AS payout_amount, c.currency, c.months,
+  c.id, c.cycle_state, c.payout_amount::text AS payout_amount, c.currency,
+  -- El informe habla en meses y la columna pasó a llamarse turns (COPAYNI-109).
+  c.turns AS months,
   to_char(c.starts_on, 'YYYY-MM') AS starts_on, c.created_at,
   (SELECT count(*)::int FROM circle_memberships m
     WHERE m.circle_id = c.id AND m.expelled_at IS NULL) AS members`;

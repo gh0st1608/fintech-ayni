@@ -21,6 +21,7 @@ import { applicantIn, assertCanJoin } from '../../domain/services/join-eligibili
 import { assertSlotAllowed } from '../../domain/services/trust-policy';
 import { priceOf, type SlotPricing, type SlotQuote } from '../../domain/services/slot-pricing';
 import { joinQuote } from '../../domain/services/vacancy';
+import { Cadence, type CadenceId } from '../../domain/value-objects/cadence';
 import { CircleTerms } from '../../domain/value-objects/circle-terms';
 import {
   CIRCLE_REPOSITORY,
@@ -69,6 +70,12 @@ export interface JoinCircleCommand {
   /** Moneda del Game'ya (pending-scope M2); la oficial si no se indica. */
   currency?: string;
   months: number;
+  /**
+   * Frecuencia de pago pedida; la mensual si no se indica (COPAYNI-121). Todavía no la expone la
+   * API: elegirla al unirse es COPAYNI-116. Existe aquí para que la bandera de cadencias tenga
+   * dónde imponerse el día que llegue, y para poder probarlo.
+   */
+  cadence?: CadenceId;
   position: number;
   idempotencyKey: string;
   /** Versión de los términos que el usuario aceptó en la confirmación (COPAYNI-86). */
@@ -145,6 +152,7 @@ export class JoinCircleUseCase {
 
     const joinConfig = await this.joinConfigs.getForUser(command.userId, command.currency);
     const payout = offeredPayout(joinConfig, command.payoutAmount, command.months);
+    this.assertCadenceEnabled(command);
     const { circle, isNew } = await this.target(command, payout);
     const today = LocalDate.fromDate(this.clock.now(), this.assignment.timeZone);
     const quote = joinQuote(this.pricing, circle, command.position, today, this.cycle.dueDay);
@@ -269,6 +277,24 @@ export class JoinCircleUseCase {
     };
   }
 
+  /**
+   * La cadencia pedida, solo si está habilitada (`CIRCLE_CADENCES_ENABLED`, COPAYNI-121).
+   *
+   * Es la puerta que separa el despliegue del código de la activación de la funcionalidad:
+   * mientras la bandera solo admita la mensual, el producto se comporta como antes de la épica.
+   * Una junta que ya existe no pasa por aquí: deshabilitar una cadencia impide crear juntas
+   * nuevas, no detiene las que están en curso.
+   */
+  private assertCadenceEnabled(command: JoinCircleCommand): Cadence {
+    const cadence = command.cadence ? Cadence.parse(command.cadence) : Cadence.default;
+    if (!this.assignment.cadences.some((enabled) => enabled.equals(cadence))) {
+      throw new ValidationError(`La frecuencia ${cadence.id} no está habilitada`, {
+        cadence: 'not_enabled',
+      });
+    }
+    return cadence;
+  }
+
   /** El círculo ofrecido, si sigue admitiendo miembros, o uno nuevo como el que ofreció `slots`. */
   private async target(
     command: JoinCircleCommand,
@@ -278,7 +304,8 @@ export class JoinCircleUseCase {
     if (command.circleId === null) {
       const terms = CircleTerms.create({
         payout,
-        months: command.months,
+        turns: command.months,
+        cadence: this.assertCadenceEnabled(command),
         startsOn: currentPeriod.addMonths(this.assignment.startOffsetMonths),
       });
       return { circle: Circle.open({ id: randomUUID(), terms }), isNew: true };
@@ -286,8 +313,12 @@ export class JoinCircleUseCase {
 
     const circle = await this.circles.findById(command.circleId);
     if (!circle) throw new NotFoundError('No se encontró el círculo', 'CIRCLE_NOT_FOUND');
-    if (!circle.terms.payout.equals(payout) || circle.terms.months !== command.months) {
-      throw new ValidationError('El círculo no tiene ese payout y esa duración', {
+    if (
+      !circle.terms.payout.equals(payout) ||
+      circle.terms.months !== command.months ||
+      !circle.terms.cadence.equals(this.assertCadenceEnabled(command))
+    ) {
+      throw new ValidationError('El círculo no tiene ese payout, esa duración y esa frecuencia', {
         circleId: 'terms_mismatch',
       });
     }

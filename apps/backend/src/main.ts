@@ -22,6 +22,12 @@ async function bootstrap(): Promise<void> {
     `${config.get('APP_NAME', { infer: true })} escuchando en el puerto ${port}`,
     'Bootstrap',
   );
+  // Qué cadencias de junta se pueden crear (COPAYNI-121): la operación necesita saber qué está
+  // activo, porque la bandera decide si una funcionalidad desplegada está expuesta o no.
+  Logger.log(
+    `Cadencias habilitadas: ${config.get('CIRCLE_CADENCES_ENABLED', { infer: true }).join(', ')}`,
+    'Bootstrap',
+  );
 }
 
 bootstrap().catch((error: unknown) => {

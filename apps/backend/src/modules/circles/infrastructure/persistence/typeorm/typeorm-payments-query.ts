@@ -138,7 +138,7 @@ export class TypeOrmPaymentsQuery implements PaymentsQueryPort {
     >(
       `SELECT i.id, i.circle_id, to_char(i.period, 'YYYY-MM') AS period,
               to_char(i.due_on, 'YYYY-MM-DD') AS due_on, i.amount::text AS amount, i.currency,
-              i.status, m.position, c.months AS slots, c.payout_amount::text AS payout_amount,
+              i.status, m.position, c.turns AS slots, c.payout_amount::text AS payout_amount,
               c.currency AS payout_currency
          FROM circle_installments i
          JOIN circle_memberships m ON m.circle_id = i.circle_id AND m.user_id = i.user_id

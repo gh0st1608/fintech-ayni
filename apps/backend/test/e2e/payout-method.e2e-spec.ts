@@ -89,7 +89,7 @@ describe('/v1/me/payout-method', () => {
     const dataSource = app.get(DataSource);
     const circleId = randomUUID();
     await dataSource.query(
-      `INSERT INTO circles (id, payout_amount, currency, months, starts_on)
+      `INSERT INTO circles (id, payout_amount, currency, turns, starts_on)
        VALUES ($1, 600000, 'PEN', 6, $2)`,
       [circleId, `${thisMonth}-01`],
     );

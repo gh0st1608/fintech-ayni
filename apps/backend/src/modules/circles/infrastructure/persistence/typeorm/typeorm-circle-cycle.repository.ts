@@ -28,7 +28,7 @@ const toDate = (period: Period): string => `${period.toString()}-01`;
 interface CircleRow {
   payout_amount: string;
   currency: string;
-  months: number;
+  turns: number;
   cadence: string;
   starts_on: string;
   cycle_state: CycleState;
@@ -163,7 +163,7 @@ export class TypeOrmCircleCycleRepository implements CircleCycleRepositoryPort {
 
   private async load(manager: EntityManager, circleId: string): Promise<StoredCycle> {
     const [circle] = await manager.query<CircleRow[]>(
-      `SELECT payout_amount::text AS payout_amount, currency, months, cycle_state, cadence,
+      `SELECT payout_amount::text AS payout_amount, currency, turns, cycle_state, cadence,
               current_turn,
               to_char(starts_on, 'YYYY-MM-DD') AS starts_on,
               to_char(current_period, 'YYYY-MM') AS current_period,
@@ -209,7 +209,7 @@ export class TypeOrmCircleCycleRepository implements CircleCycleRepositoryPort {
 
     const terms = CircleTerms.create({
       payout: Money.of(Number(circle.payout_amount), circle.currency),
-      turns: circle.months,
+      turns: circle.turns,
       // La columna la escribe la expansión con `monthly` por defecto (COPAYNI-107), así que un
       // círculo anterior se restaura con la cadencia que siempre tuvo.
       cadence: Cadence.parse(circle.cadence),
@@ -256,10 +256,10 @@ export class TypeOrmCircleCycleRepository implements CircleCycleRepositoryPort {
 
   private async save(manager: EntityManager, cycle: CircleCycle): Promise<void> {
     await manager.query(
-      // `turns` y `current_turn` se escriben junto a `months` y `current_period` mientras duren
-      // las dos formas de decir lo mismo (expansión, COPAYNI-107): la retirada es COPAYNI-109.
+      // `current_period` se conserva para los informes, que hablan en meses; el número de
+      // turnos ya no se escribe dos veces (contracción, COPAYNI-109).
       `UPDATE circles SET cycle_state = $2, current_period = $3, paused_on = $4, starts_on = $5,
-              payout_amount = $6, months = $7, turns = $7, current_turn = $8
+              payout_amount = $6, turns = $7, current_turn = $8
         WHERE id = $1`,
       [
         cycle.circleId,
@@ -273,22 +273,9 @@ export class TypeOrmCircleCycleRepository implements CircleCycleRepositoryPort {
       ],
     );
     await saveStartApproval(manager, cycle);
-    if (cycle.calendarShift > 0 && cycle.currentPeriod) {
-      // Al reanudar en otro mes, las cuotas del turno en curso pasan al mes nuevo (COPAYNI-61).
-      // Solo las de ese turno: en una junta semanal el mes anterior tiene cuotas de otros turnos,
-      // que no se movieron. Una fila anterior a la expansión no tiene turno y entra por su mes.
-      await manager.query(
-        `UPDATE circle_installments SET period = $3::date
-          WHERE circle_id = $1 AND period = $2::date
-                AND ($4::smallint IS NULL OR turn IS NULL OR turn = $4)`,
-        [
-          cycle.circleId,
-          toDate(cycle.currentPeriod.addMonths(-cycle.calendarShift)),
-          toDate(cycle.currentPeriod),
-          cycle.currentTurn,
-        ],
-      );
-    }
+    // Al reanudar en otro mes, las cuotas del turno en curso pasan al mes nuevo (COPAYNI-61). Ya
+    // no hace falta moverlas con un UPDATE aparte: desde que el conflicto se resuelve por turno
+    // (COPAYNI-109), el upsert de abajo las encuentra por su turno y les corrige el mes.
     for (const event of cycle.adminEvents) {
       await manager.query(
         `INSERT INTO circle_admin_events (circle_id, action, actor_id, reason, before, after)
@@ -305,18 +292,17 @@ export class TypeOrmCircleCycleRepository implements CircleCycleRepositoryPort {
     }
     for (const installment of cycle.installments) {
       await manager.query(
-        // El conflicto sigue resolviéndose por mes mientras exista esa unicidad: retirarla, y con
-        // ella la de aquí, es la contracción (COPAYNI-109). Hasta entonces una junta de varios
-        // turnos por mes no se puede guardar, y por eso la cadencia no se puede elegir todavía
-        // (COPAYNI-121).
+        // El conflicto se resuelve por turno, que es lo que identifica la cuota: guardar dos
+        // veces el mismo turno la actualiza, y una junta con varios turnos en un mes ya puede
+        // guardarlos todos (COPAYNI-109).
         `INSERT INTO circle_installments
            (id, circle_id, user_id, position, turn, period, due_on, amount, currency, status,
             paid_at)
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10::varchar,
                  CASE WHEN $10::varchar = 'paid' THEN now() END)
-         ON CONFLICT ON CONSTRAINT uq_circle_installments_period DO UPDATE
+         ON CONFLICT ON CONSTRAINT uq_circle_installments_turn DO UPDATE
            SET status = EXCLUDED.status,
-               turn = EXCLUDED.turn,
+               period = EXCLUDED.period,
                due_on = EXCLUDED.due_on,
                paid_at = COALESCE(circle_installments.paid_at, EXCLUDED.paid_at)`,
         [
@@ -337,7 +323,7 @@ export class TypeOrmCircleCycleRepository implements CircleCycleRepositoryPort {
       await manager.query(
         `INSERT INTO circle_payouts (circle_id, turn, period, user_id, position, amount, currency)
          VALUES ($1, $2, $3, $4, $5, $6, $7)
-         ON CONFLICT ON CONSTRAINT uq_circle_payouts_period DO NOTHING`,
+         ON CONFLICT ON CONSTRAINT uq_circle_payouts_turn DO NOTHING`,
         [
           cycle.circleId,
           payout.turn,

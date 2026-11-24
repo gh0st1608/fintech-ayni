@@ -30,6 +30,7 @@ import {
   type RunningCircle,
   SlotTakenError,
 } from '../../../domain/entities/circle';
+import { Cadence } from '../../../domain/value-objects/cadence';
 import { CircleTerms } from '../../../domain/value-objects/circle-terms';
 import { CircleMembershipEntity } from './circle-membership.entity';
 import { CircleEntity } from './circle.entity';
@@ -55,7 +56,8 @@ interface MemberCircleRow {
   circle_id: string;
   payout_amount: string;
   currency: string;
-  months: number;
+  turns: number;
+  cadence: string;
   starts_on: string;
 }
 
@@ -132,7 +134,7 @@ export class TypeOrmCircleRepository implements CircleRepositoryPort {
     }
     const rows = await this.memberships.query<MemberCircleRow[]>(
       `SELECT m.id AS membership_id, m.created_at::text AS joined_at, m.position, m.price,
-              m.expelled_at IS NOT NULL AS expelled, c.id AS circle_id, c.payout_amount::text AS payout_amount, c.currency, c.months,
+              m.expelled_at IS NOT NULL AS expelled, c.id AS circle_id, c.payout_amount::text AS payout_amount, c.currency, c.turns, c.cadence,
               to_char(c.starts_on, 'YYYY-MM-DD') AS starts_on
          FROM circle_memberships m
          JOIN circles c ON c.id = m.circle_id
@@ -151,7 +153,8 @@ export class TypeOrmCircleRepository implements CircleRepositoryPort {
         circleId: row.circle_id,
         terms: CircleTerms.create({
           payout: Money.of(Number(row.payout_amount), row.currency),
-          months: row.months,
+          turns: row.turns,
+          cadence: Cadence.parse(row.cadence),
           startsOn: LocalDate.parse(row.starts_on),
         }),
         position: row.position,
@@ -182,7 +185,7 @@ export class TypeOrmCircleRepository implements CircleRepositoryPort {
         amount: payout.amount,
         currency: payout.currency,
       })
-      .andWhere('circle.months = :months', { months })
+      .andWhere('circle.turns = :turns', { turns: months })
       .limit(1)
       .getRawOne<{ id: string }>();
     return row ? this.findById(row.id) : null;
@@ -203,7 +206,7 @@ export class TypeOrmCircleRepository implements CircleRepositoryPort {
   private joinable(startsAfter: Period, userId: string, withVacancies = false) {
     // Empieza después del mes actual: el primer día del mes siguiente o más tarde.
     const notStarted = `(circle.starts_on >= :firstAllowed
-      AND (SELECT count(*) FROM circle_memberships m WHERE m.circle_id = circle.id) < circle.months)`;
+      AND (SELECT count(*) FROM circle_memberships m WHERE m.circle_id = circle.id) < circle.turns)`;
     const withVacancy = `(circle.cycle_state = 'contributing' AND EXISTS (
       SELECT 1 FROM circle_expulsions e
        WHERE e.circle_id = circle.id AND e.paid_amount IS NOT NULL
@@ -260,7 +263,8 @@ export class TypeOrmCircleRepository implements CircleRepositoryPort {
         id: circle.id,
         payoutAmount: circle.terms.payout.amount,
         currency: circle.terms.currency,
-        months: circle.terms.months,
+        turns: circle.terms.turns,
+        cadence: circle.terms.cadence.id,
         startsOn: circle.terms.startsOn.toString(),
       });
       if (circle.memberships.length > 0) {
@@ -321,7 +325,8 @@ export class TypeOrmCircleRepository implements CircleRepositoryPort {
       id: row.id,
       terms: CircleTerms.create({
         payout: Money.of(row.payoutAmount, row.currency),
-        months: row.months,
+        turns: row.turns,
+        cadence: Cadence.parse(row.cadence),
         startsOn: LocalDate.parse(row.startsOn),
       }),
       memberships: (row.memberships ?? [])

@@ -14,9 +14,10 @@ import { insertTestUser, openTestDatabase } from '@test/support/test-database';
  * la expansión (COPAYNI-107) y su invariante vive ahora en el dominio, condicionada a la cadencia.
  * Las cinco que quedan son sobre columnas `period`, que **no guardan la fecha de un turno sino el
  * mes en que cae**: se escriben siempre como mes más `-01`, así que ninguna cadencia las incumple
- * y retirarlas solo quitaría una red. Lo que de verdad impide guardar una junta de varios turnos
- * por mes son las unicidades **por periodo**, que se retiran con las columnas mensuales en la
- * contracción (COPAYNI-109).
+ * y retirarlas solo quitaría una red. Lo que impedía guardar una junta de varios turnos por mes
+ * eran las unicidades **por periodo**, ya retiradas por la contracción (COPAYNI-109), que a la vez
+ * impuso `NOT NULL` en el turno: sin eso, retirarlas habría dejado sin proteger a las filas con
+ * el turno vacío, porque dos nulos son distintos en PostgreSQL.
  *
  * Estas pruebas fijan las dos cosas: que cada invariante de día 1 sigue impuesta allí donde debe
  * estarlo, y que las unicidades por turno cubren lo que cubrían las de periodo.
@@ -31,8 +32,8 @@ describe('Invariantes de día 1 y unicidades por turno (COPAYNI-108)', () => {
     userId = await insertTestUser(dataSource);
     circleId = randomUUID();
     await dataSource.query(
-      `INSERT INTO circles (id, payout_amount, currency, months, turns, starts_on)
-       VALUES ($1, 1200000, 'PEN', 4, 4, '2026-11-01')`,
+      `INSERT INTO circles (id, payout_amount, currency, turns, starts_on)
+       VALUES ($1, 1200000, 'PEN', 4, '2026-11-01')`,
       [circleId],
     );
   });
@@ -111,11 +112,7 @@ describe('Invariantes de día 1 y unicidades por turno (COPAYNI-108)', () => {
   describe('las unicidades por turno cubren lo que cubrían las de periodo', () => {
     it('un miembro no puede tener dos cuotas del mismo turno', async () => {
       await installment('2026-12-01', 7, 7);
-      await expect(installment('2026-12-01', 7, 7)).rejects.toThrow(
-        // La de periodo también lo habría impedido en cadencia mensual; la de turno lo impide en
-        // todas, que es lo que hacía falta confirmar.
-        /uq_circle_installments_(turn|period)/,
-      );
+      await expect(installment('2026-12-01', 7, 7)).rejects.toThrow(/uq_circle_installments_turn/);
     });
 
     it('un miembro no puede tener dos cuotas del mismo turno en meses distintos', async () => {
@@ -130,24 +127,17 @@ describe('Invariantes de día 1 y unicidades por turno (COPAYNI-108)', () => {
       await expect(payout('2027-04-01', 9)).rejects.toThrow(/uq_circle_payouts_turn/);
     });
 
-    it('las filas anteriores a la expansión, sin turno, siguen protegidas por su mes', async () => {
-      // Dos nulos son distintos en PostgreSQL, así que la unicidad por turno no las alcanza: lo
-      // que las cubre es la de periodo, que por eso no se puede retirar antes de escribir el
-      // turno en todas (COPAYNI-109).
-      await installment('2027-05-01', null, 10);
-      await expect(installment('2027-05-01', null, 10)).rejects.toThrow(
-        /uq_circle_installments_period/,
-      );
+    it('una cuota sin turno ya no se puede guardar (COPAYNI-109)', async () => {
+      // Mientras el turno admitía nulo, la unicidad por turno no alcanzaba a esas filas y las
+      // cubría la de periodo. La contracción cerró esa puerta con `NOT NULL`, que es lo que
+      // permitió retirar la unicidad por periodo sin dejar nada sin proteger.
+      await expect(installment('2027-05-01', null, 10)).rejects.toThrow(/not-null|turn/i);
     });
 
-    it('lo que todavía impide una junta de varios turnos por mes es la unicidad de periodo', async () => {
-      // Dos turnos del mismo miembro en el mismo mes: la cadencia semanal los necesita y la
-      // unicidad por periodo los rechaza. Retirarla es la contracción (COPAYNI-109), y hasta
-      // entonces la cadencia no se puede habilitar (COPAYNI-121).
-      await installment('2027-06-01', 11, 11);
-      await expect(installment('2027-06-01', 12, 11)).rejects.toThrow(
-        /uq_circle_installments_period/,
-      );
+    it('una junta puede guardar dos turnos del mismo mes, que es lo que la de periodo impedía', async () => {
+      // El caso que necesita una cadencia semanal: dos turnos del mismo miembro en el mismo mes.
+      await expect(installment('2027-06-01', 11, 11)).resolves.toBeDefined();
+      await expect(installment('2027-06-01', 12, 11)).resolves.toBeDefined();
     });
   });
 });

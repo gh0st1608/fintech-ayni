@@ -98,7 +98,9 @@ describe('aprobación del inicio de un círculo incompleto', () => {
     const [row] = await dataSource.query<
       { cycle_state: string; months: number; payout_amount: string; starts_on: string }[]
     >(
-      `SELECT cycle_state, months, payout_amount::text AS payout_amount,
+      // La columna pasó a llamarse `turns` con la contracción (COPAYNI-109); lo que la prueba
+      // comprueba es el número de turnos, que no cambia.
+      `SELECT cycle_state, turns AS months, payout_amount::text AS payout_amount,
               to_char(starts_on, 'YYYY-MM') AS starts_on
          FROM circles WHERE id = $1`,
       [id],

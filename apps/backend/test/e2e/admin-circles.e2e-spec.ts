@@ -50,7 +50,7 @@ describe('API de administración: pausa de círculos', () => {
   async function runningCircle(): Promise<string> {
     const id = randomUUID();
     await app.get(DataSource).query(
-      `INSERT INTO circles (id, payout_amount, currency, months, starts_on, cycle_state, current_period)
+      `INSERT INTO circles (id, payout_amount, currency, turns, starts_on, cycle_state, current_period)
        VALUES ($1, 600000, 'PEN', 6, '2026-11-01', 'contributing', '2026-11-01')`,
       [id],
     );

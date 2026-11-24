@@ -43,7 +43,7 @@ describe('Pagar una cuota desde la app', () => {
     const installmentId = randomUUID();
     const month = `${Period.fromDate(new Date(), 'America/Lima').toString()}-01`;
     await db.query(
-      `INSERT INTO circles (id, payout_amount, currency, months, starts_on, cycle_state, current_period)
+      `INSERT INTO circles (id, payout_amount, currency, turns, starts_on, cycle_state, current_period)
        VALUES ($1, 600000, 'PEN', 6, $2, 'contributing', $2)`,
       [circleId, month],
     );
@@ -53,8 +53,9 @@ describe('Pagar una cuota desde la app', () => {
       [randomUUID(), circleId, owner, `k-${circleId}`],
     );
     await db.query(
-      `INSERT INTO circle_installments (id, circle_id, user_id, position, period, due_on, amount, currency, status)
-       VALUES ($1, $2, $3, 6, $4, $4::date + 4, 100000, 'PEN', 'pending')`,
+      `INSERT INTO circle_installments (id, circle_id, user_id, position, turn, period, due_on,
+         amount, currency, status)
+       VALUES ($1, $2, $3, 6, 1, $4, $4::date + 4, 100000, 'PEN', 'pending')`,
       [installmentId, circleId, owner, month],
     );
     return installmentId;
