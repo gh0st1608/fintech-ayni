@@ -18,6 +18,12 @@ import {
   type Membership,
 } from '../../domain/entities/circle';
 import { applicantIn, assertCanJoin } from '../../domain/services/join-eligibility';
+import {
+  type MonthlyPayIn,
+  payInByMonth,
+  totalPayInByMonth,
+} from '../../domain/services/monthly-pay-in';
+import { TurnSchedule } from '../../domain/services/turn-schedule';
 import { assertSlotAllowed } from '../../domain/services/trust-policy';
 import { priceOf, type SlotPricing, type SlotQuote } from '../../domain/services/slot-pricing';
 import { joinQuote } from '../../domain/services/vacancy';
@@ -27,6 +33,7 @@ import {
   CIRCLE_REPOSITORY,
   type CircleRepositoryPort,
   IdempotencyKeyExistsError,
+  type MemberCircle,
 } from '../ports/circle-repository.port';
 import { JOIN_ELIGIBILITY, type JoinEligibilityPort } from '../ports/join-eligibility.port';
 import { MEMBER_DEBTS, type MemberDebtsPort } from '../ports/member-debts.port';
@@ -160,7 +167,7 @@ export class JoinCircleUseCase {
     assertCanJoin(
       applicantIn(applicant, payout.currency, this.currencies.rates),
       payout,
-      quote.installments,
+      await this.monthlyPayIn(command.userId, circle, quote, payout.currency),
     );
     const profile = await trustProfileOf(command.userId, this.eligibility, this.history);
     assertSlotAllowed(quote.type, profile, this.trust);
@@ -275,6 +282,62 @@ export class JoinCircleUseCase {
       quote: this.pricing.quoteOf(circle.terms, membership.position, membership.price),
       created: false,
     };
+  }
+
+  /**
+   * Lo que la persona pagaría cada mes calendario si se une: las cuotas de este slot más las de
+   * los círculos en los que ya participa (COPAYNI-110). El límite de pay-in es de la persona y es
+   * mensual, así que no se puede evaluar mirando solo un círculo ni solo una cuota.
+   *
+   * Todo se lleva a la moneda del círculo al que se quiere unir, que es la del límite ya
+   * convertido. Lo que ya paga se convierte **hacia arriba** (pending-scope M2): ante un
+   * redondeo, se prefiere sobrestimar el compromiso antes que autorizar de más.
+   */
+  private async monthlyPayIn(
+    userId: string,
+    circle: Circle,
+    quote: SlotQuote,
+    currency: string,
+  ): Promise<MonthlyPayIn[]> {
+    const { rates } = this.currencies;
+    const joining = payInByMonth(quote.installments, this.scheduleOf(circle.terms));
+    const parts = [joining];
+    for (const member of await this.openMemberships(userId)) {
+      // El círculo al que se une puede ser uno en el que ya está (tomar otra vacante no es el
+      // caso: una persona ocupa un solo turno), así que no hay nada que descontar.
+      const { terms, position, price } = member;
+      const { installments } = this.pricing.quoteOf(terms, position, price);
+      const converted = installments.map((amount) => rates.convert(amount, currency, 'up'));
+      parts.push(payInByMonth(converted, this.scheduleOf(terms)));
+    }
+    return totalPayInByMonth(parts);
+  }
+
+  /** Las membresías activas de la persona, todas: el límite no se evalúa a medias. */
+  private async openMemberships(userId: string): Promise<MemberCircle[]> {
+    const found: MemberCircle[] = [];
+    let cursor: string | null = null;
+    do {
+      const page = await this.circles.listMemberships({
+        userId,
+        status: 'active',
+        limit: 50,
+        cursor,
+      });
+      found.push(...page.items);
+      cursor = page.nextCursor;
+    } while (cursor);
+    return found;
+  }
+
+  /** El cronograma de cobro de una junta, que es quien sabe en qué mes vence cada turno. */
+  private scheduleOf(terms: CircleTerms): TurnSchedule {
+    return TurnSchedule.forCollection({
+      startsOn: terms.startsOn,
+      cadence: terms.cadence,
+      turns: terms.turns,
+      dueDay: this.cycle.dueDay,
+    });
   }
 
   /**

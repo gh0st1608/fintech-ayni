@@ -5,6 +5,7 @@ import {
 } from '@src/modules/circles/domain/services/join-eligibility';
 import { ExchangeRates } from '@src/shared/domain/value-objects/exchange-rates';
 import { Money } from '@src/shared/domain/value-objects/money';
+import { Period } from '@src/shared/domain/value-objects/period';
 
 const pen = (major: number) => Money.of(major * 100, 'PEN');
 const ELIGIBLE: JoinApplicant = {
@@ -14,10 +15,18 @@ const ELIGIBLE: JoinApplicant = {
   payoutMethod: { type: 'bank_account', limit: null },
 };
 const PAYOUT = pen(30_000);
-const INSTALLMENTS = [pen(3_400), pen(3_000), pen(2_900)];
+/**
+ * Las mismas tres cuotas de siempre, una por mes, que es lo que produce una junta mensual: con
+ * un mes por cuota, comparar la suma del mes y comparar cada cuota dan lo mismo, y por eso este
+ * archivo es también la reja de regresión del caso mensual (COPAYNI-110).
+ */
+const PAY_IN = [pen(3_400), pen(3_000), pen(2_900)].map((amount, index) => ({
+  period: Period.of(2026, 11).addMonths(index),
+  amount,
+}));
 
 const check = (applicant: Partial<JoinApplicant>) => () =>
-  assertCanJoin({ ...ELIGIBLE, ...applicant }, PAYOUT, INSTALLMENTS);
+  assertCanJoin({ ...ELIGIBLE, ...applicant }, PAYOUT, PAY_IN);
 
 describe('assertCanJoin', () => {
   it('acepta a un usuario verificado, dentro del límite y con método de cobro', () => {
@@ -32,10 +41,33 @@ describe('assertCanJoin', () => {
     );
   });
 
-  it('rechaza si alguna cuota del slot supera el límite mensual', () => {
+  it('rechaza si lo que paga en un mes supera el límite mensual', () => {
     expect(check({ monthlyPayInLimit: pen(3_399), payoutMethod: null })).toThrow(
       expect.objectContaining({ code: 'MONTHLY_LIMIT_EXCEEDED' }),
     );
+  });
+
+  it('el rechazo dice qué mes y cuánto se pasa, para saber qué ajustar', () => {
+    expect(check({ monthlyPayInLimit: pen(3_000) })).toThrow(
+      expect.objectContaining({
+        code: 'MONTHLY_LIMIT_EXCEEDED',
+        message: expect.stringContaining('2026-11'),
+        details: { month: '2026-11', total: '340000', excess: '40000', currency: 'PEN' },
+      }),
+    );
+  });
+
+  it('suma las cuotas que caen en el mismo mes, que es lo que el límite mide', () => {
+    // Cuatro cuotas semanales de la mitad del límite en un mes: cada una pasa el filtro por
+    // separado y juntas son el doble de lo declarado. Antes se aceptaba.
+    const weekly = [{ period: Period.of(2026, 11), amount: pen(2_000) }];
+    const same = (amount: Money) => ({ period: Period.of(2026, 11), amount });
+    expect(() =>
+      assertCanJoin({ ...ELIGIBLE, monthlyPayInLimit: pen(1_000) }, PAYOUT, weekly),
+    ).toThrow(expect.objectContaining({ code: 'MONTHLY_LIMIT_EXCEEDED' }));
+    expect(() =>
+      assertCanJoin({ ...ELIGIBLE, monthlyPayInLimit: pen(2_000) }, PAYOUT, [same(pen(2_000))]),
+    ).not.toThrow();
   });
 
   it('exige un método de cobro', () => {
