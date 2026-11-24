@@ -1,8 +1,9 @@
+import { type LocalDate } from '../../../../shared/domain/value-objects/local-date';
 import { type Money } from '../../../../shared/domain/value-objects/money';
-import { type Period } from '../../../../shared/domain/value-objects/period';
 import { ValidationError } from '../../../../shared/errors/app-error';
 import { type Circle, type Membership } from '../../domain/entities/circle';
 import { type SlotPrice } from '../../domain/services/slot-pricing';
+import { type Cadence } from '../../domain/value-objects/cadence';
 import { type CircleTerms } from '../../domain/value-objects/circle-terms';
 
 export const CIRCLE_REPOSITORY = Symbol('CIRCLE_REPOSITORY');
@@ -21,15 +22,26 @@ export class IdempotencyKeyExistsError extends Error {
 export interface JoinableCircleCriteria {
   payout: Money;
   months: number;
-  /** Solo círculos que empiezan después de este mes: en uno ya iniciado, el primer cobro pasó. */
-  startsAfter: Period;
+  /**
+   * Cadencia pedida (COPAYNI-114). Forma parte de la clave de emparejamiento: sin ella, quien
+   * pide una junta mensual podría acabar en una semanal que coincide en todo lo demás y pagar
+   * cuatro veces más a menudo de lo que aceptó.
+   */
+  cadence: Cadence;
+  /**
+   * Solo círculos que arrancan después de esta fecha: en uno ya iniciado, el primer cobro pasó.
+   * Es una fecha y no un mes (COPAYNI-114): una junta semanal puede arrancar la semana que viene,
+   * dentro del mes en curso, y sigue admitiendo miembros.
+   */
+  startsAfter: LocalDate;
   /** Excluye los círculos donde el usuario ya es miembro (un slot por usuario). */
   userId: string;
 }
 
 /** Círculos recomendados (COPAYNI-25): los que admiten al usuario, sin filtrar condiciones. */
 export interface OpenCirclesCriteria {
-  startsAfter: Period;
+  /** Igual que en el emparejamiento: una fecha, no un mes (COPAYNI-114). */
+  startsAfter: LocalDate;
   userId: string;
   limit: number;
 }

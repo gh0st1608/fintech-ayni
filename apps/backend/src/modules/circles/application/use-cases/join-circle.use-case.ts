@@ -9,7 +9,6 @@ import {
 } from '../../../../shared/application/ports/currencies.port';
 import { LocalDate } from '../../../../shared/domain/value-objects/local-date';
 import { Money } from '../../../../shared/domain/value-objects/money';
-import { Period } from '../../../../shared/domain/value-objects/period';
 import { ConflictError, NotFoundError, ValidationError } from '../../../../shared/errors/app-error';
 import {
   Circle,
@@ -17,6 +16,7 @@ import {
   IdempotencyKeyReusedError,
   type Membership,
 } from '../../domain/entities/circle';
+import { nextStart } from '../../domain/services/circle-start';
 import { applicantIn, assertCanJoin } from '../../domain/services/join-eligibility';
 import {
   type MonthlyPayIn,
@@ -363,13 +363,15 @@ export class JoinCircleUseCase {
     command: JoinCircleCommand,
     payout: Money,
   ): Promise<{ circle: Circle; isNew: boolean }> {
-    const currentPeriod = Period.fromDate(this.clock.now(), this.assignment.timeZone);
+    const today = LocalDate.fromDate(this.clock.now(), this.assignment.timeZone);
+    const currentPeriod = today.period;
     if (command.circleId === null) {
+      const cadence = this.assertCadenceEnabled(command);
       const terms = CircleTerms.create({
         payout,
         turns: command.months,
-        cadence: this.assertCadenceEnabled(command),
-        startsOn: currentPeriod.addMonths(this.assignment.startOffsetMonths),
+        cadence,
+        startsOn: nextStart(today, cadence, this.assignment.startOffsetMonths),
       });
       return { circle: Circle.open({ id: randomUUID(), terms }), isNew: true };
     }

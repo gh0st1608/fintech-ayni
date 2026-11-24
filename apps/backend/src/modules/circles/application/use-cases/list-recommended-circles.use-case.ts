@@ -79,7 +79,7 @@ export class ListRecommendedCirclesUseCase {
         ),
       ),
       this.circles.listJoinable({
-        startsAfter: today.period,
+        startsAfter: today,
         userId: principal.userId,
         limit: MAX_CANDIDATES,
       }),

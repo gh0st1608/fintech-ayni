@@ -374,13 +374,13 @@ describe('TypeOrmCircleCycleRepository', () => {
     expect(circle.availablePositions()).toEqual([4]);
     const outsider = await insertTestUser(dataSource);
     const joinable = await circles.listJoinable({
-      startsAfter: Period.of(2026, 12),
+      startsAfter: LocalDate.parse('2026-12-31'),
       userId: outsider,
       limit: 500,
     });
     expect(joinable.map(({ id: circleId }) => circleId)).toContain(id);
     const forMember = await circles.listJoinable({
-      startsAfter: Period.of(2026, 12),
+      startsAfter: LocalDate.parse('2026-12-31'),
       userId: members[0]!.userId,
       limit: 500,
     });

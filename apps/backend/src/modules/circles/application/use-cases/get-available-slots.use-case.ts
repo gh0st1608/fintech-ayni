@@ -12,7 +12,8 @@ import {
   CircleAlreadyStartedError,
 } from '../../domain/entities/circle';
 import { type SlotPricing, type SlotQuote } from '../../domain/services/slot-pricing';
-import { type Cadence } from '../../domain/value-objects/cadence';
+import { nextStart } from '../../domain/services/circle-start';
+import { Cadence, type CadenceId } from '../../domain/value-objects/cadence';
 import { type SlotRestriction, slotRestriction } from '../../domain/services/trust-policy';
 import { openVacancies } from '../../domain/services/vacancy';
 import { CircleTerms } from '../../domain/value-objects/circle-terms';
@@ -94,15 +95,18 @@ export class GetAvailableSlotsUseCase {
     months: number,
     circleId?: string,
     currency?: string,
+    /** Frecuencia pedida; la mensual si no se indica. La API la expone en COPAYNI-116. */
+    cadenceId?: CadenceId,
   ): Promise<AvailableSlotsResult> {
     const [joinConfig, profile] = await Promise.all([
       this.joinConfigs.getForUser(principal.userId, currency),
       trustProfileOf(principal.userId, this.eligibility, this.history),
     ]);
     const payout = offeredPayout(joinConfig, payoutAmount, months);
+    const cadence = this.enabledCadence(cadenceId);
     const result =
       circleId === undefined
-        ? await this.assigned(principal.userId, payout, months)
+        ? await this.assigned(principal.userId, payout, months, cadence)
         : await this.slotsOf(circleId, principal.userId, payout, months);
     return {
       ...result,
@@ -113,18 +117,34 @@ export class GetAvailableSlotsUseCase {
     };
   }
 
+  /**
+   * La cadencia pedida, solo si está habilitada (COPAYNI-121): ofrecer slots de una frecuencia
+   * que no se puede crear sería ofrecer algo que luego se rechaza al unirse.
+   */
+  private enabledCadence(id: CadenceId | undefined): Cadence {
+    const cadence = id ? Cadence.parse(id) : Cadence.default;
+    if (!this.assignment.cadences.some((enabled) => enabled.equals(cadence))) {
+      throw new ValidationError(`La frecuencia ${cadence.id} no está habilitada`, {
+        cadence: 'not_enabled',
+      });
+    }
+    return cadence;
+  }
+
   private async assigned(
     userId: string,
     payout: Money,
     months: number,
+    cadence: Cadence,
   ): Promise<SlotsWithoutRestrictions> {
-    const currentPeriod = Period.fromDate(this.clock.now(), this.assignment.timeZone);
+    const today = LocalDate.fromDate(this.clock.now(), this.assignment.timeZone);
     const circle =
       this.assignment.strategy === 'fill_oldest'
         ? await this.circles.findOldestJoinable({
             payout,
             months,
-            startsAfter: currentPeriod,
+            cadence,
+            startsAfter: today,
             userId,
           })
         : null;
@@ -132,8 +152,9 @@ export class GetAvailableSlotsUseCase {
       circle?.terms ??
       CircleTerms.create({
         payout,
-        months,
-        startsOn: currentPeriod.addMonths(this.assignment.startOffsetMonths),
+        turns: months,
+        cadence,
+        startsOn: nextStart(today, cadence, this.assignment.startOffsetMonths),
       });
 
     return {

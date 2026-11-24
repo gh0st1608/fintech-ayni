@@ -68,7 +68,8 @@ describe('Cadencias habilitadas (COPAYNI-121)', () => {
       circles.findOldestJoinable({
         payout: Money.of(3_000_000, 'PEN'),
         months: 10,
-        startsAfter: LocalDate.parse('2026-10-15').period,
+        cadence: Cadence.monthly,
+        startsAfter: LocalDate.parse('2026-10-15'),
         userId: 'ana',
       }),
     ).resolves.toBeNull();

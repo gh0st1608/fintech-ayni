@@ -70,14 +70,15 @@ describe('Límite mensual de pay-in por mes calendario (COPAYNI-110)', () => {
     const circles = new InMemoryCircleRepository();
     const useCase = withLimit(pen(5_000), circles, [Cadence.monthly, Cadence.weekly]);
 
-    // La junta arranca el 1 de noviembre, así que el primer mes con cinco cuotas es noviembre:
-    // el error nombra el primero que se pasa, no uno cualquiera.
+    // La junta semanal arranca una semana después de hoy (15 de octubre), no el 1 de noviembre:
+    // el desplazamiento de inicio va en pasos de la cadencia (COPAYNI-114). Así que el primer mes
+    // que se pasa es octubre, y es el que el error nombra.
     await expect(useCase.execute({ ...COMMAND, cadence: 'weekly' })).rejects.toThrow(
       expect.objectContaining({
         code: 'MONTHLY_LIMIT_EXCEEDED',
         // Cinco cuotas semanales caen en noviembre; el importe exacto depende de las Admin Fees
         // del slot, así que lo que se fija es el mes y que se pase de verdad.
-        details: expect.objectContaining({ month: '2026-11', currency: 'PEN' }),
+        details: expect.objectContaining({ month: '2026-10', currency: 'PEN' }),
       }),
     );
   });

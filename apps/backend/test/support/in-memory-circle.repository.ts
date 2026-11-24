@@ -112,8 +112,10 @@ export class InMemoryCircleRepository implements CircleRepositoryPort {
       if (
         terms.payout.equals(criteria.payout) &&
         terms.months === criteria.months &&
+        // La cadencia es parte de la clave, como en PostgreSQL (COPAYNI-114).
+        terms.cadence.equals(criteria.cadence) &&
         !circle.isRunning() &&
-        terms.startsOnPeriod.isAfter(criteria.startsAfter) &&
+        terms.startsOn.isAfter(criteria.startsAfter) &&
         circle.status === 'open' &&
         !circle.isMember(criteria.userId)
       ) {
@@ -129,7 +131,7 @@ export class InMemoryCircleRepository implements CircleRepositoryPort {
       .map(([id, stored]) => Circle.restore({ id, ...stored }))
       .filter(
         (circle) =>
-          (circle.isRunning() || circle.terms.startsOnPeriod.isAfter(criteria.startsAfter)) &&
+          (circle.isRunning() || circle.terms.startsOn.isAfter(criteria.startsAfter)) &&
           circle.status === 'open' &&
           !circle.isMember(criteria.userId),
       )

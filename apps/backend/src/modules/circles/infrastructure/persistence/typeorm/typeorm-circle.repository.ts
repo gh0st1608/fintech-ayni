@@ -6,7 +6,6 @@ import { type Repository } from 'typeorm';
 
 import { LocalDate } from '../../../../../shared/domain/value-objects/local-date';
 import { Money } from '../../../../../shared/domain/value-objects/money';
-import { Period } from '../../../../../shared/domain/value-objects/period';
 import { NotFoundError } from '../../../../../shared/errors/app-error';
 import {
   isUuid,
@@ -43,8 +42,6 @@ const UNIQUE_CONSTRAINT_ERRORS: Record<string, () => Error> = {
   uq_circle_memberships_idempotency_key: () => new IdempotencyKeyExistsError(),
   uq_circle_memberships_user_idempotency_key: () => new IdempotencyKeyExistsError(),
 };
-
-const toStartsOn = (period: Period): string => `${period.toString()}-01`;
 
 interface MemberCircleRow {
   membership_id: string;
@@ -179,13 +176,16 @@ export class TypeOrmCircleRepository implements CircleRepositoryPort {
   }
 
   async findOldestJoinable(criteria: JoinableCircleCriteria): Promise<Circle | null> {
-    const { payout, months, startsAfter, userId } = criteria;
+    const { payout, months, cadence, startsAfter, userId } = criteria;
     const row = await this.joinable(startsAfter, userId)
       .andWhere('circle.payout_amount = :amount AND circle.currency = :currency', {
         amount: payout.amount,
         currency: payout.currency,
       })
       .andWhere('circle.turns = :turns', { turns: months })
+      // La cadencia es parte de la clave (COPAYNI-114): un círculo de otra frecuencia no vale,
+      // aunque coincida en pozo, turnos y moneda.
+      .andWhere('circle.cadence = :cadence', { cadence: cadence.id })
       .limit(1)
       .getRawOne<{ id: string }>();
     return row ? this.findById(row.id) : null;
@@ -203,9 +203,11 @@ export class TypeOrmCircleRepository implements CircleRepositoryPort {
    * Círculos que no empezaron, no están llenos y no tienen al usuario, del más antiguo al más
    * nuevo. Con `withVacancies`, también los en curso con un turno vacante (COPAYNI-59).
    */
-  private joinable(startsAfter: Period, userId: string, withVacancies = false) {
-    // Empieza después del mes actual: el primer día del mes siguiente o más tarde.
-    const notStarted = `(circle.starts_on >= :firstAllowed
+  private joinable(startsAfter: LocalDate, userId: string, withVacancies = false) {
+    // Todavía no arrancó: su primer cobro es posterior a esa fecha. Antes se comparaba contra el
+    // primer día del mes siguiente, que para una junta mensual del día 1 es la misma respuesta y
+    // para una semanal que arranca dentro del mes la dejaba fuera (COPAYNI-114).
+    const notStarted = `(circle.starts_on > :firstAllowed
       AND (SELECT count(*) FROM circle_memberships m WHERE m.circle_id = circle.id) < circle.turns)`;
     const withVacancy = `(circle.cycle_state = 'contributing' AND EXISTS (
       SELECT 1 FROM circle_expulsions e
@@ -217,7 +219,7 @@ export class TypeOrmCircleRepository implements CircleRepositoryPort {
       .createQueryBuilder('circle')
       .select('circle.id', 'id')
       .where(withVacancies ? `(${notStarted} OR ${withVacancy})` : notStarted, {
-        firstAllowed: toStartsOn(startsAfter.addMonths(1)),
+        firstAllowed: startsAfter.toString(),
       })
       .andWhere(
         'NOT EXISTS (SELECT 1 FROM circle_memberships m WHERE m.circle_id = circle.id AND m.user_id::text = :userId)',
