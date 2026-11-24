@@ -456,11 +456,17 @@ describe('validateEnvironment', () => {
     it('trae los valores propuestos de la regla de confianza y la retención (COPAYNI-60)', () => {
       expect(validateEnvironment({ ...REQUIRED })).toMatchObject({
         TRUST_FASTEST_MIN_COMPLETED_CIRCLES: 0,
-        PAYOUT_RETENTION_INSTALLMENTS: 2,
+        // 60 días de cobertura son las 2 cuotas que se retenían antes en una junta mensual
+        // (COPAYNI-112), y sin tope efectivo sobre el pozo, que es el comportamiento actual.
+        PAYOUT_RETENTION_COVERAGE_DAYS: 60,
+        PAYOUT_RETENTION_MAX_POT_BPS: 10_000,
       });
       expect(() =>
-        validateEnvironment({ ...REQUIRED, PAYOUT_RETENTION_INSTALLMENTS: '13' }),
-      ).toThrow(/PAYOUT_RETENTION_INSTALLMENTS/);
+        validateEnvironment({ ...REQUIRED, PAYOUT_RETENTION_COVERAGE_DAYS: '400' }),
+      ).toThrow(/PAYOUT_RETENTION_COVERAGE_DAYS/);
+      expect(() =>
+        validateEnvironment({ ...REQUIRED, PAYOUT_RETENTION_MAX_POT_BPS: '10001' }),
+      ).toThrow(/PAYOUT_RETENTION_MAX_POT_BPS/);
       expect(() =>
         validateEnvironment({ ...REQUIRED, TRUST_FASTEST_MIN_COMPLETED_CIRCLES: '-1' }),
       ).toThrow(/TRUST_FASTEST_MIN_COMPLETED_CIRCLES/);

@@ -28,14 +28,15 @@ const TERMS = CircleTerms.create({
   months: 10,
   startsOn: Period.of(2026, 11),
 });
-const pricing = (retentionInstallments = 0, adminFeeBps = 0) =>
+/** `retainedInstallments` en cuotas mensuales: 30 días de cobertura es una cuota (COPAYNI-112). */
+const pricing = (retainedInstallments = 0, adminFeeBps = 0) =>
   new SlotPricing(
     SlotPricingRules.create({
       ...TEST_PRICING_RULES.props,
       fastestShareBps: 0,
       highestShareBps: 0,
       adminFeeBps,
-      retentionInstallments,
+      retentionCoverageDays: retainedInstallments * 30,
     }),
   );
 

@@ -160,8 +160,14 @@ export class SlotPricing {
     if (!Number.isInteger(position) || position < 1 || position > months) {
       throw new SlotOutOfRangeError(months);
     }
-    const { maxFeeBps, maxDiscountBps, adminFeeBps, adminFeeMode, retentionInstallments } =
-      this.rules.props;
+    const {
+      maxFeeBps,
+      maxDiscountBps,
+      adminFeeBps,
+      adminFeeMode,
+      retentionCoverageDays,
+      retentionMaxPotBps,
+    } = this.rules.props;
     const { fastest, highest } = this.tiers(months);
     const type = this.typeOf(position, months);
 
@@ -195,9 +201,19 @@ export class SlotPricing {
     );
 
     // Retención (COPAYNI-60; proporcional desde P1/P5 de pending-scope §3.2): todos los turnos
-    // retienen hasta `retentionInstallments` de las cuotas que les quedan tras cobrar. Cortarla en
-    // la primera mitad dejaba al turno 6 con más exposición que al 5, un escalón aprovechable.
-    const retained = Math.min(retentionInstallments ?? 0, months - position);
+    // retienen las cuotas que cubren `retentionCoverageDays`, acotadas por las que les quedan tras
+    // cobrar. Cortarla en la primera mitad dejaba al turno 6 con más exposición que al 5, un
+    // escalón aprovechable.
+    //
+    // La cobertura va en días y el número de cuotas se deriva de la cadencia (COPAYNI-112): 60
+    // días son 2 cuotas mensuales —lo de siempre— y 9 semanales. Además se acota como parte del
+    // pozo, para que una junta corta no retenga más de lo que negocio decida.
+    const perTurnDays = terms.cadence.approximateTurnDays();
+    const byCoverage = Math.ceil((retentionCoverageDays ?? 0) / perTurnDays);
+    const byPot = Math.floor(
+      payout.percentage(retentionMaxPotBps ?? 10_000).amount / terms.baseInstallment.amount,
+    );
+    const retained = Math.max(0, Math.min(byCoverage, byPot, months - position));
     const retention = terms.baseInstallment.times(retained);
     const fullPayout = adminFeeMode === 'deducted_from_payout' ? payout.subtract(adminFee) : payout;
 

@@ -315,7 +315,7 @@ describe('TypeOrmCircleCycleRepository', () => {
 
   it('la retención paga las últimas cuotas de cada turno y cuenta la confianza (COPAYNI-60)', async () => {
     const retaining = new SlotPricing(
-      SlotPricingRules.create({ ...TEST_PRICING_RULES.props, retentionInstallments: 2 }),
+      SlotPricingRules.create({ ...TEST_PRICING_RULES.props, retentionCoverageDays: 60 }),
     );
     const { id, members } = await fullCircle(Period.of(2026, 11), retaining);
     const history = new TypeOrmMemberHistory(dataSource.getRepository(CircleEntity));

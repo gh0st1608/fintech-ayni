@@ -24,10 +24,21 @@ export interface SlotPricingRulesProps {
   adminFeeBps: number;
   adminFeeMode: AdminFeeMode;
   /**
-   * Cuotas base que se retienen del payout de cada turno y pagan sus últimas
-   * cuotas (COPAYNI-60, R18 propuesto: 2). 0 o ausente: sin retención.
+   * **Días de cobertura** que retiene el payout de cada turno (COPAYNI-112). Antes era un número
+   * de cuotas, y el mismo número dejaba de significar lo mismo al cambiar la cadencia: 2 cuotas
+   * cubren 2 meses en mensual y 2 semanas en semanal, así que la protección caía a una séptima
+   * parte sin que nadie lo hubiera decidido. En días, la cobertura es la misma en toda cadencia y
+   * el número de cuotas se deriva. 0 o ausente: sin retención.
    */
-  retentionInstallments?: number;
+  retentionCoverageDays?: number;
+  /**
+   * Tope de la retención como parte del pozo, en puntos básicos (COPAYNI-112). Con el número de
+   * turnos configurable, la retención cambia de proporción: 2 de 4 cuotas es el 50 % del pozo y 2
+   * de 10 es el 20 %. Puede ser razonable —quien cobra primero es quien más riesgo tiene de dejar
+   * de pagar— pero debe ser una decisión explícita y no una consecuencia del número de turnos.
+   * 10000 (el valor por defecto) es sin tope efectivo.
+   */
+  retentionMaxPotBps?: number;
 }
 
 const RATE_FIELDS = [
@@ -61,12 +72,22 @@ export class SlotPricingRules {
     if (!ADMIN_FEE_MODES.includes(props.adminFeeMode)) {
       throw new InvalidSlotPricingRulesError('adminFeeMode inválido');
     }
-    const retention = props.retentionInstallments ?? 0;
-    if (!Number.isInteger(retention) || retention < 0 || retention > 12) {
+    const coverage = props.retentionCoverageDays ?? 0;
+    if (!Number.isInteger(coverage) || coverage < 0 || coverage > 366) {
       throw new InvalidSlotPricingRulesError(
-        'retentionInstallments debe ser un entero entre 0 y 12',
+        'retentionCoverageDays debe ser un entero entre 0 y 366',
       );
     }
-    return new SlotPricingRules({ ...props, retentionInstallments: retention });
+    const maxPot = props.retentionMaxPotBps ?? 10_000;
+    if (!Number.isInteger(maxPot) || maxPot < 0 || maxPot > 10_000) {
+      throw new InvalidSlotPricingRulesError(
+        'retentionMaxPotBps debe ser un entero entre 0 y 10000',
+      );
+    }
+    return new SlotPricingRules({
+      ...props,
+      retentionCoverageDays: coverage,
+      retentionMaxPotBps: maxPot,
+    });
   }
 }

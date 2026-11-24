@@ -376,13 +376,28 @@ export class EnvironmentVariables {
   TRUST_FASTEST_MIN_COMPLETED_CIRCLES: number = 0;
 
   /**
-   * Cuotas base retenidas del payout de cada turno, que pagan sus últimas cuotas (COPAYNI-60;
-   * proporcional desde P1/P5 de pending-scope §3.2). 0 desactiva la retención.
+   * Días de cobertura que retiene el payout de cada turno, y que pagan sus últimas cuotas
+   * (COPAYNI-60; proporcional desde P1/P5 de pending-scope §3.2). 0 desactiva la retención.
+   *
+   * Va en días y no en número de cuotas (COPAYNI-112) porque el mismo número dejaba de significar
+   * lo mismo al cambiar la cadencia: 2 cuotas cubren 2 meses en mensual y 2 semanas en semanal, y
+   * la protección caía a una séptima parte sin que nadie lo hubiera decidido. 60 días equivalen a
+   * las 2 cuotas de antes en una junta mensual, así que ningún círculo existente cambia.
    */
   @IsInt()
   @Min(0)
-  @Max(12)
-  PAYOUT_RETENTION_INSTALLMENTS: number = 2;
+  @Max(366)
+  PAYOUT_RETENTION_COVERAGE_DAYS: number = 60;
+
+  /**
+   * Tope de la retención como parte del pozo, en puntos básicos (COPAYNI-112). 10000 es sin tope
+   * efectivo, que es el comportamiento actual: en una junta de 4 turnos, quien cobra primero ve
+   * retenido el 50 % del pozo. Si eso se acota, lo decide riesgo y finanzas (COPAYNI-102).
+   */
+  @IsInt()
+  @Min(0)
+  @Max(10000)
+  PAYOUT_RETENTION_MAX_POT_BPS: number = 10_000;
 
   /**
    * Antigüedad máxima de la autenticación del personal para una acción crítica, como pausar un
