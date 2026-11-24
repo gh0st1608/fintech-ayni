@@ -1,0 +1,929 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Cadencias · propuestas de diseño</title>
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&family=Inter:wght@400;500;600&display=swap"
+    />
+    <style>
+      :root {
+        /* Tokens reales de apps/mobile/src/presentation/theme/tokens.ts */
+        --primary: #3051bb;
+        --primary-100: #e0e5f7;
+        --primary-300: #a1b2e7;
+        --secondary-100: #e7ebef;
+        --secondary-300: #ced7de;
+        --neutral-500: #898384;
+        --neutral-600: #726c6c;
+        --neutral-700: #5a5555;
+        --text: #0e0e0f;
+        --text-secondary: #3f3f46;
+        --success: #15b097;
+        --success-100: #e3f6f2;
+        --streak: #f05a28;
+        --error: #c03744;
+        --bg: #fafafa;
+        --surface: #ffffff;
+        /* Tokens del back-office: apps/backoffice/src/index.css */
+        --bo-canvas: #f6f7f9;
+        --bo-surface: #ffffff;
+        --bo-muted: #eef0f3;
+        --bo-line: #d5d9e0;
+        --bo-ink: #1b2430;
+        --bo-ink-soft: #55606e;
+        --bo-brand: #0b6b5d;
+        --bo-warning: #b26a00;
+        --bo-success: #1e7d3a;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background: #eceef1;
+        color: #15181c;
+        font-family: 'Inter', system-ui, sans-serif;
+        font-size: 15px;
+        line-height: 1.55;
+      }
+      .page {
+        max-width: 1180px;
+        margin: 0 auto;
+        padding: 48px 16px 96px;
+      }
+      h1 {
+        font-size: 30px;
+        line-height: 1.2;
+        margin: 0 0 8px;
+        letter-spacing: -0.01em;
+      }
+      h2 {
+        font-size: 21px;
+        margin: 56px 0 4px;
+        letter-spacing: -0.01em;
+      }
+      h3 {
+        font-size: 15px;
+        margin: 24px 0 6px;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: #55606e;
+      }
+      p,
+      li {
+        max-width: 72ch;
+      }
+      .lede {
+        color: #3b4654;
+      }
+      .ticket {
+        display: inline-block;
+        font-size: 12px;
+        font-weight: 600;
+        letter-spacing: 0.04em;
+        padding: 2px 8px;
+        border-radius: 999px;
+        background: #dfe4ea;
+        color: #2b3440;
+        vertical-align: middle;
+        margin-right: 8px;
+      }
+      .split {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 32px;
+        align-items: flex-start;
+        margin-top: 20px;
+      }
+      .split > .notes {
+        flex: 999 1 420px;
+        min-width: 0;
+      }
+      figure {
+        margin: 0;
+      }
+      figcaption {
+        font-size: 12px;
+        color: #55606e;
+        margin-top: 8px;
+        text-align: center;
+      }
+      table {
+        border-collapse: collapse;
+        width: 100%;
+        font-size: 13.5px;
+        margin: 12px 0;
+      }
+      th,
+      td {
+        text-align: left;
+        border-bottom: 1px solid #d9dde3;
+        padding: 7px 10px;
+        vertical-align: top;
+      }
+      th {
+        background: #e4e7ec;
+        font-weight: 600;
+      }
+      code {
+        font-family: ui-monospace, 'SFMono-Regular', Menlo, monospace;
+        font-size: 12.5px;
+        background: #e2e6ea;
+        padding: 1px 5px;
+        border-radius: 4px;
+      }
+      .flag {
+        border-left: 3px solid var(--bo-warning);
+        background: #fff7e8;
+        padding: 10px 14px;
+        margin: 16px 0;
+        border-radius: 0 6px 6px 0;
+      }
+      /* ---------- Maqueta: teléfono ---------- */
+      .phone {
+        width: 390px;
+        height: 844px;
+        flex: 0 0 390px;
+        background: var(--bg);
+        border-radius: 28px;
+        border: 1px solid #c8ccd3;
+        box-shadow: 0 12px 32px rgba(10, 10, 11, 0.14);
+        overflow: hidden;
+        font-family: 'Outfit', system-ui, sans-serif;
+        color: var(--text);
+        display: flex;
+        flex-direction: column;
+      }
+      .phone * {
+        font-family: inherit;
+      }
+      .nav {
+        padding: 14px 20px 0;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .nav .back {
+        width: 32px;
+        height: 32px;
+        margin-left: -8px;
+        border: 0;
+        background: transparent;
+        display: grid;
+        place-items: center;
+      }
+      .nav .title {
+        font-size: 16px;
+        font-weight: 600;
+      }
+      .stepper {
+        padding: 10px 20px 0;
+        display: flex;
+        gap: 6px;
+      }
+      .stepper span {
+        flex: 1;
+        height: 4px;
+        border-radius: 999px;
+        background: var(--primary-100);
+      }
+      .stepper span.on {
+        background: var(--primary);
+      }
+      .summary {
+        margin: 14px 20px 0;
+        padding: 14px 16px;
+        background: var(--surface);
+        border: 1px solid var(--secondary-100);
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .body {
+        flex: 1;
+        padding: 20px;
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+        overflow: hidden;
+      }
+      .q {
+        margin: 0;
+        font-size: 16px;
+        line-height: 19.2px;
+        font-weight: 600;
+      }
+      .cap {
+        font-size: 12px;
+        line-height: 14.4px;
+        color: var(--neutral-600);
+      }
+      .foot {
+        font-size: 10px;
+        line-height: 12px;
+        color: var(--neutral-600);
+      }
+      .seg {
+        display: flex;
+        gap: 6px;
+      }
+      .seg button {
+        flex: 1;
+        min-height: 48px;
+        border-radius: 8px;
+        border: 1px solid var(--secondary-300);
+        background: var(--surface);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 2px;
+        font-size: 14px;
+        color: var(--text);
+      }
+      .seg button[aria-pressed='true'] {
+        border: 2px solid var(--primary);
+        background: var(--primary-100);
+        font-weight: 600;
+      }
+      .seg button:disabled {
+        border-style: dashed;
+        color: var(--neutral-600);
+      }
+      .opt {
+        min-height: 48px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 14px 16px;
+        border-radius: 12px;
+        border: 1px solid var(--secondary-300);
+        background: var(--surface);
+        text-decoration: none;
+        color: inherit;
+      }
+      .opt.sel {
+        border: 2px solid var(--primary);
+      }
+      .opt.off {
+        opacity: 0.6;
+      }
+      .opt .amount {
+        font-size: 16px;
+        line-height: 19.2px;
+        font-weight: 600;
+        color: var(--primary);
+      }
+      .banner {
+        margin-top: auto;
+        padding: 14px 16px;
+        background: var(--primary-100);
+        border-radius: 12px;
+        display: flex;
+        gap: 10px;
+        align-items: center;
+      }
+      .banner .dot {
+        width: 40px;
+        height: 40px;
+        border-radius: 999px;
+        background: var(--primary);
+        display: grid;
+        place-items: center;
+        flex: 0 0 auto;
+      }
+      .chip {
+        font-size: 10px;
+        line-height: 12px;
+        font-weight: 600;
+        padding: 3px 8px;
+        border-radius: 999px;
+      }
+      .chip.ok {
+        background: var(--success-100);
+        color: #0b6b5d;
+      }
+      .chip.now {
+        background: var(--primary-100);
+        color: #253f93;
+      }
+      .chip.free {
+        background: var(--secondary-100);
+        color: var(--neutral-700);
+      }
+      .row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 10px 0;
+        border-bottom: 1px solid var(--secondary-100);
+      }
+      .sheet-wrap {
+        position: relative;
+        flex: 1;
+        display: flex;
+        align-items: flex-end;
+        background: rgba(10, 10, 11, 0.4);
+      }
+      .sheet {
+        width: 100%;
+        background: var(--surface);
+        border-radius: 24px 24px 0 0;
+        padding: 20px;
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+        max-height: 92%;
+      }
+      .grab {
+        width: 36px;
+        height: 4px;
+        border-radius: 999px;
+        background: var(--secondary-300);
+        margin: -6px auto 2px;
+      }
+      .btn {
+        height: 52px;
+        border: 0;
+        border-radius: 8px;
+        background: var(--primary);
+        color: #fff;
+        font-size: 16px;
+        font-weight: 600;
+        width: 100%;
+      }
+      .btn.ghost {
+        background: transparent;
+        color: var(--primary);
+        border: 1px solid var(--primary-300);
+      }
+      /* ---------- Maqueta: back-office ---------- */
+      .bo {
+        width: 100%;
+        background: var(--bo-canvas);
+        color: var(--bo-ink);
+        border: 1px solid #c8ccd3;
+        border-radius: 10px;
+        overflow: hidden;
+        font-size: 13px;
+      }
+      .bo header {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: flex-end;
+        justify-content: space-between;
+        gap: 16px;
+        padding: 20px;
+      }
+      .bo h4 {
+        margin: 0;
+        font-size: 22px;
+        font-weight: 600;
+      }
+      .bo .filters {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+      }
+      .bo label {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        font-size: 12px;
+        color: var(--bo-ink-soft);
+      }
+      .bo select,
+      .bo .toggle {
+        min-height: 36px;
+        border: 1px solid var(--bo-line);
+        border-radius: 6px;
+        background: var(--bo-surface);
+        padding: 0 10px;
+        font: inherit;
+        color: inherit;
+      }
+      .bo .cards {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 12px;
+        padding: 0 20px 16px;
+      }
+      .bo .card {
+        background: var(--bo-surface);
+        border: 1px solid var(--bo-line);
+        border-radius: 8px;
+        padding: 12px 14px;
+      }
+      .bo .card b {
+        display: block;
+        font-size: 20px;
+        font-weight: 600;
+      }
+      .bo table {
+        margin: 0;
+        font-size: 12.5px;
+        background: var(--bo-surface);
+      }
+      .bo thead th {
+        background: var(--bo-muted);
+        border-bottom: 1px solid var(--bo-line);
+        font-size: 12px;
+      }
+      .bo td {
+        border-bottom: 1px solid var(--bo-line);
+      }
+      .bo .grouphead td {
+        background: var(--bo-muted);
+        font-weight: 600;
+      }
+      .bo .tag {
+        display: inline-block;
+        font-size: 11px;
+        font-weight: 600;
+        padding: 2px 7px;
+        border-radius: 999px;
+        border: 1px solid var(--bo-line);
+      }
+      @media (max-width: 900px) {
+        .bo .cards {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="page">
+      <h1>Cadencias · propuestas de diseño</h1>
+      <p class="lede">
+        Propuestas para COPAYNI-116, 117, 120 y 118, construidas sobre la tipografía y los tokens
+        que ya usa el producto: <strong>Outfit</strong> 300/400/600 con la escala de
+        <code>tokens.ts</code> (footnote 10 · caption 12 · body 14 · highlight 16 · title 22 ·
+        display 28 · hero 32) y la paleta real, con <code>#3051BB</code> como primario. El
+        back-office va en <strong>Inter</strong> con sus propios tokens y <code>#0b6b5d</code>.
+        Las maquetas de abajo son HTML con esos valores, no capturas: se pueden medir.
+      </p>
+
+      <div class="flag">
+        <strong>Hallazgo de accesibilidad, transversal a los cuatro tickets.</strong>
+        <code>neutral500</code> (<code>#898384</code>) sobre blanco da ≈ 3,6:1 y no alcanza el AA de
+        4,5:1 para texto pequeño, que es justo donde más se usa (captions y footnotes). En estas
+        propuestas el texto secundario es <code>neutral600</code> (<code>#726C6C</code>, ≈ 4,8:1).
+        Merece una revisión aparte en toda la app.
+      </div>
+
+      <h2><span class="ticket">COPAYNI-116</span>Elegir frecuencia y turnos al unirse</h2>
+      <p>
+        Hoy el paso 2 del alta se llama «Cuota mensual» y pregunta
+        <em>¿Cuánto quieres pagar cada mes?</em>, con filas «S/ 3,000 /mes · por 10 meses». La
+        propuesta mantiene esa anatomía —y por tanto el código de
+        <code>MonthlyPayInScreen</code>— y le añade una decisión previa: la frecuencia.
+      </p>
+      <div class="split">
+        <figure>
+          <!-- 116 · paso 2: frecuencia y turnos -->
+          <div class="phone">
+            <div class="nav">
+              <button class="back" aria-label="Volver">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0E0E0F" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M15 18l-6-6 6-6" /></svg>
+              </button>
+              <span class="title">Frecuencia y turnos</span>
+            </div>
+            <div class="stepper" role="img" aria-label="Paso 2 de 4">
+              <span class="on"></span><span class="on"></span><span></span><span></span>
+            </div>
+            <div class="summary">
+              <div style="flex: 1; display: flex; flex-direction: column; gap: 2px">
+                <span class="cap">Monto a recibir</span>
+                <span style="font-size: 16px; font-weight: 600">S/ 12,000</span>
+              </div>
+              <a href="#editar" style="font-size: 12px; font-weight: 600; color: var(--primary)">Editar</a>
+            </div>
+            <div class="body">
+              <div style="display: flex; flex-direction: column; gap: 10px">
+                <h5 class="q">¿Cada cuánto quieres pagar?</h5>
+                <div class="seg" role="group" aria-label="Frecuencia de pago">
+                  <button type="button" aria-pressed="false">Mensual<span class="foot">cada mes</span></button>
+                  <button type="button" aria-pressed="true">Semanal<span class="foot" style="color: #253f93">cada 7 días</span></button>
+                  <button type="button" aria-pressed="false" disabled>Quincenal<span class="foot">no disponible</span></button>
+                </div>
+                <span class="foot">Solo aparecen las frecuencias que tu app y la junta admiten.</span>
+              </div>
+
+              <div style="display: flex; flex-direction: column; gap: 10px">
+                <h5 class="q">¿Cuántos turnos?</h5>
+                <a class="opt sel" href="#t4">
+                  <span style="flex: 1; display: flex; flex-direction: column; gap: 2px">
+                    <span class="cap"><span class="amount">S/ 3,000</span> por semana</span>
+                    <span class="foot">4 turnos · 4 miembros · termina en 1 mes</span>
+                  </span>
+                  <span style="font-size: 12px; font-weight: 600">4 turnos</span>
+                </a>
+                <a class="opt" href="#t8">
+                  <span style="flex: 1; display: flex; flex-direction: column; gap: 2px">
+                    <span class="cap"><span class="amount">S/ 1,500</span> por semana</span>
+                    <span class="foot">8 turnos · 8 miembros · termina en 2 meses</span>
+                  </span>
+                  <span style="font-size: 12px; font-weight: 600">8 turnos</span>
+                </a>
+                <div class="opt off">
+                  <span style="flex: 1; display: flex; flex-direction: column; gap: 2px">
+                    <span class="cap"><span style="font-size: 16px; font-weight: 600">S/ 6,000</span> por semana</span>
+                    <span class="foot" style="color: var(--error)">Supera tu límite mensual: noviembre sumaría S/ 24,000 de S/ 5,000</span>
+                  </span>
+                  <span style="font-size: 12px; font-weight: 600">2 turnos</span>
+                </div>
+                <a href="#todos" style="font-size: 12px; font-weight: 600; color: var(--primary); min-height: 48px; display: flex; align-items: center">Ver los 6 turnos posibles para S/ 12,000</a>
+              </div>
+
+              <div class="banner">
+                <span class="dot" aria-hidden="true">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+                </span>
+                <span class="cap" style="color: #253f93; flex: 1">Con 4 turnos semanales pagas 4 veces en un mes y cobras el pozo completo en tu semana.</span>
+              </div>
+            </div>
+          </div>
+          <figcaption>Paso 2 de 4 · 390 × 844</figcaption>
+        </figure>
+
+        <div class="notes">
+          <h3>Decisiones de la propuesta</h3>
+          <ul>
+            <li>
+              <strong>La frecuencia va antes que los turnos</strong>, no al revés: el número de
+              turnos solo significa algo una vez que se sabe cada cuánto se paga. «4» es un mes en
+              semanal y cuatro meses en mensual.
+            </li>
+            <li>
+              <strong>Un segmented control de tres, no un selector</strong>. Son tres opciones como
+              máximo (<code>CADENCE_IDS</code>) y conviene verlas juntas para comparar. Las no
+              habilitadas se muestran deshabilitadas con borde discontinuo, no se esconden: así la
+              persona entiende que existen y que no es un error de su app.
+            </li>
+            <li>
+              <strong>La fila de turnos reutiliza la anatomía existente</strong> (monto en 16/600
+              primario + unidad en caption, etiqueta a la derecha, chevron, <code>minHeight 48</code>),
+              y añade una línea footnote con lo que antes no se decía: cuántos miembros son y cuánto
+              dura la junta de verdad.
+            </li>
+            <li>
+              <strong>El rechazo por límite mensual se explica</strong>. El backend ya devuelve el
+              mes, el total y el exceso (COPAYNI-110); la fila deshabilitada los muestra en lugar
+              del «Supera tu límite mensual de cuotas» genérico de hoy.
+            </li>
+          </ul>
+
+          <h3>Copy que hay que cambiar</h3>
+          <table>
+            <thead>
+              <tr><th>Clave i18n</th><th>Hoy</th><th>Propuesta</th></tr>
+            </thead>
+            <tbody>
+              <tr><td><code>join.monthlyPayIn.title</code></td><td>Cuota mensual</td><td>Frecuencia y turnos</td></tr>
+              <tr><td><code>join.monthlyPayIn.question</code></td><td>¿Cuánto quieres pagar cada mes?</td><td>parte en dos: <code>cadence.question</code> «¿Cada cuánto quieres pagar?» y <code>turns.question</code> «¿Cuántos turnos?»</td></tr>
+              <tr><td><code>join.monthlyPayIn.perMonth</code></td><td>/mes</td><td><code>perTurn.monthly|biweekly|weekly</code>: «por mes», «cada 15 días», «por semana»</td></tr>
+              <tr><td><code>join.monthlyPayIn.optionMonths</code></td><td>por {{months}} meses</td><td><code>optionTurns</code> «{{turns}} turnos» + <code>optionDuration</code> «termina en {{duration}}»</td></tr>
+              <tr><td><code>join.monthlyPayIn.exceedsLimit</code></td><td>Supera tu límite mensual de cuotas.</td><td>«Supera tu límite mensual: {{month}} sumaría {{total}} de {{limit}}»</td></tr>
+            </tbody>
+          </table>
+          <p class="lede">
+            El paso sigue siendo 2 de 4: la frecuencia no añade un paso nuevo, para no alargar un
+            alta que ya tiene cuatro.
+          </p>
+        </div>
+      </div>
+
+      <div class="split">
+        <figure>
+          <!-- 116b · hoja de turnos válidos -->
+          <div class="phone">
+            <div class="nav">
+              <span class="title" style="opacity: 0.35">Frecuencia y turnos</span>
+            </div>
+            <div class="sheet-wrap">
+              <div class="sheet">
+                <span class="grab" aria-hidden="true"></span>
+                <h5 class="q">Turnos posibles para S/ 12,000</h5>
+                <span class="cap">En semanal, cada turno paga a un miembro. Solo se ofrecen los números que dan una cuota exacta.</span>
+                <div style="display: flex; flex-direction: column; gap: 10px; overflow: auto">
+                  <a class="opt" href="#2"><span style="flex: 1" class="cap"><span class="amount">S/ 6,000</span> por semana</span><span style="font-size: 12px; font-weight: 600">2 turnos</span></a>
+                  <a class="opt sel" href="#4"><span style="flex: 1" class="cap"><span class="amount">S/ 3,000</span> por semana</span><span style="font-size: 12px; font-weight: 600">4 turnos</span></a>
+                  <a class="opt" href="#5"><span style="flex: 1" class="cap"><span class="amount">S/ 2,400</span> por semana</span><span style="font-size: 12px; font-weight: 600">5 turnos</span></a>
+                  <a class="opt" href="#8"><span style="flex: 1" class="cap"><span class="amount">S/ 1,500</span> por semana</span><span style="font-size: 12px; font-weight: 600">8 turnos</span></a>
+                  <a class="opt" href="#10"><span style="flex: 1" class="cap"><span class="amount">S/ 1,200</span> por semana</span><span style="font-size: 12px; font-weight: 600">10 turnos</span></a>
+                  <a class="opt" href="#16"><span style="flex: 1" class="cap"><span class="amount">S/ 750</span> por semana</span><span style="font-size: 12px; font-weight: 600">16 turnos</span></a>
+                </div>
+                <div style="padding: 10px 14px; border-radius: 8px; background: var(--secondary-100)">
+                  <span class="foot">Con 7 o 9 turnos la cuota no sale exacta para este monto. Con <strong>S/ 12,600</strong> sí: 7 turnos de S/ 1,800.</span>
+                </div>
+                <button class="btn">Usar 4 turnos</button>
+              </div>
+            </div>
+          </div>
+          <figcaption>Hoja inferior · turnos válidos para el monto</figcaption>
+        </figure>
+        <div class="notes">
+          <h3>Por qué esta hoja existe</h3>
+          <p>
+            La regla de cuota exacta (<code>payout % turnos === 0</code>) no se degrada poco a poco:
+            sobre el catálogo de 235 montos, 2, 4, 5, 8, 10 y 16 turnos sirven para los 235, pero 7
+            solo para 34 y 13 para 18. Si la pantalla dejara teclear un número, la mayoría de los
+            intentos no tendría explicación visible.
+          </p>
+          <ul>
+            <li>
+              <strong>Nunca se ofrece una combinación imposible</strong>: la lista se calcula para
+              el monto elegido (COPAYNI-125).
+            </li>
+            <li>
+              <strong>El vacío se explica y propone salida</strong>, no se deja una lista en blanco:
+              «con 7 turnos no sale exacta para este monto; con S/ 12,600 sí». Es el criterio del
+              ticket y evita que la persona crea que la app está rota.
+            </li>
+            <li>
+              La hoja se abre desde el enlace del paso 2, así que el camino corto —tres opciones
+              recomendadas— sigue siendo el principal.
+            </li>
+          </ul>
+        </div>
+      </div>
+
+      <h2><span class="ticket">COPAYNI-117</span>Ver mis turnos con su fecha real</h2>
+      <div class="split">
+        <figure>
+          <div class="phone">
+            <div class="nav">
+              <button class="back" aria-label="Volver">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0E0E0F" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M15 18l-6-6 6-6" /></svg>
+              </button>
+              <span class="title">Mi junta</span>
+              <span class="chip now" style="margin-left: auto">Activa</span>
+            </div>
+            <div class="body" style="gap: 14px; overflow: auto">
+              <div>
+                <span class="cap">Pozo por turno</span>
+                <div style="font-size: 28px; line-height: 33.6px; font-weight: 600">S/ 12,000</div>
+                <span class="cap">Turno 2 de 4 · termina el 25 nov</span>
+                <div style="height: 6px; border-radius: 999px; background: var(--secondary-200, #dae1e7); margin-top: 8px; overflow: hidden">
+                  <div style="width: 50%; height: 100%; background: var(--primary)"></div>
+                </div>
+              </div>
+
+              <div>
+                <div class="row"><span class="cap" style="flex: 1">Tu turno</span><strong style="color: var(--primary); font-size: 14px">Semana 3 · mié 18 nov</strong></div>
+                <div class="row"><span class="cap" style="flex: 1">Tu cuota</span><strong style="font-size: 14px">S/ 3,000 por semana</strong></div>
+                <div class="row"><span class="cap" style="flex: 1">Retención de tu pozo</span><strong style="font-size: 14px">S/ 6,000 · 2 semanas</strong></div>
+                <div class="row" style="border-bottom: 0"><span class="cap" style="flex: 1">Próximo vencimiento</span><strong style="font-size: 14px">mié 11 nov</strong></div>
+              </div>
+              <button class="btn">Pagar S/ 3,000</button>
+
+              <h5 class="q" style="margin-top: 6px">Turnos</h5>
+              <div>
+                <div class="row">
+                  <span style="font-size: 14px; flex: 1">Semana 1 · mié 4 nov</span>
+                  <span class="cap">Ana P.</span><span class="chip ok">Cobrado</span>
+                </div>
+                <div class="row">
+                  <span style="font-size: 14px; flex: 1">Semana 2 · mié 11 nov</span>
+                  <span class="cap">Beto R.</span><span class="chip now">En curso</span>
+                </div>
+                <div class="row">
+                  <span style="font-size: 14px; font-weight: 600; flex: 1">Semana 3 · mié 18 nov</span>
+                  <span class="cap">Tú</span>
+                </div>
+                <div class="row" style="border-bottom: 0">
+                  <span style="font-size: 14px; flex: 1">Semana 4 · mié 25 nov</span>
+                  <span class="chip free">Vacante</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <figcaption>Detalle de mi junta · cadencia semanal</figcaption>
+        </figure>
+        <div class="notes">
+          <h3>La regla de la etiqueta</h3>
+          <p>
+            El dominio ya produce la etiqueta correcta: <code>TurnSchedule.labelOf</code> devuelve
+            «Semana 3 · 2026-11-18», con el nombre de la unidad según la cadencia
+            (<code>Cadence.turnLabel()</code>: Mes, Quincena, Semana). La propuesta es que la app
+            no vuelva a componer esa etiqueta: la pide y le da formato de fecha según el idioma.
+          </p>
+          <ul>
+            <li>
+              <strong>En cadencia mensual nada cambia de aspecto</strong>: la etiqueta se queda en
+              «Marzo 2027», sin día, que es lo que hay hoy. El día solo aparece cuando el mes no
+              identifica el turno.
+            </li>
+            <li>
+              <strong>«Pozo mensual» pasa a «Pozo por turno»</strong> y «Mes 2 de 4» a «Turno 2 de
+              4 · termina el 25 nov». El progreso gana la fecha real de cierre, que es la pregunta
+              que la gente hace.
+            </li>
+            <li>
+              <strong>La retención se expresa en cobertura</strong>: «S/ 6,000 · 2 semanas». Es lo
+              que COPAYNI-112 va a cambiar por debajo, y en una junta de 4 turnos conviene que se
+              vea que son dos semanas y la mitad del pozo.
+            </li>
+            <li>
+              El día de la semana abreviado («mié 18 nov») importa en semanal: la gente organiza su
+              dinero por día de semana, no por número de día.
+            </li>
+          </ul>
+          <h3>Copy que hay que cambiar</h3>
+          <table>
+            <thead><tr><th>Clave</th><th>Hoy</th><th>Propuesta</th></tr></thead>
+            <tbody>
+              <tr><td><code>circles.detail.pot</code></td><td>Pozo mensual</td><td>Pozo por turno</td></tr>
+              <tr><td><code>circles.detail.progress</code></td><td>Mes {{current}} de {{total}} · termina en {{end}}</td><td>Turno {{current}} de {{total}} · termina el {{endDate}}</td></tr>
+              <tr><td><code>circles.detail.turnValue</code></td><td>{{month}} ({{position}}.ª)</td><td>{{turnLabel}} — la da el backend</td></tr>
+              <tr><td><code>circles.detail.turnStatus.current</code></td><td>Este mes</td><td>En curso</td></tr>
+              <tr><td><code>circles.detail.yourInstallment</code></td><td>Tu cuota</td><td>Tu cuota + unidad: «S/ 3,000 por semana»</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <h2><span class="ticket">COPAYNI-120</span>Avisos por cadencia</h2>
+      <div class="split">
+        <figure>
+          <div class="phone">
+            <div class="nav"><span class="title">Avisos</span></div>
+            <div class="body" style="gap: 14px">
+              <span class="cap" style="font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em">Hoy</span>
+              <div style="background: var(--surface); border: 1px solid var(--secondary-100); border-radius: 12px; padding: 14px 16px; display: flex; gap: 12px">
+                <span style="width: 36px; height: 36px; border-radius: 999px; background: var(--primary-100); display: grid; place-items: center; flex: 0 0 auto" aria-hidden="true">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#3051BB" stroke-width="2" stroke-linecap="round"><path d="M12 3v18M5 10l7-7 7 7" /></svg>
+                </span>
+                <span>
+                  <strong style="font-size: 14px">Esta semana cobras</strong>
+                  <span class="cap" style="display: block">Tu pozo de S/ 12,000 se paga el miércoles 18, cuando todos hayan pagado.</span>
+                </span>
+              </div>
+              <div style="background: var(--surface); border: 1px solid var(--secondary-100); border-radius: 12px; padding: 14px 16px; display: flex; gap: 12px">
+                <span style="width: 36px; height: 36px; border-radius: 999px; background: #ffede5; display: grid; place-items: center; flex: 0 0 auto" aria-hidden="true">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#F05A28" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+                </span>
+                <span>
+                  <strong style="font-size: 14px">Tu cuota vence mañana</strong>
+                  <span class="cap" style="display: block">S/ 3,000 · miércoles 11 nov. Es la 2.ª de 4.</span>
+                </span>
+              </div>
+              <span class="cap" style="font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em">Esta semana</span>
+              <div style="background: var(--surface); border: 1px solid var(--secondary-100); border-radius: 12px; padding: 14px 16px; display: flex; gap: 12px">
+                <span style="width: 36px; height: 36px; border-radius: 999px; background: var(--success-100); display: grid; place-items: center; flex: 0 0 auto" aria-hidden="true">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#15B097" stroke-width="2" stroke-linecap="round"><path d="M20 6L9 17l-5-5" /></svg>
+                </span>
+                <span>
+                  <strong style="font-size: 14px">Pago recibido</strong>
+                  <span class="cap" style="display: block">S/ 3,000 de tu semana 1 · mié 4 nov.</span>
+                </span>
+              </div>
+              <div class="banner" style="margin-top: 6px">
+                <span class="dot" aria-hidden="true">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.7 21a2 2 0 01-3.4 0" /></svg>
+                </span>
+                <span class="cap" style="color: #253f93; flex: 1">En juntas semanales avisamos 1 día antes; en mensuales, 3. Puedes cambiarlo en Ajustes.</span>
+              </div>
+            </div>
+          </div>
+          <figcaption>Lista de avisos · cadencia semanal</figcaption>
+        </figure>
+        <div class="notes">
+          <h3>Qué cambia y por qué</h3>
+          <ul>
+            <li>
+              <strong>El aviso deja de hablar en meses.</strong> Hoy el título es «¡Este mes
+              cobras!» y el cuerpo no dice cuándo. En semanal, «este mes» no identifica nada: cuatro
+              turnos caen en el mismo mes. El título pasa a nombrar la unidad de la cadencia y el
+              cuerpo lleva <strong>la fecha</strong>.
+            </li>
+            <li>
+              <strong>La antelación depende de la cadencia.</strong> Avisar con 3 días en una junta
+              semanal es casi la mitad del ciclo; con 1 día en mensual es tarde. El valor por
+              cadencia sale de la misma tabla que la gracia y la mora (COPAYNI-111), y el aviso lo
+              dice en una línea para que no parezca arbitrario.
+            </li>
+            <li>
+              <strong>Agrupación por día, no por mes.</strong> Con cuatro o cinco avisos de cuota al
+              mes, los encabezados «Hoy / Esta semana / Antes» ordenan mejor que la fecha suelta.
+            </li>
+            <li>
+              <strong>La cuota dice qué número de turno es</strong> («la 2.ª de 4»): en semanal, el
+              ritmo rápido hace que la gente pierda la cuenta.
+            </li>
+          </ul>
+          <table>
+            <thead><tr><th>Clave</th><th>Hoy</th><th>Propuesta</th></tr></thead>
+            <tbody>
+              <tr><td><code>notifications.types.payoutTurn.title</code></td><td>¡Este mes cobras!</td><td>por cadencia: «Este mes cobras» · «Esta quincena cobras» · «Esta semana cobras»</td></tr>
+              <tr><td><code>notifications.types.payoutTurn.body</code></td><td>Tu pozo de {{amount}} se paga cuando todos hayan pagado.</td><td>«Tu pozo de {{amount}} se paga el {{date}}, cuando todos hayan pagado.»</td></tr>
+              <tr><td><code>notifications.types.installmentDueSoon</code></td><td>(días genéricos)</td><td>«Tu cuota vence {{relativeDay}}» + «{{amount}} · {{date}}. Es la {{turn}}.ª de {{turns}}.»</td></tr>
+            </tbody>
+          </table>
+          <p class="lede">
+            El dato de fecha ya está disponible: la consulta del feed se arregló en COPAYNI-127 y
+            devuelve el día real del turno en toda cadencia.
+          </p>
+        </div>
+      </div>
+
+      <h2><span class="ticket">COPAYNI-118</span>Back-office: filtrar y agrupar por cadencia</h2>
+      <div class="bo" style="margin-top: 20px">
+        <header>
+          <h4>Juntas</h4>
+          <div class="filters">
+            <label>Estado
+              <select>
+                <option>Todas</option><option selected>Activas</option><option>Por empezar</option><option>Finalizadas</option>
+              </select>
+            </label>
+            <label>Cadencia
+              <select>
+                <option>Todas</option><option selected>Semanal</option><option>Quincenal</option><option>Mensual</option>
+              </select>
+            </label>
+            <label>Vista
+              <span class="toggle" style="display: inline-flex; align-items: center; gap: 8px; padding: 0 10px">
+                <input type="checkbox" id="agrupar" checked />
+                <label for="agrupar" style="font-size: 12px; color: var(--bo-ink)">Agrupar por cadencia</label>
+              </span>
+            </label>
+          </div>
+        </header>
+        <div class="cards">
+          <div class="card"><span style="color: var(--bo-ink-soft)">Mensuales activas</span><b>128</b><span style="color: var(--bo-ink-soft)">S/ 1,536,000 en pozos</span></div>
+          <div class="card"><span style="color: var(--bo-ink-soft)">Quincenales activas</span><b>12</b><span style="color: var(--bo-ink-soft)">S/ 144,000</span></div>
+          <div class="card"><span style="color: var(--bo-ink-soft)">Semanales activas</span><b>7</b><span style="color: var(--bo-ink-soft)">S/ 84,000</span></div>
+          <div class="card"><span style="color: var(--bo-ink-soft)">Cierres en 7 días</span><b>31</b><span style="color: var(--bo-warning)">24 son semanales</span></div>
+        </div>
+        <table>
+          <caption class="sr-only" style="position: absolute; left: -9999px">Juntas por cadencia</caption>
+          <thead>
+            <tr>
+              <th scope="col">Junta</th><th scope="col">Cadencia</th><th scope="col">Estado</th>
+              <th scope="col">Pozo</th><th scope="col">Turno en curso</th><th scope="col">Vence</th><th scope="col">Miembros</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr class="grouphead"><td colspan="7">Semanal · 7 juntas · 24 cierres en los próximos 7 días</td></tr>
+            <tr><td>a3f1…9c</td><td><span class="tag" style="color: var(--bo-brand); border-color: var(--bo-brand)">Semanal</span></td><td>Activa</td><td>S/ 12,000</td><td>Semana 2 de 4</td><td>mié 11 nov</td><td>4 / 4</td></tr>
+            <tr><td>b7c2…41</td><td><span class="tag" style="color: var(--bo-brand); border-color: var(--bo-brand)">Semanal</span></td><td>Activa</td><td>S/ 8,000</td><td>Semana 4 de 8</td><td>vie 13 nov</td><td>8 / 8</td></tr>
+            <tr><td>c1d9…07</td><td><span class="tag" style="color: var(--bo-brand); border-color: var(--bo-brand)">Semanal</span></td><td>Pausada</td><td>S/ 12,000</td><td>Semana 1 de 4</td><td style="color: var(--bo-warning)">pausada el 9 nov</td><td>4 / 4</td></tr>
+            <tr class="grouphead"><td colspan="7">Quincenal · 12 juntas</td></tr>
+            <tr><td>d4e8…b2</td><td><span class="tag">Quincenal</span></td><td>Activa</td><td>S/ 12,000</td><td>Quincena 3 de 6</td><td>jue 10 dic</td><td>6 / 6</td></tr>
+            <tr class="grouphead"><td colspan="7">Mensual · 128 juntas</td></tr>
+            <tr><td>e9a0…5d</td><td><span class="tag">Mensual</span></td><td>Activa</td><td>S/ 30,000</td><td>Mes 3 de 10</td><td>5 ene 2027</td><td>10 / 10</td></tr>
+            <tr><td>f2b6…8e</td><td><span class="tag">Mensual</span></td><td>Por empezar</td><td>S/ 30,000</td><td>—</td><td>empieza 1 dic</td><td>7 / 10</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="notes" style="margin-top: 20px">
+        <h3>Decisiones de la propuesta</h3>
+        <ul>
+          <li>
+            <strong>La cadencia es una columna y un filtro, no una pestaña.</strong> Operación
+            necesita comparar entre cadencias —dónde se concentran los cierres— y unas pestañas lo
+            impedirían.
+          </li>
+          <li>
+            <strong>«Turno en curso» sustituye al mes.</strong> «Semana 2 de 4» dice en una celda lo
+            que antes había que deducir del mes y la posición, y en semanal el mes no lo decía.
+          </li>
+          <li>
+            <strong>La tarjeta de cierres próximos es la que justifica el ticket</strong>: con
+            juntas semanales, la carga operativa de cobros y payouts se multiplica por cuatro, y hay
+            que poder verla antes de que llegue.
+          </li>
+          <li>
+            <strong>La etiqueta de cadencia no es solo color.</strong> Semanal lleva color de marca
+            <em>y</em> texto; el resto, texto sobre borde neutro. Distinguir por color solo falla en
+            daltonismo y en impresión.
+          </li>
+          <li>
+            Agrupar es opt-in y vive en la URL, como el filtro de estado que ya existe
+            (<code>?state=</code> → <code>?state=&amp;cadence=&amp;group=</code>), para que un enlace
+            compartido muestre lo mismo.
+          </li>
+        </ul>
+      </div>
+
+      <h2>Qué hace falta del backend para sostener estas pantallas</h2>
+      <table>
+        <thead><tr><th>Pantalla</th><th>Depende de</th></tr></thead>
+        <tbody>
+          <tr><td>116 · frecuencia</td><td>COPAYNI-114 (emparejar por cadencia), 115 (capacidad del cliente), 125 (turnos ofrecibles por monto) y el campo <code>cadence</code> en el alta</td></tr>
+          <tr><td>116 · límite mensual explicado</td><td>Hecho: COPAYNI-110 devuelve mes, total y exceso en <code>details</code></td></tr>
+          <tr><td>117 · etiqueta y fechas</td><td><code>TurnSchedule.labelOf</code> ya existe; falta exponerlo en el detalle (API)</td></tr>
+          <tr><td>117 · retención en cobertura</td><td>COPAYNI-112</td></tr>
+          <tr><td>120 · fecha del turno en el aviso</td><td>Hecho: COPAYNI-127</td></tr>
+          <tr><td>120 · antelación por cadencia</td><td>COPAYNI-111</td></tr>
+          <tr><td>118 · columna y filtro</td><td>La columna <code>cadence</code> ya se guarda y se lee; falta el filtro en la consulta de administración</td></tr>
+        </tbody>
+      </table>
+    </main>
+  </body>
+</html>
