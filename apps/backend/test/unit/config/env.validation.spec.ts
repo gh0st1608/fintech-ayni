@@ -148,8 +148,13 @@ describe('validateEnvironment', () => {
 
     it('habilita las que se indiquen, y solo esas', () => {
       expect(
-        validateEnvironment({ ...REQUIRED, CIRCLE_CADENCES_ENABLED: 'monthly, weekly' })
-          .CIRCLE_CADENCES_ENABLED,
+        validateEnvironment({
+          ...REQUIRED,
+          CIRCLE_CADENCES_ENABLED: 'monthly, weekly',
+          // Habilitar una cadencia exige sus parámetros de morosidad (COPAYNI-111).
+          DELINQUENCY_GRACE_DAYS_BY_CADENCE: 'weekly:1',
+          LATE_FEE_BPS_BY_CADENCE: 'weekly:150',
+        }).CIRCLE_CADENCES_ENABLED,
       ).toEqual(['monthly', 'weekly']);
     });
 
@@ -167,6 +172,61 @@ describe('validateEnvironment', () => {
       expect(() => validateEnvironment({ ...REQUIRED, CIRCLE_CADENCES_ENABLED: value })).toThrow(
         /CIRCLE_CADENCES_ENABLED/,
       );
+    });
+  });
+
+  describe('morosidad por cadencia (COPAYNI-111)', () => {
+    const weekly = {
+      ...REQUIRED,
+      CIRCLE_CADENCES_ENABLED: 'monthly,weekly',
+    };
+
+    it('la mensual sigue tomando los valores de siempre', () => {
+      const env = validateEnvironment(REQUIRED);
+      expect(env.DELINQUENCY_GRACE_DAYS).toBe(3);
+      expect(env.LATE_FEE_BPS).toBe(300);
+      expect(env.DELINQUENCY_GRACE_DAYS_BY_CADENCE).toEqual([]);
+    });
+
+    it('no arranca si una cadencia habilitada no tiene gracia ni mora propias', () => {
+      // No caen en los valores de la mensual en silencio: están calibrados para 30 días.
+      expect(() => validateEnvironment(weekly)).toThrow(
+        /DELINQUENCY_GRACE_DAYS_BY_CADENCE: falta weekly/,
+      );
+      expect(() =>
+        validateEnvironment({ ...weekly, DELINQUENCY_GRACE_DAYS_BY_CADENCE: 'weekly:1' }),
+      ).toThrow(/LATE_FEE_BPS_BY_CADENCE: falta weekly/);
+    });
+
+    it('no arranca si la gracia no cabe en el ciclo de su cadencia', () => {
+      expect(() =>
+        validateEnvironment({
+          ...weekly,
+          DELINQUENCY_GRACE_DAYS_BY_CADENCE: 'weekly:7',
+          LATE_FEE_BPS_BY_CADENCE: 'weekly:150',
+        }),
+      ).toThrow(/weekly tiene 7 días de gracia y su ciclo dura 7/);
+    });
+
+    it('acepta los valores de cada cadencia habilitada', () => {
+      const env = validateEnvironment({
+        ...weekly,
+        DELINQUENCY_GRACE_DAYS_BY_CADENCE: 'weekly:1',
+        LATE_FEE_BPS_BY_CADENCE: 'weekly:150',
+      });
+
+      expect(env.DELINQUENCY_GRACE_DAYS_BY_CADENCE).toEqual(['weekly:1']);
+      expect(env.LATE_FEE_BPS_BY_CADENCE).toEqual(['weekly:150']);
+    });
+
+    it.each([
+      ['una cadencia desconocida', 'trimestral:3'],
+      ['una entrada sin valor', 'weekly'],
+      ['repetidos', 'weekly:1,weekly:1'],
+    ])('rechaza %s en la lista', (_case, value) => {
+      expect(() =>
+        validateEnvironment({ ...REQUIRED, DELINQUENCY_GRACE_DAYS_BY_CADENCE: value }),
+      ).toThrow(/DELINQUENCY_GRACE_DAYS_BY_CADENCE/);
     });
   });
 

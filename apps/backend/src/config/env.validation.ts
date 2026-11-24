@@ -18,7 +18,11 @@ import {
   validateSync,
 } from 'class-validator';
 
-import { CADENCE_IDS, type CadenceId } from '../modules/circles/domain/value-objects/cadence';
+import {
+  Cadence,
+  CADENCE_IDS,
+  type CadenceId,
+} from '../modules/circles/domain/value-objects/cadence';
 import { currencySettingsFrom } from '../shared/infrastructure/currency/currency-settings';
 
 /** Identidad del personal del back-office (docs/backoffice-plan.md, BO2). */
@@ -291,6 +295,33 @@ export class EnvironmentVariables {
   @Min(0)
   @Max(28)
   DELINQUENCY_GRACE_DAYS: number = 3;
+
+  /**
+   * Gracia y mora de las cadencias distintas de la mensual (COPAYNI-111), como
+   * `weekly:1,biweekly:2` y `weekly:150`. Las variables de arriba son los valores de la cadencia
+   * mensual, que no cambian.
+   *
+   * Hacen falta porque el riesgo no es el mismo: con 3 días de gracia no hay solape con la cuota
+   * siguiente ni en una junta semanal, pero sí hay 52 ocasiones anuales de incurrir en mora en
+   * lugar de 12, y un cargo del 3 % aplicado 52 veces al año sobre el mismo capital en lugar de
+   * 12. Los valores definitivos los decide riesgo y finanzas (COPAYNI-102); la estructura existe
+   * para que no se habilite una cadencia sin ellos.
+   */
+  @Transform(toList)
+  @ArrayUnique()
+  @Matches(/^(monthly|biweekly|weekly):\d{1,2}$/, {
+    each: true,
+    message: 'DELINQUENCY_GRACE_DAYS_BY_CADENCE admite entradas cadencia:días, p. ej. weekly:1',
+  })
+  DELINQUENCY_GRACE_DAYS_BY_CADENCE: string[] = [];
+
+  @Transform(toList)
+  @ArrayUnique()
+  @Matches(/^(monthly|biweekly|weekly):\d{1,5}$/, {
+    each: true,
+    message: 'LATE_FEE_BPS_BY_CADENCE admite entradas cadencia:bps, p. ej. weekly:150',
+  })
+  LATE_FEE_BPS_BY_CADENCE: string[] = [];
 
   /**
    * Cargo por mora sobre la cuota vencida, cobrado una vez, en puntos básicos (R18, propuesto:
@@ -1039,6 +1070,52 @@ export function exportsTelemetry(
  * Valida y tipa las variables de entorno. El mensaje de error nombra cada variable
  * inválida y su regla, nunca su valor (puede ser un secreto).
  */
+/** Separador de los mensajes de configuración inválida, uno por línea. */
+const LINE_BREAK = '\n';
+
+/**
+ * Gracia y mora de cada cadencia habilitada (COPAYNI-111): la API no inicia sin ellas.
+ *
+ * Una cadencia habilitada sin parámetros propios no cae en los de la mensual en silencio, porque
+ * están calibrados para un ciclo de 30 días: aplicarlos a uno de 7 multiplica por cuatro las
+ * ocasiones de mora al año sin que nadie lo haya decidido. Y la gracia tiene que ser más corta que
+ * el ciclo, o se solaparía con la cuota siguiente.
+ */
+function assertDelinquencyByCadence(env: EnvironmentVariables): void {
+  const parse = (entries: readonly string[]): Map<string, number> =>
+    new Map(
+      entries.map((entry) => {
+        const [id, value] = entry.split(':');
+        return [id!, Number(value)];
+      }),
+    );
+  const grace = parse(env.DELINQUENCY_GRACE_DAYS_BY_CADENCE);
+  const fees = parse(env.LATE_FEE_BPS_BY_CADENCE);
+  grace.set('monthly', env.DELINQUENCY_GRACE_DAYS);
+  fees.set('monthly', env.LATE_FEE_BPS);
+
+  const problems: string[] = [];
+  for (const id of env.CIRCLE_CADENCES_ENABLED) {
+    if (!grace.has(id)) {
+      problems.push(`- DELINQUENCY_GRACE_DAYS_BY_CADENCE: falta ${id}, que está habilitada`);
+    }
+    if (!fees.has(id)) {
+      problems.push(`- LATE_FEE_BPS_BY_CADENCE: falta ${id}, que está habilitada`);
+    }
+  }
+  for (const [id, days] of grace) {
+    const cycleDays = Cadence.parse(id).approximateTurnDays();
+    if (days >= cycleDays) {
+      problems.push(
+        `- DELINQUENCY_GRACE_DAYS_BY_CADENCE: ${id} tiene ${days} días de gracia y su ciclo dura ${cycleDays}`,
+      );
+    }
+  }
+  if (problems.length > 0) {
+    throw new Error(['Configuración inválida:', ...problems].join(LINE_BREAK));
+  }
+}
+
 /** Monedas admitidas con su tipo de cambio (pending-scope M2): la API no inicia sin él. */
 function assertCurrencies(env: EnvironmentVariables): void {
   try {
@@ -1078,6 +1155,8 @@ export function validateEnvironment(config: Record<string, unknown>): Environmen
       'Configuración inválida:\n- CIRCLE_CADENCES_ENABLED: monthly no se puede deshabilitar',
     );
   }
+  // Ya se sabe que las cadencias son válidas: cada una habilitada necesita su gracia y su mora.
+  if (errors.length === 0) assertDelinquencyByCadence(env);
   if (env.NODE_ENV === 'production' && env.STAFF_AUTH_PROVIDER === 'dev') {
     throw new Error(
       'Configuración inválida:\n- STAFF_AUTH_PROVIDER: dev no se admite en production',

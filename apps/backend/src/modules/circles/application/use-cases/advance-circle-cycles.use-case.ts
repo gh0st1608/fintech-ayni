@@ -26,7 +26,7 @@ import {
 } from '../ports/cycle-payments.port';
 import { CYCLE_RUNS, type CycleRunFailure, type CycleRunsPort } from '../ports/cycle-runs.port';
 import { CircleTerms } from '../../domain/value-objects/circle-terms';
-import { CIRCLE_CYCLE, type CircleCycleSettings } from './cycle-settings';
+import { CIRCLE_CYCLE, type CircleCycleSettings, delinquencyFor } from './cycle-settings';
 import { SLOT_PRICING } from './get-available-slots.use-case';
 
 export { CIRCLE_CYCLE, type CircleCycleSettings } from './cycle-settings';
@@ -201,7 +201,7 @@ export class AdvanceCircleCyclesUseCase {
     const cycle = CircleCycle.restore({
       ...stored,
       dueDay: this.settings.dueDay,
-      delinquency: this.settings.delinquency,
+      delinquency: delinquencyFor(this.settings, terms.cadence),
       fund: { balance: stored.fundBalance, feeShareBps: this.settings.fundFeeShareBps },
       members: stored.members.map(({ userId, position, price, deductPayIn }) => ({
         userId,
