@@ -36,6 +36,7 @@ import { CreatePushDevices1764590400000 } from './1764590400000-create-push-devi
 import { CreateHomeContent1764676800000 } from './1764676800000-create-home-content';
 import { CreateExternalIdentities1764763200000 } from './1764763200000-create-external-identities';
 import { AddSocialFlowCodeVerifier1764849600000 } from './1764849600000-add-social-flow-code-verifier';
+import { ExpandCircleTurns1764936000000 } from './1764936000000-expand-circle-turns';
 
 /** Migraciones en orden. Se listan explícitamente: el build no depende de globs. */
 export const MIGRATIONS = [
@@ -77,4 +78,5 @@ export const MIGRATIONS = [
   CreateHomeContent1764676800000,
   CreateExternalIdentities1764763200000,
   AddSocialFlowCodeVerifier1764849600000,
+  ExpandCircleTurns1764936000000,
 ];

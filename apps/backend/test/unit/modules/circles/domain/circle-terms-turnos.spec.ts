@@ -3,6 +3,7 @@ import {
   CircleTerms,
   MIN_CIRCLE_TURNS,
 } from '@src/modules/circles/domain/value-objects/circle-terms';
+import { LocalDate } from '@src/shared/domain/value-objects/local-date';
 import { Money } from '@src/shared/domain/value-objects/money';
 import { Period } from '@src/shared/domain/value-objects/period';
 
@@ -115,6 +116,42 @@ describe('CircleTerms con turnos y cadencia (COPAYNI-105)', () => {
     expect(() =>
       terms({ payout: pen(1_200_000), turns: 7, cadence: Cadence.weekly, startsOn: nov }),
     ).toThrow(expect.objectContaining({ code: 'INVALID_CIRCLE_TERMS' }));
+  });
+
+  it('una junta mensual arranca el día 1, y las demás cualquier día (COPAYNI-108)', () => {
+    // La invariante que imponía la base con `CHECK (extract(day FROM starts_on) = 1)` y que la
+    // expansión retiró (COPAYNI-107), ahora en el dominio y condicionada a la cadencia: la base
+    // no sabe de cadencias, y mantenerla allí prohibía las juntas semanales.
+    expect(terms({ payout: pen(1_200_000), turns: 4, startsOn: nov }).startsOn.toString()).toBe(
+      '2026-11-01',
+    );
+    expect(() =>
+      terms({ payout: pen(1_200_000), turns: 4, startsOn: LocalDate.parse('2026-11-15') }),
+    ).toThrow(expect.objectContaining({ code: 'INVALID_CIRCLE_TERMS' }));
+
+    // Fuera de la cadencia mensual el día de arranque es el del cronograma, y vale cualquiera.
+    for (const cadence of [Cadence.weekly, Cadence.biweekly]) {
+      const circle = terms({
+        payout: pen(1_200_000),
+        turns: 4,
+        cadence,
+        startsOn: LocalDate.parse('2026-11-15'),
+      });
+      expect(circle.startsOn.toString()).toBe('2026-11-15');
+    }
+  });
+
+  it('en cadencia mensual el mes nombra el turno, que es lo que protege el día 1', () => {
+    // El turno se deriva del mes al restaurar un ciclo y en el backfill de la expansión. La
+    // cuenta solo cuadra si el arranque es el día 1: con el 20 de noviembre, el turno 1 caería
+    // en noviembre y el turno 2 en diciembre, pero el mes de arranque seguiría siendo noviembre,
+    // y un mes de más o de menos desplaza a quién le toca cobrar.
+    const circle = terms({ payout: pen(1_200_000), turns: 4, startsOn: nov });
+
+    for (let turn = 1; turn <= 4; turn += 1) {
+      const period = circle.payoutPeriodOf(turn);
+      expect(circle.startsOnPeriod.monthsUntil(period) + 1).toBe(turn);
+    }
   });
 
   it('rechaza menos turnos que el mínimo, y falta de turnos', () => {

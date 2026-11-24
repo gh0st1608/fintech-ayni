@@ -1,10 +1,10 @@
-import { LocalDate } from '../../../../shared/domain/value-objects/local-date';
+import { type LocalDate } from '../../../../shared/domain/value-objects/local-date';
 import { Money } from '../../../../shared/domain/value-objects/money';
 import { type Period } from '../../../../shared/domain/value-objects/period';
 import { DomainError } from '../../../../shared/errors/app-error';
 import { refundTransactions, settlePeriod } from '../services/period-settlement';
 import { retainedInstallments, type SlotQuote } from '../services/slot-pricing';
-import { Cadence } from '../value-objects/cadence';
+import { TurnSchedule } from '../services/turn-schedule';
 import { CircleTerms } from '../value-objects/circle-terms';
 import { LedgerTransaction } from '../value-objects/ledger-transaction';
 
@@ -56,6 +56,13 @@ export interface Installment {
   readonly id: string;
   readonly userId: string;
   readonly position: number;
+  /**
+   * Turno al que corresponde la cuota: el ordinal del ciclo (1..N), que es lo que la identifica
+   * (COPAYNI-126). El mes no sirve para eso fuera de la cadencia mensual, donde cuatro turnos
+   * caen en el mismo mes.
+   */
+  readonly turn: number;
+  /** Mes del turno, para informes y para el contrato público, que habla en `YYYY-MM`. */
   readonly period: Period;
   readonly dueOn: LocalDate;
   readonly amount: Money;
@@ -71,8 +78,10 @@ export interface CycleMember {
   readonly deductPayInFromPayout?: boolean;
 }
 
-/** Payout de un mes al miembro que tiene ese turno. */
+/** Payout de un turno al miembro que lo tiene. */
 export interface Disbursement {
+  readonly turn: number;
+  /** Mes en que cae el turno, para informes. */
   readonly period: Period;
   readonly userId: string;
   readonly position: number;
@@ -152,9 +161,16 @@ export class InvalidCycleTransitionError extends DomainError {
 }
 
 /**
- * Ciclo mensual de un Game'ya (COPAYNI-56, workflow ROSCA del PO):
- * `collecting` → cada mes `contributing` (cobro de cuotas) → cierre del mes (quién cobra y
- * payout) → `finished` después del último mes. `paused` detiene el ciclo (COPAYNI-61).
+ * Ciclo de un Game'ya (COPAYNI-56, workflow ROSCA del PO):
+ * `collecting` → cada turno `contributing` (cobro de cuotas) → cierre del turno (quién cobra y
+ * payout) → `finished` después del último turno. `paused` detiene el ciclo (COPAYNI-61).
+ *
+ * **Lo que el ciclo tiene en curso es un turno, no un mes** (COPAYNI-126). El turno es el ordinal
+ * del ciclo (1..N) y es quien manda: identifica la cuota, decide quién cobra, da el vencimiento
+ * por el cronograma y determina el final. El mes se sigue guardando y mostrando, porque los
+ * informes y el contrato público hablan en `YYYY-MM`, pero ya no identifica nada: en una junta
+ * semanal de cuatro turnos los cuatro caen en el mismo mes. Mientras la cadencia sea mensual
+ * ambos coinciden, y de ahí vienen los nombres en meses que quedan en los informes.
  *
  * Un mes se cierra cuando todas sus cuotas están pagadas o incobrables. Una cuota cuyo cobro
  * falló queda `overdue`; si sigue impaga al terminar la gracia, el miembro es expulsado
@@ -181,7 +197,8 @@ export class CircleCycle {
     private readonly dueDay: number,
     private readonly delinquency: DelinquencyPolicy,
     private currentState: CycleState,
-    private period: Period | null,
+    /** Turno en curso (1..N); `null` si el círculo no está en curso. */
+    private turn: number | null,
     private readonly active: CycleMember[],
     private readonly touched: Installment[],
     private readonly payouts: Disbursement[],
@@ -230,8 +247,14 @@ export class CircleCycle {
   }
 
   /**
-   * `members`: los no expulsados. `installments`: las del mes en curso. `pendingRefunds`: las
+   * `members`: los no expulsados. `installments`: las del turno en curso. `pendingRefunds`: las
    * devoluciones de los expulsados de este círculo que todavía no se pagaron.
+   *
+   * `currentTurn` es el turno en curso tal como se guardó. Mientras la base de datos no lo tenga
+   * escrito (expansión, COPAYNI-107), se deriva del mes en curso contando meses desde el
+   * arranque, que es exactamente lo que hace el backfill de esa migración: así un círculo mensual
+   * guardado antes de este cambio se restaura idéntico, sin leer una columna que todavía puede
+   * estar vacía.
    */
   static restore(props: {
     circleId: string;
@@ -241,6 +264,7 @@ export class CircleCycle {
     fund: CycleFund;
     state: CycleState;
     currentPeriod: Period | null;
+    currentTurn?: number | null;
     members: readonly CycleMember[];
     installments: readonly Installment[];
     pendingRefunds?: readonly PendingRefund[];
@@ -254,7 +278,15 @@ export class CircleCycle {
     const notRunning = ['collecting', 'approving', 'finished', 'cancelled'].includes(state);
     const running = state === 'contributing' || state === 'paused';
     if ((running && currentPeriod === null) || (notRunning && currentPeriod)) {
-      throw new InvalidCycleTransitionError('Solo un círculo en curso tiene un mes en curso');
+      throw new InvalidCycleTransitionError('Solo un círculo en curso tiene un turno en curso');
+    }
+    const turn =
+      props.currentTurn ??
+      (currentPeriod ? terms.startsOnPeriod.monthsUntil(currentPeriod) + 1 : null);
+    if (turn !== null && (!Number.isInteger(turn) || turn < 1 || turn > terms.turns)) {
+      throw new InvalidCycleTransitionError(
+        `El turno en curso debe estar entre 1 y ${terms.turns}, y no ${turn}`,
+      );
     }
     if ((state === 'paused') !== Boolean(props.pausedOn)) {
       throw new InvalidCycleTransitionError('Solo un círculo pausado tiene fecha de pausa');
@@ -265,7 +297,7 @@ export class CircleCycle {
       dueDay,
       delinquency,
       state,
-      currentPeriod,
+      turn,
       [...members],
       [...installments],
       [],
@@ -299,11 +331,18 @@ export class CircleCycle {
 
   /**
    * Reanuda el ciclo (pending-scope §3.1, efectos recomendados de la pausa):
-   * - Si la pausa pasó a otro mes, el calendario se corre los meses que duró (inicio, fin y mes en
-   *   curso), y las cuotas del mes en curso pasan al mes nuevo.
+   * - Si la pausa duró al menos un turno, el calendario se corre esos turnos (inicio, fin y
+   *   vencimientos), y las cuotas del turno en curso pasan al mes nuevo. El turno en curso **no**
+   *   cambia: la junta sigue en el mismo turno, que ahora cae más tarde.
    * - Una cuota impaga que vencía durante la pausa pasa a vencer el día en que se reanuda; una que
    *   ya estaba en gracia al pausar se corre los días que duró la pausa, que no cuentan para la
    *   gracia.
+   *
+   * Los pasos los cuenta la cadencia (`stepsBetween`): en una junta mensual son meses de
+   * calendario, igual que antes de COPAYNI-126; en una semanal, semanas corridas. Correr una
+   * junta semanal por meses habría movido su cronograma un mes por cada pausa de un día que
+   * cruzara el fin de mes.
+   *
    * Devuelve `false` si ya estaba en curso.
    */
   resume(today: LocalDate, by: { actorId: string; reason: string }): boolean {
@@ -313,32 +352,32 @@ export class CircleCycle {
     }
     const before = this.snapshot();
     const pausedOn = this.pausedSince;
-    const months = Math.max(0, pausedOn.period.monthsUntil(today.period));
+    const { cadence } = this.currentTerms;
+    const steps = Math.max(0, cadence.stepsBetween(pausedOn, today));
     const pausedDays = Math.max(0, pausedOn.daysUntil(today));
-    const period = this.period!.addMonths(months);
+    const turn = this.turn!;
+    const periodBefore = this.currentPeriod!;
+    if (steps > 0) {
+      this.currentTerms = CircleTerms.create({
+        payout: this.currentTerms.payout,
+        turns: this.currentTerms.turns,
+        cadence,
+        startsOn: cadence.advance(this.currentTerms.startsOn, steps),
+      });
+      this.shift += periodBefore.monthsUntil(this.currentPeriod!);
+    }
+    const period = this.currentPeriod!;
+    const shifted = this.schedule().dueOn(turn);
     this.touched.forEach((installment, index) => {
-      if (!installment.period.equals(this.period!)) return;
+      if (installment.turn !== turn) return;
       const unpaid = installment.status === 'pending' || installment.status === 'overdue';
-      let dueOn = months > 0 ? LocalDate.of(period, this.dueDay) : installment.dueOn;
-      if (unpaid && months === 0 && installment.dueOn.isBefore(pausedOn)) {
+      let dueOn = steps > 0 ? shifted : installment.dueOn;
+      if (unpaid && steps === 0 && installment.dueOn.isBefore(pausedOn)) {
         dueOn = installment.dueOn.addDays(pausedDays);
       }
       if (unpaid && dueOn.isBefore(today)) dueOn = today;
       this.touched[index] = { ...installment, period, dueOn };
     });
-    if (months > 0) {
-      const { payout } = this.currentTerms;
-      this.currentTerms = CircleTerms.create({
-        payout,
-        months: this.currentTerms.months,
-        // La pausa corre el calendario en meses enteros, conservando el día del mes. Es un paso
-        // mensual explícito, no la cadencia de la junta: correr una junta semanal por meses no
-        // tiene sentido, y generalizarlo es COPAYNI-126.
-        startsOn: Cadence.monthly.advance(this.currentTerms.startsOn, months),
-      });
-      this.period = period;
-      this.shift += months;
-    }
     this.currentState = 'contributing';
     this.pausedSince = null;
     this.adminLog.push({ action: 'resume', ...by, on: today, before, after: this.snapshot() });
@@ -350,7 +389,7 @@ export class CircleCycle {
       state: this.currentState,
       startsOn: this.currentTerms.startsOnPeriod.toString(),
       endsOn: this.currentTerms.endsOn.toString(),
-      currentPeriod: this.period?.toString() ?? null,
+      currentPeriod: this.currentPeriod?.toString() ?? null,
     };
   }
 
@@ -382,11 +421,33 @@ export class CircleCycle {
     return this.currentState === 'finished';
   }
 
-  get currentPeriod(): Period | null {
-    return this.period;
+  /** Turno en curso (1..N), o `null` si el círculo no está en curso. */
+  get currentTurn(): number | null {
+    return this.turn;
   }
 
-  /** Las cuotas del mes en curso y las que se abrieron o cambiaron desde `restore`. */
+  /**
+   * Mes en que cae el turno en curso, para informes y para lo que se guarda. Es una proyección:
+   * fuera de la cadencia mensual varios turnos comparten mes, así que no identifica el turno.
+   */
+  get currentPeriod(): Period | null {
+    return this.turn === null ? null : this.schedule().dueOn(this.turn).period;
+  }
+
+  /**
+   * El cronograma de cobro: quién vence cuándo. Vive en un solo sitio para que el motor, los
+   * vencimientos y el cierre no puedan discrepar.
+   */
+  private schedule(): TurnSchedule {
+    return TurnSchedule.forCollection({
+      startsOn: this.currentTerms.startsOn,
+      cadence: this.currentTerms.cadence,
+      turns: this.currentTerms.turns,
+      dueDay: this.dueDay,
+    });
+  }
+
+  /** Las cuotas del turno en curso y las que se abrieron o cambiaron desde `restore`. */
   get installments(): readonly Installment[] {
     return [...this.touched];
   }
@@ -401,17 +462,23 @@ export class CircleCycle {
     return [...this.expelled];
   }
 
-  /** Llegó el mes de inicio y el círculo todavía no empezó. */
+  /**
+   * Llegó la fecha de inicio y el círculo todavía no empezó.
+   *
+   * Se compara contra la fecha real de arranque (COPAYNI-106), no contra su mes: una junta que
+   * arranca un jueves 12 no empieza el día 1 de ese mes. Para los círculos que arrancan el día 1,
+   * que son todos los mensuales, es la misma respuesta que antes.
+   */
   isStartDue(today: LocalDate): boolean {
-    return this.currentState === 'collecting' && !this.terms.startsOnPeriod.isAfter(today.period);
+    return this.currentState === 'collecting' && !this.terms.startsOn.isAfter(today);
   }
 
   /** Turnos sin miembro. Antes de empezar, los que nunca se llenaron. */
   missingMembers(): number {
-    return this.terms.months - this.active.length;
+    return this.terms.turns - this.active.length;
   }
 
-  /** Collecting → Contributing: abre las cuotas del primer mes. Requiere el círculo completo. */
+  /** Collecting → Contributing: abre las cuotas del primer turno. Requiere el círculo completo. */
   start(newId: () => string): void {
     if (this.currentState !== 'collecting') {
       throw new InvalidCycleTransitionError('Solo empieza un círculo que está reuniendo miembros');
@@ -422,7 +489,7 @@ export class CircleCycle {
       );
     }
     this.currentState = 'contributing';
-    this.openPeriod(this.terms.startsOnPeriod, newId);
+    this.openTurn(1, newId);
   }
 
   /** Collecting → Approving, o una ronda nueva sin los que salieron (COPAYNI-62). */
@@ -468,30 +535,29 @@ export class CircleCycle {
   }
 
   /**
-   * Abre la cuota del mes en curso de quien tomó una vacante después de que se abrió el mes
-   * (COPAYNI-59). Si la tomó desde el mes siguiente, su cuota de este mes es cero y no se abre.
+   * Abre la cuota del turno en curso de quien tomó una vacante después de que se abrió el turno
+   * (COPAYNI-59). Si la tomó desde el turno siguiente, su cuota de este turno es cero y no se abre.
    */
   admitReplacements(newId: () => string): CycleMember[] {
     if (this.currentState !== 'contributing') return [];
-    const period = this.period!;
-    const month = this.terms.startsOnPeriod.monthsUntil(period);
+    const turn = this.turn!;
     const admitted = this.active.filter(
       ({ userId, quote }) =>
-        quote.installments[month]!.isPositive() &&
+        quote.installments[turn - 1]!.isPositive() &&
         !this.touched.some(
-          (installment) => installment.userId === userId && installment.period.equals(period),
+          (installment) => installment.userId === userId && installment.turn === turn,
         ),
     );
-    for (const member of admitted) this.openInstallment(member, period, newId);
+    for (const member of admitted) this.openInstallment(member, turn, newId);
     return admitted;
   }
 
-  /** Cuotas del mes en curso que vencieron hasta `today` y todavía se cobran. */
+  /** Cuotas del turno en curso que vencieron hasta `today` y todavía se cobran. */
   dueInstallments(today: LocalDate): Installment[] {
     if (this.currentState !== 'contributing') return [];
     return this.touched.filter(
       (installment) =>
-        installment.period.equals(this.period!) &&
+        installment.turn === this.turn &&
         (installment.status === 'pending' || installment.status === 'overdue') &&
         !installment.dueOn.isAfter(today),
     );
@@ -509,7 +575,7 @@ export class CircleCycle {
   }
 
   /**
-   * Cuotas del mes en curso cuyo cobro falló y cuya gracia terminó antes de `today`: con
+   * Cuotas del turno en curso cuyo cobro falló y cuya gracia terminó antes de `today`: con
    * vencimiento el día 1 y 3 días de gracia, el último día para pagar es el 4 y se expulsa el 5.
    * Una cuota que nunca se intentó cobrar (`pending`, p. ej. si la tarea no corrió) no cuenta.
    */
@@ -517,7 +583,7 @@ export class CircleCycle {
     if (this.currentState !== 'contributing') return [];
     return this.touched.filter(
       (installment) =>
-        installment.period.equals(this.period!) &&
+        installment.turn === this.turn &&
         installment.status === 'overdue' &&
         today.isAfter(installment.dueOn.addDays(this.delinquency.graceDays)),
     );
@@ -537,13 +603,14 @@ export class CircleCycle {
     if (!installment || !member) {
       throw new InvalidCycleTransitionError('La cuota no está impaga después de la gracia');
     }
-    const month = this.terms.startsOnPeriod.monthsUntil(installment.period);
+    // Índice de su cuota en el precio del slot, que va por turnos desde cero.
+    const index = installment.turn - 1;
     const sum = (amounts: readonly Money[]): Money =>
       amounts.reduce((total, amount) => total.add(amount), Money.zero(this.terms.currency));
-    // Los meses anteriores cerraron con todas sus cuotas pagadas: cobró si su turno ya pasó.
-    const alreadyPaidOut = member.position <= month;
-    const paid = sum(member.quote.installments.slice(0, month));
-    const remaining = sum(member.quote.installments.slice(month));
+    // Los turnos anteriores cerraron con todas sus cuotas pagadas: cobró si su turno ya pasó.
+    const alreadyPaidOut = member.position <= index;
+    const paid = sum(member.quote.installments.slice(0, index));
+    const remaining = sum(member.quote.installments.slice(index));
     const retentionApplied = alreadyPaidOut
       ? Money.of(Math.min(member.quote.retention.amount, remaining.amount), this.terms.currency)
       : Money.zero(this.terms.currency);
@@ -581,24 +648,23 @@ export class CircleCycle {
   }
 
   /**
-   * El mes en curso ya venció y todas sus cuotas están pagadas o incobrables (`defaulted`). Sin la
-   * fecha, un círculo sin miembros cerraría todos sus meses de una vez.
+   * El turno en curso ya venció y todas sus cuotas están pagadas o incobrables (`defaulted`). Sin
+   * la fecha, un círculo sin miembros cerraría todos sus turnos de una vez.
    */
   isPeriodSettled(today: LocalDate): boolean {
     return (
       this.currentState === 'contributing' &&
-      !LocalDate.of(this.period!, this.dueDay).isAfter(today) &&
+      !this.schedule().dueOn(this.turn!).isAfter(today) &&
       this.touched
-        .filter(({ period }) => period.equals(this.period!))
+        .filter(({ turn }) => turn === this.turn)
         .every(({ status }) => ['paid', 'defaulted', 'retained', 'deducted'].includes(status))
     );
   }
 
-  /** Quien tiene el turno del mes en curso, o `undefined` si ese turno está libre. */
+  /** Quien tiene el turno en curso, o `undefined` si ese turno está libre. */
   receiver(): CycleMember | undefined {
-    if (this.period === null) return undefined;
-    const position = this.terms.startsOnPeriod.monthsUntil(this.period) + 1;
-    return this.active.find((member) => member.position === position);
+    if (this.turn === null) return undefined;
+    return this.active.find((member) => member.position === this.turn);
   }
 
   /**
@@ -611,28 +677,28 @@ export class CircleCycle {
    */
   closePeriod(today: LocalDate, newId: () => string): Disbursement | null {
     if (!this.isPeriodSettled(today)) {
-      throw new InvalidCycleTransitionError('El mes tiene cuotas sin pagar ni expulsión');
+      throw new InvalidCycleTransitionError('El turno tiene cuotas sin pagar ni expulsión');
     }
-    const period = this.period!;
-    const month = this.terms.startsOnPeriod.monthsUntil(period);
+    const turn = this.turn!;
+    const period = this.currentPeriod!;
+    const index = turn - 1;
     const receiver = this.receiver();
     const paid = this.touched.filter(
-      (installment) => installment.period.equals(period) && installment.status === 'paid',
+      (installment) => installment.turn === turn && installment.status === 'paid',
     );
-    // Quien pagó este mes sigue en el ciclo: se expulsa solo por una cuota impaga.
+    // Quien pagó este turno sigue en el ciclo: se expulsa solo por una cuota impaga.
     const catchUp = paid.reduce((sum, { userId }) => {
-      const share = this.active.find((member) => member.userId === userId)?.quote.catchUp?.[month];
+      const share = this.active.find((member) => member.userId === userId)?.quote.catchUp?.[index];
       return share ? sum.add(share) : sum;
     }, Money.zero(this.terms.currency));
     const retained = this.touched
-      .filter(
-        (installment) => installment.period.equals(period) && installment.status === 'retained',
-      )
+      .filter((installment) => installment.turn === turn && installment.status === 'retained')
       .map(({ userId, amount }) => ({ userId, amount }));
     const settlement = settlePeriod({
       circleId: this.circleId,
       terms: this.terms,
       period,
+      turn,
       paid: paid.map(({ amount }) => amount),
       catchUp,
       retained,
@@ -644,7 +710,7 @@ export class CircleCycle {
       },
       deducted: this.touched.find(
         (installment) =>
-          installment.period.equals(period) &&
+          installment.turn === turn &&
           installment.status === 'deducted' &&
           installment.userId === receiver?.userId,
       )?.amount,
@@ -658,6 +724,7 @@ export class CircleCycle {
     const disbursement =
       receiver && settlement.payout
         ? {
+            turn,
             period,
             userId: receiver.userId,
             position: receiver.position,
@@ -666,12 +733,15 @@ export class CircleCycle {
         : null;
     if (disbursement) this.payouts.push(disbursement);
 
-    if (period.equals(this.terms.endsOn)) {
+    // El círculo termina al cerrar el último turno. Antes se comparaba el mes con el mes de fin,
+    // y en una junta semanal todos los turnos caen en ese mes: terminaba en el primer cierre,
+    // habiendo pagado a un solo miembro (COPAYNI-126).
+    if (turn >= this.terms.turns) {
       this.currentState = 'finished';
-      this.period = null;
+      this.turn = null;
       this.decideRefunds();
     } else {
-      this.openPeriod(period.addMonths(1), newId);
+      this.openTurn(turn + 1, newId);
     }
     return disbursement;
   }
@@ -692,33 +762,36 @@ export class CircleCycle {
     }
   }
 
-  private openPeriod(period: Period, newId: () => string): void {
-    this.period = period;
-    const month = this.terms.startsOnPeriod.monthsUntil(period);
+  private openTurn(turn: number, newId: () => string): void {
+    this.turn = turn;
     for (const member of this.active) {
-      // Quien tomó una vacante no paga los meses anteriores a su ingreso (COPAYNI-59).
-      if (member.quote.installments[month]!.isPositive()) {
-        this.openInstallment(member, period, newId);
+      // Quien tomó una vacante no paga los turnos anteriores a su ingreso (COPAYNI-59).
+      if (member.quote.installments[turn - 1]!.isPositive()) {
+        this.openInstallment(member, turn, newId);
       }
     }
   }
 
-  private openInstallment(member: CycleMember, period: Period, newId: () => string): void {
-    const month = this.terms.startsOnPeriod.monthsUntil(period);
+  private openInstallment(member: CycleMember, turn: number, newId: () => string): void {
+    const index = turn - 1;
     // Sus últimas cuotas las paga la retención de su payout (COPAYNI-60).
     const retainedFrom =
-      this.terms.months - retainedInstallments(member.quote, this.terms.baseInstallment);
+      this.terms.turns - retainedInstallments(member.quote, this.terms.baseInstallment);
+    // El vencimiento lo da el cronograma, no un día fijo del mes: fuera de la cadencia mensual
+    // ese día no corresponde a ningún turno (COPAYNI-126).
+    const dueOn = this.schedule().dueOn(turn);
     this.touched.push({
       id: newId(),
       userId: member.userId,
       position: member.position,
-      period,
-      dueOn: LocalDate.of(period, this.dueDay),
-      amount: member.quote.installments[month]!,
+      turn,
+      period: dueOn.period,
+      dueOn,
+      amount: member.quote.installments[index]!,
       status:
-        month >= retainedFrom
+        index >= retainedFrom
           ? 'retained'
-          : member.deductPayInFromPayout && month === member.position - 1
+          : member.deductPayInFromPayout && turn === member.position
             ? 'deducted'
             : 'pending',
     });

@@ -77,6 +77,19 @@ export class CircleTerms {
     if (!CircleTerms.divides(payout, turns)) {
       throw new InvalidCircleTermsError('El payout debe dividirse en cuotas exactas');
     }
+    if (cadence.isMonthly() && startsOn.day !== 1) {
+      // La invariante que imponía `CHECK (extract(day FROM starts_on) = 1)` hasta que la
+      // expansión lo retiró (COPAYNI-107), ahora condicionada a la cadencia (COPAYNI-108): la
+      // base no sabe de cadencias y por eso no podía seguir imponiéndola sin prohibir las juntas
+      // semanales, que arrancan cualquier día.
+      //
+      // Sigue siendo necesaria, y no es una formalidad: mientras el turno se derive del mes
+      // —al restaurar un ciclo y en el backfill de la expansión— el mes solo nombra el turno de
+      // una junta mensual si arranca el día 1. Una junta mensual que arrancara el 20 contaría un
+      // turno de más en cuanto cruzara un fin de mes. Cuando el turno se guarde siempre
+      // (contracción, COPAYNI-109) esta restricción se puede revisar.
+      throw new InvalidCircleTermsError('Una junta mensual arranca el día 1 del mes');
+    }
     const [baseInstallment] = payout.allocate(turns);
     return new CircleTerms(payout, turns, cadence, startsOn, baseInstallment!);
   }

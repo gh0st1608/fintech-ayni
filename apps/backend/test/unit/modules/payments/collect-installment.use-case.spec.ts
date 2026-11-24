@@ -145,6 +145,7 @@ describe('Débito automático de la cuota (COPAYNI-40)', () => {
       circleId: 'c-1',
       userId: 'u-1',
       position: 1,
+      turn: 2,
       period: Period.of(2026, 12),
       dueOn: LocalDate.parse('2026-12-05'),
       amount: Money.of(300_000, 'PEN'),

@@ -30,7 +30,9 @@ export function reducedTerms(terms: CircleTerms, members: number): CircleTerms |
   if (members < MIN_CIRCLE_TURNS) return null;
   return CircleTerms.create({
     payout: Money.of(terms.baseInstallment.amount * members, terms.currency),
-    months: members,
+    turns: members,
+    // Reducir el círculo cambia cuántos son, no cada cuánto pagan: la cadencia se conserva.
+    cadence: terms.cadence,
     startsOn: terms.startsOn,
   });
 }

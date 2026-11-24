@@ -23,7 +23,11 @@ import { NotFoundError } from '@src/shared/errors/app-error';
 export class InMemoryCircleCycleRepository implements CircleCycleRepositoryPort {
   private readonly cycles = new Map<string, StoredCycle>();
   private readonly locked = new Set<string>();
-  /** Todas las cuotas guardadas, por (círculo, turno, mes), como el índice único de PostgreSQL. */
+  /**
+   * Todas las cuotas guardadas, por (círculo, puesto, turno), como `uq_circle_installments_turn`
+   * en PostgreSQL (COPAYNI-107). Antes la clave llevaba el mes, que fuera de la cadencia mensual
+   * no distingue turnos.
+   */
   readonly installments = new Map<string, Installment>();
   readonly payouts: (Disbursement & { circleId: string })[] = [];
   /** Una por (círculo, miembro), como el índice único de PostgreSQL. */
@@ -125,12 +129,13 @@ export class InMemoryCircleCycleRepository implements CircleCycleRepositoryPort 
 
   private save(cycle: CircleCycle): void {
     const stored = this.cycles.get(cycle.circleId)!;
-    const current = cycle.currentPeriod;
+    const current = cycle.currentTurn;
     this.cycles.set(cycle.circleId, {
       ...stored,
       terms: cycle.terms,
       state: cycle.state,
-      currentPeriod: current,
+      currentPeriod: cycle.currentPeriod,
+      currentTurn: current,
       pausedOn: cycle.pausedOn,
       pendingRefunds: cycle.isFinished()
         ? []
@@ -153,28 +158,19 @@ export class InMemoryCircleCycleRepository implements CircleCycleRepositoryPort 
           ? [{ ...member, position: current.position, price: priceOf(current.quote) }]
           : [member];
       }),
-      installments: current
-        ? cycle.installments.filter(({ period }) => period.equals(current))
-        : [],
+      installments: current ? cycle.installments.filter(({ turn }) => turn === current) : [],
     });
-    if (cycle.calendarShift > 0 && current) {
-      // Las cuotas del mes en curso pasaron al mes nuevo, como el UPDATE de PostgreSQL.
-      const old = `:${current.addMonths(-cycle.calendarShift).toString()}`;
-      for (const key of [...this.installments.keys()]) {
-        if (key.startsWith(`${cycle.circleId}:`) && key.endsWith(old))
-          this.installments.delete(key);
-      }
-    }
     for (const event of cycle.adminEvents)
       this.adminEvents.push({ ...event, circleId: cycle.circleId });
     for (const installment of cycle.installments) {
-      const key = `${cycle.circleId}:${installment.position}:${installment.period.toString()}`;
+      const key = `${cycle.circleId}:${installment.position}:${installment.turn}`;
       const previous = this.installments.get(key);
       this.installments.set(key, { ...installment, id: previous?.id ?? installment.id });
     }
     for (const payout of cycle.disbursements) {
+      // Una por (círculo, turno), como `uq_circle_payouts_turn`.
       const exists = this.payouts.some(
-        ({ circleId, period }) => circleId === cycle.circleId && period.equals(payout.period),
+        ({ circleId, turn }) => circleId === cycle.circleId && turn === payout.turn,
       );
       if (!exists) this.payouts.push({ ...payout, circleId: cycle.circleId });
     }

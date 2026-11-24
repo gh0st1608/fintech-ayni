@@ -22,6 +22,8 @@ export interface PeriodSettlementInput {
   circleId: string;
   terms: CircleTerms;
   period: Period;
+  /** Turno que se cierra (1..N): es lo que identifica el cierre (COPAYNI-126). */
+  turn: number;
   /** Montos de las cuotas pagadas del mes. */
   paid: readonly Money[];
   /** La parte de esas cuotas que es puesta al día de una vacante (COPAYNI-59): va al fondo. */
@@ -76,10 +78,18 @@ const min = (a: Money, b: Money): Money => (a.amount <= b.amount ? a : b);
  * Invariante: payout + residuo + pozo devuelto = cuotas base cobradas + cobertura.
  */
 export function settlePeriod(input: PeriodSettlementInput): PeriodSettlement {
-  const { circleId, terms, period, paid, receiver, feeShareBps } = input;
+  const { circleId, terms, period, turn, paid, receiver, feeShareBps } = input;
   const currency = terms.currency;
   const zero = Money.zero(currency);
-  const at = `${circleId}:${period.toString()}`;
+  // Nombre del cierre en las claves de idempotencia del libro mayor. Nombra el turno, usando el
+  // mes cuando el mes lo nombra: en cadencia mensual turno y mes se corresponden uno a uno, así
+  // que añadir el turno no distinguiría nada y en cambio cambiaría las claves ya escritas de
+  // todos los círculos que existen, que es lo que protege el libro de registrar dos veces un
+  // mismo cierre. Fuera de la cadencia mensual el mes no alcanza: cuatro turnos semanales caen
+  // en el mismo mes y compartirían clave, de modo que solo el primero quedaría registrado.
+  const at = terms.cadence.isMonthly()
+    ? `${circleId}:${period.toString()}`
+    : `${circleId}:${period.toString()}:t${turn}`;
   const pot = { account: 'circle_pot' as const };
   const fund = { account: 'guarantee_fund' as const };
   const operator = { account: 'operator' as const };

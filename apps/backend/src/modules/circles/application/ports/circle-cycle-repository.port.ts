@@ -18,10 +18,16 @@ export interface StoredCycle {
   circleId: string;
   terms: CircleTerms;
   state: CycleState;
+  /** Mes del turno en curso, para informes; `null` si el círculo no está en curso. */
   currentPeriod: Period | null;
-  /** `deductPayIn`: descontar la cuota de su mes de cobro del payout (COPAYNI-38). */
+  /**
+   * Turno en curso tal como está guardado (COPAYNI-126). Ausente mientras la columna esté vacía,
+   * y entonces el ciclo lo deriva del mes, igual que el backfill de la expansión (COPAYNI-107).
+   */
+  currentTurn?: number | null;
+  /** `deductPayIn`: descontar la cuota de su turno de cobro del payout (COPAYNI-38). */
   members: { userId: string; position: number; price?: SlotPrice; deductPayIn?: boolean }[];
-  /** Las cuotas del mes en curso. */
+  /** Las cuotas del turno en curso. */
   installments: Installment[];
   /**
    * Saldo del fondo de garantía en la moneda del círculo (COPAYNI-58), leído con el fondo

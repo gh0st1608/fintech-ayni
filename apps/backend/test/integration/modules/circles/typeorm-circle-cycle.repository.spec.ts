@@ -171,6 +171,49 @@ describe('TypeOrmCircleCycleRepository', () => {
     expect(await count('circle_installments', id)).toBe(MONTHS * 2);
   });
 
+  it('guarda el turno en el círculo, en las cuotas y en los payouts (COPAYNI-126)', async () => {
+    const { id } = await fullCircle();
+    const runOn = job([id]);
+    await runOn('2026-11-05');
+    await runOn('2026-12-05');
+
+    // El turno es lo que identifica el cierre; el mes queda para los informes. Las columnas las
+    // creó la expansión (COPAYNI-107) y hasta ahora nadie las escribía.
+    const [circle] = await dataSource.query<
+      { turns: number; current_turn: number; current_period: string; cadence: string }[]
+    >(
+      `SELECT turns, current_turn, cadence, to_char(current_period, 'YYYY-MM') AS current_period
+         FROM circles WHERE id = $1`,
+      [id],
+    );
+    expect(circle).toEqual({
+      turns: MONTHS,
+      current_turn: 3,
+      current_period: '2027-01',
+      cadence: 'monthly',
+    });
+
+    const installments = await dataSource.query<{ turn: number; period: string; total: number }[]>(
+      `SELECT turn, to_char(period, 'YYYY-MM') AS period, count(*)::int AS total
+         FROM circle_installments WHERE circle_id = $1 GROUP BY turn, period ORDER BY turn`,
+      [id],
+    );
+    expect(installments).toEqual([
+      { turn: 1, period: '2026-11', total: MONTHS },
+      { turn: 2, period: '2026-12', total: MONTHS },
+      { turn: 3, period: '2027-01', total: MONTHS },
+    ]);
+    const payouts = await dataSource.query<{ turn: number; period: string }[]>(
+      `SELECT turn, to_char(period, 'YYYY-MM') AS period
+         FROM circle_payouts WHERE circle_id = $1 ORDER BY turn`,
+      [id],
+    );
+    expect(payouts).toEqual([
+      { turn: 1, period: '2026-11' },
+      { turn: 2, period: '2026-12' },
+    ]);
+  });
+
   it('expulsa al que no pagó en la gracia, registra su deuda y lo desbloquea al saldarla', async () => {
     const { id, members } = await fullCircle();
     const defaulter = members[3]!;
