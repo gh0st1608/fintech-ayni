@@ -81,7 +81,11 @@ describe('Cadencias habilitadas (COPAYNI-121)', () => {
       assignment: { cadences: [Cadence.monthly, Cadence.weekly] },
     });
 
-    const weekly = await useCase.execute({ ...COMMAND, cadence: 'weekly' });
+    const weekly = await useCase.execute({
+      ...COMMAND,
+      cadence: 'weekly',
+      supportedCadences: ['weekly'],
+    });
     expect(weekly.terms.cadence.equals(Cadence.weekly)).toBe(true);
     expect(weekly.terms.turns).toBe(10);
 
@@ -89,6 +93,7 @@ describe('Cadencias habilitadas (COPAYNI-121)', () => {
       useCase.execute({
         ...COMMAND,
         cadence: 'biweekly',
+        supportedCadences: ['biweekly'],
         idempotencyKey: 'key-ana-0000000002',
       }),
     ).rejects.toThrow(expect.objectContaining({ details: { cadence: 'not_enabled' } }));

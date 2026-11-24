@@ -30,6 +30,21 @@ Usa el contrato común de respuestas descrito en [auth.md](auth.md). Requiere `A
 - **Deuda por impago en varias monedas:** `MEMBER_BLOCKED` informa el total en PEN, convertido hacia arriba.
 - **Supuestos de esta iteración:** el saldo de referidos solo se descuenta de cuotas en PEN; el programa de ahorro y la tarjeta prepago siguen en PEN.
 
+## Cadencias y capacidad del cliente (COPAYNI-100, 115 y 121)
+
+Una junta puede ser **mensual**, **quincenal** o **semanal**. El turno es un ordinal (1..N), no un mes: en una junta semanal de 4 turnos los cuatro caen en el mismo mes, así que el mes identifica el turno solo en cadencia mensual.
+
+**`X-Ayni-Cadences` (cabecera, opcional).** El cliente declara las cadencias que **sabe mostrar**, separadas por comas: `monthly`, `biweekly`, `weekly`.
+
+- **Sin la cabecera, el servidor asume `monthly` únicamente.** Es lo que hace la app ya publicada, que interpreta `months`, `startsOn` y `payoutPeriod` como meses: si recibiera una junta semanal, mostraría cifras y fechas equivocadas sobre dinero real.
+- `GET /v1/circles/recommended` y `GET /v1/circles/slots` solo devuelven juntas de las cadencias declaradas.
+- Alcanzar una junta de otra cadencia por su `circleId`, en `slots` o en `join`, responde **400** `VALIDATION_ERROR` con `details: { cadence: "not_supported_by_client" }`. No hay respuesta degradada.
+- Una cadencia desconocida en la cabecera responde **400** `VALIDATION_ERROR` con `details: { "x-ayni-cadences": "invalid" }`, en lugar de ignorarse.
+
+**Qué cadencias existen en el servidor** lo decide `CIRCLE_CADENCES_ENABLED`, con `monthly` como único valor por defecto y obligatorio. Pedir una no habilitada responde **400** `VALIDATION_ERROR` con `details: { cadence: "not_enabled" }`. Son dos puertas distintas: una cadencia puede estar habilitada en el servidor y aun así no enviarse a una app que no la declara.
+
+Mientras el valor por defecto siga siendo `monthly`, el contrato es idéntico al anterior a las cadencias.
+
 ## `GET /v1/circles/join-config`
 
 Montos permitidos para unirse a un Game'ya o al programa de ahorro.

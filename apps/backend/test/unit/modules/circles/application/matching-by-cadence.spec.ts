@@ -104,7 +104,7 @@ describe('Emparejamiento por cadencia (COPAYNI-114)', () => {
     addCircle('c-semanal', Cadence.weekly);
     addCircle('c-mensual', Cadence.monthly);
 
-    const result = await useCase.execute(ANA, 3_000_000, 10, undefined, undefined, 'weekly');
+    const result = await useCase.execute(ANA, 3_000_000, 10, undefined, undefined, 'weekly', BOTH);
 
     expect(result.circleId).toBe('c-semanal');
     expect(result.terms.cadence.equals(Cadence.weekly)).toBe(true);
@@ -124,7 +124,7 @@ describe('Emparejamiento por cadencia (COPAYNI-114)', () => {
     addCircle('c-semanal-vieja', Cadence.weekly);
     addCircle('c-semanal-nueva', Cadence.weekly);
 
-    const result = await useCase.execute(ANA, 3_000_000, 10, undefined, undefined, 'weekly');
+    const result = await useCase.execute(ANA, 3_000_000, 10, undefined, undefined, 'weekly', BOTH);
 
     expect(result.circleId).toBe('c-semanal-vieja');
   });
@@ -133,7 +133,7 @@ describe('Emparejamiento por cadencia (COPAYNI-114)', () => {
     const { useCase } = setup();
 
     await expect(
-      useCase.execute(ANA, 3_000_000, 10, undefined, undefined, 'weekly'),
+      useCase.execute(ANA, 3_000_000, 10, undefined, undefined, 'weekly', BOTH),
     ).rejects.toThrow(
       expect.objectContaining({ code: 'VALIDATION_ERROR', details: { cadence: 'not_enabled' } }),
     );
@@ -144,7 +144,7 @@ describe('Emparejamiento por cadencia (COPAYNI-114)', () => {
     // empezar una junta de cuatro semanas sería esperar más que lo que la junta dura.
     const { useCase } = setup({ cadences: BOTH });
 
-    const weekly = await useCase.execute(ANA, 3_000_000, 10, undefined, undefined, 'weekly');
+    const weekly = await useCase.execute(ANA, 3_000_000, 10, undefined, undefined, 'weekly', BOTH);
 
     expect(weekly.terms.startsOn.toString()).toBe('2026-10-22');
   });

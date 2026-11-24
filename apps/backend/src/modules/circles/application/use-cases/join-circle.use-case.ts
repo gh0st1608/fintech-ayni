@@ -17,6 +17,7 @@ import {
   type Membership,
 } from '../../domain/entities/circle';
 import { nextStart } from '../../domain/services/circle-start';
+import { assertSupportedByClient, clientCadences } from '../../domain/services/client-capability';
 import { applicantIn, assertCanJoin } from '../../domain/services/join-eligibility';
 import {
   type MonthlyPayIn,
@@ -83,6 +84,11 @@ export interface JoinCircleCommand {
    * dónde imponerse el día que llegue, y para poder probarlo.
    */
   cadence?: CadenceId;
+  /**
+   * Cadencias que el cliente declara soportar (COPAYNI-115); solo la mensual si no declara nada.
+   * La cabecera la lee el controlador.
+   */
+  supportedCadences?: readonly CadenceId[];
   position: number;
   idempotencyKey: string;
   /** Versión de los términos que el usuario aceptó en la confirmación (COPAYNI-86). */
@@ -161,6 +167,8 @@ export class JoinCircleUseCase {
     const payout = offeredPayout(joinConfig, command.payoutAmount, command.months);
     this.assertCadenceEnabled(command);
     const { circle, isNew } = await this.target(command, payout);
+    // Unirse por identificador es la otra puerta a una cadencia que la app no sabe mostrar.
+    assertSupportedByClient(circle.terms.cadence, clientCadences(command.supportedCadences));
     const today = LocalDate.fromDate(this.clock.now(), this.assignment.timeZone);
     const quote = joinQuote(this.pricing, circle, command.position, today, this.cycle.dueDay);
     const applicant = await this.eligibility.applicantFor(command.userId);

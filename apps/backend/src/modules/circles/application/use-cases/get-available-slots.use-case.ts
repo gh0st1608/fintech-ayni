@@ -13,6 +13,7 @@ import {
 } from '../../domain/entities/circle';
 import { type SlotPricing, type SlotQuote } from '../../domain/services/slot-pricing';
 import { nextStart } from '../../domain/services/circle-start';
+import { assertSupportedByClient } from '../../domain/services/client-capability';
 import { Cadence, type CadenceId } from '../../domain/value-objects/cadence';
 import { type SlotRestriction, slotRestriction } from '../../domain/services/trust-policy';
 import { openVacancies } from '../../domain/services/vacancy';
@@ -97,17 +98,28 @@ export class GetAvailableSlotsUseCase {
     currency?: string,
     /** Frecuencia pedida; la mensual si no se indica. La API la expone en COPAYNI-116. */
     cadenceId?: CadenceId,
+    /**
+     * Cadencias que el cliente declara soportar (COPAYNI-115). Por defecto solo la mensual, que
+     * es lo que sabe dibujar la app publicada.
+     */
+    supported: readonly Cadence[] = [Cadence.default],
   ): Promise<AvailableSlotsResult> {
     const [joinConfig, profile] = await Promise.all([
       this.joinConfigs.getForUser(principal.userId, currency),
       trustProfileOf(principal.userId, this.eligibility, this.history),
     ]);
     const payout = offeredPayout(joinConfig, payoutAmount, months);
-    const cadence = this.enabledCadence(cadenceId);
+    // Con `circleId` la cadencia que manda es la del círculo, que `slotsOf` comprueba contra lo
+    // declarado: la frecuencia pedida solo tiene sentido cuando se va a emparejar o a abrir uno.
     const result =
       circleId === undefined
-        ? await this.assigned(principal.userId, payout, months, cadence)
-        : await this.slotsOf(circleId, principal.userId, payout, months);
+        ? await this.assigned(
+            principal.userId,
+            payout,
+            months,
+            this.requestedCadence(cadenceId, supported),
+          )
+        : await this.slotsOf(circleId, principal.userId, payout, months, supported);
     return {
       ...result,
       slots: result.slots.map((slot) => ({
@@ -118,16 +130,19 @@ export class GetAvailableSlotsUseCase {
   }
 
   /**
-   * La cadencia pedida, solo si está habilitada (COPAYNI-121): ofrecer slots de una frecuencia
-   * que no se puede crear sería ofrecer algo que luego se rechaza al unirse.
+   * La cadencia pedida, solo si está habilitada en el servidor (COPAYNI-121) y declarada por el
+   * cliente (COPAYNI-115). Son dos puertas distintas: ofrecer slots de una frecuencia que no se
+   * puede crear sería ofrecer algo que luego se rechaza al unirse, y ofrecérsela a una app que no
+   * sabe dibujarla sería enseñar cifras y fechas equivocadas sobre dinero real.
    */
-  private enabledCadence(id: CadenceId | undefined): Cadence {
+  private requestedCadence(id: CadenceId | undefined, supported: readonly Cadence[]): Cadence {
     const cadence = id ? Cadence.parse(id) : Cadence.default;
     if (!this.assignment.cadences.some((enabled) => enabled.equals(cadence))) {
       throw new ValidationError(`La frecuencia ${cadence.id} no está habilitada`, {
         cadence: 'not_enabled',
       });
     }
+    assertSupportedByClient(cadence, supported);
     return cadence;
   }
 
@@ -172,9 +187,13 @@ export class GetAvailableSlotsUseCase {
     userId: string,
     payout: Money,
     months: number,
+    supported: readonly Cadence[],
   ): Promise<SlotsWithoutRestrictions> {
     const circle = await this.circles.findById(circleId);
     if (!circle) throw new NotFoundError('No se encontró el círculo', 'CIRCLE_NOT_FOUND');
+    // Alcanzar un círculo por su identificador no salta la declaración de capacidad: es la otra
+    // puerta por la que un cliente podría llegar a una cadencia que no sabe mostrar (COPAYNI-115).
+    assertSupportedByClient(circle.terms.cadence, supported);
     if (!circle.terms.payout.equals(payout) || circle.terms.months !== months) {
       throw new ValidationError('El círculo no tiene ese payout y esa duración', {
         circleId: 'terms_mismatch',

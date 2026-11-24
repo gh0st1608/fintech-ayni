@@ -14,6 +14,7 @@ import { type JoinConfig } from '../../domain/entities/join-config';
 import { installmentOptions } from '../../domain/services/installment-options';
 import { type SlotPricing } from '../../domain/services/slot-pricing';
 import { openVacancies } from '../../domain/services/vacancy';
+import { Cadence } from '../../domain/value-objects/cadence';
 import { type CircleTerms } from '../../domain/value-objects/circle-terms';
 import { CIRCLE_REPOSITORY, type CircleRepositoryPort } from '../ports/circle-repository.port';
 import {
@@ -70,7 +71,15 @@ export class ListRecommendedCirclesUseCase {
     @Inject(CLOCK) private readonly clock: ClockPort,
   ) {}
 
-  async execute(principal: Principal): Promise<RecommendedCircle[]> {
+  /**
+   * `supported`: las cadencias que el cliente declara (COPAYNI-115). Por defecto solo la mensual,
+   * que es lo que sabe dibujar la app publicada: una recomendación que no se puede mostrar bien
+   * es peor que no recomendar nada.
+   */
+  async execute(
+    principal: Principal,
+    supported: readonly Cadence[] = [Cadence.default],
+  ): Promise<RecommendedCircle[]> {
     const today = LocalDate.fromDate(this.clock.now(), this.assignment.timeZone);
     const [joinConfigs, candidates] = await Promise.all([
       Promise.all(
@@ -88,7 +97,9 @@ export class ListRecommendedCirclesUseCase {
       .map((circle) => ({ circle, vacancies: this.vacanciesOf(circle, today) }))
       .filter(
         ({ circle: { terms }, vacancies }) =>
-          (vacancies === null || vacancies.length > 0) && this.offers(joinConfigs, terms),
+          (vacancies === null || vacancies.length > 0) &&
+          supported.some((cadence) => cadence.equals(terms.cadence)) &&
+          this.offers(joinConfigs, terms),
       )
       .slice(0, this.settings.limit)
       .map(({ circle, vacancies }) => ({

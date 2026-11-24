@@ -73,7 +73,9 @@ describe('Límite mensual de pay-in por mes calendario (COPAYNI-110)', () => {
     // La junta semanal arranca una semana después de hoy (15 de octubre), no el 1 de noviembre:
     // el desplazamiento de inicio va en pasos de la cadencia (COPAYNI-114). Así que el primer mes
     // que se pasa es octubre, y es el que el error nombra.
-    await expect(useCase.execute({ ...COMMAND, cadence: 'weekly' })).rejects.toThrow(
+    await expect(
+      useCase.execute({ ...COMMAND, cadence: 'weekly', supportedCadences: ['weekly'] }),
+    ).rejects.toThrow(
       expect.objectContaining({
         code: 'MONTHLY_LIMIT_EXCEEDED',
         // Cinco cuotas semanales caen en noviembre; el importe exacto depende de las Admin Fees
