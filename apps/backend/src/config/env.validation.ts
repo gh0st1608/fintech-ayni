@@ -18,6 +18,7 @@ import {
   validateSync,
 } from 'class-validator';
 
+import { CADENCE_IDS, type CadenceId } from '../modules/circles/domain/value-objects/cadence';
 import { currencySettingsFrom } from '../shared/infrastructure/currency/currency-settings';
 
 /** Identidad del personal del back-office (docs/backoffice-plan.md, BO2). */
@@ -243,6 +244,18 @@ export class EnvironmentVariables {
   @IsInt({ each: true })
   @Min(2, { each: true })
   CIRCLE_DURATION_OPTIONS!: number[];
+
+  /**
+   * Cadencias de junta que se pueden crear, separadas por comas (COPAYNI-121). Separa el
+   * despliegue del código de la activación de la funcionalidad: con el valor por defecto el
+   * producto se comporta como antes de admitir cadencias. `monthly` no se puede quitar, porque
+   * es la de todos los círculos que existen.
+   */
+  @Transform(toList)
+  @ArrayNotEmpty()
+  @ArrayUnique()
+  @IsIn(CADENCE_IDS, { each: true })
+  CIRCLE_CADENCES_ENABLED: CadenceId[] = ['monthly'];
 
   /**
    * Cómo se elige el círculo cuyos slots se ofrecen (pending-scope R2, provisional):
@@ -1057,6 +1070,12 @@ export function validateEnvironment(config: Record<string, unknown>): Environmen
   ) {
     throw new Error(
       'Configuración inválida:\n- OTP_DELIVERY: aws requiere OTP_EMAIL_FROM, OTP_SMS_ORIGINATION_IDENTITY o ambos',
+    );
+  }
+  if (errors.length === 0 && !env.CIRCLE_CADENCES_ENABLED.includes('monthly')) {
+    // Quitarla dejaría sin poder crearse la cadencia de todos los círculos que existen.
+    throw new Error(
+      'Configuración inválida:\n- CIRCLE_CADENCES_ENABLED: monthly no se puede deshabilitar',
     );
   }
   if (env.NODE_ENV === 'production' && env.STAFF_AUTH_PROVIDER === 'dev') {

@@ -12,6 +12,7 @@ import {
   type MemberStartProposal,
 } from '../../../application/ports/start-proposals.port';
 import { newPositions, type StartDecision } from '../../../domain/services/start-approval';
+import { Cadence } from '../../../domain/value-objects/cadence';
 import { CircleTerms } from '../../../domain/value-objects/circle-terms';
 
 interface ProposalRow {
@@ -22,6 +23,7 @@ interface ProposalRow {
   currency: string;
   months: number;
   proposed_months: number;
+  cadence: string;
   starts_on: string;
   respond_by: string;
   decision: StartDecision | null;
@@ -36,7 +38,7 @@ export class SqlStartProposalsRepository implements CircleStartProposalsPort {
     if (!isUuid(userId)) return [];
     const rows = await this.dataSource.query<ProposalRow[]>(
       `SELECT c.id AS circle_id, p.round, c.payout_amount::text AS payout_amount, c.currency,
-              c.turns AS months,
+              c.turns AS months, c.cadence,
               p.payout_amount::text AS proposed_payout, p.months AS proposed_months,
               to_char(c.starts_on, 'YYYY-MM-DD') AS starts_on,
               to_char(p.respond_by, 'YYYY-MM-DD') AS respond_by, r.decision
@@ -60,17 +62,21 @@ export class SqlStartProposalsRepository implements CircleStartProposalsPort {
       members.map((member) => ({ userId: member.user_id, position: member.position })),
     );
     const startsOn = LocalDate.parse(row.starts_on);
+    // La propuesta cambia cuántos son y el pozo, no cada cuánto pagan: la cadencia es la misma.
+    const cadence = Cadence.parse(row.cadence);
     return {
       circleId: row.circle_id,
       round: row.round,
       current: CircleTerms.create({
         payout: Money.of(Number(row.payout_amount), row.currency),
-        months: row.months,
+        turns: row.months,
+        cadence,
         startsOn,
       }),
       proposed: CircleTerms.create({
         payout: Money.of(Number(row.proposed_payout), row.currency),
-        months: row.proposed_months,
+        turns: row.proposed_months,
+        cadence,
         startsOn,
       }),
       position: positions.get(userId)!,

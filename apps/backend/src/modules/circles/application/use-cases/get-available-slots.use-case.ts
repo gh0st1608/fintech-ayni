@@ -12,6 +12,7 @@ import {
   CircleAlreadyStartedError,
 } from '../../domain/entities/circle';
 import { type SlotPricing, type SlotQuote } from '../../domain/services/slot-pricing';
+import { type Cadence } from '../../domain/value-objects/cadence';
 import { type SlotRestriction, slotRestriction } from '../../domain/services/trust-policy';
 import { openVacancies } from '../../domain/services/vacancy';
 import { CircleTerms } from '../../domain/value-objects/circle-terms';
@@ -38,6 +39,12 @@ export const SLOT_PRICING = Symbol('SLOT_PRICING');
  */
 export interface CircleAssignmentSettings {
   readonly strategy: 'fill_oldest' | 'always_new';
+  /**
+   * Cadencias que se pueden crear (`CIRCLE_CADENCES_ENABLED`, COPAYNI-121). Las juntas que ya
+   * existen no la consultan: deshabilitar una cadencia impide crear juntas nuevas, no detiene
+   * las que están en curso.
+   */
+  readonly cadences: readonly Cadence[];
   /** Un círculo nuevo empieza este número de meses después del mes actual. */
   readonly startOffsetMonths: number;
   /** Zona horaria IANA que define el mes actual. */

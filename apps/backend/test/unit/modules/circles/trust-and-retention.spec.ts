@@ -21,6 +21,7 @@ import { Period } from '@src/shared/domain/value-objects/period';
 import { TestClock } from '@test/support/create-test-app';
 import { InMemoryCircleCycleRepository } from '@test/support/in-memory-circle-cycle.repository';
 import { InMemoryCircleRepository } from '@test/support/in-memory-circle.repository';
+import { Cadence } from '@src/modules/circles/domain/value-objects/cadence';
 import {
   createJoinCircleUseCase,
   ELIGIBLE,
@@ -111,7 +112,12 @@ describe('Regla de confianza por tipo de turno (COPAYNI-60)', () => {
       { getForUser: () => Promise.resolve(TEST_JOIN_CONFIG) },
       new InMemoryCircleRepository(),
       RETAINING,
-      { strategy: 'fill_oldest', startOffsetMonths: 1, timeZone: 'America/Lima' },
+      {
+        strategy: 'fill_oldest',
+        cadences: [Cadence.monthly],
+        startOffsetMonths: 1,
+        timeZone: 'America/Lima',
+      },
       { dueDay: 5 },
       { applicantFor: () => Promise.resolve({ ...ELIGIBLE, incomeDeclared: false }) },
       historyWith(0),

@@ -20,6 +20,7 @@ import { Money } from '@src/shared/domain/value-objects/money';
 import { currencySettingsFrom } from '@src/shared/infrastructure/currency/currency-settings';
 
 import { TestClock } from './create-test-app';
+import { Cadence } from '@src/modules/circles/domain/value-objects/cadence';
 
 const pen = (major: number) => Money.of(major * 100, 'PEN');
 
@@ -138,6 +139,7 @@ export function createJoinCircleUseCase(
     options.pricing ?? TEST_PRICING,
     {
       strategy: 'fill_oldest',
+      cadences: [Cadence.monthly],
       startOffsetMonths: 1,
       timeZone: 'America/Lima',
       ...options.assignment,

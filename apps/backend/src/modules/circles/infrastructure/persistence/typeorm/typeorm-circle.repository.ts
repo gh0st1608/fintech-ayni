@@ -30,6 +30,7 @@ import {
   type RunningCircle,
   SlotTakenError,
 } from '../../../domain/entities/circle';
+import { Cadence } from '../../../domain/value-objects/cadence';
 import { CircleTerms } from '../../../domain/value-objects/circle-terms';
 import { CircleMembershipEntity } from './circle-membership.entity';
 import { CircleEntity } from './circle.entity';
@@ -56,6 +57,7 @@ interface MemberCircleRow {
   payout_amount: string;
   currency: string;
   turns: number;
+  cadence: string;
   starts_on: string;
 }
 
@@ -132,7 +134,7 @@ export class TypeOrmCircleRepository implements CircleRepositoryPort {
     }
     const rows = await this.memberships.query<MemberCircleRow[]>(
       `SELECT m.id AS membership_id, m.created_at::text AS joined_at, m.position, m.price,
-              m.expelled_at IS NOT NULL AS expelled, c.id AS circle_id, c.payout_amount::text AS payout_amount, c.currency, c.turns,
+              m.expelled_at IS NOT NULL AS expelled, c.id AS circle_id, c.payout_amount::text AS payout_amount, c.currency, c.turns, c.cadence,
               to_char(c.starts_on, 'YYYY-MM-DD') AS starts_on
          FROM circle_memberships m
          JOIN circles c ON c.id = m.circle_id
@@ -152,6 +154,7 @@ export class TypeOrmCircleRepository implements CircleRepositoryPort {
         terms: CircleTerms.create({
           payout: Money.of(Number(row.payout_amount), row.currency),
           turns: row.turns,
+          cadence: Cadence.parse(row.cadence),
           startsOn: LocalDate.parse(row.starts_on),
         }),
         position: row.position,
@@ -261,6 +264,7 @@ export class TypeOrmCircleRepository implements CircleRepositoryPort {
         payoutAmount: circle.terms.payout.amount,
         currency: circle.terms.currency,
         turns: circle.terms.turns,
+        cadence: circle.terms.cadence.id,
         startsOn: circle.terms.startsOn.toString(),
       });
       if (circle.memberships.length > 0) {
@@ -322,6 +326,7 @@ export class TypeOrmCircleRepository implements CircleRepositoryPort {
       terms: CircleTerms.create({
         payout: Money.of(row.payoutAmount, row.currency),
         turns: row.turns,
+        cadence: Cadence.parse(row.cadence),
         startsOn: LocalDate.parse(row.startsOn),
       }),
       memberships: (row.memberships ?? [])

@@ -13,6 +13,7 @@ import { Period } from '@src/shared/domain/value-objects/period';
 import { TestClock } from '@test/support/create-test-app';
 import { InMemoryCircleRepository } from '@test/support/in-memory-circle.repository';
 import { ELIGIBLE, historyWith, TEST_TRUST } from '@test/support/join-circle.fixture';
+import { Cadence } from '@src/modules/circles/domain/value-objects/cadence';
 
 const pen = (major: number) => Money.of(major * 100, 'PEN');
 const ANA = { userId: 'ana' };
@@ -45,7 +46,13 @@ function setup(settings: Partial<CircleAssignmentSettings> = {}) {
     { getForUser: () => Promise.resolve(JOIN_CONFIG) },
     circles,
     PRICING,
-    { strategy: 'fill_oldest', startOffsetMonths: 1, timeZone: 'America/Lima', ...settings },
+    {
+      strategy: 'fill_oldest',
+      cadences: [Cadence.monthly],
+      startOffsetMonths: 1,
+      timeZone: 'America/Lima',
+      ...settings,
+    },
     { dueDay: 5 },
     { applicantFor: () => Promise.resolve(ELIGIBLE) },
     historyWith(1),

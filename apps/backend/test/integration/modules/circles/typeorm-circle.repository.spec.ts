@@ -7,7 +7,9 @@ import { IdempotencyKeyExistsError } from '@src/modules/circles/application/port
 import { type JoinCircleUseCase } from '@src/modules/circles/application/use-cases/join-circle.use-case';
 import { Circle } from '@src/modules/circles/domain/entities/circle';
 import { priceOf, SlotPricing } from '@src/modules/circles/domain/services/slot-pricing';
+import { Cadence } from '@src/modules/circles/domain/value-objects/cadence';
 import { CircleTerms } from '@src/modules/circles/domain/value-objects/circle-terms';
+import { LocalDate } from '@src/shared/domain/value-objects/local-date';
 import { SlotPricingRules } from '@src/modules/circles/domain/value-objects/slot-pricing-rules';
 import { CircleMembershipEntity } from '@src/modules/circles/infrastructure/persistence/typeorm/circle-membership.entity';
 import { CircleEntity } from '@src/modules/circles/infrastructure/persistence/typeorm/circle.entity';
@@ -89,6 +91,34 @@ describe('TypeOrmCircleRepository', () => {
         termsVersion: TEST_TERMS_VERSION,
       },
     ]);
+  });
+
+  it('una junta semanal sobrevive al viaje de ida y vuelta, con su día de arranque (COPAYNI-121)', async () => {
+    // Sin esto, habilitar la cadencia crearía juntas que al leerse volverían a ser mensuales.
+    const weeklyId = randomUUID();
+    await repository.create(
+      Circle.open({
+        id: weeklyId,
+        terms: CircleTerms.create({
+          payout: Money.of(1_200_000, 'PEN'),
+          turns: 4,
+          cadence: Cadence.weekly,
+          startsOn: LocalDate.parse('2026-11-04'),
+        }),
+      }),
+    );
+
+    const circle = await repository.findById(weeklyId);
+    expect(circle?.terms.cadence.id).toBe('weekly');
+    expect(circle?.terms.turns).toBe(4);
+    // Arranca un miércoles: el día 1 solo lo exige la cadencia mensual (COPAYNI-108), y la base
+    // dejó de exigirlo con la expansión (COPAYNI-107).
+    expect(circle?.terms.startsOn.toString()).toBe('2026-11-04');
+    const [row] = await dataSource.query<{ cadence: string; starts_on: string }[]>(
+      `SELECT cadence, to_char(starts_on, 'YYYY-MM-DD') AS starts_on FROM circles WHERE id = $1`,
+      [weeklyId],
+    );
+    expect(row).toEqual({ cadence: 'weekly', starts_on: '2026-11-04' });
   });
 
   it('el precio congelado sobrevive a un cambio de reglas y a la lectura de Mis círculos (COPAYNI-55)', async () => {
