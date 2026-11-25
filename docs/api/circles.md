@@ -91,24 +91,53 @@ Cuotas y duraciones posibles para el payout elegido (Monthly Pay-in, COPAYNI-29)
 
 - `payoutAmount`: en unidades menores. Tiene que estar en el rango de `join-config`, caer en un salto del slider y no superar `userPayoutLimit`.
 - `currency` (opcional): la moneda del Game'ya; sin ella, la oficial. Lo mismo vale para `slots` (query) y `join` (cuerpo).
-- Las duraciones salen de la configuración (`CIRCLE_DURATION_OPTIONS`; provisional: 6, 10 y 12 meses, como en el Figma).
-- Solo se ofrecen las duraciones que dan cuotas exactas en céntimos.
+- Las duraciones salen de la configuración, de una de estas dos formas (COPAYNI-125):
+  - `CIRCLE_DURATION_OPTIONS`: la lista cerrada. Es lo que hay hoy (6, 10 y 12, como en el Figma).
+  - `CIRCLE_TURNS_MIN` y `CIRCLE_TURNS_MAX`: el rango de turnos, ambos extremos incluidos. Con los dos puestos, el rango manda. Van juntos y la API no arranca con uno solo: ningún rango reproduce exactamente `6,10,12`, así que activarlo cambia lo que se ofrece y es una decisión de negocio, no un despliegue de código.
+- Solo se ofrecen las duraciones que dan cuotas exactas en céntimos: con un rango de 2 a 24, S/ 12.000 ofrece 12 duraciones de las 23 configuradas, y S/ 30.000 ofrece 18.
+- `x-ayni-cadences` (opcional, COPAYNI-115): las cadencias que la app sabe mostrar. Las cuotas se calculan hoy en mensual; la frecuencia pedida se expone en COPAYNI-116.
 
 **200**:
 
 ```json
 {
   "payout": { "amount": 3000000, "currency": "PEN" },
+  "cadence": "monthly",
   "options": [
-    { "months": 6, "installment": { "amount": 500000, "currency": "PEN" } },
-    { "months": 10, "installment": { "amount": 300000, "currency": "PEN" } },
-    { "months": 12, "installment": { "amount": 250000, "currency": "PEN" } }
-  ]
+    {
+      "turns": 6,
+      "months": 6,
+      "installment": { "amount": 500000, "currency": "PEN" },
+      "cadence": "monthly",
+      "unit": "Mes",
+      "approximateDays": 180
+    },
+    {
+      "turns": 10,
+      "months": 10,
+      "installment": { "amount": 300000, "currency": "PEN" },
+      "cadence": "monthly",
+      "unit": "Mes",
+      "approximateDays": 300
+    },
+    {
+      "turns": 12,
+      "months": 12,
+      "installment": { "amount": 250000, "currency": "PEN" },
+      "cadence": "monthly",
+      "unit": "Mes",
+      "approximateDays": 360
+    }
+  ],
+  "alternatives": []
 }
 ```
 
-- `installment` es la **cuota base** (payout / meses). La del slot elegido varía con su fee, su descuento y las Admin Fees: es el aviso de la pantalla.
-- `options` va de menor a mayor duración y puede venir vacío si ninguna duración da cuotas exactas.
+- `installment` es la **cuota base** (payout / turnos). La del slot elegido varía con su fee, su descuento y las Admin Fees: es el aviso de la pantalla.
+- `turns` es el número de turnos, que son los puestos y las cuotas. `months` es su alias y vale lo mismo: lo lee la app publicada y se mantiene (COPAYNI-122).
+- `unit` y `approximateDays` son la duración derivada de la cadencia: 12 turnos son 12 meses («Mes», ~360 días) en mensual y 12 semanas («Semana», 84 días) en semanal. La cuota es la misma; lo que cambia es cuánto dura la junta.
+- `options` va de menor a mayor duración.
+- `alternatives`: con `options` vacío, los montos ofrecibles más cercanos —el anterior y el siguiente del slider que sí existen— con las duraciones de cada uno. Un monto válido del slider sin ninguna duración exacta no se responde con una lista vacía a secas: el usuario no tiene por qué deducir que el problema es la divisibilidad. Con `options` no vacío llega vacío, y queda vacío también si ningún monto del rango admite ninguna duración.
 - **Propuesto (R5, no implementado en el backend):** `withinMonthlyLimit` (boolean, opcional) en cada opción. Con `false`, la cuota supera el límite mensual de pay-in del usuario y la app la muestra deshabilitada con el motivo (COPAYNI-29). Si falta, la app no restringe la opción.
 
 | Error                | HTTP | Cuándo                                                          |

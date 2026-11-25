@@ -110,13 +110,21 @@ describe('GET /v1/circles/installment-options', () => {
   it('devuelve las cuotas por duración para el payout elegido', async () => {
     const response = await get('?payoutAmount=3000000').expect(200);
 
+    // El contrato completo, con la duración derivada de la cadencia y el alias `months` que
+    // sigue leyendo la app publicada (COPAYNI-125).
+    const option = (turns: number, installment: number) => ({
+      turns,
+      months: turns,
+      installment: { amount: installment, currency: 'PEN' },
+      cadence: 'monthly',
+      unit: 'Mes',
+      approximateDays: turns * 30,
+    });
     expect(response.body.data).toEqual({
       payout: { amount: 3000000, currency: 'PEN' },
-      options: [
-        { months: 6, installment: { amount: 500000, currency: 'PEN' } },
-        { months: 10, installment: { amount: 300000, currency: 'PEN' } },
-        { months: 12, installment: { amount: 250000, currency: 'PEN' } },
-      ],
+      cadence: 'monthly',
+      options: [option(6, 500000), option(10, 300000), option(12, 250000)],
+      alternatives: [],
     });
   });
 
@@ -124,8 +132,12 @@ describe('GET /v1/circles/installment-options', () => {
     const response = await get('?payoutAmount=840000&currency=USD').expect(200);
     expect(response.body.data.payout).toEqual({ amount: 840000, currency: 'USD' });
     expect(response.body.data.options).toContainEqual({
+      turns: 6,
       months: 6,
       installment: { amount: 140000, currency: 'USD' },
+      cadence: 'monthly',
+      unit: 'Mes',
+      approximateDays: 180,
     });
 
     await get('?payoutAmount=12000000&currency=USD').expect(422);

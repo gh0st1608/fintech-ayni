@@ -17,7 +17,11 @@ import {
   type Membership,
 } from '../../domain/entities/circle';
 import { nextStart } from '../../domain/services/circle-start';
-import { assertSupportedByClient, clientCadences } from '../../domain/services/client-capability';
+import {
+  assertCadenceEnabled,
+  assertSupportedByClient,
+  clientCadences,
+} from '../../domain/services/client-capability';
 import { applicantIn, assertCanJoin } from '../../domain/services/join-eligibility';
 import {
   type MonthlyPayIn,
@@ -358,11 +362,7 @@ export class JoinCircleUseCase {
    */
   private assertCadenceEnabled(command: JoinCircleCommand): Cadence {
     const cadence = command.cadence ? Cadence.parse(command.cadence) : Cadence.default;
-    if (!this.assignment.cadences.some((enabled) => enabled.equals(cadence))) {
-      throw new ValidationError(`La frecuencia ${cadence.id} no está habilitada`, {
-        cadence: 'not_enabled',
-      });
-    }
+    assertCadenceEnabled(cadence, this.assignment.cadences);
     return cadence;
   }
 

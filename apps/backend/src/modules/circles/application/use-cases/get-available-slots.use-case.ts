@@ -13,7 +13,7 @@ import {
 } from '../../domain/entities/circle';
 import { type SlotPricing, type SlotQuote } from '../../domain/services/slot-pricing';
 import { nextStart } from '../../domain/services/circle-start';
-import { assertSupportedByClient } from '../../domain/services/client-capability';
+import { assertSupportedByClient, requestedCadence } from '../../domain/services/client-capability';
 import { Cadence, type CadenceId } from '../../domain/value-objects/cadence';
 import { type SlotRestriction, slotRestriction } from '../../domain/services/trust-policy';
 import { openVacancies } from '../../domain/services/vacancy';
@@ -28,30 +28,13 @@ import {
 import { CIRCLE_CYCLE, type CircleCycleSettings } from './cycle-settings';
 import { TRUST_SETTINGS, type TrustSettings, trustProfileOf } from './trust';
 import { offeredPayout } from './offered-payout';
+import {
+  CIRCLE_ASSIGNMENT,
+  type CircleAssignmentSettings,
+  SLOT_PRICING,
+} from './assignment-settings';
 
-export const CIRCLE_ASSIGNMENT = Symbol('CIRCLE_ASSIGNMENT');
-export const SLOT_PRICING = Symbol('SLOT_PRICING');
-
-/**
- * Regla provisional para elegir el círculo (pending-scope R2), desde la configuración.
- * - `fill_oldest`: el círculo abierto más antiguo con esas condiciones, que todavía no empezó y
- *   donde el usuario no es miembro. Completa círculos antes de abrir otros, así empiezan antes.
- *   Si no hay, uno nuevo.
- * - `always_new`: siempre uno nuevo.
- */
-export interface CircleAssignmentSettings {
-  readonly strategy: 'fill_oldest' | 'always_new';
-  /**
-   * Cadencias que se pueden crear (`CIRCLE_CADENCES_ENABLED`, COPAYNI-121). Las juntas que ya
-   * existen no la consultan: deshabilitar una cadencia impide crear juntas nuevas, no detiene
-   * las que están en curso.
-   */
-  readonly cadences: readonly Cadence[];
-  /** Un círculo nuevo empieza este número de meses después del mes actual. */
-  readonly startOffsetMonths: number;
-  /** Zona horaria IANA que define el mes actual. */
-  readonly timeZone: string;
-}
+export { CIRCLE_ASSIGNMENT, SLOT_PRICING, type CircleAssignmentSettings };
 
 export interface AvailableSlot extends SlotQuote {
   available: boolean;
@@ -117,7 +100,7 @@ export class GetAvailableSlotsUseCase {
             principal.userId,
             payout,
             months,
-            this.requestedCadence(cadenceId, supported),
+            requestedCadence(cadenceId, this.assignment.cadences, supported),
           )
         : await this.slotsOf(circleId, principal.userId, payout, months, supported);
     return {
@@ -127,23 +110,6 @@ export class GetAvailableSlotsUseCase {
         restriction: slotRestriction(slot.type, profile, this.trust),
       })),
     };
-  }
-
-  /**
-   * La cadencia pedida, solo si está habilitada en el servidor (COPAYNI-121) y declarada por el
-   * cliente (COPAYNI-115). Son dos puertas distintas: ofrecer slots de una frecuencia que no se
-   * puede crear sería ofrecer algo que luego se rechaza al unirse, y ofrecérsela a una app que no
-   * sabe dibujarla sería enseñar cifras y fechas equivocadas sobre dinero real.
-   */
-  private requestedCadence(id: CadenceId | undefined, supported: readonly Cadence[]): Cadence {
-    const cadence = id ? Cadence.parse(id) : Cadence.default;
-    if (!this.assignment.cadences.some((enabled) => enabled.equals(cadence))) {
-      throw new ValidationError(`La frecuencia ${cadence.id} no está habilitada`, {
-        cadence: 'not_enabled',
-      });
-    }
-    assertSupportedByClient(cadence, supported);
-    return cadence;
   }
 
   private async assigned(

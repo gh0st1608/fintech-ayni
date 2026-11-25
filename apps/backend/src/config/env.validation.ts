@@ -23,6 +23,7 @@ import {
   CADENCE_IDS,
   type CadenceId,
 } from '../modules/circles/domain/value-objects/cadence';
+import { MAX_CIRCLE_TURNS } from '../modules/circles/domain/value-objects/turn-options';
 import { currencySettingsFrom } from '../shared/infrastructure/currency/currency-settings';
 
 /** Identidad del personal del back-office (docs/backoffice-plan.md, BO2). */
@@ -248,6 +249,22 @@ export class EnvironmentVariables {
   @IsInt({ each: true })
   @Min(2, { each: true })
   CIRCLE_DURATION_OPTIONS!: number[];
+
+  /**
+   * Turnos mínimo y máximo que puede elegir el usuario (COPAYNI-125). Con los dos puestos, el
+   * rango sustituye a `CIRCLE_DURATION_OPTIONS`; sin ellos rige la lista, que es lo que hay hoy
+   * en producción. Conviven porque ningún rango reproduce exactamente `6,10,12`: activar el rango
+   * cambia lo que se ofrece, y eso se despliega cuando negocio lo decida, no al desplegar código.
+   */
+  @IsOptional()
+  @IsInt()
+  @Min(2)
+  CIRCLE_TURNS_MIN?: number;
+
+  @IsOptional()
+  @IsInt()
+  @Max(MAX_CIRCLE_TURNS)
+  CIRCLE_TURNS_MAX?: number;
 
   /**
    * Cadencias de junta que se pueden crear, separadas por comas (COPAYNI-121). Separa el
@@ -1131,6 +1148,26 @@ function assertDelinquencyByCadence(env: EnvironmentVariables): void {
   }
 }
 
+/**
+ * El rango de turnos, si está configurado (COPAYNI-125).
+ *
+ * Los dos extremos van juntos: con uno solo no se sabe si el otro es el de la lista, el mínimo
+ * del dominio o ninguno, y adivinarlo cambiaría en silencio lo que se le ofrece a la gente.
+ */
+function assertTurnsRange(env: EnvironmentVariables): void {
+  const { CIRCLE_TURNS_MIN: min, CIRCLE_TURNS_MAX: max } = env;
+  const problems: string[] = [];
+  if ((min === undefined) !== (max === undefined)) {
+    problems.push('- CIRCLE_TURNS_MIN y CIRCLE_TURNS_MAX: o se configuran los dos, o ninguno');
+  }
+  if (min !== undefined && max !== undefined && max < min) {
+    problems.push(`- CIRCLE_TURNS_MAX: ${max} es menor que el mínimo ${min}`);
+  }
+  if (problems.length > 0) {
+    throw new Error(['Configuración inválida:', ...problems].join(LINE_BREAK));
+  }
+}
+
 /** Monedas admitidas con su tipo de cambio (pending-scope M2): la API no inicia sin él. */
 function assertCurrencies(env: EnvironmentVariables): void {
   try {
@@ -1172,6 +1209,7 @@ export function validateEnvironment(config: Record<string, unknown>): Environmen
   }
   // Ya se sabe que las cadencias son válidas: cada una habilitada necesita su gracia y su mora.
   if (errors.length === 0) assertDelinquencyByCadence(env);
+  if (errors.length === 0) assertTurnsRange(env);
   if (env.NODE_ENV === 'production' && env.STAFF_AUTH_PROVIDER === 'dev') {
     throw new Error(
       'Configuración inválida:\n- STAFF_AUTH_PROVIDER: dev no se admite en production',

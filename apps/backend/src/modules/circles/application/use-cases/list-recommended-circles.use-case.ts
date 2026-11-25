@@ -117,8 +117,8 @@ export class ListRecommendedCirclesUseCase {
     return (
       joinConfig !== undefined &&
       joinConfig.allowsPayout(terms.payout) &&
-      installmentOptions(terms.payout, joinConfig.durationOptions).some(
-        (option) => option.months === terms.months,
+      installmentOptions(terms.payout, joinConfig.turnOptions).some(
+        (option) => option.turns === terms.turns,
       )
     );
   }

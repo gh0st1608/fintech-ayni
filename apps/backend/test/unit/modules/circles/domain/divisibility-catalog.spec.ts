@@ -26,6 +26,13 @@ const CATALOG = Array.from(
 const offerable = (turns: number): number =>
   CATALOG.filter((payout) => CircleTerms.divides(payout, turns)).length;
 
+/**
+ * La duración y la cuota de cada opción ofrecida. La opción lleva además la cadencia y la
+ * duración derivada (COPAYNI-125); lo que fija este catálogo es qué duraciones existen.
+ */
+const offered = (payout: Money, durations: readonly number[]) =>
+  installmentOptions(payout, durations).map(({ months, installment }) => ({ months, installment }));
+
 describe('Cuota exacta sobre el catálogo (COPAYNI-113)', () => {
   it('el catálogo de prd son 235 montos, de 3.000 a 120.000 cada 500', () => {
     expect(CATALOG).toHaveLength(235);
@@ -58,12 +65,12 @@ describe('Cuota exacta sobre el catálogo (COPAYNI-113)', () => {
 
   it('las duraciones ofrecidas hoy son las que dividen el monto, y nada más', () => {
     // 30.000 se reparte en 6, 10 y 12; 30.500 en ninguna de las tres, y no se ofrece.
-    expect(installmentOptions(Money.of(3_000_000, 'PEN'), [6, 10, 12])).toEqual([
+    expect(offered(Money.of(3_000_000, 'PEN'), [6, 10, 12])).toEqual([
       { months: 6, installment: Money.of(500_000, 'PEN') },
       { months: 10, installment: Money.of(300_000, 'PEN') },
       { months: 12, installment: Money.of(250_000, 'PEN') },
     ]);
-    expect(installmentOptions(Money.of(3_050_000, 'PEN'), [6, 10, 12])).toEqual([
+    expect(offered(Money.of(3_050_000, 'PEN'), [6, 10, 12])).toEqual([
       { months: 10, installment: Money.of(305_000, 'PEN') },
     ]);
   });
@@ -71,7 +78,7 @@ describe('Cuota exacta sobre el catálogo (COPAYNI-113)', () => {
   it('un turno de menos del mínimo no se ofrece aunque divida', () => {
     // 1 divide cualquier monto, y una junta de un turno no es una junta.
     expect(CircleTerms.divides(Money.of(3_000_000, 'PEN'), 1)).toBe(true);
-    expect(installmentOptions(Money.of(3_000_000, 'PEN'), [1, 10])).toEqual([
+    expect(offered(Money.of(3_000_000, 'PEN'), [1, 10])).toEqual([
       { months: 10, installment: Money.of(300_000, 'PEN') },
     ]);
   });

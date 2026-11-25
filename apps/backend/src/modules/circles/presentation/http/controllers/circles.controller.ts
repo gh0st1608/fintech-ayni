@@ -107,6 +107,13 @@ export class CirclesController {
     return RecommendedCirclesResponse.from(await this.listRecommended.execute(principal, cadences));
   }
 
+  @ApiHeader({
+    name: CLIENT_CADENCES_HEADER,
+    required: false,
+    description:
+      'Cadencias que la app sabe mostrar, separadas por comas (monthly, biweekly, weekly). ' +
+      'Sin la cabecera, las cuotas se calculan en mensual (COPAYNI-115).',
+  })
   @Get('installment-options')
   @ApiOkResponse({
     type: InstallmentOptionsResponse,
@@ -122,9 +129,17 @@ export class CirclesController {
   async installmentOptions(
     @CurrentPrincipal() principal: Principal,
     @Query() query: InstallmentOptionsQuery,
+    @ClientCadences() cadences: Cadence[],
   ): Promise<InstallmentOptionsResponse> {
     return InstallmentOptionsResponse.from(
-      await this.getInstallmentOptions.execute(principal, query.payoutAmount, query.currency),
+      await this.getInstallmentOptions.execute(
+        principal,
+        query.payoutAmount,
+        query.currency,
+        // La frecuencia pedida la expone COPAYNI-116; hasta entonces son cuotas mensuales.
+        undefined,
+        cadences,
+      ),
     );
   }
 

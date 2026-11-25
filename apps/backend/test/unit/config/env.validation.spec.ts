@@ -141,6 +141,47 @@ describe('validateEnvironment', () => {
       );
     });
   });
+  describe('CIRCLE_TURNS_MIN y CIRCLE_TURNS_MAX (COPAYNI-125)', () => {
+    it('sin configurar, rige la lista cerrada: es lo que hay hoy en producción', () => {
+      const env = validateEnvironment(REQUIRED);
+      expect(env.CIRCLE_TURNS_MIN).toBeUndefined();
+      expect(env.CIRCLE_TURNS_MAX).toBeUndefined();
+      expect(env.CIRCLE_DURATION_OPTIONS).toEqual([6, 10, 12]);
+    });
+
+    it('acepta el rango completo', () => {
+      const env = validateEnvironment({
+        ...REQUIRED,
+        CIRCLE_TURNS_MIN: '2',
+        CIRCLE_TURNS_MAX: '24',
+      });
+      expect([env.CIRCLE_TURNS_MIN, env.CIRCLE_TURNS_MAX]).toEqual([2, 24]);
+    });
+
+    it.each([
+      ['solo el mínimo', { CIRCLE_TURNS_MIN: '2' }],
+      ['solo el máximo', { CIRCLE_TURNS_MAX: '24' }],
+    ])('no arranca con %s: no se adivina el otro extremo', (_case, override) => {
+      expect(() => validateEnvironment({ ...REQUIRED, ...override })).toThrow(
+        /CIRCLE_TURNS_MIN y CIRCLE_TURNS_MAX/,
+      );
+    });
+
+    it('no arranca con el máximo bajo el mínimo', () => {
+      expect(() =>
+        validateEnvironment({ ...REQUIRED, CIRCLE_TURNS_MIN: '12', CIRCLE_TURNS_MAX: '6' }),
+      ).toThrow(/CIRCLE_TURNS_MAX/);
+    });
+
+    it.each([
+      ['un mínimo de un turno', { CIRCLE_TURNS_MIN: '1', CIRCLE_TURNS_MAX: '12' }],
+      ['un máximo sobre el tope del dominio', { CIRCLE_TURNS_MIN: '2', CIRCLE_TURNS_MAX: '25' }],
+      ['un rango no entero', { CIRCLE_TURNS_MIN: '2.5', CIRCLE_TURNS_MAX: '12' }],
+    ])('rechaza %s', (_case, override) => {
+      expect(() => validateEnvironment({ ...REQUIRED, ...override })).toThrow(/CIRCLE_TURNS/);
+    });
+  });
+
   describe('CIRCLE_CADENCES_ENABLED (COPAYNI-121)', () => {
     it('por defecto solo habilita la mensual, que es como se comportaba antes de la épica', () => {
       expect(validateEnvironment(REQUIRED).CIRCLE_CADENCES_ENABLED).toEqual(['monthly']);
