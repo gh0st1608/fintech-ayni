@@ -116,25 +116,32 @@
     },
     "monthlyPayIn": {
       "title": "Cuota mensual",
-      "question": "¿Cuánto quieres pagar cada mes?",
+      "question": "¿Cuánto quieres pagar {{per}}?",
       "summaryLabel": "Monto a recibir",
       "edit": "Editar",
       "editA11y": "Editar el monto a recibir",
       "optionsLabel": "Cuotas disponibles",
-      "option": "{{amount}} al mes",
+      "option": "{{amount}} {{per}}",
       "optionMonths": "por {{months}} meses",
       "exceedsLimit": "Supera tu límite mensual de cuotas.",
       "info": "La cuota mensual puede variar según el costo o los descuentos de tu turno.",
       "empty": "No hay cuotas disponibles para este monto. Prueba con otro monto a recibir.",
       "missingPayout": "Primero elige el monto a recibir.",
       "choosePayout": "Elegir el monto",
-      "perMonth": "/mes"
+      "perMonth": "/mes",
+      "duration": "Dura {{days}} días",
+      "endsOn": "Termina el {{date}}",
+      "emptyTitle": "Ese monto no se reparte en cuotas exactas",
+      "emptyBody": "Con {{amount}} ninguna cantidad de turnos da una cuota exacta en céntimos. Prueba con otro monto.",
+      "suggestion": "Con {{amount}} sí: {{turns}} de {{installment}}",
+      "changeAmount": "Cambiar el monto",
+      "optionTurns": "por {{turns}}"
     },
     "slot": {
       "title": "Turno de cobro",
       "question": "¿En qué mes quieres recibir tu pozo?",
       "installmentSummaryLabel": "Cuota mensual",
-      "installmentSummary": "{{amount}} al mes · {{months}} meses",
+      "installmentSummary": "{{amount}} {{per}} · {{turns}}",
       "editInstallmentA11y": "Editar la cuota mensual",
       "types": {
         "fastestPayout": "Cobro más rápido",
@@ -239,6 +246,15 @@
     "currency": {
       "label": "Moneda",
       "rate": "Tipo de cambio fijo: {{from}} = {{to}}"
+    },
+    "frequency": {
+      "title": "Frecuencia",
+      "question": "¿Cada cuánto quieres pagar?",
+      "optionsLabel": "Frecuencias disponibles",
+      "summaryLabel": "Frecuencia",
+      "editA11y": "Cambiar la frecuencia",
+      "turnEvery": "Un turno cada {{days}} días",
+      "changed": "Cambiaste la frecuencia: vuelve a elegir el monto y los turnos."
     }
   },
   "circles": {
@@ -291,15 +307,21 @@
     "cadences": {
       "monthly": {
         "turn": "Mes",
-        "per": "por mes"
+        "per": "por mes",
+        "turns_one": "{{count}} mes",
+        "turns_other": "{{count}} meses"
       },
       "biweekly": {
         "turn": "Quincena",
-        "per": "por quincena"
+        "per": "por quincena",
+        "turns_one": "{{count}} quincena",
+        "turns_other": "{{count}} quincenas"
       },
       "weekly": {
         "turn": "Semana",
-        "per": "por semana"
+        "per": "por semana",
+        "turns_one": "{{count}} semana",
+        "turns_other": "{{count}} semanas"
       }
     },
     "detail": {

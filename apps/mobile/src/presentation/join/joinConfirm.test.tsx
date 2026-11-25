@@ -123,7 +123,7 @@ describe('JoinConfirmScreen', () => {
     const { onEditSlot, onEditPayoutMethod } = await renderConfirm();
     const summary = await screen.findByTestId('join-summary');
     expect(summary).toHaveTextContent(/30\.?000/);
-    expect(summary).toHaveTextContent(/3\.?000.* al mes · 10 meses/);
+    expect(summary).toHaveTextContent(/3\.?000.*por mes · 10 meses/);
     expect(summary).toHaveTextContent(/ene\.? 2027 · Turno 3 · Menor costo/i);
     expect(summary).toHaveTextContent(/Cuenta bancaria/);
 

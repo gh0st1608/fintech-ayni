@@ -1,3 +1,4 @@
+import type { Cadence } from './MyCircleDetail';
 import { DomainError } from '@/domain/shared/errors/DomainError';
 import type { Money } from '@/domain/shared/value-objects/Money';
 
@@ -44,6 +45,8 @@ export interface JoinCircleRequest {
   payout: Money;
   months: number;
   position: number;
+  /** Frecuencia elegida (COPAYNI-116); la mensual si falta, que es lo que hacía la app antes. */
+  cadence?: Cadence;
   /** Versión de los términos que el usuario aceptó en la confirmación (COPAYNI-86). */
   termsVersion: string;
 }

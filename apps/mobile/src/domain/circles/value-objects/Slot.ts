@@ -1,3 +1,4 @@
+import type { Cadence } from '../MyCircleDetail';
 import { DomainError } from '@/domain/shared/errors/DomainError';
 import { Money } from '@/domain/shared/value-objects/Money';
 
@@ -119,5 +120,28 @@ export class Slot {
 export interface SlotGroup {
   type: SlotType;
   /** En orden de cobro; incluye los ocupados para mostrarlos deshabilitados. */
+  slots: Slot[];
+}
+
+/**
+ * Los slots de una junta con sus condiciones reales (COPAYNI-116).
+ *
+ * Las fechas y la duración las calcula el servidor: la app las muestra tal cual. Fuera de la
+ * cadencia mensual no se pueden derivar de los meses, porque cuatro turnos semanales caen en el
+ * mismo mes.
+ */
+export interface SlotsQuote {
+  /** Círculo ofrecido; `null` si es uno nuevo, que se crea al unirse. */
+  circleId: string | null;
+  cadence: Cadence;
+  /** Cómo se llama un turno: «Mes», «Quincena», «Semana». */
+  unit: string;
+  turns: number;
+  /** `YYYY-MM-DD` del primer turno. */
+  startsOnDate: string;
+  /** `YYYY-MM-DD` del último turno: cuándo termina la junta. */
+  endsOnDate: string;
+  /** Días corridos que dura la junta. */
+  durationDays: number;
   slots: Slot[];
 }

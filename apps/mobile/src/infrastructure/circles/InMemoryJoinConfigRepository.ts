@@ -1,4 +1,4 @@
-import type { JoinConfig } from '@/domain/circles/JoinConfig';
+import type { CadenceOption, JoinConfig } from '@/domain/circles/JoinConfig';
 import type { JoinConfigRepositoryPort } from '@/domain/circles/ports/JoinConfigRepositoryPort';
 import { PayoutRange } from '@/domain/circles/value-objects/PayoutRange';
 import { Money } from '@/domain/shared/value-objects/Money';
@@ -14,6 +14,8 @@ export interface InMemoryJoinConfigOptions {
    * `"3.75"`. Sus montos son los equivalentes que calcula el backend.
    */
   secondCurrency?: { code: string; rateToOfficial: string };
+  /** Frecuencias ofrecidas (COPAYNI-116); solo la mensual si no se indica. */
+  cadences?: readonly CadenceOption[];
 }
 
 /**
@@ -53,6 +55,11 @@ export class InMemoryJoinConfigRepository implements JoinConfigRepositoryPort {
         : PayoutRange.create({ min: money(800), max: money(32000), step: money(100) }),
       userPayoutLimit: userPayoutLimit === undefined ? undefined : money(userPayoutLimit),
       savingProgramMax: money(official ? 1000000 : 266666),
+      // El falso de dev ofrece lo que ofrece producción hoy: solo la mensual (COPAYNI-121).
+      // `cadences` permite simular el paso de frecuencia sin backend.
+      cadences: this.options.cadences ?? [
+        { id: 'monthly', unit: 'Mes', turnDays: 30, default: true },
+      ],
       currencies,
       termsVersion: '2026-11',
     };

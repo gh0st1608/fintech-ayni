@@ -4,7 +4,11 @@ import { ActivityIndicator, ScrollView, StyleSheet, View } from 'react-native';
 
 import ROCKET from '@assets/images/shared/rocket.png';
 
-import { availablePayoutRange, type CurrencyOption } from '@/domain/circles/JoinConfig';
+import {
+  availablePayoutRange,
+  type CurrencyOption,
+  offersCadenceChoice,
+} from '@/domain/circles/JoinConfig';
 import type { PayoutRange } from '@/domain/circles/value-objects/PayoutRange';
 import { Money } from '@/domain/shared/value-objects/Money';
 import { currencyName, useFormatMoney } from '@/presentation/formatters/formatMoney';
@@ -19,6 +23,7 @@ import { Stepper } from '@/presentation/shared/components/Stepper';
 import { colors, spacing } from '@/presentation/theme/tokens';
 
 import { GameyaIntro } from '../components/GameyaIntro';
+import { JoinSummary } from '../components/JoinSummary';
 import { useJoinConfig } from '../hooks/useJoinConfig';
 import { useJoinFlow } from '../JoinFlowProvider';
 
@@ -28,6 +33,8 @@ export const JOIN_FLOW_STEPS = 4;
 interface PayoutAmountScreenProps {
   /** Se llama con el monto ya guardado en el borrador; la ruta navega al paso 2. */
   onNext: () => void;
+  /** Vuelve al paso de frecuencia (COPAYNI-116); ausente si no hay frecuencia que elegir. */
+  onEditCadence?: () => void;
 }
 
 /**
@@ -35,7 +42,7 @@ interface PayoutAmountScreenProps {
  * habilitada (pending-scope M2), primero se elige la moneda con las pestañas de "Choose turn"
  * (Figma 55:9444); el rango del slider es el de esa moneda.
  */
-export function PayoutAmountScreen({ onNext }: PayoutAmountScreenProps) {
+export function PayoutAmountScreen({ onNext, onEditCadence }: PayoutAmountScreenProps) {
   const { t } = useTranslation();
   const { draft } = useJoinFlow();
   // La del borrador (p. ej. "Join now" de un Game'ya en dólares) o, sin ella, la oficial.
@@ -56,6 +63,20 @@ export function PayoutAmountScreen({ onNext }: PayoutAmountScreenProps) {
     );
   } else {
     const range = availablePayoutRange(config.data);
+    // Con más de una frecuencia, la elegida se ve y se puede cambiar desde aquí: cambiarla
+    // descarta el monto y los turnos, así que vuelve al paso anterior (COPAYNI-116).
+    const cadenceRow = offersCadenceChoice(config.data) && onEditCadence && (
+      <JoinSummary
+        rows={[
+          {
+            label: t('join.frequency.summaryLabel'),
+            value: t(`circles.cadences.${draft.cadence}.turn`),
+            editLabel: t('join.frequency.editA11y'),
+            onEdit: onEditCadence,
+          },
+        ]}
+      />
+    );
     const selector = config.data.currencies.length > 1 && (
       <CurrencySelector
         options={config.data.currencies}
@@ -69,11 +90,17 @@ export function PayoutAmountScreen({ onNext }: PayoutAmountScreenProps) {
         key={range.currency}
         range={range}
         isUserLimited={range.max.amount < config.data.payoutRange.max.amount}
-        header={selector}
+        header={
+          <>
+            {cadenceRow}
+            {selector}
+          </>
+        }
         onNext={onNext}
       />
     ) : (
       <View style={styles.content}>
+        {cadenceRow}
         {selector}
         <AppText accessibilityRole="alert" style={styles.centerText}>
           {t('join.payout.belowMinimum')}

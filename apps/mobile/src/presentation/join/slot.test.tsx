@@ -69,7 +69,9 @@ describe('SlotScreen', () => {
     await pickType();
     expect(await slot(1)).toBeTruthy();
     expect(screen.getByLabelText('Paso 3 de 4')).toBeTruthy();
-    expect(screen.getByTestId('join-summary')).toHaveTextContent(/30\.000.*3\.?000.* al mes · 10/);
+    expect(screen.getByTestId('join-summary')).toHaveTextContent(
+      /30\.000.*3\.?000.*por mes · 10 meses/,
+    );
     expect(tab('Cobro más rápido')).toBeSelected();
     expect(tab('Menor costo')).toBeTruthy();
     expect(tab('Mayor retorno')).toBeTruthy();
@@ -160,8 +162,8 @@ describe('SlotScreen', () => {
     const circleQuote = quote();
     const original = circleQuote.listSlots.bind(circleQuote);
     let online = false;
-    circleQuote.listSlots = jest.fn((payout: Money, months: number) =>
-      online ? original(payout, months) : Promise.reject(new AppError('network', 'offline')),
+    circleQuote.listSlots = jest.fn((props: Parameters<typeof original>[0]) =>
+      online ? original(props) : Promise.reject(new AppError('network', 'offline')),
     );
     await renderSlot({ circleQuote });
 

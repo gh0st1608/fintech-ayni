@@ -22,7 +22,7 @@ export default function CirclesRoute() {
       }
       onJoinCircle={(payout, target) => {
         start(payout, target);
-        router.push('/join/payout-amount');
+        router.push('/join/frequency');
       }}
     />
   );

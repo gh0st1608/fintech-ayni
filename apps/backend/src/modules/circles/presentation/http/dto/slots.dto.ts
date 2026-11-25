@@ -61,6 +61,14 @@ export class SlotResponse {
   @ApiProperty({ example: '2026-11', description: 'Mes de cobro (YYYY-MM)' })
   payoutPeriod!: string;
 
+  @ApiProperty({
+    example: '2026-11-04',
+    description:
+      'Día real de cobro de ese turno (YYYY-MM-DD). Es lo que se muestra al elegir: en una ' +
+      'junta semanal cuatro turnos caen en el mismo mes (COPAYNI-116)',
+  })
+  payoutOn!: string;
+
   @ApiProperty({ enum: SLOT_TYPES })
   type!: SlotType;
 
@@ -174,6 +182,7 @@ export class SlotsResponse {
       slots: slots.map((slot) => ({
         position: slot.position,
         payoutPeriod: slot.payoutPeriod.toString(),
+        payoutOn: terms.payoutDateOf(slot.position).toString(),
         type: slot.type,
         fee: MoneyResponse.from(slot.fee),
         discount: MoneyResponse.from(slot.discount),

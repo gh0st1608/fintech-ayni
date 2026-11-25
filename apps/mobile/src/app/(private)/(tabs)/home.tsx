@@ -10,7 +10,7 @@ export default function HomeRoute() {
       onJoinCircle={(payout, target) => {
         // "Join now" empieza el flujo con el monto del círculo (paso 1 precargado).
         start(payout, target);
-        router.push('/join/payout-amount');
+        router.push('/join/frequency');
       }}
       onJoin={() => router.push('/join')}
       onOpenReferral={() => router.push('/profile/referral')}

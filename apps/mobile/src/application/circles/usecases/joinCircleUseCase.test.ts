@@ -52,7 +52,15 @@ describe('JoinCircleUseCase', () => {
       created: true,
     });
     expect(join).toHaveBeenCalledWith(
-      { circleId: null, payout: pen(30_000), months: 10, position: 3, termsVersion: TERMS },
+      {
+        circleId: null,
+        payout: pen(30_000),
+        months: 10,
+        position: 3,
+        // La frecuencia elegida viaja con el pedido (COPAYNI-116).
+        cadence: 'monthly',
+        termsVersion: TERMS,
+      },
       'key-1',
     );
   });

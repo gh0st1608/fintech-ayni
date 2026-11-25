@@ -1,6 +1,7 @@
 import { createContext, useContext, useMemo, useState } from 'react';
 
 import { JoinCircleDraft } from '@/domain/circles/JoinCircleDraft';
+import type { Cadence } from '@/domain/circles/MyCircleDetail';
 import type { JoinTarget } from '@/domain/circles/RecommendedCircle';
 import type { InstallmentOption } from '@/domain/circles/value-objects/InstallmentOption';
 import type { Slot } from '@/domain/circles/value-objects/Slot';
@@ -14,6 +15,8 @@ interface JoinFlowValue {
    * pedir sus slots, el círculo (COPAYNI-59).
    */
   start: (payoutAmount?: Money, target?: JoinTarget) => void;
+  /** Paso de frecuencia (COPAYNI-116): cambiarla descarta el monto y los turnos. */
+  setCadence: (cadence: Cadence) => void;
   setPayoutAmount: (amount: Money) => void;
   setInstallment: (option: InstallmentOption) => void;
   setSlot: (slot: Slot) => void;
@@ -34,6 +37,7 @@ export function JoinFlowProvider({ children }: { children: React.ReactNode }) {
         if (payoutAmount && target) setDraft(JoinCircleDraft.forTarget(payoutAmount, target));
         else setDraft(payoutAmount ? empty.withPayoutAmount(payoutAmount) : empty);
       },
+      setCadence: (cadence) => setDraft((current) => current.withCadence(cadence)),
       setPayoutAmount: (amount) => setDraft((current) => current.withPayoutAmount(amount)),
       setInstallment: (option) => setDraft((current) => current.withInstallment(option)),
       setSlot: (slot) => setDraft((current) => current.withSlot(slot)),

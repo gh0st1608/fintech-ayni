@@ -21,6 +21,20 @@ const joinConfigDto = z.object({
       }),
     )
     .min(1),
+  /**
+   * Frecuencias ofrecidas (COPAYNI-116). Un backend anterior no las envía: entonces solo se
+   * ofrece la mensual, que es como se comportaba la app.
+   */
+  cadences: z
+    .array(
+      z.object({
+        id: z.enum(['monthly', 'biweekly', 'weekly']),
+        unit: z.string().min(1),
+        turnDays: z.number().int().positive(),
+        default: z.boolean(),
+      }),
+    )
+    .default([{ id: 'monthly', unit: 'Mes', turnDays: 30, default: true }]),
   termsVersion: z.string().min(1),
 });
 
@@ -43,6 +57,7 @@ export class JoinConfigApiRepository implements JoinConfigRepositoryPort {
       userPayoutLimit: dto.userPayoutLimit ? toMoney(dto.userPayoutLimit) : undefined,
       savingProgramMax: toMoney(dto.savingProgramMax),
       currencies: dto.currencies,
+      cadences: dto.cadences,
       termsVersion: dto.termsVersion,
     };
   }

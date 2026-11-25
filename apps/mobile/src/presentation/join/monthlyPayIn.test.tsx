@@ -54,9 +54,9 @@ describe('MonthlyPayInScreen', () => {
     expect(screen.getByLabelText('Paso 2 de 4')).toBeTruthy();
     expect(screen.getByTestId('join-summary')).toHaveTextContent(/30\.000/);
     // Intl en español no agrupa los miles de 4 cifras: "5000", no "5.000".
-    expect(await option(/5\.?000.*al mes.*6 meses/)).toBeTruthy();
-    expect(await option(/3\.?000.*al mes.*10 meses/)).toBeTruthy();
-    expect(await option(/2\.?500.*al mes.*12 meses/)).toBeTruthy();
+    expect(await option(/5\.?000.*por mes.*6 meses/)).toBeTruthy();
+    expect(await option(/3\.?000.*por mes.*10 meses/)).toBeTruthy();
+    expect(await option(/2\.?500.*por mes.*12 meses/)).toBeTruthy();
     expect(
       screen.getByText(
         'La cuota mensual puede variar según el costo o los descuentos de tu turno.',
@@ -95,7 +95,9 @@ describe('MonthlyPayInScreen', () => {
       circleQuote: new InMemoryCircleQuoteRepository({ latencyMs: 0, durations: [7] }),
     });
     await renderPayIn({ setup });
-    expect(await screen.findByRole('alert')).toHaveTextContent(/No hay cuotas disponibles/);
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      /ninguna cantidad de turnos da una cuota exacta/,
+    );
   });
 
   it('sin conexión muestra un error recuperable y conserva el monto', async () => {

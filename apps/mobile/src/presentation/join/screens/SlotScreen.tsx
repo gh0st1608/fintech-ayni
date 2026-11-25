@@ -9,6 +9,7 @@ import {
   SlotNoLongerAvailableError,
   type Slot,
   type SlotGroup,
+  type SlotsQuote,
   type SlotType,
 } from '@/domain/circles/value-objects/Slot';
 import type { Money } from '@/domain/shared/value-objects/Money';
@@ -75,7 +76,13 @@ export function SlotScreen({ onEditPayout, onEditInstallment, onNext }: SlotScre
     );
   } else {
     body = (
-      <SlotPicker payout={payout} installment={installment} groups={slots.data} onNext={onNext} />
+      <SlotPicker
+        payout={payout}
+        installment={installment}
+        groups={slots.data.groups}
+        quote={slots.data.quote}
+        onNext={onNext}
+      />
     );
   }
 
@@ -97,9 +104,14 @@ export function SlotScreen({ onEditPayout, onEditInstallment, onNext }: SlotScre
             },
             {
               label: t('join.slot.installmentSummaryLabel'),
+              // La duración se dice en la unidad de la cadencia: «12 × Semana», no «12 meses»
+              // (COPAYNI-116). La unidad la manda el servidor con la opción.
               value: t('join.slot.installmentSummary', {
                 amount: formatMoney(installment.installment, { trimZeroDecimals: true }),
-                months: installment.months,
+                per: t(`circles.cadences.${installment.cadence}.per`),
+                turns: t(`circles.cadences.${installment.cadence}.turns`, {
+                  count: installment.turns,
+                }),
               }),
               editLabel: t('join.slot.editInstallmentA11y'),
               onEdit: onEditInstallment,
@@ -122,11 +134,13 @@ function SlotPicker({
   payout,
   installment,
   groups,
+  quote,
   onNext,
 }: {
   payout: Money;
   installment: InstallmentOption;
   groups: SlotGroup[];
+  quote: SlotsQuote;
   onNext: () => void;
 }) {
   const { t } = useTranslation();

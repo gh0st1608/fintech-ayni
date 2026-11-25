@@ -116,25 +116,32 @@
     },
     "monthlyPayIn": {
       "title": "Monthly Pay-in",
-      "question": "How much do you want to pay each month?",
+      "question": "How much do you want to pay {{per}}?",
       "summaryLabel": "Payout amount",
       "edit": "Edit",
       "editA11y": "Edit the payout amount",
       "optionsLabel": "Available pay-ins",
-      "option": "{{amount}} per month",
+      "option": "{{amount}} {{per}}",
       "optionMonths": "for {{months}} months",
       "exceedsLimit": "Exceeds your monthly pay-in limit.",
       "info": "Your monthly pay-in may vary depending on your slot fees or discounts.",
       "empty": "There are no pay-ins available for this amount. Try another payout amount.",
       "missingPayout": "Choose the payout amount first.",
       "choosePayout": "Choose the amount",
-      "perMonth": "/Monthly"
+      "perMonth": "/Monthly",
+      "duration": "Lasts {{days}} days",
+      "endsOn": "Ends on {{date}}",
+      "emptyTitle": "That amount doesn't split into exact installments",
+      "emptyBody": "With {{amount}} no number of turns gives an exact installment in cents. Try another amount.",
+      "suggestion": "With {{amount}} it works: {{turns}} of {{installment}}",
+      "changeAmount": "Change the amount",
+      "optionTurns": "for {{turns}}"
     },
     "slot": {
       "title": "Payout Slot",
       "question": "In which month do you want to receive your payout?",
       "installmentSummaryLabel": "Monthly pay-in",
-      "installmentSummary": "{{amount}} per month · {{months}} months",
+      "installmentSummary": "{{amount}} {{per}} · {{turns}}",
       "editInstallmentA11y": "Edit the monthly pay-in",
       "types": {
         "fastestPayout": "Fastest Payout",
@@ -239,6 +246,15 @@
     "currency": {
       "label": "Currency",
       "rate": "Fixed exchange rate: {{from}} = {{to}}"
+    },
+    "frequency": {
+      "title": "Frequency",
+      "question": "How often do you want to pay?",
+      "optionsLabel": "Available frequencies",
+      "summaryLabel": "Frequency",
+      "editA11y": "Change the frequency",
+      "turnEvery": "One turn every {{days}} days",
+      "changed": "You changed the frequency: choose the amount and the turns again."
     }
   },
   "circles": {
@@ -291,15 +307,21 @@
     "cadences": {
       "monthly": {
         "turn": "Month",
-        "per": "per month"
+        "per": "per month",
+        "turns_one": "{{count}} month",
+        "turns_other": "{{count}} months"
       },
       "biweekly": {
         "turn": "Fortnight",
-        "per": "per fortnight"
+        "per": "per fortnight",
+        "turns_one": "{{count}} fortnight",
+        "turns_other": "{{count}} fortnights"
       },
       "weekly": {
         "turn": "Week",
-        "per": "per week"
+        "per": "per week",
+        "turns_one": "{{count}} week",
+        "turns_other": "{{count}} weeks"
       }
     },
     "detail": {

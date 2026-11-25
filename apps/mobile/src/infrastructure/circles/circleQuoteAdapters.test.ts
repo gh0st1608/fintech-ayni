@@ -48,6 +48,36 @@ describe('CircleQuoteApiRepository', () => {
     expect(options[1]?.withinMonthlyLimit).toBe(true);
   });
 
+  it('pide las cuotas de la cadencia elegida, con su unidad y su duración', async () => {
+    const { fetchImpl, repository } = setup({
+      payout: money(1_200_000),
+      cadence: 'weekly',
+      options: [
+        {
+          months: 4,
+          turns: 4,
+          installment: money(300_000),
+          cadence: 'weekly',
+          unit: 'Semana',
+          approximateDays: 28,
+        },
+      ],
+      alternatives: [],
+    });
+
+    const options = await repository.listInstallmentOptions(pen(12_000), 'weekly');
+
+    expect(fetchImpl.mock.calls[0]?.[0]).toBe(
+      'https://api.test/v1/circles/installment-options?payoutAmount=1200000&currency=PEN&cadence=weekly',
+    );
+    expect(options[0]).toMatchObject({
+      turns: 4,
+      cadence: 'weekly',
+      unit: 'Semana',
+      approximateDays: 28,
+    });
+  });
+
   it('acepta una lista vacía', async () => {
     const { repository } = setup({ ...OPTIONS, options: [] });
     await expect(repository.listInstallmentOptions(pen(30_000))).resolves.toEqual([]);
@@ -100,7 +130,11 @@ describe('InMemoryCircleQuoteRepository', () => {
     const controller = new AbortController();
     controller.abort();
     await expect(
-      new InMemoryCircleQuoteRepository().listInstallmentOptions(pen(30_000), controller.signal),
+      new InMemoryCircleQuoteRepository().listInstallmentOptions(
+        pen(30_000),
+        'monthly',
+        controller.signal,
+      ),
     ).rejects.toMatchObject({ kind: 'cancelled' });
   });
 });
@@ -132,7 +166,7 @@ const SLOTS = {
 describe('CircleQuoteApiRepository.listSlots', () => {
   it('pide los slots del payout y la duración y mapea los tipos', async () => {
     const { fetchImpl, repository } = setup(SLOTS);
-    const slots = await repository.listSlots(pen(30_000), 10);
+    const { slots } = await repository.listSlots({ payout: pen(30_000), turns: 10 });
 
     expect(fetchImpl.mock.calls[0]?.[0]).toBe(
       'https://api.test/v1/circles/slots?payoutAmount=3000000&months=10&currency=PEN',
@@ -145,9 +179,41 @@ describe('CircleQuoteApiRepository.listSlots', () => {
     expect(slots.every(({ circleId }) => circleId === 'c-1')).toBe(true);
   });
 
+  it('pide la cadencia y devuelve las condiciones reales de la junta', async () => {
+    // COPAYNI-116: la app no deriva fechas de los meses; las pide y las muestra.
+    const { fetchImpl, repository } = setup({
+      ...SLOTS,
+      months: 4,
+      turns: 4,
+      cadence: 'weekly',
+      unit: 'Semana',
+      startsOnDate: '2026-11-04',
+      endsOnDate: '2026-11-25',
+      durationDays: 28,
+    });
+
+    const quote = await repository.listSlots({
+      payout: pen(30_000),
+      turns: 4,
+      cadence: 'weekly',
+    });
+
+    expect(fetchImpl.mock.calls[0]?.[0]).toBe(
+      'https://api.test/v1/circles/slots?payoutAmount=3000000&months=4&currency=PEN&cadence=weekly',
+    );
+    expect(quote).toMatchObject({
+      cadence: 'weekly',
+      unit: 'Semana',
+      turns: 4,
+      startsOnDate: '2026-11-04',
+      endsOnDate: '2026-11-25',
+      durationDays: 28,
+    });
+  });
+
   it('un círculo nuevo llega con circleId null', async () => {
     const { repository } = setup({ ...SLOTS, circleId: null });
-    const slots = await repository.listSlots(pen(30_000), 10);
+    const { slots } = await repository.listSlots({ payout: pen(30_000), turns: 10 });
     expect(slots[0]?.circleId).toBeNull();
   });
 
@@ -158,16 +224,16 @@ describe('CircleQuoteApiRepository.listSlots', () => {
     [{ ...SLOTS, circleId: undefined }],
   ])('rechaza una respuesta que no cumple el contrato', async (body) => {
     const { repository } = setup(body);
-    await expect(repository.listSlots(pen(30_000), 10)).rejects.toThrow();
+    await expect(repository.listSlots({ payout: pen(30_000), turns: 10 })).rejects.toThrow();
   });
 });
 
 describe('InMemoryCircleQuoteRepository.listSlots', () => {
   it('aplica los parámetros provisionales: fee lineal al inicio y descuento al final', async () => {
-    const slots = await new InMemoryCircleQuoteRepository({
+    const { slots } = await new InMemoryCircleQuoteRepository({
       latencyMs: 0,
       startsOn: '2026-11',
-    }).listSlots(pen(30_000), 10);
+    }).listSlots({ payout: pen(30_000), turns: 10 });
 
     expect(slots.map(({ payoutPeriod }) => payoutPeriod)).toEqual([
       '2026-11',
@@ -190,7 +256,7 @@ describe('InMemoryCircleQuoteRepository.listSlots', () => {
   it('empieza el mes siguiente al actual y permite ocupar slots', async () => {
     const repository = new InMemoryCircleQuoteRepository({ latencyMs: 0 });
     repository.take(3);
-    const slots = await repository.listSlots(pen(30_000), 10);
+    const { slots } = await repository.listSlots({ payout: pen(30_000), turns: 10 });
     const next = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 1);
     expect(slots[0]?.payoutDate.getTime()).toBe(next.getTime());
     expect(slots.filter(({ available }) => !available).map(({ position }) => position)).toEqual([

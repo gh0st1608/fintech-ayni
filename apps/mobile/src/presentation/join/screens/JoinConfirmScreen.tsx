@@ -125,9 +125,13 @@ function Review({
     },
     {
       label: t('join.slot.installmentSummaryLabel'),
+      // La cuota y la duración, en la unidad de la cadencia elegida (COPAYNI-116).
       value: t('join.slot.installmentSummary', {
         amount: money(installment!.installment),
-        months: installment!.months,
+        per: t(`circles.cadences.${installment!.cadence}.per`),
+        turns: t(`circles.cadences.${installment!.cadence}.turns`, {
+          count: installment!.turns,
+        }),
       }),
       editLabel: t('join.slot.editInstallmentA11y'),
       onEdit: onEditInstallment,
