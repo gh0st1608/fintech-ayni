@@ -116,18 +116,34 @@ describe('GET /v1/me/circles', () => {
       state: 'collecting',
       payout: { amount: 7_500_000, currency: 'PEN' },
       months: 6,
+      // Los campos de cadencia del detalle (COPAYNI-117); `months` es el alias de `turnCount`.
+      turnCount: 6,
+      cadence: 'monthly',
+      unit: 'Mes',
       startsOn: startsOn.toString(),
       endsOn: startsOn.addMonths(5).toString(),
       currentPeriod: null,
       currentMonth: null,
+      currentTurn: null,
       position: 3,
       payoutPeriod: startsOn.addMonths(2).toString(),
       nextDue: null,
     });
-    const turns = detail.body.data.turns as { position: number; isMe: boolean; status: string }[];
+    const turns = detail.body.data.turns as {
+      position: number;
+      turn: number;
+      payoutOn: string;
+      isMe: boolean;
+      status: string;
+    }[];
     expect(turns).toHaveLength(6);
     expect(turns.find(({ isMe }) => isMe)).toMatchObject({ position: 3, status: 'upcoming' });
     expect(turns.filter(({ status }) => status === 'vacant')).toHaveLength(5);
+    // Cada turno con su ordinal y su día real de cobro, que en mensual es el día 1.
+    expect(turns.map(({ turn }) => turn)).toEqual([1, 2, 3, 4, 5, 6]);
+    expect(turns.map(({ payoutOn }) => payoutOn)).toEqual(
+      Array.from({ length: 6 }, (_unused, index) => `${startsOn.addMonths(index).toString()}-01`),
+    );
 
     // Otro usuario no ve el detalle de un círculo donde no está.
     const stranger = await signIn();

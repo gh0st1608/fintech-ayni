@@ -236,11 +236,16 @@ describe('CircleMembershipApiRepository.getMine (COPAYNI-88)', () => {
           circleId: 'c 1',
           state: 'contributing',
           payout: money(3_000_000),
+          // El alias `months` sigue llegando y no se lee: la app habla de turnos (COPAYNI-117).
           months: 2,
+          turnCount: 2,
+          cadence: 'weekly',
           startsOn: '2026-11',
-          endsOn: '2026-12',
-          currentPeriod: '2026-12',
-          currentMonth: 2,
+          startsOnDate: '2026-11-04',
+          endsOn: '2026-11',
+          endsOnDate: '2026-11-11',
+          currentPeriod: '2026-11',
+          currentTurn: 2,
           position: 2,
           payoutPeriod: '2026-12',
           type: 'highest_return',
@@ -255,8 +260,24 @@ describe('CircleMembershipApiRepository.getMine (COPAYNI-88)', () => {
             status: 'overdue',
           },
           turns: [
-            { position: 1, period: '2026-11', memberName: 'María R.', isMe: false, status: 'paid' },
-            { position: 2, period: '2026-12', memberName: 'Ana P.', isMe: true, status: 'current' },
+            {
+              position: 1,
+              turn: 1,
+              period: '2026-11',
+              payoutOn: '2026-11-04',
+              memberName: 'María R.',
+              isMe: false,
+              status: 'paid',
+            },
+            {
+              position: 2,
+              turn: 2,
+              period: '2026-11',
+              payoutOn: '2026-11-11',
+              memberName: 'Ana P.',
+              isMe: true,
+              status: 'current',
+            },
           ],
         },
       },
@@ -266,12 +287,21 @@ describe('CircleMembershipApiRepository.getMine (COPAYNI-88)', () => {
     expect(detail).toMatchObject({
       type: 'highestReturn',
       payout: pen(30_000),
+      turnCount: 2,
+      cadence: 'weekly',
+      currentTurn: 2,
+      startsOnDate: '2026-11-04',
+      endsOnDate: '2026-11-11',
       installments: [pen(15_000), pen(14_000)],
       nextDue: { installmentId: 'i-1', amount: pen(14_000), status: 'overdue' },
+      // Los dos turnos caen en noviembre y cada uno trae su día: el mes no los distingue.
       turns: [
-        { memberName: 'María R.', status: 'paid' },
-        { isMe: true, status: 'current' },
+        { turn: 1, payoutOn: '2026-11-04', memberName: 'María R.', status: 'paid' },
+        { turn: 2, payoutOn: '2026-11-11', isMe: true, status: 'current' },
       ],
     });
+    // El alias que manda el servidor no entra en el modelo de la app.
+    expect(detail).not.toHaveProperty('months');
+    expect(detail).not.toHaveProperty('currentMonth');
   });
 });

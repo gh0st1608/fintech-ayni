@@ -288,9 +288,23 @@
       "loadError": "No pudimos cargar las propuestas de inicio: {{reason}}",
       "changed": "Las condiciones cambiaron porque alguien salió de la junta. Revisa la propuesta nueva."
     },
+    "cadences": {
+      "monthly": {
+        "turn": "Mes",
+        "per": "por mes"
+      },
+      "biweekly": {
+        "turn": "Quincena",
+        "per": "por quincena"
+      },
+      "weekly": {
+        "turn": "Semana",
+        "per": "por semana"
+      }
+    },
     "detail": {
       "title": "Mi junta",
-      "pot": "Pozo mensual",
+      "pot": "Pozo por turno",
       "states": {
         "collecting": "Por empezar",
         "approving": "Esperando aprobación",
@@ -300,25 +314,27 @@
         "finished": "Finalizada"
       },
       "progressA11y": "Avance de la junta",
-      "progress": "Mes {{current}} de {{total}} · termina en {{end}}",
-      "startsOn": "Empieza en {{month}}",
+      "progress": "Turno {{current}} de {{total}} · termina el {{end}}",
+      "startsOn": "Empieza el {{date}}",
       "yourTurn": "Tu turno",
-      "turnValue": "{{month}} ({{position}}.º)",
+      "turnValue": "{{unit}} {{turn}} · {{date}}",
       "yourInstallment": "Tu cuota",
       "retention": "Retención de tu payout",
       "nextDue": "Próximo vencimiento",
       "nothingDue": "Estás al día",
       "pay": "Pagar {{amount}}",
       "turns": "Turnos",
-      "turnRow": "{{month}} · {{name}}",
+      "turnRow": "{{label}} · {{name}}",
       "you": "Tú",
       "member": "Miembro",
       "vacant": "Turno vacante",
       "turnStatus": {
         "paid": "Cobrado",
-        "current": "Este mes",
-        "vacant": "Vacante"
-      }
+        "current": "En curso",
+        "vacant": "Vacante",
+        "upcoming": "Próximo"
+      },
+      "installmentValue": "{{amount}} {{perUnit}}"
     }
   },
   "saving": {

@@ -99,11 +99,16 @@ export class InMemoryCircleMembershipRepository implements CircleMembershipRepos
       circleId,
       state: finished ? 'finished' : started ? 'contributing' : 'collecting',
       payout: circle.payout,
-      months: circle.months,
+      // El falso de desarrollo solo arma juntas mensuales, que es lo que hoy se puede crear
+      // (CIRCLE_CADENCES_ENABLED, COPAYNI-121): un turno por mes, el día 1.
+      turnCount: circle.months,
+      cadence: 'monthly',
       startsOn: circle.startsOn,
+      startsOnDate: `${circle.startsOn}-01`,
       endsOn: circle.endsOn,
+      endsOnDate: `${circle.endsOn}-01`,
       currentPeriod,
-      currentMonth: currentPeriod ? monthsBetween(circle.startsOn, currentPeriod) + 1 : null,
+      currentTurn: currentPeriod ? monthsBetween(circle.startsOn, currentPeriod) + 1 : null,
       position: circle.position,
       payoutPeriod: circle.payoutPeriod,
       type: circle.type,
@@ -116,7 +121,9 @@ export class InMemoryCircleMembershipRepository implements CircleMembershipRepos
         const isMe = index + 1 === circle.position;
         return {
           position: index + 1,
+          turn: index + 1,
           period,
+          payoutOn: `${period}-01`,
           memberName: isMe ? 'Tú' : (names[index % names.length] ?? null),
           isMe,
           status: period < current ? 'paid' : period === current ? 'current' : 'upcoming',

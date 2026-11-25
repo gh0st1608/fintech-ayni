@@ -15,10 +15,18 @@ export interface MyCircleCalendar {
   state: CycleState;
   /** Mes en curso del ciclo, `YYYY-MM`, si ya empezó. */
   currentPeriod: string | null;
+  /**
+   * Turno en curso (1..N), si ya empezó.
+   *
+   * Es lo que identifica el avance del ciclo (COPAYNI-117). El mes no sirve para eso fuera de la
+   * cadencia mensual: en una junta semanal hay cuatro turnos en el mismo mes, y derivar el turno
+   * del mes marcaría cuatro turnos a la vez.
+   */
+  currentTurn: number | null;
   /** Miembros vigentes (sin expulsados). */
   members: CalendarMember[];
-  /** Meses (`YYYY-MM`) cuyo payout ya se pagó. */
-  paidPeriods: string[];
+  /** Turnos cuyo payout ya se pagó. */
+  paidTurns: number[];
 }
 
 export interface MyCircleCalendarPort {

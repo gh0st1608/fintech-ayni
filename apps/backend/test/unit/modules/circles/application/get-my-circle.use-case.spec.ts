@@ -57,8 +57,9 @@ function setup(
             ? {
                 state: 'contributing',
                 currentPeriod: '2027-01',
+                currentTurn: 3,
                 members,
-                paidPeriods: ['2026-11', '2026-12'],
+                paidTurns: [1, 2],
                 ...calendar,
               }
             : null,
@@ -123,8 +124,9 @@ describe('Detalle de mi círculo (COPAYNI-88)', () => {
       payout: pen(30_000),
     };
     const other = { ...due, installmentId: 'i-2', circleId: 'c-2' };
-    const detail = await setup({ state: 'collecting', currentPeriod: null, paidPeriods: [] }, () =>
-      Promise.resolve([other, due]),
+    const detail = await setup(
+      { state: 'collecting', currentPeriod: null, currentTurn: null, paidTurns: [] },
+      () => Promise.resolve([other, due]),
     ).execute(ANA, 'c-1');
     expect(detail.currentMonth).toBeNull();
     expect(detail.nextDue?.installmentId).toBe('i-1');

@@ -28,6 +28,9 @@ interface CircleDetailScreenProps {
 /** Primer día del mes `YYYY-MM`, para formatearlo con el idioma activo. */
 const periodDate = (period: string) => `${period}-01T12:00:00`;
 
+/** Un día `YYYY-MM-DD` a mediodía, para formatearlo sin que el huso lo corra de día. */
+const atNoon = (date: string) => `${date}T12:00:00`;
+
 /**
  * Detalle de mi círculo (diseño D8 aprobado, COPAYNI-88): pozo y progreso, mi turno y mi cuota,
  * el próximo vencimiento con acceso a pagar, y los turnos con los nombres abreviados de los demás.
@@ -64,8 +67,17 @@ function Detail({ circle, onPay }: { circle: MyCircleDetail; onPay: (id: string)
   const formatDate = useFormatDate();
   const money = (amount: Money) => formatMoney(amount, { trimZeroDecimals: true });
   const monthYear = (period: string) => formatDate(periodDate(period), 'monthYear');
-  const monthIndex = circle.currentMonth ? circle.currentMonth - 1 : 0;
-  const installment = circle.installments[Math.min(monthIndex, circle.installments.length - 1)]!;
+  const day = (date: string) => formatDate(atNoon(date), 'date');
+  const turnIndex = circle.currentTurn ? circle.currentTurn - 1 : 0;
+  const installment = circle.installments[Math.min(turnIndex, circle.installments.length - 1)]!;
+  // La unidad se traduce en la app a partir de la cadencia, que es un enumerado: la etiqueta que
+  // manda el servidor está en un solo idioma y esta pantalla se muestra en el del usuario.
+  const unit = t(`circles.cadences.${circle.cadence}.turn`);
+  const perUnit = t(`circles.cadences.${circle.cadence}.per`);
+  /** «Semana 3 · 18 nov»: el ordinal y la fecha que calculó el servidor (COPAYNI-117). */
+  const turnLabel = (turn: CircleTurn) =>
+    t('circles.detail.turnValue', { unit, turn: turn.turn, date: day(turn.payoutOn) });
+  const myTurn = circle.turns.find(({ isMe }) => isMe);
 
   return (
     <ScrollView contentContainerStyle={styles.content} testID="circle-detail">
@@ -84,25 +96,25 @@ function Detail({ circle, onPay }: { circle: MyCircleDetail; onPay: (id: string)
           accessible
           accessibilityRole="progressbar"
           accessibilityLabel={t('circles.detail.progressA11y')}
-          accessibilityValue={{ min: 0, max: circle.months, now: circle.currentMonth ?? 0 }}
+          accessibilityValue={{ min: 0, max: circle.turnCount, now: circle.currentTurn ?? 0 }}
         >
-          {Array.from({ length: circle.months }, (_, index) => (
+          {Array.from({ length: circle.turnCount }, (_unused, index) => (
             <View
               key={index}
               style={[
                 styles.segment,
-                circle.currentMonth !== null && index < circle.currentMonth && styles.segmentDone,
+                circle.currentTurn !== null && index < circle.currentTurn && styles.segmentDone,
               ]}
             />
           ))}
         </View>
         <AppText variant="caption" color={colors.neutral600} testID="circle-detail-progress">
-          {circle.currentMonth === null
-            ? t('circles.detail.startsOn', { month: monthYear(circle.startsOn) })
+          {circle.currentTurn === null
+            ? t('circles.detail.startsOn', { date: day(circle.startsOnDate) })
             : t('circles.detail.progress', {
-                current: circle.currentMonth,
-                total: circle.months,
-                end: monthYear(circle.endsOn),
+                current: circle.currentTurn,
+                total: circle.turnCount,
+                end: day(circle.endsOnDate),
               })}
         </AppText>
       </View>
@@ -111,13 +123,21 @@ function Detail({ circle, onPay }: { circle: MyCircleDetail; onPay: (id: string)
         <View style={styles.rows}>
           <Row
             label={t('circles.detail.yourTurn')}
-            value={t('circles.detail.turnValue', {
-              month: monthYear(circle.payoutPeriod),
-              position: circle.position,
-            })}
+            value={
+              myTurn
+                ? turnLabel(myTurn)
+                : t('circles.detail.turnValue', {
+                    unit,
+                    turn: circle.position,
+                    date: monthYear(circle.payoutPeriod),
+                  })
+            }
             highlight
           />
-          <Row label={t('circles.detail.yourInstallment')} value={money(installment)} />
+          <Row
+            label={t('circles.detail.yourInstallment')}
+            value={t('circles.detail.installmentValue', { amount: money(installment), perUnit })}
+          />
           {circle.retention.amount > 0 && (
             <Row label={t('circles.detail.retention')} value={money(circle.retention)} />
           )}
@@ -144,7 +164,7 @@ function Detail({ circle, onPay }: { circle: MyCircleDetail; onPay: (id: string)
       <Card testID="circle-detail-turns">
         <View style={styles.rows}>
           {circle.turns.map((turn) => (
-            <TurnRow key={turn.position} turn={turn} month={monthYear(turn.period)} />
+            <TurnRow key={turn.turn} turn={turn} label={turnLabel(turn)} />
           ))}
         </View>
       </Card>
@@ -180,7 +200,7 @@ const TURN_ICONS = {
   vacant: { name: 'ellipse-outline', color: colors.neutral500 },
 } as const;
 
-function TurnRow({ turn, month }: { turn: CircleTurn; month: string }) {
+function TurnRow({ turn, label }: { turn: CircleTurn; label: string }) {
   const { t } = useTranslation();
   const name = turn.isMe
     ? t('circles.detail.you')
@@ -188,17 +208,15 @@ function TurnRow({ turn, month }: { turn: CircleTurn; month: string }) {
       t(turn.status === 'vacant' ? 'circles.detail.vacant' : 'circles.detail.member'));
   const icon = TURN_ICONS[turn.status];
   return (
-    <View style={styles.row} testID={`circle-turn-${turn.position}`}>
+    <View style={styles.row} testID={`circle-turn-${turn.turn}`}>
       <Ionicons name={icon.name} size={20} color={icon.color} />
       <AppText weight={turn.isMe ? 'semibold' : 'regular'} style={styles.flex}>
-        {t('circles.detail.turnRow', { month, name })}
+        {t('circles.detail.turnRow', { label, name })}
       </AppText>
-      {turn.status !== 'upcoming' && (
-        <Badge
-          label={t(`circles.detail.turnStatus.${turn.status}`)}
-          tone={turn.status === 'paid' ? 'success' : 'subtle'}
-        />
-      )}
+      <Badge
+        label={t(`circles.detail.turnStatus.${turn.status}`)}
+        tone={turn.status === 'paid' ? 'success' : 'subtle'}
+      />
     </View>
   );
 }

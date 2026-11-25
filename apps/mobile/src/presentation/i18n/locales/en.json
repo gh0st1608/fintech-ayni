@@ -288,9 +288,23 @@
       "loadError": "We couldn't load the start proposals: {{reason}}",
       "changed": "The terms changed because someone left the circle. Review the new proposal."
     },
+    "cadences": {
+      "monthly": {
+        "turn": "Month",
+        "per": "per month"
+      },
+      "biweekly": {
+        "turn": "Fortnight",
+        "per": "per fortnight"
+      },
+      "weekly": {
+        "turn": "Week",
+        "per": "per week"
+      }
+    },
     "detail": {
       "title": "My circle",
-      "pot": "Monthly pot",
+      "pot": "Pot per turn",
       "states": {
         "collecting": "Not started",
         "approving": "Awaiting approval",
@@ -300,25 +314,27 @@
         "finished": "Finished"
       },
       "progressA11y": "Circle progress",
-      "progress": "Month {{current}} of {{total}} · ends in {{end}}",
-      "startsOn": "Starts in {{month}}",
+      "progress": "Turn {{current}} of {{total}} · ends on {{end}}",
+      "startsOn": "Starts on {{date}}",
       "yourTurn": "Your turn",
-      "turnValue": "{{month}} (#{{position}})",
+      "turnValue": "{{unit}} {{turn}} · {{date}}",
       "yourInstallment": "Your installment",
       "retention": "Payout withholding",
       "nextDue": "Next due date",
       "nothingDue": "You're up to date",
       "pay": "Pay {{amount}}",
       "turns": "Turns",
-      "turnRow": "{{month}} · {{name}}",
+      "turnRow": "{{label}} · {{name}}",
       "you": "You",
       "member": "Member",
       "vacant": "Vacant turn",
       "turnStatus": {
         "paid": "Paid out",
-        "current": "This month",
-        "vacant": "Vacant"
-      }
+        "current": "In progress",
+        "vacant": "Vacant",
+        "upcoming": "Upcoming"
+      },
+      "installmentValue": "{{amount}} {{perUnit}}"
     }
   },
   "saving": {

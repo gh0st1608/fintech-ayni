@@ -426,11 +426,15 @@ Mis círculos, de la unión más reciente a la más antigua, paginados por curso
   "state": "contributing",
   "payout": { "amount": 3000000, "currency": "PEN" },
   "months": 10,
+  "turnCount": 10,
+  "cadence": "monthly",
+  "unit": "Mes",
   "startsOn": "2026-11",
   "startsOnDate": "2026-11-01",
   "endsOn": "2027-08",
   "currentPeriod": "2027-01",
   "currentMonth": 3,
+  "currentTurn": 3,
   "position": 4,
   "payoutPeriod": "2027-02",
   "type": "lowest_fees",
@@ -447,14 +451,18 @@ Mis círculos, de la unión más reciente a la más antigua, paginados por curso
   "turns": [
     {
       "position": 1,
+      "turn": 1,
       "period": "2026-11",
+      "payoutOn": "2026-11-01",
       "memberName": "María R.",
       "isMe": false,
       "status": "paid"
     },
     {
       "position": 4,
+      "turn": 4,
       "period": "2027-02",
+      "payoutOn": "2027-02-01",
       "memberName": "Ana P.",
       "isMe": true,
       "status": "upcoming"
@@ -462,6 +470,15 @@ Mis círculos, de la unión más reciente a la más antigua, paginados por curso
   ]
 }
 ```
+
+### Turnos con su fecha real (COPAYNI-117)
+
+- `turn` es el **ordinal** del turno (1..`turnCount`) y es lo que lo identifica. `period` sigue siendo su mes, pero fuera de la cadencia mensual el mes no identifica un turno: en una junta semanal hay cuatro o cinco turnos en el mismo mes.
+- `payoutOn` es el día real en que ese turno cobra el pozo, calculado por `TurnSchedule` en el servidor. **La app lo muestra tal cual y no deriva fechas de los meses**: con tres cadencias, cualquier aritmética de calendario en el cliente se desvía de la del servidor.
+- `cadence` y `unit` (`Mes`, `Quincena`, `Semana`) permiten etiquetar el turno en la unidad que corresponde: «Semana 3 · 18 nov», no «mes 3». El formato de la fecha lo decide la app con su locale (COPAYNI-17); el servidor la envía en ISO.
+- `turnCount` es cuántos turnos tiene la junta. Se llama así, y no `turns`, porque ese nombre ya lo ocupa la lista. `months` es su alias y lo lee la app publicada.
+- `currentTurn` es el turno en curso. `currentMonth` es su alias y **solo** coincide en cadencia mensual, así que la app nueva usa `currentTurn`.
+- El estado de cada turno (`paid`, `current`, `upcoming`, `vacant`) se calcula **por turno**, no por mes: antes, cobrar el primer turno de una junta semanal habría marcado como cobrados los cuatro turnos de ese mes.
 
 | Campo                            | Notas                                                                                                                                                                                                                                                                                                                        |
 | -------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
