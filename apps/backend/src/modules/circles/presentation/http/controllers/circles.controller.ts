@@ -79,9 +79,10 @@ export class CirclesController {
   async joinConfig(
     @CurrentPrincipal() principal: Principal,
     @Query() query: CurrencyQuery,
+    @ClientCadences() cadences: Cadence[],
   ): Promise<JoinConfigResponse> {
     return JoinConfigResponse.from(
-      await this.getJoinConfig.execute(principal, query.currency),
+      await this.getJoinConfig.execute(principal, query.currency, cadences),
       this.termsSettings.version,
     );
   }
@@ -136,8 +137,7 @@ export class CirclesController {
         principal,
         query.payoutAmount,
         query.currency,
-        // La frecuencia pedida la expone COPAYNI-116; hasta entonces son cuotas mensuales.
-        undefined,
+        query.cadence,
         cadences,
       ),
     );
@@ -177,7 +177,7 @@ export class CirclesController {
         query.months,
         query.circleId,
         query.currency,
-        undefined,
+        query.cadence,
         cadences,
       ),
     );

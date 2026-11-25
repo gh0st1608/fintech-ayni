@@ -147,6 +147,16 @@ export class CircleTerms {
   }
 
   /**
+   * Día real del último turno: cuándo termina la junta.
+   *
+   * Es lo que se le muestra a la persona (COPAYNI-116), porque fuera de la cadencia mensual el
+   * mes de `endsOn` no dice qué día termina: cuatro turnos semanales caben en el mismo mes.
+   */
+  get endsOnDate(): LocalDate {
+    return this.schedule().endsOn();
+  }
+
+  /**
    * El cronograma de la junta, que es quien sabe de calendario.
    *
    * `CircleTerms` no repite la aritmética: la delega aquí, para que una cadencia nueva o un

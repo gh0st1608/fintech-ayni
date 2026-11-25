@@ -1,5 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import {
+  IsIn,
   IsInt,
   IsOptional,
   IsString,
@@ -12,6 +13,7 @@ import {
 
 import { type JoinCircleResult } from '../../../application/use-cases/join-circle.use-case';
 import { catchUpTotal, SLOT_TYPES, type SlotType } from '../../../domain/services/slot-pricing';
+import { CADENCE_IDS, type CadenceId } from '../../../domain/value-objects/cadence';
 import { MoneyResponse } from './join-config.response';
 
 export class JoinCircleRequest {
@@ -31,11 +33,25 @@ export class JoinCircleRequest {
   @Max(Number.MAX_SAFE_INTEGER)
   payoutAmount!: number;
 
-  @ApiProperty({ example: 10, description: 'Duración de installment-options' })
+  @ApiProperty({
+    example: 10,
+    description: 'Turnos: una de las duraciones que ofreció installment-options',
+  })
   @IsInt()
   @Min(2)
   @Max(120)
   months!: number;
+
+  @ApiProperty({
+    required: false,
+    enum: CADENCE_IDS,
+    description:
+      'Frecuencia de los turnos (COPAYNI-116), la misma que se pidió en slots. La mensual si ' +
+      'falta. Tiene que estar habilitada en el servidor y declarada en x-ayni-cadences',
+  })
+  @IsOptional()
+  @IsIn(CADENCE_IDS)
+  cadence?: CadenceId;
 
   @ApiProperty({ example: 3, description: 'Slot elegido: 1 = cobra el primer mes' })
   @IsInt()
@@ -82,8 +98,17 @@ export class JoinCircleResponse {
   @ApiProperty({ type: MoneyResponse })
   payout!: MoneyResponse;
 
-  @ApiProperty({ example: 10 })
+  @ApiProperty({ example: 10, deprecated: true, description: 'Alias de turns' })
   months!: number;
+
+  @ApiProperty({ example: 10, description: 'Turnos de la junta' })
+  turns!: number;
+
+  @ApiProperty({ enum: CADENCE_IDS })
+  cadence!: CadenceId;
+
+  @ApiProperty({ example: '2026-11-25', description: 'Día real del último turno' })
+  endsOnDate!: string;
 
   @ApiProperty({ example: 3 })
   position!: number;
@@ -127,6 +152,9 @@ export class JoinCircleResponse {
       startsOnDate: terms.startsOn.toString(),
       payout: MoneyResponse.from(terms.payout),
       months: terms.months,
+      turns: terms.turns,
+      cadence: terms.cadence.id,
+      endsOnDate: terms.endsOnDate.toString(),
       position: quote.position,
       payoutPeriod: quote.payoutPeriod.toString(),
       type: quote.type,

@@ -1,6 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { IsInt, IsOptional, Matches, Max, Min } from 'class-validator';
+import { IsIn, IsInt, IsOptional, Matches, Max, Min } from 'class-validator';
 
 import { type InstallmentOptionsResult } from '../../../application/use-cases/get-installment-options.use-case';
 import { type InstallmentOption } from '../../../domain/services/installment-options';
@@ -24,6 +24,17 @@ export class InstallmentOptionsQuery {
   @IsOptional()
   @Matches(/^[A-Z]{3}$/)
   currency?: string;
+
+  @ApiProperty({
+    required: false,
+    enum: CADENCE_IDS,
+    description:
+      'Frecuencia de los turnos (COPAYNI-116). La mensual si falta. Tiene que estar habilitada ' +
+      'en el servidor y declarada por el cliente en x-ayni-cadences',
+  })
+  @IsOptional()
+  @IsIn(CADENCE_IDS)
+  cadence?: CadenceId;
 }
 
 export class InstallmentOptionResponse {
