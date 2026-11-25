@@ -129,6 +129,7 @@ export class CirclesApiRepository implements CirclesRepositoryPort {
   list(filter: CirclesFilter, signal?: AbortSignal): Promise<CirclesPage> {
     const query = new URLSearchParams();
     if (filter.state) query.set('state', filter.state);
+    if (filter.cadence) query.set('cadence', filter.cadence);
     if (filter.cursor) query.set('cursor', filter.cursor);
     if (filter.limit) query.set('limit', String(filter.limit));
     const suffix = query.size > 0 ? `?${query.toString()}` : '';
@@ -280,7 +281,11 @@ export class FinanceApiRepository implements FinanceRepositoryPort {
   constructor(private readonly http: HttpClientPort) {}
 
   installments(filter: InstallmentsFilter, signal?: AbortSignal): Promise<InstallmentsPage> {
-    const query = pageQuery(filter, { status: filter.status, period: filter.period });
+    const query = pageQuery(filter, {
+      status: filter.status,
+      period: filter.period,
+      cadence: filter.cadence,
+    });
     return this.http.get(`/admin/v1/finance/installments${query}`, {
       schema: installmentsPageSchema,
       signal,

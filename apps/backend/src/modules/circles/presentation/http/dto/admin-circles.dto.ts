@@ -5,6 +5,7 @@ import { IsIn, IsInt, IsOptional, IsString, Max, Min, MaxLength } from 'class-va
 import { type AdminCircleSummary } from '../../../application/ports/admin-circles-query.port';
 import { type AdminCircleView } from '../../../application/use-cases/admin-circles.use-cases';
 import { CYCLE_STATES, type CycleState } from '../../../domain/entities/circle-cycle';
+import { CADENCE_IDS, type CadenceId } from '../../../domain/value-objects/cadence';
 import { MoneyResponse } from './join-config.response';
 
 export class AdminCirclesQuery {
@@ -12,6 +13,14 @@ export class AdminCirclesQuery {
   @IsOptional()
   @IsIn(CYCLE_STATES)
   state?: CycleState;
+
+  @ApiPropertyOptional({
+    enum: CADENCE_IDS,
+    description: 'Solo las juntas de esta cadencia (COPAYNI-118)',
+  })
+  @IsOptional()
+  @IsIn(CADENCE_IDS)
+  cadence?: CadenceId;
 
   @ApiPropertyOptional({ description: 'nextCursor de la página anterior' })
   @IsOptional()
@@ -38,11 +47,23 @@ export class AdminCircleSummaryResponse {
   @ApiProperty({ type: MoneyResponse })
   payout!: MoneyResponse;
 
-  @ApiProperty()
+  @ApiProperty({ deprecated: true, description: 'Alias de turns' })
   months!: number;
+
+  @ApiProperty({ description: 'Turnos de la junta, que son sus puestos y sus cuotas' })
+  turns!: number;
+
+  @ApiProperty({ enum: CADENCE_IDS, description: 'Frecuencia de los turnos (COPAYNI-118)' })
+  cadence!: CadenceId;
 
   @ApiProperty({ example: '2026-12' })
   startsOn!: string;
+
+  @ApiProperty({
+    example: '2026-12-01',
+    description: 'Día real del primer turno; fuera de la cadencia mensual no es el 1',
+  })
+  startsOnDate!: string;
 
   @ApiProperty({ description: 'Miembros vigentes, sin expulsados' })
   members!: number;
@@ -56,7 +77,10 @@ export class AdminCircleSummaryResponse {
       state: circle.state,
       payout: MoneyResponse.from(circle.payout),
       months: circle.months,
+      turns: circle.turns,
+      cadence: circle.cadence,
       startsOn: circle.startsOn,
+      startsOnDate: circle.startsOnDate,
       members: circle.members,
       createdAt: circle.createdAt.toISOString(),
     };

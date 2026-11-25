@@ -157,8 +157,13 @@ describe('CirclesApiRepository', () => {
     circleId: '00000000-0000-4000-8000-000000000001',
     state: 'paused',
     payout: { amount: 600000, currency: 'PEN' },
+    // El backend sigue enviando `months` como alias; el contrato que se lee es el de turnos
+    // y cadencia (COPAYNI-118).
     months: 6,
+    turns: 6,
+    cadence: 'weekly',
     startsOn: '2026-12',
+    startsOnDate: '2026-12-02',
     members: 4,
     createdAt: '2026-11-09T15:00:00.000Z',
   };
@@ -169,11 +174,21 @@ describe('CirclesApiRepository', () => {
       ok({ items: [], nextCursor: null }),
     ]);
     const repository = new CirclesApiRepository(http);
-    const page = await repository.list({ state: 'paused', cursor: 'c1', limit: 10 });
+    const page = await repository.list({
+      state: 'paused',
+      cadence: 'weekly',
+      cursor: 'c1',
+      limit: 10,
+    });
     expect(page.items[0]?.createdAt).toEqual(new Date(summary.createdAt));
+    expect(page.items[0]).toMatchObject({
+      cadence: 'weekly',
+      turns: 6,
+      startsOnDate: '2026-12-02',
+    });
     await repository.list({});
     expect(calls.map(({ url }) => url)).toEqual([
-      'http://api.test/admin/v1/circles?state=paused&cursor=c1&limit=10',
+      'http://api.test/admin/v1/circles?state=paused&cadence=weekly&cursor=c1&limit=10',
       'http://api.test/admin/v1/circles',
     ]);
   });

@@ -31,7 +31,7 @@ Con `oidc`:
 | --------------------------------------------- | ------------------------------------------------- | --------------------------------------------- |
 | `GET /admin/v1/me`                            | Todos                                             | `{ staffId, email, roles, authenticatedAt }`  |
 | `POST /admin/v1/dev/sessions`                 | — (solo con `dev`)                                | `{ accessToken, expiresIn }`                  |
-| `GET /admin/v1/circles?state=&limit=&cursor=` | `support`, `operations`, `finance`, `super_admin` | `{ items, nextCursor }`                       |
+| `GET /admin/v1/circles?state=&cadence=&limit=&cursor=` | `support`, `operations`, `finance`, `super_admin` | `{ items, nextCursor }`                       |
 | `GET /admin/v1/circles/:circleId`             | `support`, `operations`, `finance`, `super_admin` | Detalle                                       |
 | `POST /admin/v1/circles/:circleId/pause`      | `super_admin`, con step-up                        | Ver [circles.md](circles.md#pausa-copayni-61) |
 | `POST /admin/v1/circles/:circleId/resume`     | `super_admin`, con step-up                        | Igual                                         |
@@ -40,6 +40,7 @@ Con `oidc`:
 - **Listado:** del más nuevo al más antiguo. `limit` entre 1 y 100 (25 por defecto). `nextCursor` es `null` en la última página; un cursor alterado responde `VALIDATION_ERROR`.
 - **Detalle:** suma `currentPeriod`, `pausedOn`, `memberships` y `startProposal` (`round`, `payout`, `months`, `respondBy`, `accepted`, `withdrawn`).
 - **Datos personales enmascarados:** cada miembro trae `name` (`Juana P.`), `email` (`j***@mail.com`) y `phone` (`+51******321`). Revelar el dato completo será otra acción, con motivo y auditoría.
+- **Cadencia (COPAYNI-118):** `cadence` filtra el listado por frecuencia (`monthly`, `biweekly`, `weekly`) y cada fila la trae, junto con `turns` y `startsOnDate`, el día real del primer turno. `months` sigue siendo el alias de `turns`. Operar sin ver la cadencia mezcla ciclos de distinta frecuencia en la misma pantalla.
 
 Errores: `UNAUTHORIZED` (401) sin token, con token inválido o sin autenticación reciente; `FORBIDDEN` (403) si el rol no alcanza; `VALIDATION_ERROR` (400); `CIRCLE_NOT_FOUND` (404).
 
@@ -125,15 +126,24 @@ Fase 3 de [backoffice-plan.md](../backoffice-plan.md). Roles: `finance` y `super
 
 | Endpoint                                                            | Qué hace                                                                                                                      |
 | ------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| `GET /admin/v1/finance/installments?status=&period=&limit=&cursor=` | Cuotas del vencimiento más reciente al más antiguo, con `totals` (cantidad y suma por estado y moneda). `period` es `AAAA-MM` |
+| `GET /admin/v1/finance/installments?status=&period=&cadence=&limit=&cursor=` | Cuotas del vencimiento más reciente al más antiguo, con `totals` (cantidad y suma por estado, **cadencia** y moneda). `period` es `AAAA-MM` |
 | `GET /admin/v1/finance/payouts?limit=&cursor=`                      | Pozos entregados, del más reciente al más antiguo                                                                             |
-| `GET /admin/v1/finance/guarantee-fund?limit=&cursor=`               | `balances` por moneda (saldo, círculos en curso, `minimum` y `belowMinimum`) y los movimientos del fondo                      |
+| `GET /admin/v1/finance/guarantee-fund?limit=&cursor=`               | `balances` por moneda (saldo, círculos en curso, `minimum` y `belowMinimum`), `totals` por cadencia y los movimientos del fondo |
 
 - **Estados de cuota:** `pending`, `paid`, `overdue`, `defaulted`, `retained` y `deducted`, como en el ciclo mensual.
 - **Persona:** solo `userId` y el nombre enmascarado; finanzas no necesita email ni teléfono.
 - **Mínimo del fondo:** `GUARANTEE_FUND_MIN_INSTALLMENTS_PER_CIRCLE` cuotas base por círculo en curso (R18), la misma regla que la alerta del backend.
 - **Movimientos:** importe positivo entra al fondo y negativo sale. `reason` solo viene en los movimientos manuales (`seed_capital`, `adjustment`).
 - **Datos simulados:** mientras el ciclo use `CIRCLE_PAYMENTS_ADAPTER=fake` y la tarea diaria siga apagada en prd, estas vistas muestran lo que haya en la base, sin conciliar contra la pasarela.
+
+### Cadencia en finanzas (COPAYNI-118)
+
+Agrupar solo por mes mezcla una junta mensual con cuatro semanas de otra: la cifra sale sumada y la conciliación deja de cuadrar a simple vista. Por eso:
+
+- `totals` de cuotas agrupa por estado, **cadencia** y moneda. Con solo juntas mensuales sale una fila por estado, como antes, y además dice de qué cadencia es. `cadence` en la consulta acota tanto el listado como los totales.
+- Cada cuota trae `turn` (el turno del ciclo) y `cadence`, además de `period` y `dueOn`. El mes no identifica una cuota fuera de la cadencia mensual: en una junta semanal hay cuatro cuotas en el mismo mes.
+- Cada pozo entregado trae `turn` y `cadence`.
+- El fondo de garantía expone `totals`: aporte y uso **por cadencia y moneda**, leídos por separado y no como un neto. Los movimientos manuales no tienen junta y por tanto tampoco cadencia: salen en su propia fila con `cadence: null` y no se reparten entre las demás. Cada movimiento trae además la `cadence` de su junta.
 
 ## Doble aprobación del fondo de garantía
 

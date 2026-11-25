@@ -2,7 +2,10 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import { IsIn, IsInt, IsOptional, IsString, Matches, Max, MaxLength, Min } from 'class-validator';
 
-import { type FundMovement } from '../../../application/ports/admin-finance-query.port';
+import {
+  type FundMovement,
+  type FundTotal,
+} from '../../../application/ports/admin-finance-query.port';
 import {
   type FundBalanceView,
   type InstallmentView,
@@ -13,6 +16,7 @@ import {
   INSTALLMENT_STATUSES,
   type InstallmentStatus,
 } from '../../../domain/entities/circle-cycle';
+import { CADENCE_IDS, type CadenceId } from '../../../domain/value-objects/cadence';
 import { MoneyResponse } from './join-config.response';
 
 export class FinancePageQuery {
@@ -37,6 +41,14 @@ export class InstallmentsQuery extends FinancePageQuery {
   @IsIn(INSTALLMENT_STATUSES)
   status?: InstallmentStatus;
 
+  @ApiPropertyOptional({
+    enum: CADENCE_IDS,
+    description: 'Solo las cuotas de juntas de esta cadencia (COPAYNI-118)',
+  })
+  @IsOptional()
+  @IsIn(CADENCE_IDS)
+  cadence?: CadenceId;
+
   @ApiPropertyOptional({ example: '2026-12', description: 'Mes de la cuota (AAAA-MM)' })
   @IsOptional()
   @Matches(/^\d{4}-(0[1-9]|1[0-2])$/, { message: 'period debe tener la forma AAAA-MM' })
@@ -56,6 +68,14 @@ export class FinanceMemberResponse {
 }
 
 export class InstallmentTotalResponse {
+  @ApiProperty({
+    enum: CADENCE_IDS,
+    description:
+      'Cadencia de las juntas de ese total. Entra en el agrupamiento porque una cifra que suma ' +
+      'una junta mensual con cuatro semanas de otra no se puede conciliar (COPAYNI-118)',
+  })
+  cadence!: CadenceId;
+
   @ApiProperty({ enum: INSTALLMENT_STATUSES })
   status!: InstallmentStatus;
 
@@ -73,8 +93,19 @@ export class InstallmentResponse {
   @ApiProperty({ format: 'uuid' })
   circleId!: string;
 
-  @ApiProperty({ description: 'Turno' })
+  @ApiProperty({ description: 'Puesto del miembro en la junta' })
   position!: number;
+
+  @ApiProperty({
+    example: 3,
+    description:
+      'Turno del ciclo al que corresponde la cuota. El mes no la identifica fuera de la ' +
+      'cadencia mensual: en una semanal hay cuatro cuotas en el mismo mes (COPAYNI-118)',
+  })
+  turn!: number;
+
+  @ApiProperty({ enum: CADENCE_IDS })
+  cadence!: CadenceId;
 
   @ApiProperty({ example: '2026-12' })
   period!: string;
@@ -99,6 +130,8 @@ export class InstallmentResponse {
       id: item.id,
       circleId: item.circleId,
       position: item.position,
+      turn: item.turn,
+      cadence: item.cadence,
       period: item.period,
       dueOn: item.dueOn,
       amount: MoneyResponse.from(item.amount),
@@ -130,6 +163,12 @@ export class PayoutResponse {
   @ApiProperty()
   position!: number;
 
+  @ApiProperty({ example: 3, description: 'Turno del ciclo en que se pagó el pozo' })
+  turn!: number;
+
+  @ApiProperty({ enum: CADENCE_IDS })
+  cadence!: CadenceId;
+
   @ApiProperty({ example: '2026-12' })
   period!: string;
 
@@ -147,6 +186,8 @@ export class PayoutResponse {
       id: item.id,
       circleId: item.circleId,
       position: item.position,
+      turn: item.turn,
+      cadence: item.cadence,
       period: item.period,
       amount: MoneyResponse.from(item.amount),
       disbursedAt: item.disbursedAt.toISOString(),
@@ -196,6 +237,13 @@ export class FundMovementResponse {
   @ApiProperty({ nullable: true, type: String })
   circleId!: string | null;
 
+  @ApiProperty({
+    enum: CADENCE_IDS,
+    nullable: true,
+    description: 'Cadencia de la junta del movimiento; null en los movimientos manuales',
+  })
+  cadence!: CadenceId | null;
+
   @ApiProperty({ nullable: true, type: String, example: '2026-12' })
   period!: string | null;
 
@@ -213,6 +261,7 @@ export class FundMovementResponse {
       transactionKey: movement.transactionKey,
       kind: movement.kind,
       circleId: movement.circleId,
+      cadence: movement.cadence,
       period: movement.period,
       reason: movement.reason,
       amount: MoneyResponse.from(movement.amount),
@@ -221,9 +270,39 @@ export class FundMovementResponse {
   }
 }
 
+/** Aporte y uso del fondo por cadencia (COPAYNI-118). */
+export class FundTotalResponse {
+  @ApiProperty({
+    enum: CADENCE_IDS,
+    nullable: true,
+    description: 'Cadencia de las juntas del total; null en los movimientos manuales sin junta',
+  })
+  cadence!: CadenceId | null;
+
+  @ApiProperty({ type: MoneyResponse, description: 'Lo que entró al fondo' })
+  contributed!: MoneyResponse;
+
+  @ApiProperty({ type: MoneyResponse, description: 'Lo que salió del fondo' })
+  used!: MoneyResponse;
+
+  static from(total: FundTotal): FundTotalResponse {
+    return {
+      cadence: total.cadence,
+      contributed: MoneyResponse.from(total.contributed),
+      used: MoneyResponse.from(total.used),
+    };
+  }
+}
+
 export class GuaranteeFundResponse {
   @ApiProperty({ type: [FundBalanceResponse], description: 'Una por moneda' })
   balances!: FundBalanceResponse[];
+
+  @ApiProperty({
+    type: [FundTotalResponse],
+    description: 'Aporte y uso por cadencia y moneda (COPAYNI-118)',
+  })
+  totals!: FundTotalResponse[];
 
   @ApiProperty({ type: [FundMovementResponse] })
   items!: FundMovementResponse[];

@@ -88,17 +88,33 @@ describe('API del back-office: finanzas', () => {
       200,
     );
     const { totals, items } = response.body.data as {
-      totals: { status: string; count: number; total: { amount: number } }[];
-      items: { circleId: string; status: string; member: { name: string } }[];
+      totals: { status: string; cadence: string; count: number; total: { amount: number } }[];
+      items: {
+        circleId: string;
+        status: string;
+        turn: number;
+        cadence: string;
+        dueOn: string;
+        member: { name: string };
+      }[];
     };
+    // Los totales se agrupan por estado y cadencia (COPAYNI-118). Con solo juntas mensuales sale
+    // una fila por estado, como antes, y ahora dice de qué cadencia es.
+    const monthly = { cadence: 'monthly', count: 1, total: { amount: 100000, currency: 'PEN' } };
     expect(totals).toEqual(
       expect.arrayContaining([
-        { status: 'paid', count: 1, total: { amount: 100000, currency: 'PEN' } },
-        { status: 'overdue', count: 1, total: { amount: 100000, currency: 'PEN' } },
-        { status: 'pending', count: 1, total: { amount: 100000, currency: 'PEN' } },
+        { ...monthly, status: 'paid' },
+        { ...monthly, status: 'overdue' },
+        { ...monthly, status: 'pending' },
       ]),
     );
     expect(items.filter((item) => item.circleId === circleId)).toHaveLength(3);
+    // Y cada cuota dice su turno y su fecha, además del mes.
+    for (const item of items.filter((candidate) => candidate.circleId === circleId)) {
+      expect(item.cadence).toBe('monthly');
+      expect(item.turn).toBeGreaterThan(0);
+      expect(item.dueOn).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    }
     expect(items[0]?.member.name).toBe('Lucía M.');
     expect(JSON.stringify(response.body)).not.toContain('@mail.com');
 

@@ -20,6 +20,7 @@ import {
   FinancePageQuery,
   FundBalanceResponse,
   FundMovementResponse,
+  FundTotalResponse,
   GuaranteeFundResponse,
   InstallmentResponse,
   InstallmentsQuery,
@@ -61,12 +62,14 @@ export class AdminFinanceController {
     const { totals, page } = await this.listInstallments.execute({
       status: query.status,
       period: query.period,
+      cadence: query.cadence,
       limit: query.limit ?? DEFAULT_PAGE_SIZE,
       cursor: query.cursor ?? null,
     });
     return {
-      totals: totals.map(({ status, count, total }) => ({
+      totals: totals.map(({ status, cadence, count, total }) => ({
         status,
+        cadence,
         count,
         total: { amount: total.amount, currency: total.currency },
       })),
@@ -105,12 +108,13 @@ export class AdminFinanceController {
   @ApiUnauthorizedResponse({ description: 'Sin token del personal o token inválido' })
   @ApiForbiddenResponse({ description: 'El rol no ve finanzas (FORBIDDEN)' })
   async guaranteeFund(@Query() query: FinancePageQuery): Promise<GuaranteeFundResponse> {
-    const { balances, movements } = await this.getFund.execute({
+    const { balances, totals, movements } = await this.getFund.execute({
       limit: query.limit ?? DEFAULT_PAGE_SIZE,
       cursor: query.cursor ?? null,
     });
     return {
       balances: balances.map((balance) => FundBalanceResponse.from(balance)),
+      totals: totals.map((total) => FundTotalResponse.from(total)),
       items: movements.items.map((movement) => FundMovementResponse.from(movement)),
       nextCursor: movements.nextCursor,
     };

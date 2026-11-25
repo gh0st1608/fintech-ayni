@@ -1,4 +1,5 @@
 import type {
+  Cadence,
   CircleDetail,
   CirclesPage,
   CircleSummary,
@@ -57,6 +58,7 @@ import type {
   GuaranteeFund,
   Installment,
   InstallmentsPage,
+  InstallmentStatus,
   PayoutsPage,
 } from '@/domain/finance/Finance';
 
@@ -115,8 +117,10 @@ export function circle(overrides: Partial<CircleDetail> = {}): CircleDetail {
     circleId: id,
     state: 'contributing',
     payout: { amount: 600_000, currency: 'PEN' },
-    months: 6,
+    turns: 6,
+    cadence: 'monthly',
     startsOn: '2026-12',
+    startsOnDate: '2026-12-01',
     members: 4,
     createdAt: NOW,
     currentPeriod: '2026-12',
@@ -143,8 +147,15 @@ export class InMemoryCircles implements CirclesRepositoryPort {
 
   constructor(public circles: CircleDetail[] = []) {}
 
+  readonly requests: CirclesFilter[] = [];
+
   list(filter: CirclesFilter): Promise<CirclesPage> {
-    const matching = this.circles.filter(({ state }) => !filter.state || state === filter.state);
+    this.requests.push(filter);
+    const matching = this.circles.filter(
+      (item) =>
+        (!filter.state || item.state === filter.state) &&
+        (!filter.cadence || item.cadence === filter.cadence),
+    );
     const start = filter.cursor ? Number(filter.cursor) : 0;
     const items: CircleSummary[] = structuredClone(matching.slice(start, start + this.pageSize));
     const next = start + this.pageSize;
@@ -428,6 +439,8 @@ export function installment(overrides: Partial<Installment> = {}): Installment {
     id: `00000000-0000-4000-b000-${String(sequence).padStart(12, '0')}`,
     circleId: '00000000-0000-4000-8000-000000000042',
     position: 2,
+    turn: 2,
+    cadence: 'monthly',
     period: '2026-12',
     dueOn: '2026-12-01',
     amount: { amount: 100_000, currency: 'PEN' },
@@ -446,7 +459,7 @@ export class InMemoryFinance implements FinanceRepositoryPort {
   constructor(
     public installmentItems: Installment[] = [],
     public payoutPage: PayoutsPage = { items: [], nextCursor: null },
-    public fund: GuaranteeFund = { balances: [], items: [], nextCursor: null },
+    public fund: GuaranteeFund = { balances: [], totals: [], items: [], nextCursor: null },
   ) {}
 
   installments(filter: InstallmentsFilter): Promise<InstallmentsPage> {
@@ -454,17 +467,22 @@ export class InMemoryFinance implements FinanceRepositoryPort {
     const matching = this.installmentItems.filter(
       (item) =>
         (!filter.status || item.status === filter.status) &&
-        (!filter.period || item.period === filter.period),
+        (!filter.period || item.period === filter.period) &&
+        (!filter.cadence || item.cadence === filter.cadence),
     );
     const start = filter.cursor ? Number(filter.cursor) : 0;
     const next = start + this.pageSize;
-    const totals = [...new Set(matching.map((item) => item.status))].map((status) => {
-      const ofStatus = matching.filter((item) => item.status === status);
+    // Agrupa por estado y cadencia, como el backend (COPAYNI-118).
+    const groups = [...new Set(matching.map((item) => `${item.status}|${item.cadence}`))];
+    const totals = groups.map((group) => {
+      const [status, cadence] = group.split('|') as [InstallmentStatus, Cadence];
+      const ofGroup = matching.filter((item) => item.status === status && item.cadence === cadence);
       return {
         status,
-        count: ofStatus.length,
+        cadence,
+        count: ofGroup.length,
         total: {
-          amount: ofStatus.reduce((sum, item) => sum + item.amount.amount, 0),
+          amount: ofGroup.reduce((sum, item) => sum + item.amount.amount, 0),
           currency: 'PEN',
         },
       };

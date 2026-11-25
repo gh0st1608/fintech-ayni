@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-import { CYCLE_STATES } from '@/domain/circles/Circle';
+import { CADENCES, CYCLE_STATES } from '@/domain/circles/Circle';
 import { KYC_STATUSES, KYC_TYPES } from '@/domain/kyc/Kyc';
 import { STAFF_ROLES } from '@/domain/staff/Staff';
 import { KYC_DOCUMENT_STATES, USER_STATUSES } from '@/domain/users/User';
@@ -37,8 +37,12 @@ const summary = z.object({
   circleId: z.uuid(),
   state: z.enum(CYCLE_STATES),
   payout: money,
-  months: z.number().int().positive(),
+  // `turns`, `cadence` y el día real del arranque son el contrato de cadencias (COPAYNI-118).
+  // El alias `months` que sigue enviando el backend no se lee.
+  turns: z.number().int().positive(),
+  cadence: z.enum(CADENCES),
   startsOn: z.string().regex(/^\d{4}-\d{2}$/),
+  startsOnDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   members: z.number().int().nonnegative(),
   createdAt: isoDate,
 });
@@ -156,6 +160,7 @@ export const installmentsPageSchema = z.object({
   totals: z.array(
     z.object({
       status: z.enum(INSTALLMENT_STATUSES),
+      cadence: z.enum(CADENCES),
       count: z.number().int().nonnegative(),
       total: money,
     }),
@@ -165,6 +170,8 @@ export const installmentsPageSchema = z.object({
       id: z.uuid(),
       circleId: z.uuid(),
       position: z.number().int().positive(),
+      turn: z.number().int().positive(),
+      cadence: z.enum(CADENCES),
       period,
       dueOn: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
       amount: money,
@@ -182,6 +189,8 @@ export const payoutsPageSchema = z.object({
       id: z.uuid(),
       circleId: z.uuid(),
       position: z.number().int().positive(),
+      turn: z.number().int().positive(),
+      cadence: z.enum(CADENCES),
       period,
       amount: money,
       disbursedAt: isoDate,
@@ -200,11 +209,19 @@ export const guaranteeFundSchema = z.object({
       belowMinimum: z.boolean(),
     }),
   ),
+  totals: z.array(
+    z.object({
+      cadence: z.enum(CADENCES).nullable(),
+      contributed: money,
+      used: money,
+    }),
+  ),
   items: z.array(
     z.object({
       transactionKey: z.string(),
       kind: z.string(),
       circleId: z.uuid().nullable(),
+      cadence: z.enum(CADENCES).nullable(),
       period: period.nullable(),
       reason: z.string().nullable(),
       amount: money,

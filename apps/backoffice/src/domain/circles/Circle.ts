@@ -9,6 +9,10 @@ export const CYCLE_STATES = [
 ] as const;
 export type CycleState = (typeof CYCLE_STATES)[number];
 
+/** Frecuencia de los turnos de una junta (COPAYNI-118). */
+export const CADENCES = ['monthly', 'biweekly', 'weekly'] as const;
+export type Cadence = (typeof CADENCES)[number];
+
 /** Monto en unidades menores (céntimos) y su moneda ISO 4217. */
 export interface Money {
   amount: number;
@@ -19,9 +23,17 @@ export interface CircleSummary {
   circleId: string;
   state: CycleState;
   payout: Money;
-  months: number;
+  /** Turnos de la junta, que son sus puestos y sus cuotas. */
+  turns: number;
+  /**
+   * Frecuencia de los turnos. Operar sin verla mezcla ciclos de distinta frecuencia en la misma
+   * pantalla, y los totales dejan de cuadrar a simple vista (COPAYNI-118).
+   */
+  cadence: Cadence;
   /** `YYYY-MM`. */
   startsOn: string;
+  /** `YYYY-MM-DD`: el día real del primer turno, que fuera de la mensual no es el 1. */
+  startsOnDate: string;
   /** Miembros vigentes, sin expulsados. */
   members: number;
   createdAt: Date;
@@ -46,6 +58,7 @@ export interface CircleMember {
 export interface StartProposal {
   round: number;
   payout: Money;
+  /** Turnos propuestos. El backend lo sigue enviando como `months`. */
   months: number;
   /** `YYYY-MM-DD`. */
   respondBy: string;
@@ -76,6 +89,19 @@ export function pauseActionFor(state: CycleState): PauseAction | null {
 }
 
 /** Turnos ocupados frente a los turnos de la junta. */
-export function fillRatio(circle: Pick<CircleSummary, 'members' | 'months'>): number {
-  return circle.months === 0 ? 0 : Math.min(circle.members / circle.months, 1);
+export function fillRatio(circle: Pick<CircleSummary, 'members' | 'turns'>): number {
+  return circle.turns === 0 ? 0 : Math.min(circle.members / circle.turns, 1);
 }
+
+/** Cómo se nombra la cadencia y su turno en las pantallas de operación. */
+export const CADENCE_LABELS: Record<Cadence, string> = {
+  monthly: 'Mensual',
+  biweekly: 'Quincenal',
+  weekly: 'Semanal',
+};
+
+export const TURN_UNIT_LABELS: Record<Cadence, string> = {
+  monthly: 'Mes',
+  biweekly: 'Quincena',
+  weekly: 'Semana',
+};

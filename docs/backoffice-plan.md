@@ -151,6 +151,17 @@ El código ya define 5 roles. Propuesta para el MVP, sin agregar roles hasta que
 - **[H] Implementado:** `POST /admin/v1/guarantee-fund/movements` (propone), `GET /admin/v1/approvals` y `POST /admin/v1/approvals/:id/approve` y `/reject` ([admin.md](api/admin.md#doble-aprobación-del-fondo-de-garantía)). Regla provisional: `finance` y `super_admin`, nunca la misma persona (BO6)
 - **[H] Implementado:** `GET /admin/v1/delinquency` (en gracia, expulsados, deudas y devoluciones; COPAYNI-94)
 
+**Cadencias en el back-office (COPAYNI-118, implementado):**
+
+Las vistas agrupaban por mes. Con tres cadencias conviviendo, un mes mezcla una junta mensual con cuatro semanas de otra: la cifra sale sumada y la conciliación deja de cuadrar a simple vista.
+
+- **Juntas:** filtro por cadencia, y cada fila trae su cadencia y el día real de arranque (en semanal no es el día 1).
+- **Cuotas:** cada fila se identifica por su turno y su fecha —«Semana 2 · 9 dic 2026»—, con el mes y el puesto como dato secundario, y hay filtro por cadencia.
+- **Totales:** se agrupan por estado **y cadencia**, y nunca se suman entre sí. Con solo juntas mensuales sale una fila por estado, como antes, y además dice de qué cadencia es.
+- **Pozos:** cada entrega trae su turno y su cadencia.
+- **Fondo de garantía:** aporte y uso por cadencia, leídos por separado y no como un neto; los movimientos manuales no tienen junta y salen aparte.
+- **Turnos de una junta:** el detalle pagina de 25 en 25, porque una junta semanal larga puede tener decenas.
+
 ### 7.2 Login del personal: qué está hecho y qué falta decidir (16 de noviembre de 2026)
 
 **[H] Hecho y probado** (COPAYNI-72, sin depender del proveedor):

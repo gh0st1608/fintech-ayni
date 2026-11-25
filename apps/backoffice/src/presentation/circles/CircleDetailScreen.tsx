@@ -2,7 +2,12 @@ import { useState } from 'react';
 import { Link, useParams } from 'react-router';
 
 import { MAX_REASON_LENGTH } from '@/application/usecases';
-import { type CircleDetail, type PauseAction, pauseActionFor } from '@/domain/circles/Circle';
+import {
+  CADENCE_LABELS,
+  type CircleDetail,
+  type PauseAction,
+  pauseActionFor,
+} from '@/domain/circles/Circle';
 import { AppError } from '@/domain/shared/AppError';
 import { can } from '@/domain/staff/Staff';
 
@@ -21,6 +26,12 @@ import { useSession, useStaff } from '../providers/AppProviders';
 import { useCircle, useSetCirclePause } from './useCircles';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * Cuántos turnos se muestran de entrada (COPAYNI-118). Una junta semanal larga puede tener
+ * decenas de turnos, y renderizarlos todos deja la pantalla inmanejable.
+ */
+const TURNS_PAGE_SIZE = 25;
 
 /** Detalle de una junta: condiciones, miembros (enmascarados) y la propuesta de inicio. */
 export function CircleDetailScreen() {
@@ -56,6 +67,8 @@ function CircleView({ circle }: { circle: CircleDetail }) {
   const staff = useStaff();
   const action = pauseActionFor(circle.state);
   const canPause = can(staff, 'circles.pause') && action !== null;
+  const [visible, setVisible] = useState(TURNS_PAGE_SIZE);
+  const shown = circle.memberships.slice(0, visible);
 
   return (
     <section className="flex flex-col gap-6">
@@ -75,8 +88,10 @@ function CircleView({ circle }: { circle: CircleDetail }) {
       </header>
 
       <dl className="grid grid-cols-2 gap-4 rounded-md border border-line bg-surface p-4 sm:grid-cols-4">
-        <Info label="Turnos" value={`${circle.members} de ${circle.months}`} />
-        <Info label="Inicio" value={formatPeriod(circle.startsOn)} />
+        <Info label="Turnos" value={`${circle.members} de ${circle.turns}`} />
+        <Info label="Cadencia" value={CADENCE_LABELS[circle.cadence]} />
+        {/* El día real del primer turno; fuera de la cadencia mensual no es el 1. */}
+        <Info label="Inicio" value={formatDay(circle.startsOnDate)} />
         <Info
           label="Mes en curso"
           value={circle.currentPeriod ? formatPeriod(circle.currentPeriod) : '—'}
@@ -132,7 +147,7 @@ function CircleView({ circle }: { circle: CircleDetail }) {
                 </tr>
               </thead>
               <tbody className="divide-y divide-line bg-surface">
-                {circle.memberships.map((member) => (
+                {shown.map((member) => (
                   <tr key={member.userId}>
                     <td className="px-4 py-2">
                       {member.position}
@@ -150,6 +165,13 @@ function CircleView({ circle }: { circle: CircleDetail }) {
                 ))}
               </tbody>
             </table>
+          </div>
+        )}
+        {shown.length < circle.memberships.length && (
+          <div>
+            <Button variant="secondary" onClick={() => setVisible(visible + TURNS_PAGE_SIZE)}>
+              Ver más turnos ({circle.memberships.length - shown.length} restantes)
+            </Button>
           </div>
         )}
       </section>

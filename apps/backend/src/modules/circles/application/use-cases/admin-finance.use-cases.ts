@@ -10,6 +10,7 @@ import {
   type AdminPayout,
   type FinanceMember,
   type FundMovement,
+  type FundTotal,
   type InstallmentsFilter,
   type Page,
 } from '../ports/admin-finance-query.port';
@@ -56,7 +57,10 @@ export class ListInstallmentsUseCase {
   }> {
     assertPeriod(filter.period);
     const [totals, page] = await Promise.all([
-      this.finance.installmentTotals(filter.period),
+      // El resumen se agrupa por estado y cadencia, y respeta el filtro de cadencia: una cifra
+      // que suma una junta mensual con cuatro semanas de otra no se puede conciliar
+      // (COPAYNI-118).
+      this.finance.installmentTotals(filter.period, filter.cadence),
       this.finance.installments(filter),
     ]);
     return {
@@ -103,12 +107,15 @@ export class GetGuaranteeFundUseCase {
     @Inject(ADMIN_FINANCE_QUERY) private readonly finance: AdminFinanceQueryPort,
   ) {}
 
-  async execute(filter: {
-    limit: number;
-    cursor: string | null;
-  }): Promise<{ balances: FundBalanceView[]; movements: Page<FundMovement> }> {
-    const [statuses, movements] = await Promise.all([
+  async execute(filter: { limit: number; cursor: string | null }): Promise<{
+    balances: FundBalanceView[];
+    /** Aporte y uso por cadencia (COPAYNI-118). */
+    totals: FundTotal[];
+    movements: Page<FundMovement>;
+  }> {
+    const [statuses, totals, movements] = await Promise.all([
       this.fund.status(),
+      this.finance.fundTotals(),
       this.finance.fundMovements(filter),
     ]);
     return {
@@ -121,6 +128,7 @@ export class GetGuaranteeFundUseCase {
           belowMinimum: status.balance.amount < minimum.amount,
         };
       }),
+      totals,
       movements,
     };
   }
