@@ -24,6 +24,7 @@ import {
   type CadenceId,
 } from '../modules/circles/domain/value-objects/cadence';
 import { MAX_CIRCLE_TURNS } from '../modules/circles/domain/value-objects/turn-options';
+import { dueSoonByCadenceFrom } from '../modules/notifications/domain/due-soon-lead';
 import { currencySettingsFrom } from '../shared/infrastructure/currency/currency-settings';
 
 /** Identidad del personal del back-office (docs/backoffice-plan.md, BO2). */
@@ -520,6 +521,17 @@ export class EnvironmentVariables {
   @Min(1)
   @Max(15)
   NOTIFICATION_DUE_SOON_DAYS: number = 3;
+
+  /**
+   * Antelación del recordatorio por cadencia, como `cadencia:dias` separadas por comas
+   * (COPAYNI-120). Sin entrada para una cadencia rige `NOTIFICATION_DUE_SOON_DAYS`, calibrado
+   * para un ciclo de 30 días; con 0 no se manda recordatorio previo, solo el del vencimiento.
+   * La antelación tiene que ser menor que el ciclo, o el aviso llega antes del turno anterior.
+   */
+  @Transform(toList)
+  @IsString({ each: true })
+  @Matches(/^[a-z]+:\d{1,2}$/, { each: true })
+  NOTIFICATION_DUE_SOON_DAYS_BY_CADENCE: string[] = [];
 
   /**
    * Aviso en el celular (COPAYNI-85). `fake` solo registra el envío, para desarrollo y pruebas, y
@@ -1168,6 +1180,31 @@ function assertTurnsRange(env: EnvironmentVariables): void {
   }
 }
 
+/**
+ * Antelación del recordatorio de cuota por cadencia (COPAYNI-120).
+ *
+ * Tiene que ser menor que la duración del ciclo: con 3 días de antelación sobre un ciclo de 7, el
+ * recordatorio de un turno llegaría antes de que venza el anterior, y la persona recibiría dos
+ * avisos de cuotas distintas casi juntos.
+ */
+function assertDueSoonByCadence(env: EnvironmentVariables): void {
+  const byCadence = dueSoonByCadenceFrom(env.NOTIFICATION_DUE_SOON_DAYS_BY_CADENCE);
+  const problems: string[] = [];
+  for (const id of env.CIRCLE_CADENCES_ENABLED) {
+    const cadence = Cadence.parse(id);
+    const days = byCadence[id] ?? env.NOTIFICATION_DUE_SOON_DAYS;
+    const cycleDays = cadence.approximateTurnDays();
+    if (days >= cycleDays) {
+      problems.push(
+        `- NOTIFICATION_DUE_SOON_DAYS_BY_CADENCE: ${id} avisa ${days} días antes y su ciclo dura ${cycleDays}`,
+      );
+    }
+  }
+  if (problems.length > 0) {
+    throw new Error(['Configuración inválida:', ...problems].join(LINE_BREAK));
+  }
+}
+
 /** Monedas admitidas con su tipo de cambio (pending-scope M2): la API no inicia sin él. */
 function assertCurrencies(env: EnvironmentVariables): void {
   try {
@@ -1210,6 +1247,7 @@ export function validateEnvironment(config: Record<string, unknown>): Environmen
   // Ya se sabe que las cadencias son válidas: cada una habilitada necesita su gracia y su mora.
   if (errors.length === 0) assertDelinquencyByCadence(env);
   if (errors.length === 0) assertTurnsRange(env);
+  if (errors.length === 0) assertDueSoonByCadence(env);
   if (env.NODE_ENV === 'production' && env.STAFF_AUTH_PROVIDER === 'dev') {
     throw new Error(
       'Configuración inválida:\n- STAFF_AUTH_PROVIDER: dev no se admite en production',

@@ -954,6 +954,10 @@
         "title": "It's your payout month!",
         "body": "Your {{amount}} payout is sent once everyone has paid."
       },
+      "payoutTurnDated": {
+        "title": "It's your turn to collect",
+        "body": "Your {{amount}} pot is paid on {{date}}, once everyone has paid."
+      },
       "payoutDisbursed": {
         "title": "You received your payout",
         "body": "We sent you {{amount}}."

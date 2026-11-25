@@ -178,8 +178,13 @@ function NotificationCard({
       defaultValue: t('notifications.documents.additional'),
     }),
   };
-  const title = t(`notifications.types.${type}.title`);
-  const body = t(`notifications.types.${type}.body`, values);
+  // «¡Este mes cobras!» es falso en una junta semanal, donde hay cuatro turnos en el mes: el
+  // aviso del turno de cobro tiene su propio texto fuera de la cadencia mensual (COPAYNI-120).
+  const nonMonthlyTurn =
+    type === 'payoutTurn' && notification.cadence !== null && notification.cadence !== 'monthly';
+  const key = nonMonthlyTurn ? 'payoutTurnDated' : type;
+  const title = t(`notifications.types.${key}.title`);
+  const body = t(`notifications.types.${key}.body`, values);
   const when =
     groupOf(notification.occurredAt, now) === 'today'
       ? new Intl.DateTimeFormat(i18n.language, { hour: 'numeric', minute: '2-digit' }).format(

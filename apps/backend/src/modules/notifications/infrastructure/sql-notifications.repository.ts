@@ -27,43 +27,61 @@ const ME = (column: string): string => `($1::uuid IS NULL OR ${column} = $1::uui
 const MONEY = (amount: string, currency: string): string =>
   `jsonb_build_object('amount', ${amount}, 'currency', ${currency})`;
 
+/**
+ * Días de antelación del recordatorio para la cadencia de esa junta (COPAYNI-120).
+ *
+ * `$3` es el valor de siempre, el de la cadencia mensual, y `$4` el mapa por cadencia. Tres días
+ * de antelación sobre un ciclo de 7 dejan el recordatorio casi pegado al turno anterior, así que
+ * cada cadencia lleva el suyo; con 0 no se manda recordatorio previo, solo el del mismo día.
+ */
+const LEAD_DAYS = `COALESCE(($4::jsonb ->> c.cadence)::int, $3::int)`;
+
+/** Lo que cada aviso de cuota necesita para escribirse en la unidad de su cadencia. */
+const INSTALLMENT_DATA = (extra: string): string =>
+  `jsonb_build_object('circleId', i.circle_id, 'amount', ${MONEY('i.amount', 'i.currency')},
+                      'cadence', c.cadence, 'turn', i.turn, ${extra})`;
+
 const SOURCES: readonly string[] = [
-  // Cuota por vencer: N días antes y el mismo día, solo si sigue pendiente.
+  // Cuota por vencer: la antelación de su cadencia antes, y el mismo día, si sigue pendiente.
   `SELECT i.user_id, 'installment_due_soon', 'payments',
-          jsonb_build_object('circleId', i.circle_id, 'amount', ${MONEY('i.amount', 'i.currency')},
-                             'dueOn', to_char(i.due_on, 'YYYY-MM-DD')),
+          ${INSTALLMENT_DATA("'dueOn', to_char(i.due_on, 'YYYY-MM-DD')")},
           'due_soon:' || i.id, ($2::date)::timestamp AT TIME ZONE 'UTC'
      FROM circle_installments i
-    WHERE i.status = 'pending' AND i.due_on > $2::date AND i.due_on <= $2::date + $3::int
+     JOIN circles c ON c.id = i.circle_id
+    WHERE i.status = 'pending' AND ${LEAD_DAYS} > 0
+      AND i.due_on > $2::date AND i.due_on <= $2::date + ${LEAD_DAYS}
       AND ${ME('i.user_id')}`,
   `SELECT i.user_id, 'installment_due_today', 'payments',
-          jsonb_build_object('circleId', i.circle_id, 'amount', ${MONEY('i.amount', 'i.currency')},
-                             'dueOn', to_char(i.due_on, 'YYYY-MM-DD')),
+          ${INSTALLMENT_DATA("'dueOn', to_char(i.due_on, 'YYYY-MM-DD')")},
           'due_today:' || i.id, ($2::date)::timestamp AT TIME ZONE 'UTC'
      FROM circle_installments i
+     JOIN circles c ON c.id = i.circle_id
     WHERE i.status = 'pending' AND i.due_on = $2::date AND ${ME('i.user_id')}`,
   // Pago recibido o fallido (la cuota venció sin cobrarse).
   `SELECT i.user_id, 'payment_received', 'payments',
-          jsonb_build_object('circleId', i.circle_id, 'amount', ${MONEY('i.amount', 'i.currency')},
-                             'period', to_char(i.period, 'YYYY-MM')),
+          ${INSTALLMENT_DATA("'period', to_char(i.period, 'YYYY-MM')")},
           'paid:' || i.id, i.paid_at
      FROM circle_installments i
+     JOIN circles c ON c.id = i.circle_id
     WHERE i.status = 'paid' AND i.paid_at IS NOT NULL AND ${ME('i.user_id')}`,
   `SELECT i.user_id, 'payment_failed', 'payments',
-          jsonb_build_object('circleId', i.circle_id, 'amount', ${MONEY('i.amount', 'i.currency')},
-                             'dueOn', to_char(i.due_on, 'YYYY-MM-DD')),
+          ${INSTALLMENT_DATA("'dueOn', to_char(i.due_on, 'YYYY-MM-DD')")},
           'failed:' || i.id, (i.due_on + 1)::timestamp AT TIME ZONE 'UTC'
      FROM circle_installments i
+     JOIN circles c ON c.id = i.circle_id
     WHERE i.status IN ('overdue', 'defaulted') AND ${ME('i.user_id')}`,
   // Turno de cobro: cuándo le toca el pozo, y el pozo entregado. El día del turno lo da la
-  // cadencia de la junta (COPAYNI-120): sumar meses a la posición solo acierta en la mensual, y
-  // en una semanal habría avisado a tres de cada cuatro miembros en el mes equivocado. El aviso
-  // sigue hablando en meses, que es lo que el cliente muestra hoy; adaptar los textos y el
-  // momento a cada cadencia es el resto de COPAYNI-120.
+  // cadencia de la junta (COPAYNI-127): sumar meses a la posición solo acierta en la mensual, y
+  // en una semanal habría avisado a tres de cada cuatro miembros en el mes equivocado.
+  //
+  // La clave de deduplicación lleva el día del turno, y no su mes, porque en una junta semanal
+  // hay cuatro turnos en el mismo mes y con el mes solo se avisaría del primero (COPAYNI-120).
   `SELECT m.user_id, 'payout_turn', 'payments',
           jsonb_build_object('circleId', c.id, 'amount', ${MONEY('c.payout_amount', 'c.currency')},
-                             'period', to_char(t.turn_on, 'YYYY-MM')),
-          'payout_turn:' || c.id || ':' || to_char(t.turn_on, 'YYYY-MM'),
+                             'cadence', c.cadence, 'turn', m.position,
+                             'period', to_char(t.turn_on, 'YYYY-MM'),
+                             'dueOn', to_char(t.turn_on, 'YYYY-MM-DD')),
+          'payout_turn:' || c.id || ':' || to_char(t.turn_on, 'YYYY-MM-DD'),
           t.turn_on::timestamp AT TIME ZONE 'UTC'
      FROM circle_memberships m
      JOIN circles c ON c.id = m.circle_id
@@ -73,9 +91,11 @@ const SOURCES: readonly string[] = [
       AND ${ME('m.user_id')}`,
   `SELECT p.user_id, 'payout_disbursed', 'payments',
           jsonb_build_object('circleId', p.circle_id, 'amount', ${MONEY('p.amount', 'p.currency')},
+                             'cadence', c.cadence, 'turn', p.turn,
                              'period', to_char(p.period, 'YYYY-MM')),
           'payout:' || p.id, p.disbursed_at
      FROM circle_payouts p
+     JOIN circles c ON c.id = p.circle_id
     WHERE ${ME('p.user_id')}`,
   // Documentos aprobados o rechazados, y la verificación de identidad decidida.
   `SELECT d.user_id, 'document_' || d.status, 'account',
@@ -92,16 +112,19 @@ const SOURCES: readonly string[] = [
       AND ${ME('v.user_id')}`,
   // Cambios del círculo: inicio, pausa o reanudación y miembros nuevos mientras se arma.
   `SELECT m.user_id, 'circle_started', 'circles',
-          jsonb_build_object('circleId', c.id, 'period', to_char(c.starts_on, 'YYYY-MM')),
+          jsonb_build_object('circleId', c.id, 'cadence', c.cadence,
+                             'period', to_char(c.starts_on, 'YYYY-MM'),
+                             'dueOn', to_char(c.starts_on, 'YYYY-MM-DD')),
           'circle_started:' || c.id, c.starts_on::timestamp AT TIME ZONE 'UTC'
      FROM circle_memberships m
      JOIN circles c ON c.id = m.circle_id
     WHERE c.cycle_state IN ('contributing', 'paused', 'finished') AND c.starts_on <= $2::date
       AND m.expelled_at IS NULL AND ${ME('m.user_id')}`,
   `SELECT m.user_id, 'circle_' || e.action || 'd', 'circles',
-          jsonb_build_object('circleId', e.circle_id),
+          jsonb_build_object('circleId', e.circle_id, 'cadence', c.cadence),
           'circle_' || e.action || ':' || e.id, e.created_at
      FROM circle_admin_events e
+     JOIN circles c ON c.id = e.circle_id
      JOIN circle_memberships m ON m.circle_id = e.circle_id AND m.created_at <= e.created_at
     WHERE m.expelled_at IS NULL AND ${ME('m.user_id')}`,
   `SELECT m.user_id, 'circle_member_joined', 'circles',
@@ -160,13 +183,23 @@ function decodeCursor(cursor: string): { at: string; id: string } {
 export class SqlNotificationsRepository implements NotificationsPort {
   constructor(@InjectDataSource() private readonly dataSource: DataSource) {}
 
-  async project(scope: { userId?: string; today: string; dueSoonDays: number }): Promise<number> {
+  async project(scope: {
+    userId?: string;
+    today: string;
+    dueSoonDays: number;
+    dueSoonDaysByCadence?: Readonly<Partial<Record<string, number>>>;
+  }): Promise<number> {
     const created = await this.dataSource.query<unknown[]>(
       `INSERT INTO notifications (user_id, type, category, data, dedupe_key, occurred_at)
        SELECT * FROM (${SOURCES.join('\n UNION ALL \n')}) AS facts
        ON CONFLICT (user_id, dedupe_key) DO NOTHING
        RETURNING 1`,
-      [scope.userId ?? null, scope.today, scope.dueSoonDays],
+      [
+        scope.userId ?? null,
+        scope.today,
+        scope.dueSoonDays,
+        JSON.stringify(scope.dueSoonDaysByCadence ?? {}),
+      ],
     );
     return created.length;
   }

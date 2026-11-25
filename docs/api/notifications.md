@@ -11,7 +11,7 @@ Las notificaciones **se derivan de los hechos ya guardados**, sin tocar cada cas
 
 | Tipo                    | Pestaña    | Cuándo                                                                          | `data`                         |
 | ----------------------- | ---------- | ------------------------------------------------------------------------------- | ------------------------------ |
-| `installment_due_soon`  | `payments` | Cuota pendiente que vence en los próximos `NOTIFICATION_DUE_SOON_DAYS` días (3) | `circleId`, `amount`, `dueOn`  |
+| `installment_due_soon`  | `payments` | Cuota pendiente que vence dentro de la antelación de su cadencia (`NOTIFICATION_DUE_SOON_DAYS`, 3 en mensual) | `circleId`, `amount`, `dueOn`, `cadence`, `turn`  |
 | `installment_due_today` | `payments` | Cuota pendiente que vence hoy (zona `BUSINESS_TIME_ZONE`)                       | `circleId`, `amount`, `dueOn`  |
 | `payment_received`      | `payments` | Cuota pagada                                                                    | `circleId`, `amount`, `period` |
 | `payment_failed`        | `payments` | Cuota vencida sin cobrar (`overdue` o `defaulted`)                              | `circleId`, `amount`, `dueOn`  |
@@ -133,6 +133,15 @@ Responde `{ "deviceId": "…", "platform": "android" }`. Es idempotente por toke
 
 ## Supuestos [?]
 
-- **Cuota por vencer:** se avisa una vez dentro de los 3 días previos (no exactamente el día 3) y otra el mismo día; si la app no se abre, la tarea diaria igual la genera.
+- **Cuota por vencer:** se avisa una vez dentro de la antelación de su cadencia (no exactamente el último día) y otra el mismo día; si la app no se abre, la tarea diaria igual la genera.
+
+### Cadencia en los avisos (COPAYNI-120)
+
+Los avisos de cuota, cobro, inicio y reanudación llevan `cadence` y, cuando aplica, `turn`. Sin `cadence` se asumen mensuales, que es lo que tienen guardado los avisos anteriores a la épica.
+
+- **El texto.** Fuera de la cadencia mensual no se usa la palabra «mes»: «tu cuota de este mes» es falso cuando hay cuatro cuotas en el mes, y «este mes cobras» no identifica a ninguno de los cuatro miembros que cobran en él. El turno se nombra en su unidad («la semana 3») y el turno de cobro se avisa con su fecha. **En cadencia mensual los textos son exactamente los de antes**, palabra por palabra.
+- **El momento.** `NOTIFICATION_DUE_SOON_DAYS_BY_CADENCE` fija la antelación del recordatorio por cadencia, en formato `cadencia:dias`. Sin entrada rige `NOTIFICATION_DUE_SOON_DAYS`. Con `0` no se manda recordatorio previo y queda solo el del día del vencimiento, que es la palanca para no saturar un ciclo corto. La antelación tiene que ser **menor que la duración del ciclo** o la API no arranca: con 3 días sobre un ciclo de 7, el recordatorio de un turno llegaría antes de que venza el anterior.
+- **Cuántos avisos.** Por turno y por persona, como máximo **3** sobre su propia cuota: el recordatorio previo, el del vencimiento y el del pago recibido o fallido. Con la antelación en 0 quedan 2. Los de su turno de cobro ocurren una sola vez en toda la junta. Lo que cambia con la cadencia no es la cuenta por turno, sino cuántos turnos hay al año, que es inherente al producto.
+- La clave de deduplicación del aviso de cobro lleva el **día** del turno y no su mes: con el mes, en una junta semanal solo se avisaría del primero de los cuatro turnos de ese mes.
 - **Pago fallido:** hoy no hay un registro de intentos de cobro; se usa la cuota vencida sin pagar.
 - **Retención:** las notificaciones no se borran todavía. Definir con Legal cuánto se conservan (L5).

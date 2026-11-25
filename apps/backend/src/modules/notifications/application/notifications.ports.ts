@@ -1,3 +1,5 @@
+import { type CadenceId } from '../../circles/domain/value-objects/cadence';
+
 import { type Notification, type NotificationCategory } from '../domain/notification';
 import { type PendingPush } from './push.ports';
 
@@ -7,6 +9,12 @@ export const NOTIFICATION_SETTINGS = Symbol('NOTIFICATION_SETTINGS');
 export interface NotificationSettings {
   /** Días antes del vencimiento en que se avisa (además del mismo día). */
   readonly dueSoonDays: number;
+  /**
+   * Antelación del recordatorio por cadencia, en días (COPAYNI-120). Sin entrada para una
+   * cadencia rige `dueSoonDays`, que está calibrado para un ciclo mensual; con 0 no se manda
+   * recordatorio previo, solo el del mismo día del vencimiento.
+   */
+  readonly dueSoonDaysByCadence?: Readonly<Partial<Record<CadenceId, number>>>;
   /** Zona IANA que define "hoy" para los vencimientos. */
   readonly timeZone: string;
 }
@@ -23,7 +31,12 @@ export interface NotificationsFilter {
  */
 export interface NotificationsPort {
   /** Genera las que falten; `userId` limita a una persona. Devuelve cuántas creó. */
-  project(scope: { userId?: string; today: string; dueSoonDays: number }): Promise<number>;
+  project(scope: {
+    userId?: string;
+    today: string;
+    dueSoonDays: number;
+    dueSoonDaysByCadence?: Readonly<Partial<Record<CadenceId, number>>>;
+  }): Promise<number>;
   list(
     userId: string,
     filter: NotificationsFilter,

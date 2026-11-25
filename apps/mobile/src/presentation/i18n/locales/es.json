@@ -954,6 +954,10 @@
         "title": "¡Este mes cobras!",
         "body": "Tu pozo de {{amount}} se paga cuando todos hayan pagado."
       },
+      "payoutTurnDated": {
+        "title": "¡Te toca cobrar!",
+        "body": "Tu pozo de {{amount}} se paga el {{date}}, cuando todos hayan pagado."
+      },
       "payoutDisbursed": {
         "title": "Recibiste tu pozo",
         "body": "Te enviamos {{amount}}."

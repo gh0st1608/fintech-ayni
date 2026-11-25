@@ -3,6 +3,8 @@
  * texto: la app arma el mensaje en el idioma de la persona. Cada una tiene una clave única por
  * persona, así un mismo hecho nunca se notifica dos veces.
  */
+import { type CadenceId } from '../../circles/domain/value-objects/cadence';
+
 export const NOTIFICATION_TYPES = [
   'installment_due_soon',
   'installment_due_today',
@@ -47,6 +49,12 @@ export interface NotificationData {
   period?: string;
   /** Tipo de documento (`national_id`, `proof_of_income`, `additional`, `identity`). */
   documentType?: string;
+  /**
+   * Cadencia de la junta y turno al que se refiere el aviso (COPAYNI-120). Sin cadencia se asume
+   * mensual, que es la de todas las juntas anteriores a la épica y la que producía estos textos.
+   */
+  cadence?: CadenceId;
+  turn?: number;
 }
 
 export interface Notification {
