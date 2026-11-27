@@ -50,7 +50,7 @@ const WEEKLY: AgreementData = {
     { turn: 4, dueOn: '2026-11-25' },
   ],
   graceDays: 1,
-  lateFeeBps: 150,
+  lateFeeBps: 70,
 };
 
 /** La misma junta en mensual, como las que existen hoy. */
@@ -145,8 +145,8 @@ describe('Documentos por cadencia (COPAYNI-119)', () => {
     // decir «el vigente» cuando el valor que se aplica es otro.
     const [weeklyContract, weeklyNote] = documents(WEEKLY);
     expect(weeklyContract).toContain('Días de gracia desde el vencimiento: 1.');
-    expect(weeklyContract).toContain('Cargo por mora sobre la cuota vencida: 1.50 %.');
-    expect(weeklyNote).toContain('cargo por mora de 1.50 %');
+    expect(weeklyContract).toContain('Cargo por mora sobre la cuota vencida: 0.70 %.');
+    expect(weeklyNote).toContain('cargo por mora de 0.70 %');
 
     const [monthlyContract] = documents(MONTHLY);
     expect(monthlyContract).toContain('Días de gracia desde el vencimiento: 3.');
@@ -203,7 +203,7 @@ describe('Registro de aprobaciones (COPAYNI-119)', () => {
     const env = {
       ...TEST_ENV,
       DELINQUENCY_GRACE_DAYS_BY_CADENCE: 'weekly:1',
-      LATE_FEE_BPS_BY_CADENCE: 'weekly:150',
+      LATE_FEE_BPS_BY_CADENCE: 'weekly:70',
       NOTIFICATION_DUE_SOON_DAYS_BY_CADENCE: 'weekly:1',
     };
 

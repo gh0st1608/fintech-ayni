@@ -115,12 +115,13 @@ describe('Opciones de cuota con la configuración de hoy (COPAYNI-125)', () => {
 });
 
 describe('Opciones de cuota con el rango (COPAYNI-125)', () => {
-  it('ofrece solo las combinaciones que existen, no las 23 del rango', () => {
-    // 12.000 en un rango de 2 a 24: salen 16 duraciones, no 23. Es el punto del ticket: el
-    // usuario elige dentro de lo que se puede construir, no dentro de lo configurado.
-    const options = installmentOptions(pen(1_200_000), TurnOptions.range(2, 24));
+  it('ofrece solo las combinaciones que existen, no las 11 del rango', () => {
+    // 12.000 en el rango completo de 2 a 12 (COPAYNI-101): salen 8 duraciones, no 11. Es el punto
+    // del ticket: el usuario elige dentro de lo que se puede construir, no dentro de lo
+    // configurado.
+    const options = installmentOptions(pen(1_200_000), TurnOptions.range(2, MAX_CIRCLE_TURNS));
 
-    expect(options.map(({ turns }) => turns)).toEqual([2, 3, 4, 5, 6, 8, 10, 12, 15, 16, 20, 24]);
+    expect(options.map(({ turns }) => turns)).toEqual([2, 3, 4, 5, 6, 8, 10, 12]);
     expect(
       options.every(({ installment, turns }) => installment.amount * turns === 1_200_000),
     ).toBe(true);
@@ -129,7 +130,9 @@ describe('Opciones de cuota con el rango (COPAYNI-125)', () => {
   it('el rango no pierde las duraciones de la lista de hoy', () => {
     // Un rango que las contiene ofrece esas tres y además las otras que existan.
     const amount = pen(3_000_000);
-    const wide = installmentOptions(amount, TurnOptions.range(2, 24)).map(({ turns }) => turns);
+    const wide = installmentOptions(amount, TurnOptions.range(2, MAX_CIRCLE_TURNS)).map(
+      ({ turns }) => turns,
+    );
 
     for (const turns of TODAY) expect(wide).toContain(turns);
   });
@@ -151,7 +154,7 @@ describe('Opciones de cuota con el rango (COPAYNI-125)', () => {
   it('la cadencia no cambia qué duraciones existen, solo cuánto duran', () => {
     // La cuota exacta reparte un monto en partes iguales: es aritmética del monto, no del tiempo.
     const turnsOf = (cadence: Cadence) =>
-      installmentOptions(pen(1_250_000), TurnOptions.range(2, 24), cadence).map(
+      installmentOptions(pen(1_250_000), TurnOptions.range(2, MAX_CIRCLE_TURNS), cadence).map(
         ({ turns }) => turns,
       );
 
@@ -185,8 +188,9 @@ describe('Toda combinación ofrecida es construible (COPAYNI-125)', () => {
           built += 1;
         }
       }
-      // Que no pase de largo sin construir nada: son miles de combinaciones por cadencia.
-      expect(built).toBeGreaterThan(2_000);
+      // Que no pase de largo sin construir nada: con el rango de 2 a 12 (COPAYNI-101) son 1.493
+      // combinaciones por cadencia.
+      expect(built).toBeGreaterThan(1_400);
     },
   );
 

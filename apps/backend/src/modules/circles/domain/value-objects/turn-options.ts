@@ -7,8 +7,15 @@ export class InvalidTurnOptionsError extends DomainError {
   }
 }
 
-/** Tope del rango admitido. El máximo real por cadencia lo decide negocio (COPAYNI-101). */
-export const MAX_CIRCLE_TURNS = 24;
+/**
+ * Tope de turnos de una junta, decidido por el PO el 27 de noviembre de 2026 (COPAYNI-101): 12 en
+ * las tres cadencias, que es el máximo que ya se ofrecía en mensual.
+ *
+ * Uniforme y no uno por cadencia a propósito: no cambia el número de integrantes por junta ni
+ * obliga a otro patrón de interfaz, y acota la exposición de la semanal, que con 12 turnos dura
+ * 84 días. Se revisa con datos de operación.
+ */
+export const MAX_CIRCLE_TURNS = 12;
 
 /**
  * Qué números de turno se pueden elegir (COPAYNI-125).
@@ -18,8 +25,8 @@ export const MAX_CIRCLE_TURNS = 24;
  * - **Lista cerrada**, que es la configuración de hoy (`6,10,12` en dev y en prd) y la que debe
  *   seguir produciendo exactamente las mismas opciones mientras negocio no decida otra cosa.
  * - **Rango**, que es la capacidad nueva: el usuario elige cuántos turnos quiere dentro de un
- *   mínimo y un máximo. El mínimo es 2 —con uno no hay junta— y el máximo lo decide negocio
- *   (COPAYNI-101), así que hasta entonces conviven.
+ *   mínimo y un máximo. El mínimo es 2 —con uno no hay junta— y el máximo es 12 (COPAYNI-101).
+ *   Las dos formas conviven porque ningún rango reproduce exactamente `6,10,12`.
  *
  * El objeto solo dice qué números **se ofrecen a evaluar**. Cuáles de ellos son construibles para
  * un monto concreto lo decide la regla de cuota exacta (COPAYNI-113), que no depende de la

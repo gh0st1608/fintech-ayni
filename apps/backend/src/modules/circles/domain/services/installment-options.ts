@@ -44,7 +44,7 @@ const optionOf = (payout: Money, turns: number, cadence: Cadence): InstallmentOp
  * 2500×12 para 30.000).
  *
  * Solo se ofrecen duraciones que dan cuotas exactas en céntimos, y por eso la lista ofrecida
- * **no** es la lista configurada: con 30.000 y una configuración de 2 a 24 turnos salen 18 de las
+ * **no** es la lista configurada: con 30.000 y una configuración de 2 a 12 turnos salen 9 de las
  * 23 duraciones posibles, y con 12.000 salen 16. La regla no depende de la cadencia —reparte un
  * monto en partes iguales, no en el tiempo—, pero la duración resultante sí: 12 turnos son 12
  * meses en mensual y unas 12 semanas en semanal (COPAYNI-125).

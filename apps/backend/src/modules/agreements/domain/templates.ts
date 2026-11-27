@@ -101,7 +101,7 @@ const FREQUENCY_TEXT: Record<CadenceId, string> = {
  *
  * Va entero y con fechas reales, no como una duración en meses: hay 4,33 semanas por mes, así
  * que ninguna cantidad de semanas cuadra con un número entero de meses y «dos meses» describiría
- * una obligación distinta de la que el sistema cobra. En una junta de 24 turnos son 24 líneas, y
+ * una obligación distinta de la que el sistema cobra. En una junta de 12 turnos son 12 líneas, y
  * es el precio de que el documento diga exactamente lo que ocurre.
  */
 const scheduleText = (data: AgreementData): string[] => [

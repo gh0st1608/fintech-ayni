@@ -257,6 +257,8 @@ export class EnvironmentVariables {
    * rango sustituye a `CIRCLE_DURATION_OPTIONS`; sin ellos rige la lista, que es lo que hay hoy
    * en producción. Conviven porque ningún rango reproduce exactamente `6,10,12`: activar el rango
    * cambia lo que se ofrece, y eso se despliega cuando negocio lo decida, no al desplegar código.
+   *
+   * El máximo admitido son 12 turnos en las tres cadencias (COPAYNI-101, 27 de noviembre de 2026).
    */
   @IsOptional()
   @IsInt()
@@ -323,8 +325,13 @@ export class EnvironmentVariables {
    * Hacen falta porque el riesgo no es el mismo: con 3 días de gracia no hay solape con la cuota
    * siguiente ni en una junta semanal, pero sí hay 52 ocasiones anuales de incurrir en mora en
    * lugar de 12, y un cargo del 3 % aplicado 52 veces al año sobre el mismo capital en lugar de
-   * 12. Los valores definitivos los decide riesgo y finanzas (COPAYNI-102); la estructura existe
-   * para que no se habilite una cadencia sin ellos.
+   * 12.
+   *
+   * Los valores son los que decidió el PO el 27 de noviembre de 2026 (COPAYNI-102), con el
+   * criterio de **igualar la carga anual**, no el porcentaje por cuota: la mensual cobra 300 bps
+   * doce veces al año, 3600 bps anuales, así que la quincenal cobra 3600 / 26 ≈ 140 bps y la
+   * semanal 3600 / 52 ≈ 70 bps sobre el mismo capital. La gracia guarda la misma proporción del
+   * ciclo que los 3 días de la mensual: 2 días sobre 14 y 1 sobre 7.
    */
   @Transform(toList)
   @ArrayUnique()
@@ -332,7 +339,7 @@ export class EnvironmentVariables {
     each: true,
     message: 'DELINQUENCY_GRACE_DAYS_BY_CADENCE admite entradas cadencia:días, p. ej. weekly:1',
   })
-  DELINQUENCY_GRACE_DAYS_BY_CADENCE: string[] = [];
+  DELINQUENCY_GRACE_DAYS_BY_CADENCE: string[] = ['biweekly:2', 'weekly:1'];
 
   @Transform(toList)
   @ArrayUnique()
@@ -340,7 +347,7 @@ export class EnvironmentVariables {
     each: true,
     message: 'LATE_FEE_BPS_BY_CADENCE admite entradas cadencia:bps, p. ej. weekly:150',
   })
-  LATE_FEE_BPS_BY_CADENCE: string[] = [];
+  LATE_FEE_BPS_BY_CADENCE: string[] = ['biweekly:140', 'weekly:70'];
 
   /**
    * Cargo por mora sobre la cuota vencida, cobrado una vez, en puntos básicos (R18, propuesto:
@@ -388,6 +395,11 @@ export class EnvironmentVariables {
    * Círculos completados sin expulsión que pide un turno Fastest Payout (COPAYNI-60, R18). 0 al
    * lanzar (P10 de pending-scope §3.2): nadie tiene historial todavía y exigir 1 dejaría esos
    * turnos vacíos. El riesgo lo compensa el tope bajo de `JOIN_PAYOUT_MAX`.
+   *
+   * Es el mismo requisito en toda cadencia: el PO decidió el 27 de noviembre de 2026
+   * (COPAYNI-101) no pedir nada adicional a la semanal ni a las juntas cortas. Exigir un círculo
+   * completado para la semanal cerraría la puerta justo a quien recibe ingresos semanales y aún
+   * no tiene historial, y lo que acota la pérdida es la retención con tope (COPAYNI-102).
    */
   @IsInt()
   @Min(0)
@@ -409,14 +421,22 @@ export class EnvironmentVariables {
   PAYOUT_RETENTION_COVERAGE_DAYS: number = 60;
 
   /**
-   * Tope de la retención como parte del pozo, en puntos básicos (COPAYNI-112). 10000 es sin tope
-   * efectivo, que es el comportamiento actual: en una junta de 4 turnos, quien cobra primero ve
-   * retenido el 50 % del pozo. Si eso se acota, lo decide riesgo y finanzas (COPAYNI-102).
+   * Tope de la retención como parte del pozo, en puntos básicos (COPAYNI-112). 2500 por decisión
+   * del PO del 27 de noviembre de 2026 (COPAYNI-102): sin tope, en una junta de 4 turnos quien
+   * cobra primero ve retenida la mitad del pozo, y la junta corta pierde su sentido.
+   *
+   * El tope manda sobre la cobertura en días cuando la junta es corta o la cadencia rápida, y eso
+   * cambia dos cosas respecto de lo que había:
+   *
+   * - En una junta **mensual de 6 turnos** la retención baja de 2 cuotas a 1 (de un 33 % del pozo
+   *   a un 17 %): el miembro recibe más al cobrar y el fondo queda algo menos protegido.
+   * - En **semanal** la cobertura efectiva ya no son 60 días: con 12 turnos el tope deja 3 cuotas,
+   *   unas 3 semanas. Retener 9 de 12 cuotas serían tres cuartas partes del pozo.
    */
   @IsInt()
   @Min(0)
   @Max(10000)
-  PAYOUT_RETENTION_MAX_POT_BPS: number = 10_000;
+  PAYOUT_RETENTION_MAX_POT_BPS: number = 2_500;
 
   /**
    * Antigüedad máxima de la autenticación del personal para una acción crítica, como pausar un

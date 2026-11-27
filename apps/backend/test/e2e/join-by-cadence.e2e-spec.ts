@@ -34,7 +34,7 @@ const RANGED_JOIN_CONFIG: JoinConfigRepositoryPort = {
         }),
         savingProgramMax: pen(100_000_000),
         userPayoutLimit: null,
-        turnRange: { min: 2, max: 24 },
+        turnRange: { min: 2, max: 12 },
       }),
     ),
 };
@@ -112,9 +112,9 @@ describe('Unión por cadencia (COPAYNI-116)', () => {
       options: { turns: number; unit: string; installment: { amount: number } }[];
     };
     expect(cadence).toBe('weekly');
-    // De S/ 12.000 solo existen las duraciones con cuota exacta (COPAYNI-125), no las 23 del
+    // De S/ 12.000 solo existen las duraciones con cuota exacta (COPAYNI-125), no las 11 del
     // rango configurado.
-    expect(options.map(({ turns }) => turns)).toEqual([2, 3, 4, 5, 6, 8, 10, 12, 15, 16, 20, 24]);
+    expect(options.map(({ turns }) => turns)).toEqual([2, 3, 4, 5, 6, 8, 10, 12]);
     expect(new Set(options.map(({ unit }) => unit))).toEqual(new Set(['Semana']));
     expect(
       options.every(({ turns, installment }) => installment.amount * turns === 1_200_000),

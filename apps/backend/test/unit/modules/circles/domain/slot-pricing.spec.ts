@@ -78,7 +78,8 @@ describe('installmentOptions', () => {
 
   it('acepta los extremos del rango del Figma (3.000 y 120.000)', () => {
     expect(installmentOptions(pen(300_000), [6, 12]).map(({ months }) => months)).toEqual([6, 12]);
-    expect(installmentOptions(pen(12_000_000), [24])[0]?.installment.amount).toBe(500_000);
+    // Con el tope de 12 turnos (COPAYNI-101), 120.000 en 12 turnos son cuotas de 10.000.
+    expect(installmentOptions(pen(12_000_000), [12])[0]?.installment.amount).toBe(1_000_000);
   });
 });
 

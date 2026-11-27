@@ -97,7 +97,8 @@ Cuotas y duraciones posibles para el payout elegido (Monthly Pay-in, COPAYNI-29)
 - Las duraciones salen de la configuración, de una de estas dos formas (COPAYNI-125):
   - `CIRCLE_DURATION_OPTIONS`: la lista cerrada. Es lo que hay hoy (6, 10 y 12, como en el Figma).
   - `CIRCLE_TURNS_MIN` y `CIRCLE_TURNS_MAX`: el rango de turnos, ambos extremos incluidos. Con los dos puestos, el rango manda. Van juntos y la API no arranca con uno solo: ningún rango reproduce exactamente `6,10,12`, así que activarlo cambia lo que se ofrece y es una decisión de negocio, no un despliegue de código.
-- Solo se ofrecen las duraciones que dan cuotas exactas en céntimos: con un rango de 2 a 24, S/ 12.000 ofrece 12 duraciones de las 23 configuradas, y S/ 30.000 ofrece 18.
+- El máximo admitido son **12 turnos** en las tres cadencias (COPAYNI-101, decisión del PO del 27/11/2026): es el máximo que ya se ofrecía en mensual, no cambia el número de integrantes por junta y acota la semanal a 84 días. `CIRCLE_TURNS_MAX` no admite más.
+- Solo se ofrecen las duraciones que dan cuotas exactas en céntimos: con el rango completo de 2 a 12, S/ 12.000 ofrece 8 duraciones de las 11 configuradas, y S/ 30.000 también 8.
 - `cadence` (opcional, COPAYNI-116): la frecuencia de los turnos (`monthly`, `biweekly`, `weekly`). La mensual si falta. Tiene que estar habilitada en el servidor (`CIRCLE_CADENCES_ENABLED`) y declarada por el cliente en `x-ayni-cadences`; si no, responde `VALIDATION_ERROR` con `cadence: not_enabled` o `cadence: not_supported_by_client`.
 - `x-ayni-cadences` (opcional, COPAYNI-115): las cadencias que la app sabe mostrar.
 
@@ -319,13 +320,21 @@ Se comprueba en este orden, que es el orden en que la app resuelve cada caso:
 
 | Tipo de turno    | Requisito                                                                               | Motivo si no lo cumple |
 | ---------------- | --------------------------------------------------------------------------------------- | ---------------------- |
-| `fastest_payout` | `TRUST_FASTEST_MIN_COMPLETED_CIRCLES` círculos terminados sin expulsión (1 por defecto) | `trust_required`       |
+| `fastest_payout` | `TRUST_FASTEST_MIN_COMPLETED_CIRCLES` círculos terminados sin expulsión (0 al lanzar) | `trust_required`       |
 | `lowest_fees`    | Identidad verificada e ingreso declarado                                                | `income_required`      |
 | `highest_return` | Identidad verificada                                                                    | `identity_required`    |
 
 - `slots` marca cada turno con `allowed` y `notAllowedReason`; la unión rechaza un turno no permitido con `SLOT_NOT_ALLOWED` (422, `details.reason`).
 - **Ingreso declarado:** la app todavía no lo pide (R5), así que la elegibilidad provisional lo da por declarado.
-- **Retención:** en cada turno se retienen `PAYOUT_RETENTION_INSTALLMENTS` cuotas base del payout (2 por defecto), como mucho las que le quedan por pagar después de cobrar: `min(PAYOUT_RETENTION_INSTALLMENTS, months - position)`. El último turno no retiene nada. Antes se cortaba en la primera mitad, lo que dejaba al turno 6 de 10 con más exposición que al 5 (pending-scope §3.2, P1 y P5). `netPayout` ya la descuenta, y `retention` la muestra en `slots` y en la unión, antes de unirse.
+- **El requisito es el mismo en toda cadencia** (COPAYNI-101, 27/11/2026): la semanal y las juntas cortas no piden nada adicional. Exigir un círculo completado para la semanal cerraría la puerta justo a quien recibe ingresos semanales y aún no tiene historial; lo que acota la pérdida es la retención con tope.
+- **Retención** (COPAYNI-112, valores decididos en COPAYNI-102): en cada turno se retienen las cuotas base que cubren `PAYOUT_RETENTION_COVERAGE_DAYS` días (60), acotadas por el tope `PAYOUT_RETENTION_MAX_POT_BPS` sobre el pozo (2500 = 25 %) y por las cuotas que le quedan por pagar después de cobrar:
+
+  `retenidas = min(ceil(60 / días del turno), floor(pozo × 25 % / cuota base), turnos − posición)`
+
+  El último turno no retiene nada. Antes se cortaba en la primera mitad, lo que dejaba al turno 6 de 10 con más exposición que al 5 (pending-scope §3.2, P1 y P5). `netPayout` ya la descuenta, y `retention` la muestra en `slots` y en la unión, antes de unirse.
+- **La cobertura va en días y no en número de cuotas** porque el mismo número dejaba de significar lo mismo al cambiar la cadencia: 2 cuotas cubren 2 meses en mensual y 2 semanas en semanal. **El tope manda sobre la cobertura** cuando la junta es corta o la cadencia rápida, y eso cambia dos casos respecto de lo que había antes del tope:
+  - Junta **mensual de 6 turnos**: retiene 1 cuota y no 2 (del 33 % del pozo al 17 %).
+  - Junta **semanal de 12 turnos**: retiene 3 cuotas, unas 3 semanas, y no las 9 de los 60 días, que serían tres cuartas partes del pozo.
 - **Cómo se aplica:** al cobrar, la retención pasa a la cuenta `retention_held` del miembro. Sus últimas cuotas quedan `retained`: no se cobran y las paga la retención (`retention_applied`). Ejemplo: payout de 30.000 en 10 meses, turno 3: recibe 24.000 y sus cuotas de los meses 9 y 10 quedan pagadas.
 - **Si deja de pagar después de cobrar,** su retención va al fondo (`retention_to_fund`) y se descuenta de su deuda; el fondo cubre el resto.
 - La deducción del pay-in desde el payout de COPAYNI-38 debe usar este mismo mecanismo.
@@ -544,6 +553,20 @@ Reglas del PO (pending-scope R3 y §3.1) con los valores propuestos en R18, todo
 | Bloqueo        | Con una deuda abierta, `POST /v1/circles/join` responde `MEMBER_BLOCKED`. Un reintento de una unión anterior sigue respondiendo la unión                                                                                                                                                                           | —                                                      |
 | Desbloqueo     | Automático al saldar la deuda (`SettleMemberDebtUseCase`). Lo invocará la confirmación del pago de la pasarela (D1, COPAYNI-34); hoy no hay forma de pagar desde la app                                                                                                                                            | —                                                      |
 | Devolución     | Solo si no cobró: lo pagado menos la penalidad. Se registra y se paga al cerrar el círculo (COPAYNI-58)                                                                                                                                                                                                            | `EXPULSION_REFUND_PENALTY_BPS` (500 = 5 %, mínimo 5 %) |
+
+#### Gracia y mora por cadencia (COPAYNI-111, valores de COPAYNI-102)
+
+Decisión del PO del 27/11/2026. El criterio es **igualar la carga anual**, no el porcentaje por cuota: la mensual cobra 300 bps doce veces al año, 3.600 bps anuales sobre el mismo capital. Mantener 300 bps en semanal serían 15.600 al año, cuatro veces más, sin que nadie lo hubiera decidido. La gracia guarda la misma proporción del ciclo que los 3 días de la mensual.
+
+| Cadencia  | Ciclo   | Gracia | Cargo por mora | Ocasiones al año |
+| --------- | ------- | ------ | -------------- | ---------------- |
+| `monthly` | 30 días | 3 días | 300 bps (3 %)  | 12               |
+| `biweekly`| 14 días | 2 días | 140 bps (1,4 %)| 26               |
+| `weekly`  | 7 días  | 1 día  | 70 bps (0,7 %) | 52               |
+
+- Los valores de la mensual son `DELINQUENCY_GRACE_DAYS` y `LATE_FEE_BPS`, que **no cambian**. Los de las otras van en `DELINQUENCY_GRACE_DAYS_BY_CADENCE` y `LATE_FEE_BPS_BY_CADENCE`, con estos valores por defecto.
+- Una cadencia habilitada sin sus valores **no arranca**: no caen en los de la mensual en silencio. La gracia tiene que ser más corta que el ciclo, o se solaparía con la cuota siguiente.
+- Quedan fijados en el contrato y el pagaré que se firman (COPAYNI-119), así que un cambio posterior de configuración no altera lo ya firmado.
 
 - **Solo se expulsa por una cuota que tuvo un intento de cobro fallido.** Si la tarea no corrió y la cuota nunca se intentó cobrar, se intenta primero y, si falla, se expulsa en la ejecución siguiente: una caída del sistema no expulsa a nadie sin intento de cobro.
 - El turno libre del expulsado se maneja como cualquier turno libre (`payout_unassigned`); el reemplazo llega con COPAYNI-59.

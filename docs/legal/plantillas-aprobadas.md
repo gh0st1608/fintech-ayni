@@ -42,7 +42,7 @@ El documento se genera con una sola plantilla parametrizada, así que lo que hay
 1. **El plazo son turnos y fechas, no meses.** «Un círculo de ahorro de 10 semanas, con aportes de
    frecuencia semanal, que inicia el 2026-11-04 y termina el 2027-01-13.»
 2. **El calendario completo de vencimientos**, una línea por turno con su fecha real. En una junta
-   de 24 turnos son 24 líneas. Es lo que hace que el título coincida con lo que se cobra.
+   de 12 turnos son 12 líneas. Es lo que hace que el título coincida con lo que se cobra.
 3. **La equivalencia en meses solo como referencia**, marcada como tal y nunca como plazo: «unos
    2,8 meses (84 días corridos). El plazo de la obligación son las fechas de arriba.» No se imprime
    en cadencia mensual, donde el plazo ya está en meses.
@@ -61,8 +61,10 @@ Las preguntas de ejecutabilidad del pagaré —PG1 a PG6 de
 abiertas y se siguen en COPAYNI-99. En particular **PG3**, cómo se fija el monto de un pagaré
 cuando la deuda es contingente, que afecta a la validez del título en cualquier cadencia.
 
-Las decisiones de riesgo y finanzas sobre el cargo por mora y la retención por cadencia son
-**COPAYNI-102**, y el documento imprime los valores que esa decisión fije.
+Las decisiones de riesgo y finanzas sobre el cargo por mora y la retención por cadencia se
+cerraron en **COPAYNI-102** el 27 de noviembre de 2026: gracia de 3, 2 y 1 día y cargo por mora de
+300, 140 y 70 bps en mensual, quincenal y semanal, con la retención acotada al 25 % del pozo. El
+documento imprime esos valores, y quedan fijados en el texto que se firma.
 
 ## Cómo se aprueba una cadencia
 
