@@ -160,7 +160,14 @@ function SlotPicker({
   const [type, setType] = useState<SlotType | null>(previous?.type ?? null);
   const group = groups.find((entry) => entry.type === type);
 
-  const monthYear = (slot: Slot) => formatDate(slot.payoutDate, 'monthYear');
+  /**
+   * Cómo se nombra el cobro de un turno (COPAYNI-116).
+   *
+   * En cadencia mensual, el mes, como hasta ahora. En las demás, el día: cuatro turnos semanales
+   * caen en el mismo mes y «nov 2026» no distingue a ninguno.
+   */
+  const monthly = quote.cadence === 'monthly';
+  const payoutLabel = (slot: Slot) => formatDate(slot.payoutDate, monthly ? 'monthYear' : 'date');
   const conflict = confirm.error instanceof SlotNoLongerAvailableError;
   const proceed = () => {
     if (!selected) return;
@@ -187,8 +194,8 @@ function SlotPicker({
           const range =
             first && last
               ? t(`join.slot.typeSlots.${entry.type}`, {
-                  from: formatDate(first.payoutDate, 'month'),
-                  to: formatDate(last.payoutDate, 'month'),
+                  from: formatDate(first.payoutDate, monthly ? 'month' : 'date'),
+                  to: formatDate(last.payoutDate, monthly ? 'month' : 'date'),
                 })
               : t('join.slot.typeEmpty');
           const tag =
@@ -238,6 +245,13 @@ function SlotPicker({
         <AppText variant="highlight" weight="semibold" accessibilityRole="header">
           {t('join.slot.question')}
         </AppText>
+        {/* La duración y el fin los calcula el servidor: 4 turnos semanales son 28 días. */}
+        <AppText variant="caption" color={colors.neutral600} testID="slot-duration">
+          {t('join.slot.duration', {
+            days: quote.durationDays,
+            date: formatDate(`${quote.endsOnDate}T12:00:00`, 'date'),
+          })}
+        </AppText>
         <SegmentedTabs
           options={groups.map((entry) => ({
             key: entry.type,
@@ -251,8 +265,8 @@ function SlotPicker({
           <>
             <AppText variant="caption" color={colors.neutral600} testID="slot-type-summary">
               {`${t('join.slot.typeRange', {
-                from: monthYear(group.slots[0]!),
-                to: monthYear(group.slots[group.slots.length - 1]!),
+                from: payoutLabel(group.slots[0]!),
+                to: payoutLabel(group.slots[group.slots.length - 1]!),
               })} ${t(`join.slot.typeTag.${type}`)}`}
             </AppText>
             <View
@@ -264,6 +278,7 @@ function SlotPicker({
                 <SlotCard
                   key={slot.position}
                   slot={slot}
+                  payoutLabel={payoutLabel(slot)}
                   selected={selected?.position === slot.position}
                   onSelect={() => {
                     confirm.reset();
@@ -286,7 +301,9 @@ function SlotPicker({
       <Button
         label={
           selected
-            ? t('join.slot.continueWith', { month: formatDate(selected.payoutDate, 'month') })
+            ? t('join.slot.continueWith', {
+                month: formatDate(selected.payoutDate, monthly ? 'month' : 'date'),
+              })
             : t('join.next')
         }
         disabled={!selected}
@@ -300,16 +317,18 @@ function SlotPicker({
 /** Tarjeta de mes del Figma: mes y turno arriba; fees o "Sin fees", descuento y ajustes abajo. */
 function SlotCard({
   slot,
+  payoutLabel,
   selected,
   onSelect,
 }: {
   slot: Slot;
+  /** Cuándo cobra ese turno, ya formateado: el mes en mensual y el día en las demás. */
+  payoutLabel: string;
   selected: boolean;
   onSelect: () => void;
 }) {
   const { t } = useTranslation();
   const formatMoney = useFormatMoney();
-  const formatDate = useFormatDate();
   const money = (amount: Money) => formatMoney(amount, { trimZeroDecimals: true });
   const details: { text: string; color: string }[] = [];
   if (slot.fee.amount > 0) {
@@ -336,7 +355,7 @@ function SlotCard({
   const reason = slot.notAllowedReason
     ? t(`join.slot.notAllowed.${slot.notAllowedReason}`)
     : t('join.slot.taken');
-  const month = formatDate(slot.payoutDate, 'monthYear');
+  const month = payoutLabel;
   const position = t('join.slot.position', { position: slot.position });
   const label = [
     month,

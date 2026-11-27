@@ -14,20 +14,27 @@ import { SlotScreen } from './screens/SlotScreen';
 
 const pen = (major: number) => Money.fromMajor(major, 'PEN');
 
+const TEN_MONTHS = InstallmentOption.create({ months: 10, installment: pen(3_000) });
+
 /** Precarga los pasos 1 y 2 (30.000 en 10 cuotas) y muestra el slot guardado. */
-function Draft({ complete = true }: { complete?: boolean }) {
-  const { draft, start, setInstallment } = useJoinFlow();
+function Draft({
+  complete = true,
+  option = TEN_MONTHS,
+}: {
+  complete?: boolean;
+  option?: InstallmentOption;
+}) {
+  const { draft, start, setCadence, setInstallment } = useJoinFlow();
   const started = useRef(false);
   useEffect(() => {
     if (started.current || !complete) return;
     started.current = true;
+    setCadence(option.cadence);
     start(pen(30_000));
-  }, [complete, start]);
+  }, [complete, option.cadence, setCadence, start]);
   useEffect(() => {
-    if (draft.payoutAmount && !draft.installment) {
-      setInstallment(InstallmentOption.create({ months: 10, installment: pen(3_000) }));
-    }
-  }, [draft, setInstallment]);
+    if (draft.payoutAmount && !draft.installment) setInstallment(option);
+  }, [draft, option, setInstallment]);
   return <Text testID="draft">{draft.slot ? `slot ${draft.slot.position}` : 'none'}</Text>;
 }
 
@@ -38,11 +45,16 @@ function quote(options: { takenPositions?: number[] } = {}) {
 async function renderSlot({
   circleQuote = quote(),
   complete = true,
-}: { circleQuote?: InMemoryCircleQuoteRepository; complete?: boolean } = {}) {
+  option,
+}: {
+  circleQuote?: InMemoryCircleQuoteRepository;
+  complete?: boolean;
+  option?: InstallmentOption;
+} = {}) {
   const handlers = { onEditPayout: jest.fn(), onEditInstallment: jest.fn(), onNext: jest.fn() };
   const view = await renderWithProviders(
     <JoinFlowProvider>
-      <Draft complete={complete} />
+      <Draft complete={complete} option={option} />
       <SlotScreen {...handlers} />
     </JoinFlowProvider>,
     createTestContainer({ circleQuote }),
@@ -55,6 +67,39 @@ const tab = (name: string) => screen.getByRole('tab', { name });
 /** Figma 55:9377: primero se elige el tipo de turno; luego aparecen los meses. */
 const pickType = async (type = 'fastestPayout') =>
   fireEvent.press(await screen.findByTestId(`slot-type-${type}`));
+
+/** 30.000 en 4 turnos semanales: los cuatro caen en noviembre. */
+const FOUR_WEEKS = InstallmentOption.create({
+  turns: 4,
+  installment: pen(7_500),
+  cadence: 'weekly',
+  unit: 'Semana',
+  approximateDays: 28,
+});
+
+describe('SlotScreen en una junta semanal (COPAYNI-116)', () => {
+  it('identifica cada turno por su día y dice cuánto dura la junta', async () => {
+    await renderSlot({ option: FOUR_WEEKS });
+    await pickType('lowestFees');
+
+    // La duración y el fin los calcula el servidor: 4 turnos de 7 días.
+    expect(await screen.findByTestId('slot-duration')).toHaveTextContent(
+      /dura 28 días y termina el 22 nov\.? 2026/i,
+    );
+    // Los cuatro turnos caen en noviembre: lo que los distingue es el día.
+    const cards = await screen.findByTestId('slot-2');
+    expect(cards).toHaveTextContent(/8 nov\.? 2026/i);
+    expect(screen.getByTestId('slot-3')).toHaveTextContent(/15 nov\.? 2026/i);
+    expect(screen.getByTestId('slot-2')).not.toHaveTextContent(/^nov\.? 2026$/i);
+  });
+
+  it('en una junta mensual sigue mostrando el mes, como hasta ahora', async () => {
+    await renderSlot();
+    await pickType('lowestFees');
+
+    expect(await screen.findByTestId('slot-3')).toHaveTextContent(/ene\.? 2027/i);
+  });
+});
 
 describe('SlotScreen', () => {
   it('muestra el paso 3 de 4 con el resumen editable y los tres tipos de turno', async () => {

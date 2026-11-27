@@ -139,8 +139,8 @@
     },
     "slot": {
       "title": "Payout Slot",
-      "question": "In which month do you want to receive your payout?",
-      "installmentSummaryLabel": "Monthly pay-in",
+      "question": "When do you want to receive your pot?",
+      "installmentSummaryLabel": "Your installment",
       "installmentSummary": "{{amount}} {{per}} · {{turns}}",
       "editInstallmentA11y": "Edit the monthly pay-in",
       "types": {
@@ -180,7 +180,8 @@
         "fastestPayout": "First slots (from {{from}} to {{to}})",
         "lowestFees": "Middle slots (from {{from}} to {{to}})",
         "highestReturn": "Last slots (from {{from}} to {{to}})"
-      }
+      },
+      "duration": "The circle lasts {{days}} days and ends on {{date}}"
     },
     "payoutMethod": {
       "title": "Payout Method",

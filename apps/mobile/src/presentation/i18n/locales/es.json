@@ -139,8 +139,8 @@
     },
     "slot": {
       "title": "Turno de cobro",
-      "question": "¿En qué mes quieres recibir tu pozo?",
-      "installmentSummaryLabel": "Cuota mensual",
+      "question": "¿Cuándo quieres recibir tu pozo?",
+      "installmentSummaryLabel": "Tu cuota",
       "installmentSummary": "{{amount}} {{per}} · {{turns}}",
       "editInstallmentA11y": "Editar la cuota mensual",
       "types": {
@@ -180,7 +180,8 @@
         "fastestPayout": "Primeros turnos (de {{from}} a {{to}})",
         "lowestFees": "Turnos intermedios (de {{from}} a {{to}})",
         "highestReturn": "Últimos turnos (de {{from}} a {{to}})"
-      }
+      },
+      "duration": "La junta dura {{days}} días y termina el {{date}}"
     },
     "payoutMethod": {
       "title": "Método de cobro",

@@ -16,6 +16,8 @@ import type { Money } from '@/domain/shared/value-objects/Money';
 import { moneyDto, toMoney } from './moneyDto';
 
 /** DTO de GET /circles/installment-options (docs/api/circles.md). */
+const DAY = /^\d{4}-\d{2}-\d{2}$/;
+
 const cadenceDto = z.enum(['monthly', 'biweekly', 'weekly']);
 
 const installmentOptionsDto = z.object({
@@ -67,8 +69,6 @@ const RESTRICTION_BY_DTO = {
 } as const satisfies Record<string, SlotRestriction>;
 
 /** DTO de GET /circles/slots (docs/api/circles.md). */
-const DAY = /^\d{4}-\d{2}-\d{2}$/;
-
 const slotsDto = z.object({
   /** Círculo ofrecido; `null` si es uno nuevo. */
   circleId: z.string().min(1).nullable(),
@@ -87,6 +87,8 @@ const slotsDto = z.object({
     z.object({
       position: z.number().int().positive(),
       payoutPeriod: z.string(),
+      /** Día real de cobro (COPAYNI-116); un backend anterior no lo envía. */
+      payoutOn: z.string().regex(DAY).optional(),
       type: z.enum(['fastest_payout', 'lowest_fees', 'highest_return']),
       fee: moneyDto,
       discount: moneyDto,
@@ -200,6 +202,7 @@ export class CircleQuoteApiRepository implements CircleQuoteRepositoryPort {
       Slot.create({
         position: slot.position,
         payoutPeriod: slot.payoutPeriod,
+        payoutOn: slot.payoutOn,
         type: SLOT_TYPE_BY_DTO[slot.type],
         fee: toMoney(slot.fee),
         discount: toMoney(slot.discount),

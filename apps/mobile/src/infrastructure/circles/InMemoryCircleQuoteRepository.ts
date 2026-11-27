@@ -131,9 +131,15 @@ export class InMemoryCircleQuoteRepository implements CircleQuoteRepositoryPort 
       let type: SlotType = 'lowestFees';
       if (position <= fastest) type = 'fastestPayout';
       else if (position > months - highest) type = 'highestReturn';
+      // En mensual, el turno cae en su mes; en las demás, cada N días desde el arranque.
+      const payoutOn =
+        cadence === 'monthly'
+          ? `${addMonths(startsOn, index)}-01`
+          : addDays(`${startsOn}-01`, index * TURN_DAYS[cadence]);
       return Slot.create({
         position,
-        payoutPeriod: addMonths(startsOn, index),
+        payoutPeriod: payoutOn.slice(0, 7),
+        payoutOn,
         type,
         fee:
           type === 'fastestPayout'
