@@ -9,9 +9,24 @@ export class NationalIdRequiredError extends DomainError {
   readonly code = 'NATIONAL_ID_REQUIRED';
 }
 
-/** Las cuotas del slot superan el límite mensual de pay-in del Perfil (R5). */
+/**
+ * Las cuotas que caerían en un mes superan el límite mensual de pay-in del Perfil (R5).
+ *
+ * El límite se compara contra la **suma del mes**, no contra una cuota (COPAYNI-110): en una
+ * junta semanal caen cuatro o cinco cuotas en el mismo mes. El backend informa de qué mes se
+ * trata y en cuánto se pasa; `month` y `excess` son `null` si no los envió.
+ */
 export class MonthlyLimitExceededError extends DomainError {
   readonly code = 'MONTHLY_LIMIT_EXCEEDED';
+
+  constructor(
+    message: string,
+    /** `YYYY-MM` del mes que se pasa del límite. */
+    readonly month: string | null = null,
+    readonly excess: Money | null = null,
+  ) {
+    super(message);
+  }
 }
 
 /** Falta el método de cobro, o el elegido ya no está disponible. */

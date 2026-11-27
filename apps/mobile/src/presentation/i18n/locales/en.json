@@ -226,7 +226,8 @@
         "memberBlocked": "You were removed from a circle for missing an installment. Pay the overdue amount plus the late fee ({{amount}}) to join another one.",
         "memberBlockedNoAmount": "You were removed from a circle for missing an installment. Pay the overdue amount plus the late fee to join another one.",
         "slotNotAllowed": "You can't take this type of slot yet. Choose another one.",
-        "termsOutdated": "The circle terms changed. Review and accept them again to join."
+        "termsOutdated": "The circle terms changed. Review and accept them again to join.",
+        "monthlyLimitExceededDetail": "In {{month}} your installments exceed your monthly limit by {{amount}}."
       },
       "actions": {
         "verifyIdentity": "Verify my National ID",

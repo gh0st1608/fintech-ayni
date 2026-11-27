@@ -154,7 +154,8 @@ function Review({
     },
   ];
 
-  const recovery = recoveryFor(t, money, join.error, {
+  const monthName = (period: string) => formatDate(`${period}-01T12:00:00`, 'monthYear');
+  const recovery = recoveryFor(t, money, monthName, join.error, {
     onEditSlot,
     onEditPayoutMethod,
     onVerifyIdentity,
@@ -233,6 +234,8 @@ interface Recovery {
 function recoveryFor(
   t: TFunction,
   money: (amount: Money) => string,
+  /** El mes `YYYY-MM` con el nombre del idioma activo. */
+  monthName: (period: string) => string,
   error: Error | null,
   actions: Pick<
     JoinConfirmScreenProps,
@@ -249,7 +252,13 @@ function recoveryFor(
   }
   if (error instanceof MonthlyLimitExceededError) {
     return {
-      message: t('join.confirm.errors.monthlyLimitExceeded'),
+      message:
+        error.month && error.excess
+          ? t('join.confirm.errors.monthlyLimitExceededDetail', {
+              month: monthName(error.month),
+              amount: money(error.excess),
+            })
+          : t('join.confirm.errors.monthlyLimitExceeded'),
       action: withAction(t('join.confirm.actions.increaseLimit'), actions.onIncreaseLimit),
     };
   }

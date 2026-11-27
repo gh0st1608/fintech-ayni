@@ -226,7 +226,8 @@
         "memberBlocked": "Fuiste expulsado de una junta por no pagar una cuota. Paga lo vencido más el cargo por mora ({{amount}}) para unirte a otra.",
         "memberBlockedNoAmount": "Fuiste expulsado de una junta por no pagar una cuota. Paga lo vencido más el cargo por mora para unirte a otra.",
         "slotNotAllowed": "Todavía no puedes tomar ese tipo de turno. Elige otro.",
-        "termsOutdated": "Los términos del círculo cambiaron. Revísalos y acéptalos de nuevo para unirte."
+        "termsOutdated": "Los términos del círculo cambiaron. Revísalos y acéptalos de nuevo para unirte.",
+        "monthlyLimitExceededDetail": "En {{month}} tus cuotas se pasan de tu límite mensual en {{amount}}."
       },
       "actions": {
         "verifyIdentity": "Verificar mi National ID",

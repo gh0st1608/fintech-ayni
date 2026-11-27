@@ -182,13 +182,22 @@ export class InMemoryCircleMembershipRepository implements CircleMembershipRepos
       this.rejection = undefined;
       // Como el backend: lo vencido (una cuota base) más 3 % de cargo por mora, en unidades menores.
       const installment = Math.round(request.payout.amount / request.months);
-      const fieldErrors =
-        code === 'MEMBER_BLOCKED'
-          ? {
-              amountDue: String(installment + Math.round(installment * 0.03)),
-              currency: request.payout.currency,
-            }
-          : undefined;
+      let fieldErrors: Record<string, string> | undefined;
+      if (code === 'MEMBER_BLOCKED') {
+        fieldErrors = {
+          amountDue: String(installment + Math.round(installment * 0.03)),
+          currency: request.payout.currency,
+        };
+      }
+      if (code === 'MONTHLY_LIMIT_EXCEEDED') {
+        // El backend dice qué mes se pasa y en cuánto (COPAYNI-110).
+        fieldErrors = {
+          month: this.options.startsOn ?? nextMonth(),
+          total: String(installment),
+          excess: String(Math.round(installment / 2)),
+          currency: request.payout.currency,
+        };
+      }
       throw new AppError(REJECTIONS[code], `Join rejected: ${code}`, { code, fieldErrors });
     }
 

@@ -245,7 +245,7 @@ describe('JoinConfirmScreen', () => {
     ],
     [
       'MONTHLY_LIMIT_EXCEEDED',
-      /superan tu límite mensual/,
+      /tus cuotas se pasan de tu límite mensual en/,
       'Aumentar mi límite',
       'onIncreaseLimit',
     ],
@@ -275,6 +275,24 @@ describe('JoinConfirmScreen', () => {
       expect((view as unknown as Record<string, jest.Mock>)[handler]).toHaveBeenCalled();
     },
   );
+
+  it('al pasarse del límite mensual dice qué mes y en cuánto (COPAYNI-110)', async () => {
+    // El límite se compara contra la suma del mes, no contra una cuota: en una junta semanal
+    // caen cuatro o cinco cuotas en el mismo mes, y hay que decir cuál se pasa.
+    await renderConfirm({
+      circleMembership: new InMemoryCircleMembershipRepository({
+        latencyMs: 0,
+        startsOn: '2027-03',
+        rejectWith: 'MONTHLY_LIMIT_EXCEEDED',
+      }),
+    });
+
+    await fireEvent.press(await submit());
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      /En mar\.? 2027 tus cuotas se pasan de tu límite mensual en 1\.?500/,
+    );
+  });
 
   it('muestra la retención del payout antes de unirse (COPAYNI-60)', async () => {
     await renderConfirm({
