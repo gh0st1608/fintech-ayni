@@ -1,3 +1,4 @@
+import type { Cadence } from './MyCircleDetail';
 import { DomainError } from '@/domain/shared/errors/DomainError';
 import type { Money } from '@/domain/shared/value-objects/Money';
 
@@ -8,9 +9,24 @@ export class NationalIdRequiredError extends DomainError {
   readonly code = 'NATIONAL_ID_REQUIRED';
 }
 
-/** Las cuotas del slot superan el límite mensual de pay-in del Perfil (R5). */
+/**
+ * Las cuotas que caerían en un mes superan el límite mensual de pay-in del Perfil (R5).
+ *
+ * El límite se compara contra la **suma del mes**, no contra una cuota (COPAYNI-110): en una
+ * junta semanal caen cuatro o cinco cuotas en el mismo mes. El backend informa de qué mes se
+ * trata y en cuánto se pasa; `month` y `excess` son `null` si no los envió.
+ */
 export class MonthlyLimitExceededError extends DomainError {
   readonly code = 'MONTHLY_LIMIT_EXCEEDED';
+
+  constructor(
+    message: string,
+    /** `YYYY-MM` del mes que se pasa del límite. */
+    readonly month: string | null = null,
+    readonly excess: Money | null = null,
+  ) {
+    super(message);
+  }
 }
 
 /** Falta el método de cobro, o el elegido ya no está disponible. */
@@ -44,6 +60,8 @@ export interface JoinCircleRequest {
   payout: Money;
   months: number;
   position: number;
+  /** Frecuencia elegida (COPAYNI-116); la mensual si falta, que es lo que hacía la app antes. */
+  cadence?: Cadence;
   /** Versión de los términos que el usuario aceptó en la confirmación (COPAYNI-86). */
   termsVersion: string;
 }

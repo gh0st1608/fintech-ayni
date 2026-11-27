@@ -33,6 +33,8 @@ export class ConfigJoinConfigRepository implements JoinConfigRepositoryPort {
   ) {
     this.official = currencies.official;
     const money = (amount: number) => Money.of(amount, currencies.official);
+    const min = config.get('CIRCLE_TURNS_MIN', { infer: true });
+    const max = config.get('CIRCLE_TURNS_MAX', { infer: true });
     const base = JoinConfig.create({
       payoutRange: PayoutRange.create({
         min: money(config.get('JOIN_PAYOUT_MIN', { infer: true })),
@@ -41,7 +43,11 @@ export class ConfigJoinConfigRepository implements JoinConfigRepositoryPort {
       }),
       savingProgramMax: money(config.get('SAVING_PROGRAM_MAX', { infer: true })),
       userPayoutLimit: null,
-      durationOptions: config.get('CIRCLE_DURATION_OPTIONS', { infer: true }),
+      // El rango manda cuando está configurado; si no, la lista cerrada de siempre
+      // (COPAYNI-125). La validación de entorno garantiza que los dos extremos van juntos.
+      ...(min !== undefined && max !== undefined
+        ? { turnRange: { min, max } }
+        : { durationOptions: config.get('CIRCLE_DURATION_OPTIONS', { infer: true }) }),
     });
     this.byCurrency = new Map(
       currencies.supported.map((currency) => [

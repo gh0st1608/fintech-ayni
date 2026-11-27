@@ -37,6 +37,7 @@ export class SyncNotificationsUseCase {
       userId,
       today,
       dueSoonDays: this.settings.dueSoonDays,
+      dueSoonDaysByCadence: this.settings.dueSoonDaysByCadence,
     });
     if (!userId) this.logger.log({ event: 'notifications.synced', created, today });
     return created;

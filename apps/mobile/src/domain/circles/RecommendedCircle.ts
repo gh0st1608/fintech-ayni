@@ -1,3 +1,4 @@
+import type { Cadence } from './MyCircleDetail';
 import type { Money } from '@/domain/shared/value-objects/Money';
 
 /** Un círculo abierto que se le recomienda al usuario (GET /circles/recommended). */
@@ -24,4 +25,6 @@ export interface RecommendedCircle {
 export interface JoinTarget {
   circleId: string;
   months: number;
+  /** Cadencia del círculo recomendado (COPAYNI-116); la mensual si el backend no la envía. */
+  cadence?: Cadence;
 }

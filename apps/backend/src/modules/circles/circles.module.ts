@@ -115,6 +115,7 @@ import {
   CIRCLE_CYCLE,
   type CircleCycleSettings,
 } from './application/use-cases/advance-circle-cycles.use-case';
+import { delinquencyByCadenceFrom } from './application/use-cases/cycle-settings';
 import { GetInstallmentOptionsUseCase } from './application/use-cases/get-installment-options.use-case';
 import { CIRCLE_TERMS, type CircleTermsSettings } from './application/use-cases/circle-terms';
 import { GetJoinConfigUseCase } from './application/use-cases/get-join-config.use-case';
@@ -207,6 +208,13 @@ import { MyCirclesController } from './presentation/http/controllers/my-circles.
           lateFeeBps: config.get('LATE_FEE_BPS', { infer: true }),
           refundPenaltyBps: config.get('EXPULSION_REFUND_PENALTY_BPS', { infer: true }),
         },
+        // Y las de las demás cadencias (COPAYNI-111): la validación de entorno ya garantizó que
+        // toda cadencia habilitada tiene las suyas.
+        delinquencyByCadence: delinquencyByCadenceFrom({
+          graceDays: config.get('DELINQUENCY_GRACE_DAYS_BY_CADENCE', { infer: true }),
+          lateFeeBps: config.get('LATE_FEE_BPS_BY_CADENCE', { infer: true }),
+          refundPenaltyBps: config.get('EXPULSION_REFUND_PENALTY_BPS', { infer: true }),
+        }),
         fundFeeShareBps: config.get('GUARANTEE_FUND_FEE_SHARE_BPS', { infer: true }),
       }),
     },
@@ -358,7 +366,8 @@ import { MyCirclesController } from './presentation/http/controllers/my-circles.
             maxDiscountBps: config.get('SLOT_MAX_DISCOUNT_BPS', { infer: true }),
             adminFeeBps: config.get('ADMIN_FEE_BPS', { infer: true }),
             adminFeeMode: config.get('ADMIN_FEE_MODE', { infer: true }),
-            retentionInstallments: config.get('PAYOUT_RETENTION_INSTALLMENTS', { infer: true }),
+            retentionCoverageDays: config.get('PAYOUT_RETENTION_COVERAGE_DAYS', { infer: true }),
+            retentionMaxPotBps: config.get('PAYOUT_RETENTION_MAX_POT_BPS', { infer: true }),
           }),
         ),
     },

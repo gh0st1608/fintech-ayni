@@ -11,8 +11,8 @@ import { PayoutNotAllowedError } from './get-installment-options.use-case';
 export function offeredPayout(joinConfig: JoinConfig, payoutAmount: number, months: number): Money {
   const payout = Money.of(payoutAmount, joinConfig.payoutRange.currency);
   if (!joinConfig.allowsPayout(payout)) throw new PayoutNotAllowedError();
-  const offered = installmentOptions(payout, joinConfig.durationOptions);
-  if (!offered.some((option) => option.months === months)) {
+  const offered = installmentOptions(payout, joinConfig.turnOptions);
+  if (!offered.some((option) => option.turns === months)) {
     throw new ValidationError('La duración no es una opción para ese payout', {
       months: 'not_offered',
     });

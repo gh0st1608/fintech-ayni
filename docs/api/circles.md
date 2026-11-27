@@ -30,6 +30,21 @@ Usa el contrato común de respuestas descrito en [auth.md](auth.md). Requiere `A
 - **Deuda por impago en varias monedas:** `MEMBER_BLOCKED` informa el total en PEN, convertido hacia arriba.
 - **Supuestos de esta iteración:** el saldo de referidos solo se descuenta de cuotas en PEN; el programa de ahorro y la tarjeta prepago siguen en PEN.
 
+## Cadencias y capacidad del cliente (COPAYNI-100, 115 y 121)
+
+Una junta puede ser **mensual**, **quincenal** o **semanal**. El turno es un ordinal (1..N), no un mes: en una junta semanal de 4 turnos los cuatro caen en el mismo mes, así que el mes identifica el turno solo en cadencia mensual.
+
+**`X-Ayni-Cadences` (cabecera, opcional).** El cliente declara las cadencias que **sabe mostrar**, separadas por comas: `monthly`, `biweekly`, `weekly`.
+
+- **Sin la cabecera, el servidor asume `monthly` únicamente.** Es lo que hace la app ya publicada, que interpreta `months`, `startsOn` y `payoutPeriod` como meses: si recibiera una junta semanal, mostraría cifras y fechas equivocadas sobre dinero real.
+- `GET /v1/circles/recommended` y `GET /v1/circles/slots` solo devuelven juntas de las cadencias declaradas.
+- Alcanzar una junta de otra cadencia por su `circleId`, en `slots` o en `join`, responde **400** `VALIDATION_ERROR` con `details: { cadence: "not_supported_by_client" }`. No hay respuesta degradada.
+- Una cadencia desconocida en la cabecera responde **400** `VALIDATION_ERROR` con `details: { "x-ayni-cadences": "invalid" }`, en lugar de ignorarse.
+
+**Qué cadencias existen en el servidor** lo decide `CIRCLE_CADENCES_ENABLED`, con `monthly` como único valor por defecto y obligatorio. Pedir una no habilitada responde **400** `VALIDATION_ERROR` con `details: { cadence: "not_enabled" }`. Son dos puertas distintas: una cadencia puede estar habilitada en el servidor y aun así no enviarse a una app que no la declara.
+
+Mientras el valor por defecto siga siendo `monthly`, el contrato es idéntico al anterior a las cadencias.
+
 ## `GET /v1/circles/join-config`
 
 Montos permitidos para unirse a un Game'ya o al programa de ahorro.
@@ -51,6 +66,7 @@ Montos permitidos para unirse a un Game'ya o al programa de ahorro.
     { "code": "PEN", "official": true, "rateToOfficial": "1" },
     { "code": "USD", "official": false, "rateToOfficial": "3.75" }
   ],
+  "cadences": [{ "id": "monthly", "unit": "Mes", "turnDays": 30, "default": true }],
   "termsVersion": "2026-11"
 }
 ```
@@ -61,6 +77,7 @@ Montos permitidos para unirse a un Game'ya o al programa de ahorro.
 | `userPayoutLimit`  | Payout máximo según el límite mensual del usuario (R5), o `null` si no lo restringe.                              |
 | `savingProgramMax` | Máximo del programa de ahorro, para la descripción de "Elige un servicio".                                        |
 | `currencies`       | Monedas habilitadas; la oficial va primero. `rateToOfficial`: unidades de PEN por unidad de esa moneda.           |
+| `cadences`         | Frecuencias que se pueden elegir (COPAYNI-116): las habilitadas en el servidor **y** declaradas en `x-ayni-cadences`. Cada una con su `unit` y los días de su turno. |
 | `termsVersion`     | Versión vigente de los términos del círculo (`CIRCLE_TERMS_VERSION`). La app la envía al unirse (COPAYNI-86).     |
 
 Comportamiento de la app:
@@ -68,6 +85,7 @@ Comportamiento de la app:
 - Si `userPayoutLimit` es menor que `payout.max`, el slider se corta en ese monto (ajustado al salto) y se explica cómo aumentarlo.
 - Si es menor que `payout.min`, no se ofrece el slider: el usuario aún no puede unirse.
 - Una respuesta que no cumple el esquema se rechaza (`INVALID_RESPONSE`).
+- Con **una sola** cadencia en `cadences`, la app no muestra el paso de frecuencia: el flujo es el mensual de siempre. Es lo que recibe la app publicada, que no envía la cabecera.
 - Con más de una moneda, Payout Amount muestra arriba las pestañas de moneda (el estilo de "Choose turn", Figma 55:9444) y, en una moneda que no es la oficial, el tipo de cambio fijo. `installment-options`, `slots` y `join` reciben la moneda elegida (`currency`).
 
 ## `GET /v1/circles/installment-options?payoutAmount=<entero>`
@@ -76,24 +94,54 @@ Cuotas y duraciones posibles para el payout elegido (Monthly Pay-in, COPAYNI-29)
 
 - `payoutAmount`: en unidades menores. Tiene que estar en el rango de `join-config`, caer en un salto del slider y no superar `userPayoutLimit`.
 - `currency` (opcional): la moneda del Game'ya; sin ella, la oficial. Lo mismo vale para `slots` (query) y `join` (cuerpo).
-- Las duraciones salen de la configuración (`CIRCLE_DURATION_OPTIONS`; provisional: 6, 10 y 12 meses, como en el Figma).
-- Solo se ofrecen las duraciones que dan cuotas exactas en céntimos.
+- Las duraciones salen de la configuración, de una de estas dos formas (COPAYNI-125):
+  - `CIRCLE_DURATION_OPTIONS`: la lista cerrada. Es lo que hay hoy (6, 10 y 12, como en el Figma).
+  - `CIRCLE_TURNS_MIN` y `CIRCLE_TURNS_MAX`: el rango de turnos, ambos extremos incluidos. Con los dos puestos, el rango manda. Van juntos y la API no arranca con uno solo: ningún rango reproduce exactamente `6,10,12`, así que activarlo cambia lo que se ofrece y es una decisión de negocio, no un despliegue de código.
+- Solo se ofrecen las duraciones que dan cuotas exactas en céntimos: con un rango de 2 a 24, S/ 12.000 ofrece 12 duraciones de las 23 configuradas, y S/ 30.000 ofrece 18.
+- `cadence` (opcional, COPAYNI-116): la frecuencia de los turnos (`monthly`, `biweekly`, `weekly`). La mensual si falta. Tiene que estar habilitada en el servidor (`CIRCLE_CADENCES_ENABLED`) y declarada por el cliente en `x-ayni-cadences`; si no, responde `VALIDATION_ERROR` con `cadence: not_enabled` o `cadence: not_supported_by_client`.
+- `x-ayni-cadences` (opcional, COPAYNI-115): las cadencias que la app sabe mostrar.
 
 **200**:
 
 ```json
 {
   "payout": { "amount": 3000000, "currency": "PEN" },
+  "cadence": "monthly",
   "options": [
-    { "months": 6, "installment": { "amount": 500000, "currency": "PEN" } },
-    { "months": 10, "installment": { "amount": 300000, "currency": "PEN" } },
-    { "months": 12, "installment": { "amount": 250000, "currency": "PEN" } }
-  ]
+    {
+      "turns": 6,
+      "months": 6,
+      "installment": { "amount": 500000, "currency": "PEN" },
+      "cadence": "monthly",
+      "unit": "Mes",
+      "approximateDays": 180
+    },
+    {
+      "turns": 10,
+      "months": 10,
+      "installment": { "amount": 300000, "currency": "PEN" },
+      "cadence": "monthly",
+      "unit": "Mes",
+      "approximateDays": 300
+    },
+    {
+      "turns": 12,
+      "months": 12,
+      "installment": { "amount": 250000, "currency": "PEN" },
+      "cadence": "monthly",
+      "unit": "Mes",
+      "approximateDays": 360
+    }
+  ],
+  "alternatives": []
 }
 ```
 
-- `installment` es la **cuota base** (payout / meses). La del slot elegido varía con su fee, su descuento y las Admin Fees: es el aviso de la pantalla.
-- `options` va de menor a mayor duración y puede venir vacío si ninguna duración da cuotas exactas.
+- `installment` es la **cuota base** (payout / turnos). La del slot elegido varía con su fee, su descuento y las Admin Fees: es el aviso de la pantalla.
+- `turns` es el número de turnos, que son los puestos y las cuotas. `months` es su alias y vale lo mismo: lo lee la app publicada y se mantiene (COPAYNI-122).
+- `unit` y `approximateDays` son la duración derivada de la cadencia: 12 turnos son 12 meses («Mes», ~360 días) en mensual y 12 semanas («Semana», 84 días) en semanal. La cuota es la misma; lo que cambia es cuánto dura la junta.
+- `options` va de menor a mayor duración.
+- `alternatives`: con `options` vacío, los montos ofrecibles más cercanos —el anterior y el siguiente del slider que sí existen— con las duraciones de cada uno. Un monto válido del slider sin ninguna duración exacta no se responde con una lista vacía a secas: el usuario no tiene por qué deducir que el problema es la divisibilidad. Con `options` no vacío llega vacío, y queda vacío también si ningún monto del rango admite ninguna duración.
 - **Propuesto (R5, no implementado en el backend):** `withinMonthlyLimit` (boolean, opcional) en cada opción. Con `false`, la cuota supera el límite mensual de pay-in del usuario y la app la muestra deshabilitada con el motivo (COPAYNI-29). Si falta, la app no restringe la opción.
 
 | Error                | HTTP | Cuándo                                                          |
@@ -101,14 +149,30 @@ Cuotas y duraciones posibles para el payout elegido (Monthly Pay-in, COPAYNI-29)
 | `VALIDATION_ERROR`   | 400  | Falta `payoutAmount`, no es un entero o hay parámetros de más.  |
 | `PAYOUT_NOT_ALLOWED` | 422  | Fuera del rango, fuera del salto o sobre el límite del usuario. |
 
-## `GET /v1/circles/slots?payoutAmount=<entero>&months=<entero>[&circleId=<uuid>]`
+## `GET /v1/circles/slots?payoutAmount=<entero>&months=<entero>[&circleId=<uuid>][&cadence=<id>]`
 
 **Estado:** implementado en el backend (COPAYNI-30), con una **regla provisional** para elegir el círculo (R2). La app la consume con `CircleQuoteApiRepository` y, en dev, con el adaptador falso.
 
 Slots del círculo que se le ofrece al usuario con ese payout y esa duración, ocupados incluidos, con el precio que calcula `SlotPricing` (COPAYNI-24).
 
 - `payoutAmount` y `months` tienen que ser una combinación de `installment-options`.
+- `cadence` (opcional, COPAYNI-116): la frecuencia pedida, con las mismas dos puertas que en `installment-options`. Con `circleId` manda la cadencia del círculo, y lo que se comprueba es que el cliente la declare.
+- La respuesta añade `turns`, `cadence`, `unit`, `endsOn`, `endsOnDate` y `durationDays`: la duración se muestra en la unidad de la cadencia y con la **fecha real de fin**, no como un número de meses, que fuera de la mensual no cuadra. 4 turnos semanales son 28 días; 4 quincenales, 56. `months` sigue siendo el alias de `turns`.
 - `circleId` (opcional, COPAYNI-59): los slots de ese círculo, el de un recomendado de Home, en vez del que asigna la regla de abajo. Tiene que tener ese payout y esa duración, y el usuario no puede ser miembro. Si el círculo está en curso, solo sus [vacantes abiertas](#reemplazo-del-turno-copayni-59) tienen `available: true`, con el precio de la puesta al día.
+
+### Elegir la frecuencia y el número de turnos (COPAYNI-116)
+
+El flujo de unión pedía monto, duración en meses de una lista cerrada y turno de cobro. Con cadencias:
+
+1. **Frecuencia.** La app ofrece solo las cadencias que declara soportar y que el servidor habilita. Sin la cabecera, el paso no existe y el flujo es el mensual de siempre.
+2. **Monto.** Igual que hoy, del slider de `join-config`.
+3. **Número de turnos.** De `installment-options`, que devuelve **solo las combinaciones que existen** para ese monto (COPAYNI-125), cada una con su cuota, su unidad y los días que dura. Un campo libre produciría rechazos que la persona no sabría interpretar.
+4. **Turno de cobro.** De `slots`, que ahora trae las fechas reales de la junta y la retención de cada turno.
+5. **Confirmar.** `POST /v1/circles/join` acepta `cadence` en el cuerpo, la misma que se pidió en `slots`, y responde con `turns`, `cadence`, `startsOnDate` y `endsOnDate` de la junta creada.
+
+Si la persona cambia la frecuencia o el monto después de elegir turnos, las opciones dependientes se recalculan: `installment-options` y `slots` se vuelven a pedir con los valores nuevos.
+
+**Pendiente de COPAYNI-119:** el contrato y el pagaré que se firman todavía no distinguen la cadencia ni llevan las fechas reales de cada vencimiento. Hasta que legal cierre las plantillas, habilitar una cadencia no mensual en producción no es posible.
 
 ### Qué círculo se ofrece (regla provisional, pending-scope R2)
 
@@ -382,11 +446,15 @@ Mis círculos, de la unión más reciente a la más antigua, paginados por curso
   "state": "contributing",
   "payout": { "amount": 3000000, "currency": "PEN" },
   "months": 10,
+  "turnCount": 10,
+  "cadence": "monthly",
+  "unit": "Mes",
   "startsOn": "2026-11",
   "startsOnDate": "2026-11-01",
   "endsOn": "2027-08",
   "currentPeriod": "2027-01",
   "currentMonth": 3,
+  "currentTurn": 3,
   "position": 4,
   "payoutPeriod": "2027-02",
   "type": "lowest_fees",
@@ -403,14 +471,18 @@ Mis círculos, de la unión más reciente a la más antigua, paginados por curso
   "turns": [
     {
       "position": 1,
+      "turn": 1,
       "period": "2026-11",
+      "payoutOn": "2026-11-01",
       "memberName": "María R.",
       "isMe": false,
       "status": "paid"
     },
     {
       "position": 4,
+      "turn": 4,
       "period": "2027-02",
+      "payoutOn": "2027-02-01",
       "memberName": "Ana P.",
       "isMe": true,
       "status": "upcoming"
@@ -418,6 +490,15 @@ Mis círculos, de la unión más reciente a la más antigua, paginados por curso
   ]
 }
 ```
+
+### Turnos con su fecha real (COPAYNI-117)
+
+- `turn` es el **ordinal** del turno (1..`turnCount`) y es lo que lo identifica. `period` sigue siendo su mes, pero fuera de la cadencia mensual el mes no identifica un turno: en una junta semanal hay cuatro o cinco turnos en el mismo mes.
+- `payoutOn` es el día real en que ese turno cobra el pozo, calculado por `TurnSchedule` en el servidor. **La app lo muestra tal cual y no deriva fechas de los meses**: con tres cadencias, cualquier aritmética de calendario en el cliente se desvía de la del servidor.
+- `cadence` y `unit` (`Mes`, `Quincena`, `Semana`) permiten etiquetar el turno en la unidad que corresponde: «Semana 3 · 18 nov», no «mes 3». El formato de la fecha lo decide la app con su locale (COPAYNI-17); el servidor la envía en ISO.
+- `turnCount` es cuántos turnos tiene la junta. Se llama así, y no `turns`, porque ese nombre ya lo ocupa la lista. `months` es su alias y lo lee la app publicada.
+- `currentTurn` es el turno en curso. `currentMonth` es su alias y **solo** coincide en cadencia mensual, así que la app nueva usa `currentTurn`.
+- El estado de cada turno (`paid`, `current`, `upcoming`, `vacant`) se calcula **por turno**, no por mes: antes, cobrar el primer turno de una junta semanal habría marcado como cobrados los cuatro turnos de ese mes.
 
 | Campo                            | Notas                                                                                                                                                                                                                                                                                                                        |
 | -------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

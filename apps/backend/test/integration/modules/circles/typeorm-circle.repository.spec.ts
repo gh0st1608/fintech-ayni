@@ -356,7 +356,8 @@ describe('TypeOrmCircleRepository', () => {
       repository.findOldestJoinable({
         payout,
         months: 6,
-        startsAfter: Period.of(2030, 1),
+        cadence: Cadence.monthly,
+        startsAfter: LocalDate.parse('2030-01-31'),
         userId,
       });
 
@@ -380,7 +381,8 @@ describe('TypeOrmCircleRepository', () => {
         repository.findOldestJoinable({
           payout: Money.of(7_350_000, 'USD'),
           months: 6,
-          startsAfter: Period.of(2030, 1),
+          cadence: Cadence.monthly,
+          startsAfter: LocalDate.parse('2030-01-31'),
           userId: 'user-1',
         }),
       ).resolves.toBeNull();
@@ -401,11 +403,19 @@ describe('TypeOrmCircleRepository', () => {
       // Ana: se miran solo los de este test.
       const mine = new Set<string>([first, second, third]);
       const joinable = (
-        await repository.listJoinable({ startsAfter: Period.of(2090, 12), userId: ana, limit: 500 })
+        await repository.listJoinable({
+          startsAfter: LocalDate.parse('2090-12-31'),
+          userId: ana,
+          limit: 500,
+        })
       ).filter(({ id }) => mine.has(id));
       expect(joinable.map(({ id }) => id)).toEqual([first, second, third]);
       await expect(
-        repository.listJoinable({ startsAfter: Period.of(2090, 12), userId: ana, limit: 2 }),
+        repository.listJoinable({
+          startsAfter: LocalDate.parse('2090-12-31'),
+          userId: ana,
+          limit: 2,
+        }),
       ).resolves.toHaveLength(2);
       expect(joinable[0]?.isTaken(1)).toBe(true);
       expect(joinable[1]?.terms.months).toBe(12);

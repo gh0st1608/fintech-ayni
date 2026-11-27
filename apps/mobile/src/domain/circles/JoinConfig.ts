@@ -1,3 +1,4 @@
+import type { Cadence } from './MyCircleDetail';
 import type { Money } from '@/domain/shared/value-objects/Money';
 
 import type { PayoutRange } from './value-objects/PayoutRange';
@@ -12,6 +13,17 @@ export interface CurrencyOption {
   rateToOfficial: string;
 }
 
+/** Una frecuencia que se puede elegir, tal como la ofrece el servidor. */
+export interface CadenceOption {
+  id: Cadence;
+  /** Cómo se llama un turno: «Mes», «Quincena», «Semana». */
+  unit: string;
+  /** Días que dura un turno; aproximado en la mensual. */
+  turnDays: number;
+  /** true en la mensual, la de todas las juntas que existen. */
+  default: boolean;
+}
+
 /** Configuración del backend para unirse a un círculo (GET /circles/join-config). */
 export interface JoinConfig {
   /** Rango general de payout del Game'ya. */
@@ -22,8 +34,18 @@ export interface JoinConfig {
   savingProgramMax: Money;
   /** Monedas habilitadas; la oficial va primero. Con una sola, no hay nada que elegir. */
   currencies: readonly CurrencyOption[];
+  /**
+   * Frecuencias que se pueden elegir (COPAYNI-116): las que el servidor habilita y la app
+   * declara soportar. Con una sola no hay paso de frecuencia, y el flujo es el mensual de hoy.
+   */
+  cadences: readonly CadenceOption[];
   /** Versión vigente de los términos del círculo: se acepta y se envía al unirse (COPAYNI-86). */
   termsVersion: string;
+}
+
+/** Si hay frecuencia que elegir: con una sola, el paso no se muestra (COPAYNI-116). */
+export function offersCadenceChoice(config: JoinConfig): boolean {
+  return config.cadences.length > 1;
 }
 
 /** Rango que el usuario puede elegir de verdad: null si su límite no alcanza el mínimo. */

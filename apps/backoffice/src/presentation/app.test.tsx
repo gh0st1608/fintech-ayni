@@ -98,6 +98,45 @@ describe('listado de juntas', () => {
     await waitFor(() => expect(router.state.location.search).toBe(''));
   });
 
+  it('cada fila trae su cadencia y el día real de arranque', async () => {
+    renderApp({
+      path: '/circles',
+      auth: signedIn(['support']),
+      circles: new InMemoryCircles([
+        circle({ cadence: 'weekly', turns: 4, startsOn: '2026-11', startsOnDate: '2026-11-04' }),
+      ]),
+    });
+    await screen.findByRole('link', { name: /6.?000/ });
+    const row = screen.getAllByRole('row')[1];
+
+    expect(row).toHaveTextContent('Semanal');
+    // El 4 de noviembre, no «noviembre»: fuera de la mensual el arranque no es el día 1.
+    expect(row).toHaveTextContent(/4 nov\.? 2026/);
+    expect(row).toHaveTextContent('4 de 4');
+  });
+
+  it('filtra por cadencia sin perder el filtro de estado', async () => {
+    const circles = new InMemoryCircles([
+      circle({ state: 'contributing', cadence: 'monthly' }),
+      circle({ state: 'contributing', cadence: 'weekly' }),
+    ]);
+    const { user, router } = renderApp({
+      path: '/circles?state=contributing',
+      auth: signedIn(['operations']),
+      circles,
+    });
+    await screen.findAllByRole('link', { name: /6.?000/ });
+
+    await user.selectOptions(screen.getByLabelText('Cadencia'), 'weekly');
+    await waitFor(() => expect(circles.requests.at(-1)).toMatchObject({ cadence: 'weekly' }));
+    // Los dos filtros conviven en la URL: cambiar uno no borra el otro.
+    expect(router.state.location.search).toContain('state=contributing');
+    expect(router.state.location.search).toContain('cadence=weekly');
+    // La etiqueta de la fila, no la opción del filtro: las dos dicen lo mismo.
+    expect(await screen.findAllByText('Semanal', { selector: 'span' })).not.toHaveLength(0);
+    expect(screen.queryByText('Mensual', { selector: 'span' })).not.toBeInTheDocument();
+  });
+
   it('pagina con "Cargar más"', async () => {
     const circles = new InMemoryCircles([circle(), circle(), circle()]);
     circles.pageSize = 2;
@@ -193,6 +232,59 @@ describe('detalle de una junta', () => {
     });
     await user.click(await screen.findByRole('button', { name: 'Reintentar' }));
     expect(await screen.findByRole('heading', { name: /Junta de/ })).toBeInTheDocument();
+  });
+});
+
+describe('detalle de una junta con muchos turnos (COPAYNI-118)', () => {
+  /** Una junta semanal larga: 40 turnos, el tipo de junta que el catálogo por rango permite. */
+  const longCircle = () =>
+    circle({
+      cadence: 'weekly',
+      turns: 40,
+      startsOn: '2026-11',
+      startsOnDate: '2026-11-04',
+      members: 40,
+      memberships: Array.from({ length: 40 }, (_unused, index) => ({
+        userId: `3333333${String(index).padStart(2, '0')}-3333-4333-8333-333333333333`,
+        position: index + 1,
+        name: `Socio ${index + 1}`,
+        email: null,
+        phone: null,
+        joinedAt: NOW,
+        expelledAt: null,
+      })),
+    });
+
+  it('muestra la cadencia y el día real de arranque', async () => {
+    const target = longCircle();
+    renderApp({
+      path: `/circles/${target.circleId}`,
+      auth: signedIn(['operations']),
+      circles: new InMemoryCircles([target]),
+    });
+
+    expect(await screen.findByText('Semanal')).toBeInTheDocument();
+    expect(screen.getByText(/4 nov\.? 2026/)).toBeInTheDocument();
+    expect(screen.getByText('40 de 40')).toBeInTheDocument();
+  });
+
+  it('pagina el listado de turnos en lugar de renderizarlos todos', async () => {
+    const target = longCircle();
+    const { user } = renderApp({
+      path: `/circles/${target.circleId}`,
+      auth: signedIn(['operations']),
+      circles: new InMemoryCircles([target]),
+    });
+    await screen.findByText('Socio 1');
+
+    // 25 de entrada, más la fila del encabezado.
+    expect(screen.getAllByRole('row')).toHaveLength(26);
+    expect(screen.queryByText('Socio 40')).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: /Ver más turnos \(15 restantes\)/ }));
+
+    expect(await screen.findByText('Socio 40')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Ver más turnos/ })).not.toBeInTheDocument();
   });
 });
 

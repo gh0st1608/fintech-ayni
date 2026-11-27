@@ -1,5 +1,6 @@
 import { Link, useSearchParams } from 'react-router';
 
+import { CADENCE_LABELS, CADENCES, type Cadence, TURN_UNIT_LABELS } from '@/domain/circles/Circle';
 import {
   FUND_MOVEMENT_LABELS,
   INSTALLMENT_STATUS_LABELS,
@@ -8,6 +9,9 @@ import {
   isPeriod,
 } from '@/domain/finance/Finance';
 import { can } from '@/domain/staff/Staff';
+
+const isCadence = (value: string | null): value is Cadence =>
+  (CADENCES as readonly string[]).includes(value ?? '');
 
 import {
   Badge,
@@ -102,12 +106,14 @@ function InstallmentsView() {
   const rawPeriod = params.get('period');
   const status = isStatus(rawStatus) ? rawStatus : undefined;
   const period = rawPeriod && isPeriod(rawPeriod) ? rawPeriod : undefined;
-  const installments = useInstallments(status, period);
+  const rawCadence = params.get('cadence');
+  const cadence = isCadence(rawCadence) ? rawCadence : undefined;
+  const installments = useInstallments(status, period, cadence);
   const pages = installments.data?.pages ?? [];
   const items = pages.flatMap((page) => page.items);
   const totals = pages[0]?.totals ?? [];
 
-  const setFilter = (key: 'status' | 'period', value: string) => {
+  const setFilter = (key: 'status' | 'period' | 'cadence', value: string) => {
     const next = new URLSearchParams(params);
     if (value) next.set(key, value);
     else next.delete(key);
@@ -149,16 +155,44 @@ function InstallmentsView() {
             )}
           </Field>
         </div>
+        <div className="w-full sm:w-48">
+          <Field label="Cadencia">
+            {(field) => (
+              <select
+                {...field}
+                className={inputClass}
+                value={cadence ?? ''}
+                onChange={(event) => setFilter('cadence', event.target.value)}
+              >
+                <option value="">Todas</option>
+                {CADENCES.map((value) => (
+                  <option key={value} value={value}>
+                    {CADENCE_LABELS[value]}
+                  </option>
+                ))}
+              </select>
+            )}
+          </Field>
+        </div>
       </div>
 
       {totals.length > 0 && (
-        <ul aria-label="Totales por estado" className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+        <ul
+          aria-label="Totales por estado y cadencia"
+          className="grid grid-cols-2 gap-2 sm:grid-cols-3"
+        >
+          {/*
+            Cada total dice de qué cadencia es y nunca se suman entre sí: una cifra que mezcla
+            una junta mensual con cuatro semanas de otra no se puede conciliar (COPAYNI-118).
+          */}
           {totals.map((total) => (
             <li
-              key={`${total.status}-${total.total.currency}`}
+              key={`${total.status}-${total.cadence}-${total.total.currency}`}
               className="rounded-md border border-line bg-surface p-3"
             >
-              <p className="text-xs text-ink-soft">{INSTALLMENT_STATUS_LABELS[total.status]}</p>
+              <p className="text-xs text-ink-soft">
+                {INSTALLMENT_STATUS_LABELS[total.status]} · {CADENCE_LABELS[total.cadence]}
+              </p>
               <p className="font-semibold">{formatMoney(total.total)}</p>
               <p className="text-xs text-ink-soft">
                 {total.count} {total.count === 1 ? 'cuota' : 'cuotas'}
@@ -191,6 +225,9 @@ function InstallmentsView() {
                   Junta y turno
                 </th>
                 <th scope="col" className="px-4 py-2 font-medium">
+                  Cadencia
+                </th>
+                <th scope="col" className="px-4 py-2 font-medium">
                   Monto
                 </th>
                 <th scope="col" className="px-4 py-2 font-medium">
@@ -204,9 +241,19 @@ function InstallmentsView() {
                   <td className="px-4 py-2">{formatDay(item.dueOn)}</td>
                   <td className="px-4 py-2">{item.member.name ?? '—'}</td>
                   <td className="px-4 py-2">
+                    {/*
+                      El turno del ciclo y su fecha, además del mes: en una junta semanal hay
+                      cuatro cuotas en el mismo mes y el mes no identifica ninguna.
+                    */}
                     <CircleLink circleId={item.circleId}>
-                      {formatPeriod(item.period)} · turno {item.position}
+                      {TURN_UNIT_LABELS[item.cadence]} {item.turn} · {formatDay(item.dueOn)}
                     </CircleLink>
+                    <p className="text-xs text-ink-soft">
+                      {formatPeriod(item.period)} · puesto {item.position}
+                    </p>
+                  </td>
+                  <td className="px-4 py-2">
+                    <Badge tone="neutral">{CADENCE_LABELS[item.cadence]}</Badge>
                   </td>
                   <td className="px-4 py-2">{formatMoney(item.amount)}</td>
                   <td className="px-4 py-2">
@@ -277,8 +324,11 @@ function PayoutsView() {
                   <td className="px-4 py-2">{item.member.name ?? '—'}</td>
                   <td className="px-4 py-2">
                     <CircleLink circleId={item.circleId}>
-                      {formatPeriod(item.period)} · turno {item.position}
+                      {TURN_UNIT_LABELS[item.cadence]} {item.turn} · {formatPeriod(item.period)}
                     </CircleLink>
+                    <p className="text-xs text-ink-soft">
+                      {CADENCE_LABELS[item.cadence]} · puesto {item.position}
+                    </p>
                   </td>
                   <td className="px-4 py-2">{formatMoney(item.amount)}</td>
                 </tr>
@@ -306,6 +356,7 @@ function FundView() {
   const fund = useGuaranteeFund();
   const pages = fund.data?.pages ?? [];
   const balances = pages[0]?.balances ?? [];
+  const totals = pages[0]?.totals ?? [];
   const items = pages.flatMap((page) => page.items);
 
   if (fund.isPending) return <Spinner label="Cargando el fondo" />;
@@ -342,6 +393,31 @@ function FundView() {
         </ul>
       )}
 
+      {totals.length > 0 && (
+        <>
+          <h2 className="text-lg font-semibold">Aporte y uso por cadencia</h2>
+          {/*
+            Aporte y uso se leen por separado y por cadencia (COPAYNI-118): un neto no dice
+            cuánto puso cada tipo de junta ni cuánto consumió. Los movimientos manuales no
+            tienen junta y salen aparte.
+          */}
+          <ul aria-label="Fondo por cadencia" className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+            {totals.map((total) => (
+              <li
+                key={`${total.cadence ?? 'manual'}-${total.contributed.currency}`}
+                className="rounded-md border border-line bg-surface p-3"
+              >
+                <p className="text-xs text-ink-soft">
+                  {total.cadence ? CADENCE_LABELS[total.cadence] : 'Movimientos manuales'}
+                </p>
+                <p className="font-semibold">+{formatMoney(total.contributed)}</p>
+                <p className="text-sm text-ink-soft">−{formatMoney(total.used)} usado</p>
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
+
       <h2 className="text-lg font-semibold">Movimientos</h2>
       {items.length === 0 ? (
         <EmptyState title="Sin movimientos" />
@@ -359,6 +435,9 @@ function FundView() {
                 </th>
                 <th scope="col" className="px-4 py-2 font-medium">
                   Junta
+                </th>
+                <th scope="col" className="px-4 py-2 font-medium">
+                  Cadencia
                 </th>
                 <th scope="col" className="px-4 py-2 font-medium">
                   Monto
@@ -384,6 +463,13 @@ function FundView() {
                       </CircleLink>
                     ) : (
                       '—'
+                    )}
+                  </td>
+                  <td className="px-4 py-2">
+                    {item.cadence ? (
+                      <Badge tone="neutral">{CADENCE_LABELS[item.cadence]}</Badge>
+                    ) : (
+                      <span className="text-xs text-ink-soft">Manual</span>
                     )}
                   </td>
                   <td

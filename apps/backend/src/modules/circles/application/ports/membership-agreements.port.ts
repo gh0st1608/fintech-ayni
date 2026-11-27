@@ -1,3 +1,4 @@
+import { type CadenceId } from '../../domain/value-objects/cadence';
 import { type Money } from '../../../../shared/domain/value-objects/money';
 
 export const MEMBERSHIP_AGREEMENTS = Symbol('MEMBERSHIP_AGREEMENTS');
@@ -14,6 +15,24 @@ export interface AgreementTerms {
   readonly startsOn: string;
   /** Mes en que le toca cobrar, `YYYY-MM`. */
   readonly payoutPeriod: string;
+  /**
+   * Lo que el documento necesita para describir la obligación real (COPAYNI-119): la frecuencia,
+   * los turnos, las fechas de cada vencimiento y los parámetros de morosidad de esa cadencia.
+   * Sin esto el contrato hablaría de meses sobre una junta que vence por semanas.
+   */
+  readonly cadence: CadenceId;
+  readonly turns: number;
+  readonly unit: string;
+  /** `YYYY-MM-DD` del primer y del último turno. */
+  readonly startsOnDate: string;
+  readonly endsOnDate: string;
+  /** `YYYY-MM-DD` en que cobra el pozo. */
+  readonly payoutOn: string;
+  /** El pozo menos la retención: lo que recibe de inmediato. */
+  readonly netPayout: Money;
+  readonly dueDates: readonly { readonly turn: number; readonly dueOn: string }[];
+  readonly graceDays: number;
+  readonly lateFeeBps: number;
 }
 
 /** Una membresía que venció sin firmar: su turno se libera. */

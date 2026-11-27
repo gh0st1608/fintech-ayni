@@ -1,4 +1,4 @@
-import type { Money } from '../circles/Circle';
+import type { Cadence, Money } from '../circles/Circle';
 
 /** Estados de una cuota mensual, como los define el backend (ciclo mensual). */
 export const INSTALLMENT_STATUSES = [
@@ -21,6 +21,12 @@ export interface Installment {
   id: string;
   circleId: string;
   position: number;
+  /**
+   * Turno del ciclo al que corresponde la cuota, y cadencia de su junta. El mes no identifica la
+   * cuota fuera de la cadencia mensual: en una semanal hay cuatro en el mismo mes (COPAYNI-118).
+   */
+  turn: number;
+  cadence: Cadence;
   /** `YYYY-MM`. */
   period: string;
   /** `YYYY-MM-DD`. */
@@ -33,6 +39,8 @@ export interface Installment {
 
 export interface InstallmentTotal {
   status: InstallmentStatus;
+  /** Cadencia de las juntas de ese total: una cifra que las mezcla no se puede conciliar. */
+  cadence: Cadence;
   count: number;
   total: Money;
 }
@@ -47,6 +55,8 @@ export interface Payout {
   id: string;
   circleId: string;
   position: number;
+  turn: number;
+  cadence: Cadence;
   period: string;
   amount: Money;
   disbursedAt: Date;
@@ -69,6 +79,8 @@ export interface FundMovement {
   transactionKey: string;
   kind: string;
   circleId: string | null;
+  /** Cadencia de la junta del movimiento; `null` en los movimientos manuales sin junta. */
+  cadence: Cadence | null;
   period: string | null;
   reason: string | null;
   /** Positivo entra al fondo; negativo sale. */
@@ -76,8 +88,16 @@ export interface FundMovement {
   createdAt: Date;
 }
 
+/** Aporte y uso del fondo por cadencia, leídos por separado y no como un neto (COPAYNI-118). */
+export interface FundTotal {
+  cadence: Cadence | null;
+  contributed: Money;
+  used: Money;
+}
+
 export interface GuaranteeFund {
   balances: FundBalance[];
+  totals: FundTotal[];
   items: FundMovement[];
   nextCursor: string | null;
 }

@@ -37,14 +37,21 @@ function setup(limit = 5, currencies = TEST_CURRENCIES) {
   );
   const addCircle = (
     id: string,
-    props: { payout?: Money; months?: number; startsOn?: Period; members?: string[] } = {},
+    props: {
+      payout?: Money;
+      months?: number;
+      startsOn?: Period;
+      members?: string[];
+      cadence?: Cadence;
+    } = {},
   ) =>
     circles.add(
       Circle.restore({
         id,
         terms: CircleTerms.create({
           payout: props.payout ?? pen(30_000),
-          months: props.months ?? 6,
+          turns: props.months ?? 6,
+          cadence: props.cadence ?? Cadence.monthly,
           startsOn: props.startsOn ?? Period.of(2026, 11),
         }),
         memberships: (props.members ?? []).map((userId, index) => ({
@@ -58,6 +65,28 @@ function setup(limit = 5, currencies = TEST_CURRENCIES) {
 }
 
 describe('ListRecommendedCirclesUseCase', () => {
+  it('no recomienda una junta de una cadencia que el cliente no declaró (COPAYNI-115)', async () => {
+    // La app publicada no declara nada: una recomendación que no sabe dibujar es peor que
+    // ninguna, porque mostraría cifras y fechas equivocadas sobre dinero real.
+    const { useCase, addCircle } = setup();
+    addCircle('mensual');
+    addCircle('semanal', { cadence: Cadence.weekly, startsOn: Period.of(2026, 11) });
+
+    const recommended = await useCase.execute(ANA);
+
+    expect(recommended.map(({ circleId }) => circleId)).toEqual(['mensual']);
+  });
+
+  it('declarando la cadencia, esa junta sí se recomienda', async () => {
+    const { useCase, addCircle } = setup();
+    addCircle('mensual');
+    addCircle('semanal', { cadence: Cadence.weekly, startsOn: Period.of(2026, 11) });
+
+    const recommended = await useCase.execute(ANA, [Cadence.monthly, Cadence.weekly]);
+
+    expect(recommended.map(({ circleId }) => circleId)).toEqual(['mensual', 'semanal']);
+  });
+
   it('recomienda los círculos que admiten al usuario, del más antiguo al más nuevo', async () => {
     const { useCase, addCircle } = setup();
     addCircle('empezado', { startsOn: Period.of(2026, 10) });

@@ -1,6 +1,6 @@
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
-import type { CycleState, PauseAction } from '@/domain/circles/Circle';
+import type { Cadence, CycleState, PauseAction } from '@/domain/circles/Circle';
 
 import { useContainer, useStaff } from '../providers/AppProviders';
 
@@ -8,16 +8,17 @@ const PAGE_SIZE = 25;
 
 export const circlesKeys = {
   all: ['circles'] as const,
-  list: (state: CycleState | undefined) => ['circles', 'list', { state: state ?? 'all' }] as const,
+  list: (state: CycleState | undefined, cadence: Cadence | undefined) =>
+    ['circles', 'list', { state: state ?? 'all', cadence: cadence ?? 'all' }] as const,
   detail: (circleId: string) => ['circles', 'detail', circleId] as const,
 };
 
-export function useCircles(state: CycleState | undefined) {
+export function useCircles(state: CycleState | undefined, cadence?: Cadence) {
   const { circles } = useContainer();
   return useInfiniteQuery({
-    queryKey: circlesKeys.list(state),
+    queryKey: circlesKeys.list(state, cadence),
     queryFn: ({ pageParam, signal }) =>
-      circles.list.execute({ state, cursor: pageParam, limit: PAGE_SIZE }, signal),
+      circles.list.execute({ state, cadence, cursor: pageParam, limit: PAGE_SIZE }, signal),
     initialPageParam: null as string | null,
     getNextPageParam: (page) => page.nextCursor,
   });

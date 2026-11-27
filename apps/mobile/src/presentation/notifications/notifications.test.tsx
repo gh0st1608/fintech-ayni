@@ -21,6 +21,8 @@ const notification = (overrides: Partial<AppNotification>): AppNotification => (
   amount: Money.fromMajor(560, 'PEN'),
   dueOn: '2026-12-01',
   period: null,
+  cadence: null,
+  turn: null,
   documentType: null,
   occurredAt: new Date(2026, 10, 12, 9, 30),
   read: false,
@@ -157,6 +159,51 @@ describe('NotificationsScreen', () => {
     fireEvent.press(screen.getByRole('tab', { name: 'Círculos' }));
     await waitFor(() => expect(screen.queryByText('Tu cuota vence pronto')).toBeNull());
     expect(screen.getByText('Nuevo miembro en tu junta')).toBeOnTheScreen();
+  });
+
+  it('el turno de cobro de una junta no mensual se avisa con su fecha, sin decir «mes»', async () => {
+    // «¡Este mes cobras!» es falso en una junta semanal: cuatro miembros cobran ese mes y el
+    // aviso no identifica a ninguno (COPAYNI-120).
+    const { container } = setup([
+      notification({
+        id: 'n-9',
+        type: 'payoutTurn',
+        amount: Money.fromMajor(12_000, 'PEN'),
+        dueOn: '2026-11-18',
+        period: '2026-11',
+        cadence: 'weekly',
+        turn: 3,
+        occurredAt: new Date(2026, 10, 12, 8, 0),
+      }),
+    ]);
+    await renderWithProviders(
+      <NotificationsScreen onOpen={jest.fn()} now={() => NOW} />,
+      container,
+    );
+
+    expect(await screen.findByText('¡Te toca cobrar!')).toBeOnTheScreen();
+    expect(screen.queryByText('¡Este mes cobras!')).toBeNull();
+    expect(screen.getByText(/se paga el 18 nov\.? 2026/)).toBeOnTheScreen();
+  });
+
+  it('una junta mensual conserva el aviso de siempre', async () => {
+    const { container } = setup([
+      notification({
+        id: 'n-10',
+        type: 'payoutTurn',
+        amount: Money.fromMajor(24_000, 'PEN'),
+        dueOn: null,
+        period: '2026-11',
+        cadence: 'monthly',
+        occurredAt: new Date(2026, 10, 12, 8, 0),
+      }),
+    ]);
+    await renderWithProviders(
+      <NotificationsScreen onOpen={jest.fn()} now={() => NOW} />,
+      container,
+    );
+
+    expect(await screen.findByText('¡Este mes cobras!')).toBeOnTheScreen();
   });
 
   it('al tocar una, queda leída y abre su pantalla', async () => {

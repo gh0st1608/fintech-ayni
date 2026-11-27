@@ -1,7 +1,13 @@
 import type { CircleQuoteRepositoryPort } from '@/domain/circles/ports/CircleQuoteRepositoryPort';
+import type { Cadence } from '@/domain/circles/MyCircleDetail';
 import type { RecommendedCircle } from '@/domain/circles/RecommendedCircle';
 import { InstallmentOption } from '@/domain/circles/value-objects/InstallmentOption';
-import { Slot, type SlotRestriction, type SlotType } from '@/domain/circles/value-objects/Slot';
+import {
+  Slot,
+  type SlotRestriction,
+  type SlotsQuote,
+  type SlotType,
+} from '@/domain/circles/value-objects/Slot';
 import { Money } from '@/domain/shared/value-objects/Money';
 import { simulateLatency } from '@/infrastructure/fake/simulateLatency';
 
@@ -53,6 +59,21 @@ function share(payout: Money, bps: number, step: number, steps: number): Money {
  * Cotización falsa (contract-first) con la misma regla provisional que el backend: cuota base
  * = payout / meses, solo para las duraciones que dan cuotas exactas en céntimos.
  */
+/** Cómo se nombra y cuánto dura un turno de cada cadencia, para el modo dev. */
+const TURN_UNIT: Record<Cadence, string> = {
+  monthly: 'Mes',
+  biweekly: 'Quincena',
+  weekly: 'Semana',
+};
+const TURN_DAYS: Record<Cadence, number> = { monthly: 30, biweekly: 14, weekly: 7 };
+
+/** `YYYY-MM-DD` más `days` días. */
+function addDays(day: string, days: number): string {
+  const date = new Date(`${day}T12:00:00Z`);
+  date.setUTCDate(date.getUTCDate() + days);
+  return date.toISOString().slice(0, 10);
+}
+
 export class InMemoryCircleQuoteRepository implements CircleQuoteRepositoryPort {
   private readonly latencyMs: number;
 
@@ -60,7 +81,11 @@ export class InMemoryCircleQuoteRepository implements CircleQuoteRepositoryPort 
     this.latencyMs = options.latencyMs ?? 400;
   }
 
-  async listInstallmentOptions(payout: Money, signal?: AbortSignal): Promise<InstallmentOption[]> {
+  async listInstallmentOptions(
+    payout: Money,
+    cadence: Cadence = 'monthly',
+    signal?: AbortSignal,
+  ): Promise<InstallmentOption[]> {
     await simulateLatency(this.latencyMs, signal);
     const { durations = [6, 10, 12], monthlyPayInLimit } = this.options;
     const limit =
@@ -69,32 +94,52 @@ export class InMemoryCircleQuoteRepository implements CircleQuoteRepositoryPort 
         : Money.fromMajor(monthlyPayInLimit, payout.currency);
 
     return durations
-      .filter((months) => payout.amount % months === 0)
-      .map((months) => {
-        const installment = Money.of(payout.amount / months, payout.currency);
+      .filter((turns) => payout.amount % turns === 0)
+      .map((turns) => {
+        const installment = Money.of(payout.amount / turns, payout.currency);
         return InstallmentOption.create({
-          months,
+          turns,
           installment,
           withinMonthlyLimit: !limit || installment.amount <= limit.amount,
+          cadence,
+          unit: TURN_UNIT[cadence],
+          approximateDays: turns * TURN_DAYS[cadence],
         });
       });
   }
 
-  async listSlots(payout: Money, months: number, signal?: AbortSignal): Promise<Slot[]> {
+  async listSlots({
+    payout,
+    turns: months,
+    cadence = 'monthly',
+    signal,
+  }: {
+    payout: Money;
+    turns: number;
+    cadence?: Cadence;
+    signal?: AbortSignal;
+    circleId?: string | null;
+  }): Promise<SlotsQuote> {
     await simulateLatency(this.latencyMs, signal);
     const { takenPositions = [], startsOn = nextMonth() } = this.options;
     const fastest = Math.floor(months * FASTEST_SHARE);
     const highest = Math.floor(months * HIGHEST_SHARE);
     const zero = Money.of(0, payout.currency);
 
-    return Array.from({ length: months }, (_, index) => {
+    const slots = Array.from({ length: months }, (_, index) => {
       const position = index + 1;
       let type: SlotType = 'lowestFees';
       if (position <= fastest) type = 'fastestPayout';
       else if (position > months - highest) type = 'highestReturn';
+      // En mensual, el turno cae en su mes; en las demás, cada N días desde el arranque.
+      const payoutOn =
+        cadence === 'monthly'
+          ? `${addMonths(startsOn, index)}-01`
+          : addDays(`${startsOn}-01`, index * TURN_DAYS[cadence]);
       return Slot.create({
         position,
-        payoutPeriod: addMonths(startsOn, index),
+        payoutPeriod: payoutOn.slice(0, 7),
+        payoutOn,
         type,
         fee:
           type === 'fastestPayout'
@@ -109,6 +154,24 @@ export class InMemoryCircleQuoteRepository implements CircleQuoteRepositoryPort 
         notAllowedReason: this.options.notAllowed?.[type] ?? null,
       });
     });
+    // El falso arma juntas que arrancan el día 1 y avanza por días en las demás cadencias, lo
+    // justo para que las pantallas muestren fechas coherentes en desarrollo.
+    const first = `${startsOn}-01`;
+    const durationDays = months * TURN_DAYS[cadence];
+    const endsOnDate =
+      cadence === 'monthly'
+        ? `${addMonths(startsOn, months - 1)}-01`
+        : addDays(first, (months - 1) * TURN_DAYS[cadence]);
+    return {
+      circleId: this.options.circleId ?? null,
+      cadence,
+      unit: TURN_UNIT[cadence],
+      turns: months,
+      startsOnDate: first,
+      endsOnDate,
+      durationDays,
+      slots,
+    };
   }
 
   async listRecommended(signal?: AbortSignal): Promise<RecommendedCircle[]> {

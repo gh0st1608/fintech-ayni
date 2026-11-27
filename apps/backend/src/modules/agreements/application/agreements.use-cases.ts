@@ -30,12 +30,7 @@ import {
   unreadDocuments,
 } from '../domain/agreement';
 import { SignatureChallenge, type SignatureOutcome } from '../domain/signature-challenge';
-import {
-  type AgreementData,
-  hashOf,
-  renderAgreement,
-  TEMPLATE_VERSIONS,
-} from '../domain/templates';
+import { type AgreementData, hashOf, renderAgreement, templateVersion } from '../domain/templates';
 import {
   AGREEMENT_SETTINGS,
   AGREEMENTS,
@@ -101,10 +96,11 @@ export class OpenAgreementsUseCase {
       userId: props.userId,
       circleId: props.circleId,
       position: props.position,
-      contractVersion: TEMPLATE_VERSIONS.contract,
+      // La versión lleva la cadencia: cada documento se aprueba por separado (COPAYNI-119).
+      contractVersion: templateVersion('contract', props.data.cadence),
       contractText,
       contractHash: hashOf(contractText),
-      promissoryNoteVersion: TEMPLATE_VERSIONS.promissory_note,
+      promissoryNoteVersion: templateVersion('promissory_note', props.data.cadence),
       promissoryNoteText: noteText,
       promissoryNoteHash: hashOf(noteText),
       createdAt: now,

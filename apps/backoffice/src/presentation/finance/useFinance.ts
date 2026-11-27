@@ -1,3 +1,4 @@
+import type { Cadence } from '@/domain/circles/Circle';
 import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
 import type { ApprovalStatus, FundMovementKind } from '@/domain/finance/Approval';
@@ -7,12 +8,23 @@ import { useContainer, useStaff } from '../providers/AppProviders';
 
 const PAGE_SIZE = 25;
 
-export function useInstallments(status: InstallmentStatus | undefined, period: string | undefined) {
+export function useInstallments(
+  status: InstallmentStatus | undefined,
+  period: string | undefined,
+  cadence?: Cadence,
+) {
   const { finance } = useContainer();
   return useInfiniteQuery({
-    queryKey: ['finance', 'installments', { status: status ?? 'all', period: period ?? 'all' }],
+    queryKey: [
+      'finance',
+      'installments',
+      { status: status ?? 'all', period: period ?? 'all', cadence: cadence ?? 'all' },
+    ],
     queryFn: ({ pageParam, signal }) =>
-      finance.installments.execute({ status, period, cursor: pageParam, limit: PAGE_SIZE }, signal),
+      finance.installments.execute(
+        { status, period, cadence, cursor: pageParam, limit: PAGE_SIZE },
+        signal,
+      ),
     initialPageParam: null as string | null,
     getNextPageParam: (page) => page.nextCursor,
   });

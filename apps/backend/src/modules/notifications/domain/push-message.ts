@@ -1,3 +1,4 @@
+import { type CadenceId } from '../../circles/domain/value-objects/cadence';
 import { type Notification, type NotificationData, type NotificationType } from './notification';
 
 /**
@@ -30,7 +31,21 @@ interface Values {
   dueOn: string;
   month: string;
   document: string;
+  /**
+   * Cómo se nombra el turno ante la persona: «marzo de 2027» en una junta mensual y «la semana
+   * 3» en una semanal (COPAYNI-120). Evita la palabra «mes» fuera de la cadencia mensual, donde
+   * hay cuatro cuotas en el mismo mes y decir «tu cuota de este mes» es falso.
+   */
+  turn: string;
+  /** La junta es mensual: entonces los textos son exactamente los de antes de la épica. */
+  monthly: boolean;
 }
+
+/** Cómo se nombra un turno en cada cadencia y en cada idioma. */
+const TURN_NAMES: Record<PushLanguage, Record<CadenceId, string>> = {
+  es: { monthly: 'el mes', biweekly: 'la quincena', weekly: 'la semana' },
+  en: { monthly: 'month', biweekly: 'fortnight', weekly: 'week' },
+};
 
 const DOCUMENTS: Record<PushLanguage, Record<string, string>> = {
   es: {
@@ -61,7 +76,9 @@ const TEXT: Record<PushLanguage, Record<NotificationType, Template>> = {
     }),
     payment_received: (v) => ({
       title: 'Recibimos tu pago',
-      body: `Tu cuota de ${v.amount} de ${v.month} quedó pagada.`,
+      body: v.monthly
+        ? `Tu cuota de ${v.amount} de ${v.month} quedó pagada.`
+        : `Tu cuota de ${v.amount} de ${v.turn} quedó pagada.`,
     }),
     payment_failed: (v) => ({
       title: 'No pudimos cobrar tu cuota',
@@ -69,11 +86,15 @@ const TEXT: Record<PushLanguage, Record<NotificationType, Template>> = {
     }),
     payout_turn: (v) => ({
       title: 'Te toca cobrar',
-      body: `Este mes recibes ${v.amount} de tu junta.`,
+      body: v.monthly
+        ? `Este mes recibes ${v.amount} de tu junta.`
+        : `El ${v.dueOn} recibes ${v.amount} de tu junta.`,
     }),
     payout_disbursed: (v) => ({
       title: 'Te enviamos tu pozo',
-      body: `Enviamos ${v.amount} de tu junta de ${v.month}.`,
+      body: v.monthly
+        ? `Enviamos ${v.amount} de tu junta de ${v.month}.`
+        : `Enviamos ${v.amount} de tu junta, de ${v.turn}.`,
     }),
     document_approved: (v) => ({
       title: 'Documento aprobado',
@@ -85,15 +106,19 @@ const TEXT: Record<PushLanguage, Record<NotificationType, Template>> = {
     }),
     circle_started: (v) => ({
       title: 'Tu junta empezó',
-      body: `Tu junta arrancó en ${v.month}: ya puedes pagar tu primera cuota.`,
+      body: v.monthly
+        ? `Tu junta arrancó en ${v.month}: ya puedes pagar tu primera cuota.`
+        : `Tu junta arrancó el ${v.dueOn}: ya puedes pagar tu primera cuota.`,
     }),
     circle_paused: () => ({
       title: 'Tu junta está en pausa',
       body: 'No se cobran cuotas mientras esté pausada. Te avisamos cuando se reanude.',
     }),
-    circle_resumed: () => ({
+    circle_resumed: (v) => ({
       title: 'Tu junta se reanudó',
-      body: 'Vuelven las cuotas y los cobros del mes.',
+      body: v.monthly
+        ? 'Vuelven las cuotas y los cobros del mes.'
+        : 'Vuelven las cuotas y los cobros de tu junta.',
     }),
     circle_member_joined: () => ({
       title: 'Tu junta sumó un miembro',
@@ -111,7 +136,9 @@ const TEXT: Record<PushLanguage, Record<NotificationType, Template>> = {
     }),
     payment_received: (v) => ({
       title: 'Payment received',
-      body: `Your ${v.amount} installment for ${v.month} is paid.`,
+      body: v.monthly
+        ? `Your ${v.amount} installment for ${v.month} is paid.`
+        : `Your ${v.amount} installment for ${v.turn} is paid.`,
     }),
     payment_failed: (v) => ({
       title: "We couldn't charge your installment",
@@ -119,11 +146,15 @@ const TEXT: Record<PushLanguage, Record<NotificationType, Template>> = {
     }),
     payout_turn: (v) => ({
       title: "It's your turn to collect",
-      body: `You receive ${v.amount} from your circle this month.`,
+      body: v.monthly
+        ? `You receive ${v.amount} from your circle this month.`
+        : `You receive ${v.amount} from your circle on ${v.dueOn}.`,
     }),
     payout_disbursed: (v) => ({
       title: 'We sent your payout',
-      body: `We sent ${v.amount} from your ${v.month} circle.`,
+      body: v.monthly
+        ? `We sent ${v.amount} from your ${v.month} circle.`
+        : `We sent ${v.amount} from your circle, for ${v.turn}.`,
     }),
     document_approved: (v) => ({
       title: 'Document approved',
@@ -135,15 +166,19 @@ const TEXT: Record<PushLanguage, Record<NotificationType, Template>> = {
     }),
     circle_started: (v) => ({
       title: 'Your circle started',
-      body: `Your circle started in ${v.month}: you can pay your first installment.`,
+      body: v.monthly
+        ? `Your circle started in ${v.month}: you can pay your first installment.`
+        : `Your circle started on ${v.dueOn}: you can pay your first installment.`,
     }),
     circle_paused: () => ({
       title: 'Your circle is paused',
       body: "No installments are charged while it's paused. We'll let you know when it resumes.",
     }),
-    circle_resumed: () => ({
+    circle_resumed: (v) => ({
       title: 'Your circle resumed',
-      body: 'Monthly installments and payouts are back.',
+      body: v.monthly
+        ? 'Monthly installments and payouts are back.'
+        : 'Installments and payouts are back.',
     }),
     circle_member_joined: () => ({
       title: 'Someone joined your circle',
@@ -174,7 +209,12 @@ function valuesOf(data: NotificationData, language: PushLanguage): Values {
   const document = data.documentType
     ? (DOCUMENTS[language][data.documentType] ?? DOCUMENTS[language].additional!)
     : DOCUMENTS[language].additional!;
-  return { amount, dueOn, month, document };
+  // Sin cadencia en los datos se asume mensual, que es la de todas las juntas que existen y la
+  // que producían los avisos antes de la épica.
+  const cadence: CadenceId = data.cadence ?? 'monthly';
+  const name = TURN_NAMES[language][cadence];
+  const turn = data.turn ? `${name} ${data.turn}` : name;
+  return { amount, dueOn, month, document, turn, monthly: cadence === 'monthly' };
 }
 
 /** Título y cuerpo del aviso para una notificación de la bandeja. */

@@ -29,8 +29,9 @@ describe('finanzas: cuotas', () => {
     ]);
     const { user, router } = renderApp({ path: '/finance', auth: signedIn(['finance']), finance });
 
-    const totals = await screen.findByRole('list', { name: 'Totales por estado' });
-    expect(within(totals).getByText('Pagada')).toBeInTheDocument();
+    const totals = await screen.findByRole('list', { name: 'Totales por estado y cadencia' });
+    // Cada total dice de qué cadencia es; con solo juntas mensuales hay una fila por estado.
+    expect(within(totals).getByText('Pagada · Mensual')).toBeInTheDocument();
     expect(within(totals).getByText('2 cuotas')).toBeInTheDocument();
     expect(screen.getAllByText('Lucía M.')).toHaveLength(3);
 
@@ -41,8 +42,8 @@ describe('finanzas: cuotas', () => {
     await user.selectOptions(screen.getByLabelText('Estado'), '');
     await user.type(screen.getByLabelText('Mes'), '2027-01');
     await waitFor(() => expect(finance.requests.at(-1)).toMatchObject({ period: '2027-01' }));
-    // Soporte de juntas: el turno enlaza al detalle de la junta.
-    expect(screen.getAllByRole('link', { name: /turno/ })[0]).toHaveAttribute(
+    // Soporte de juntas: el turno, con su unidad y su fecha, enlaza al detalle de la junta.
+    expect(screen.getAllByRole('link', { name: /Mes 2 ·/ })[0]).toHaveAttribute(
       'href',
       '/circles/00000000-0000-4000-8000-000000000042',
     );
@@ -70,6 +71,34 @@ describe('finanzas: cuotas', () => {
     await waitFor(() => expect(screen.getAllByText('Lucía M.')).toHaveLength(3));
   });
 
+  it('los totales no mezclan cadencias, y el filtro de cadencia acota el listado', async () => {
+    // El punto del ticket (COPAYNI-118): agrupar solo por mes sumaría la junta mensual con las
+    // cuatro semanas de la otra, y la cifra dejaría de cuadrar a simple vista.
+    const finance = new InMemoryFinance([
+      installment({
+        status: 'paid',
+        cadence: 'monthly',
+        amount: { amount: 500_000, currency: 'PEN' },
+      }),
+      installment({ status: 'paid', cadence: 'weekly', turn: 1, dueOn: '2026-12-02' }),
+      installment({ status: 'paid', cadence: 'weekly', turn: 2, dueOn: '2026-12-09' }),
+    ]);
+    const { user, router } = renderApp({ path: '/finance', auth: signedIn(['finance']), finance });
+
+    const totals = await screen.findByRole('list', { name: 'Totales por estado y cadencia' });
+    expect(within(totals).getByText('Pagada · Mensual')).toBeInTheDocument();
+    expect(within(totals).getByText('Pagada · Semanal')).toBeInTheDocument();
+    expect(within(totals).getByText('1 cuota')).toBeInTheDocument();
+    expect(within(totals).getByText('2 cuotas')).toBeInTheDocument();
+    // Y cada cuota semanal se distingue por su turno y su fecha, las dos del mismo mes.
+    expect(screen.getByRole('link', { name: /Semana 1 ·/ })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /Semana 2 ·/ })).toBeInTheDocument();
+
+    await user.selectOptions(screen.getByLabelText('Cadencia'), 'weekly');
+    await waitFor(() => expect(finance.requests.at(-1)).toMatchObject({ cadence: 'weekly' }));
+    expect(router.state.location.search).toContain('cadence=weekly');
+  });
+
   it('el caso de uso rechaza un mes con otra forma', () => {
     expect(() =>
       new ListInstallmentsUseCase(new InMemoryFinance()).execute({ period: '12-2026' }),
@@ -85,6 +114,8 @@ describe('finanzas: pozos y fondo', () => {
           id: '00000000-0000-4000-c000-000000000001',
           circleId: '00000000-0000-4000-8000-000000000042',
           position: 1,
+          turn: 1,
+          cadence: 'monthly',
           period: '2026-12',
           amount: { amount: 600_000, currency: 'PEN' },
           disbursedAt: NOW,
@@ -116,11 +147,24 @@ describe('finanzas: pozos y fondo', () => {
           belowMinimum: true,
         },
       ],
+      totals: [
+        {
+          cadence: 'monthly',
+          contributed: { amount: 50_000, currency: 'PEN' },
+          used: { amount: 10_000, currency: 'PEN' },
+        },
+        {
+          cadence: 'weekly',
+          contributed: { amount: 30_000, currency: 'PEN' },
+          used: { amount: 0, currency: 'PEN' },
+        },
+      ],
       items: [
         {
           transactionKey: 'seed:1',
           kind: 'seed_capital',
           circleId: null,
+          cadence: null,
           period: null,
           reason: 'Aporte inicial',
           amount: { amount: 50_000, currency: 'PEN' },
@@ -130,6 +174,7 @@ describe('finanzas: pozos y fondo', () => {
           transactionKey: 'cov:1',
           kind: 'coverage',
           circleId: '00000000-0000-4000-8000-000000000042',
+          cadence: 'weekly',
           period: '2026-12',
           reason: null,
           amount: { amount: -10_000, currency: 'PEN' },
@@ -168,7 +213,7 @@ describe('FinanceApiRepository', () => {
     const replies: unknown[] = [
       { totals: [], items: [], nextCursor: null },
       { items: [], nextCursor: null },
-      { balances: [], items: [], nextCursor: null },
+      { balances: [], totals: [], items: [], nextCursor: null },
     ];
     const fetchFn = jest.fn((url: URL | RequestInfo) => {
       calls.push(url instanceof URL ? url.href : typeof url === 'string' ? url : url.url);
@@ -181,11 +226,17 @@ describe('FinanceApiRepository', () => {
     const repository = new FinanceApiRepository(
       new FetchHttpClient('http://api.test', new TokenStore(), 5_000, fetchFn),
     );
-    await repository.installments({ status: 'overdue', period: '2026-12', cursor: 'c', limit: 5 });
+    await repository.installments({
+      status: 'overdue',
+      period: '2026-12',
+      cadence: 'weekly',
+      cursor: 'c',
+      limit: 5,
+    });
     await repository.payouts({});
     await repository.guaranteeFund({ limit: 10 });
     expect(calls).toEqual([
-      'http://api.test/admin/v1/finance/installments?status=overdue&period=2026-12&cursor=c&limit=5',
+      'http://api.test/admin/v1/finance/installments?status=overdue&period=2026-12&cadence=weekly&cursor=c&limit=5',
       'http://api.test/admin/v1/finance/payouts',
       'http://api.test/admin/v1/finance/guarantee-fund?limit=10',
     ]);

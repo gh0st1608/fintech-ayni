@@ -116,7 +116,9 @@ describe('Puesta al día', () => {
         },
       ],
     });
-    const [slot] = await repository.listSlots(pen(30_000), 10, undefined, 'v-1');
+    const {
+      slots: [slot],
+    } = await repository.listSlots({ payout: pen(30_000), turns: 10, circleId: 'v-1' });
     expect(fetchImpl.mock.calls[0]?.[0]).toBe(
       'https://api.test/v1/circles/slots?payoutAmount=3000000&months=10&circleId=v-1&currency=PEN',
     );

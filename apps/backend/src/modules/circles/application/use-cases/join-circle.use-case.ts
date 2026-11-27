@@ -9,7 +9,6 @@ import {
 } from '../../../../shared/application/ports/currencies.port';
 import { LocalDate } from '../../../../shared/domain/value-objects/local-date';
 import { Money } from '../../../../shared/domain/value-objects/money';
-import { Period } from '../../../../shared/domain/value-objects/period';
 import { ConflictError, NotFoundError, ValidationError } from '../../../../shared/errors/app-error';
 import {
   Circle,
@@ -17,6 +16,12 @@ import {
   IdempotencyKeyReusedError,
   type Membership,
 } from '../../domain/entities/circle';
+import { nextStart } from '../../domain/services/circle-start';
+import {
+  assertCadenceEnabled,
+  assertSupportedByClient,
+  clientCadences,
+} from '../../domain/services/client-capability';
 import { applicantIn, assertCanJoin } from '../../domain/services/join-eligibility';
 import {
   type MonthlyPayIn,
@@ -43,7 +48,7 @@ import {
   type MembershipAgreementsPort,
 } from '../ports/membership-agreements.port';
 import { CIRCLE_TERMS, type CircleTermsSettings } from './circle-terms';
-import { CIRCLE_CYCLE, type CircleCycleSettings } from './cycle-settings';
+import { CIRCLE_CYCLE, type CircleCycleSettings, delinquencyFor } from './cycle-settings';
 import { TRUST_SETTINGS, type TrustSettings, trustProfileOf } from './trust';
 import {
   JOIN_CONFIG_REPOSITORY,
@@ -83,6 +88,11 @@ export interface JoinCircleCommand {
    * dónde imponerse el día que llegue, y para poder probarlo.
    */
   cadence?: CadenceId;
+  /**
+   * Cadencias que el cliente declara soportar (COPAYNI-115); solo la mensual si no declara nada.
+   * La cabecera la lee el controlador.
+   */
+  supportedCadences?: readonly CadenceId[];
   position: number;
   idempotencyKey: string;
   /** Versión de los términos que el usuario aceptó en la confirmación (COPAYNI-86). */
@@ -128,7 +138,11 @@ export class JoinCircleUseCase {
     @Inject(CIRCLE_ASSIGNMENT) private readonly assignment: CircleAssignmentSettings,
     @Inject(JOIN_ELIGIBILITY) private readonly eligibility: JoinEligibilityPort,
     @Inject(MEMBER_DEBTS) private readonly debts: MemberDebtsPort,
-    @Inject(CIRCLE_CYCLE) private readonly cycle: Pick<CircleCycleSettings, 'dueDay'>,
+    @Inject(CIRCLE_CYCLE)
+    private readonly cycle: Pick<
+      CircleCycleSettings,
+      'dueDay' | 'delinquency' | 'delinquencyByCadence'
+    >,
     @Inject(MEMBER_HISTORY) private readonly history: MemberHistoryPort,
     @Inject(TRUST_SETTINGS) private readonly trust: TrustSettings,
     @Inject(CURRENCIES) private readonly currencies: CurrencySettings,
@@ -161,6 +175,8 @@ export class JoinCircleUseCase {
     const payout = offeredPayout(joinConfig, command.payoutAmount, command.months);
     this.assertCadenceEnabled(command);
     const { circle, isNew } = await this.target(command, payout);
+    // Unirse por identificador es la otra puerta a una cadencia que la app no sabe mostrar.
+    assertSupportedByClient(circle.terms.cadence, clientCadences(command.supportedCadences));
     const today = LocalDate.fromDate(this.clock.now(), this.assignment.timeZone);
     const quote = joinQuote(this.pricing, circle, command.position, today, this.cycle.dueDay);
     const applicant = await this.eligibility.applicantFor(command.userId);
@@ -234,6 +250,8 @@ export class JoinCircleUseCase {
         retention: quote.retention,
         startsOn: terms.startsOnPeriod.toString(),
         payoutPeriod: quote.payoutPeriod.toString(),
+        // El documento describe la obligación con fechas reales, no con meses (COPAYNI-119).
+        ...this.agreementSchedule(terms, position, quote),
       },
     });
   }
@@ -350,11 +368,7 @@ export class JoinCircleUseCase {
    */
   private assertCadenceEnabled(command: JoinCircleCommand): Cadence {
     const cadence = command.cadence ? Cadence.parse(command.cadence) : Cadence.default;
-    if (!this.assignment.cadences.some((enabled) => enabled.equals(cadence))) {
-      throw new ValidationError(`La frecuencia ${cadence.id} no está habilitada`, {
-        cadence: 'not_enabled',
-      });
-    }
+    assertCadenceEnabled(cadence, this.assignment.cadences);
     return cadence;
   }
 
@@ -363,13 +377,15 @@ export class JoinCircleUseCase {
     command: JoinCircleCommand,
     payout: Money,
   ): Promise<{ circle: Circle; isNew: boolean }> {
-    const currentPeriod = Period.fromDate(this.clock.now(), this.assignment.timeZone);
+    const today = LocalDate.fromDate(this.clock.now(), this.assignment.timeZone);
+    const currentPeriod = today.period;
     if (command.circleId === null) {
+      const cadence = this.assertCadenceEnabled(command);
       const terms = CircleTerms.create({
         payout,
         turns: command.months,
-        cadence: this.assertCadenceEnabled(command),
-        startsOn: currentPeriod.addMonths(this.assignment.startOffsetMonths),
+        cadence,
+        startsOn: nextStart(today, cadence, this.assignment.startOffsetMonths),
       });
       return { circle: Circle.open({ id: randomUUID(), terms }), isNew: true };
     }
@@ -391,5 +407,49 @@ export class JoinCircleUseCase {
       throw new CircleAlreadyStartedError();
     }
     return { circle, isNew: false };
+  }
+
+  /**
+   * Lo que el contrato y el pagaré necesitan del calendario (COPAYNI-119).
+   *
+   * El cronograma sale de `TurnSchedule`, que es el único que hace aritmética de calendario de la
+   * junta, y los parámetros de morosidad de la cadencia (COPAYNI-111): el documento tiene que
+   * decir el cargo por mora que de verdad se le va a aplicar.
+   */
+  private agreementSchedule(
+    terms: CircleTerms,
+    position: number,
+    quote: SlotQuote,
+  ): {
+    cadence: CadenceId;
+    turns: number;
+    unit: string;
+    startsOnDate: string;
+    endsOnDate: string;
+    payoutOn: string;
+    netPayout: Money;
+    dueDates: { turn: number; dueOn: string }[];
+    graceDays: number;
+    lateFeeBps: number;
+  } {
+    const schedule = TurnSchedule.forCollection({
+      startsOn: terms.startsOn,
+      cadence: terms.cadence,
+      turns: terms.turns,
+      dueDay: this.cycle.dueDay,
+    });
+    const delinquency = delinquencyFor(this.cycle, terms.cadence);
+    return {
+      cadence: terms.cadence.id,
+      turns: terms.turns,
+      unit: terms.cadence.turnLabel().toLowerCase(),
+      startsOnDate: terms.startsOn.toString(),
+      endsOnDate: terms.endsOnDate.toString(),
+      payoutOn: terms.payoutDateOf(position).toString(),
+      netPayout: quote.netPayout,
+      dueDates: schedule.all().map(({ turn, dueOn }) => ({ turn, dueOn: dueOn.toString() })),
+      graceDays: delinquency.graceDays,
+      lateFeeBps: delinquency.lateFeeBps,
+    };
   }
 }

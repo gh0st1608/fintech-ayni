@@ -79,6 +79,16 @@ export class JoinCircleUseCase {
       if (error instanceof AppError && error.code === 'MEMBER_BLOCKED') {
         throw new MemberBlockedError('Join rejected: MEMBER_BLOCKED', amountDue(error));
       }
+      if (error instanceof AppError && error.code === 'MONTHLY_LIMIT_EXCEEDED') {
+        // El backend dice qué mes se pasa y en cuánto (COPAYNI-110): se muestra, no se repite
+        // un mensaje genérico que obligue a adivinar.
+        const { month, excess, currency } = error.fieldErrors ?? {};
+        throw new MonthlyLimitExceededError(
+          'Join rejected: MONTHLY_LIMIT_EXCEEDED',
+          month ?? null,
+          excess && currency ? Money.of(Number(excess), currency) : null,
+        );
+      }
       const TypedError = error instanceof AppError ? TYPED_ERRORS[error.code ?? ''] : undefined;
       if (TypedError) throw new TypedError(`Join rejected: ${(error as AppError).code}`);
       throw error;

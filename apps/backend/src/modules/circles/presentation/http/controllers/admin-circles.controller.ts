@@ -80,6 +80,7 @@ export class AdminCirclesController {
   async list(@Query() query: AdminCirclesQuery): Promise<AdminCirclesResponse> {
     const page = await this.listCircles.execute({
       state: query.state,
+      cadence: query.cadence,
       limit: query.limit ?? DEFAULT_PAGE_SIZE,
       cursor: query.cursor ?? null,
     });

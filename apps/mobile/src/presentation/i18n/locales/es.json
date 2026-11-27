@@ -116,25 +116,35 @@
     },
     "monthlyPayIn": {
       "title": "Cuota mensual",
-      "question": "¿Cuánto quieres pagar cada mes?",
+      "question": "¿Cuánto quieres pagar {{per}}?",
       "summaryLabel": "Monto a recibir",
       "edit": "Editar",
       "editA11y": "Editar el monto a recibir",
       "optionsLabel": "Cuotas disponibles",
-      "option": "{{amount}} al mes",
+      "option": "{{amount}} {{per}}",
       "optionMonths": "por {{months}} meses",
       "exceedsLimit": "Supera tu límite mensual de cuotas.",
       "info": "La cuota mensual puede variar según el costo o los descuentos de tu turno.",
       "empty": "No hay cuotas disponibles para este monto. Prueba con otro monto a recibir.",
       "missingPayout": "Primero elige el monto a recibir.",
       "choosePayout": "Elegir el monto",
-      "perMonth": "/mes"
+      "perMonth": "/mes",
+      "duration": "Dura {{days}} días",
+      "endsOn": "Termina el {{date}}",
+      "emptyTitle": "Ese monto no se reparte en cuotas exactas",
+      "emptyBody": "Con {{amount}} ninguna cantidad de turnos da una cuota exacta en céntimos. Prueba con otro monto.",
+      "suggestion": "Con {{amount}} sí: {{turns}} de {{installment}}",
+      "changeAmount": "Cambiar el monto",
+      "optionTurns": "por {{turns}}",
+      "cadenceChanged": "Cambiaste la frecuencia: estas son las opciones nuevas.",
+      "amountChanged": "Cambiaste el monto: estas son las opciones nuevas.",
+      "dismiss": "Entendido"
     },
     "slot": {
       "title": "Turno de cobro",
-      "question": "¿En qué mes quieres recibir tu pozo?",
-      "installmentSummaryLabel": "Cuota mensual",
-      "installmentSummary": "{{amount}} al mes · {{months}} meses",
+      "question": "¿Cuándo quieres recibir tu pozo?",
+      "installmentSummaryLabel": "Tu cuota",
+      "installmentSummary": "{{amount}} {{per}} · {{turns}}",
       "editInstallmentA11y": "Editar la cuota mensual",
       "types": {
         "fastestPayout": "Cobro más rápido",
@@ -173,7 +183,8 @@
         "fastestPayout": "Primeros turnos (de {{from}} a {{to}})",
         "lowestFees": "Turnos intermedios (de {{from}} a {{to}})",
         "highestReturn": "Últimos turnos (de {{from}} a {{to}})"
-      }
+      },
+      "duration": "La junta dura {{days}} días y termina el {{date}}"
     },
     "payoutMethod": {
       "title": "Método de cobro",
@@ -215,7 +226,8 @@
         "memberBlocked": "Fuiste expulsado de una junta por no pagar una cuota. Paga lo vencido más el cargo por mora ({{amount}}) para unirte a otra.",
         "memberBlockedNoAmount": "Fuiste expulsado de una junta por no pagar una cuota. Paga lo vencido más el cargo por mora para unirte a otra.",
         "slotNotAllowed": "Todavía no puedes tomar ese tipo de turno. Elige otro.",
-        "termsOutdated": "Los términos del círculo cambiaron. Revísalos y acéptalos de nuevo para unirte."
+        "termsOutdated": "Los términos del círculo cambiaron. Revísalos y acéptalos de nuevo para unirte.",
+        "monthlyLimitExceededDetail": "En {{month}} tus cuotas se pasan de tu límite mensual en {{amount}}."
       },
       "actions": {
         "verifyIdentity": "Verificar mi National ID",
@@ -239,6 +251,15 @@
     "currency": {
       "label": "Moneda",
       "rate": "Tipo de cambio fijo: {{from}} = {{to}}"
+    },
+    "frequency": {
+      "title": "Frecuencia",
+      "question": "¿Cada cuánto quieres pagar?",
+      "optionsLabel": "Frecuencias disponibles",
+      "summaryLabel": "Frecuencia",
+      "editA11y": "Cambiar la frecuencia",
+      "turnEvery": "Un turno cada {{days}} días",
+      "changed": "Cambiaste la frecuencia: vuelve a elegir el monto y los turnos."
     }
   },
   "circles": {
@@ -288,9 +309,29 @@
       "loadError": "No pudimos cargar las propuestas de inicio: {{reason}}",
       "changed": "Las condiciones cambiaron porque alguien salió de la junta. Revisa la propuesta nueva."
     },
+    "cadences": {
+      "monthly": {
+        "turn": "Mes",
+        "per": "por mes",
+        "turns_one": "{{count}} mes",
+        "turns_other": "{{count}} meses"
+      },
+      "biweekly": {
+        "turn": "Quincena",
+        "per": "por quincena",
+        "turns_one": "{{count}} quincena",
+        "turns_other": "{{count}} quincenas"
+      },
+      "weekly": {
+        "turn": "Semana",
+        "per": "por semana",
+        "turns_one": "{{count}} semana",
+        "turns_other": "{{count}} semanas"
+      }
+    },
     "detail": {
       "title": "Mi junta",
-      "pot": "Pozo mensual",
+      "pot": "Pozo por turno",
       "states": {
         "collecting": "Por empezar",
         "approving": "Esperando aprobación",
@@ -300,25 +341,27 @@
         "finished": "Finalizada"
       },
       "progressA11y": "Avance de la junta",
-      "progress": "Mes {{current}} de {{total}} · termina en {{end}}",
-      "startsOn": "Empieza en {{month}}",
+      "progress": "Turno {{current}} de {{total}} · termina el {{end}}",
+      "startsOn": "Empieza el {{date}}",
       "yourTurn": "Tu turno",
-      "turnValue": "{{month}} ({{position}}.º)",
+      "turnValue": "{{unit}} {{turn}} · {{date}}",
       "yourInstallment": "Tu cuota",
       "retention": "Retención de tu payout",
       "nextDue": "Próximo vencimiento",
       "nothingDue": "Estás al día",
       "pay": "Pagar {{amount}}",
       "turns": "Turnos",
-      "turnRow": "{{month}} · {{name}}",
+      "turnRow": "{{label}} · {{name}}",
       "you": "Tú",
       "member": "Miembro",
       "vacant": "Turno vacante",
       "turnStatus": {
         "paid": "Cobrado",
-        "current": "Este mes",
-        "vacant": "Vacante"
-      }
+        "current": "En curso",
+        "vacant": "Vacante",
+        "upcoming": "Próximo"
+      },
+      "installmentValue": "{{amount}} {{perUnit}}"
     }
   },
   "saving": {
@@ -937,6 +980,10 @@
       "payoutTurn": {
         "title": "¡Este mes cobras!",
         "body": "Tu pozo de {{amount}} se paga cuando todos hayan pagado."
+      },
+      "payoutTurnDated": {
+        "title": "¡Te toca cobrar!",
+        "body": "Tu pozo de {{amount}} se paga el {{date}}, cuando todos hayan pagado."
       },
       "payoutDisbursed": {
         "title": "Recibiste tu pozo",

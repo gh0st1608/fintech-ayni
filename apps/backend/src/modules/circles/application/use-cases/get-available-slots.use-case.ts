@@ -12,7 +12,9 @@ import {
   CircleAlreadyStartedError,
 } from '../../domain/entities/circle';
 import { type SlotPricing, type SlotQuote } from '../../domain/services/slot-pricing';
-import { type Cadence } from '../../domain/value-objects/cadence';
+import { nextStart } from '../../domain/services/circle-start';
+import { assertSupportedByClient, requestedCadence } from '../../domain/services/client-capability';
+import { Cadence, type CadenceId } from '../../domain/value-objects/cadence';
 import { type SlotRestriction, slotRestriction } from '../../domain/services/trust-policy';
 import { openVacancies } from '../../domain/services/vacancy';
 import { CircleTerms } from '../../domain/value-objects/circle-terms';
@@ -26,30 +28,13 @@ import {
 import { CIRCLE_CYCLE, type CircleCycleSettings } from './cycle-settings';
 import { TRUST_SETTINGS, type TrustSettings, trustProfileOf } from './trust';
 import { offeredPayout } from './offered-payout';
+import {
+  CIRCLE_ASSIGNMENT,
+  type CircleAssignmentSettings,
+  SLOT_PRICING,
+} from './assignment-settings';
 
-export const CIRCLE_ASSIGNMENT = Symbol('CIRCLE_ASSIGNMENT');
-export const SLOT_PRICING = Symbol('SLOT_PRICING');
-
-/**
- * Regla provisional para elegir el círculo (pending-scope R2), desde la configuración.
- * - `fill_oldest`: el círculo abierto más antiguo con esas condiciones, que todavía no empezó y
- *   donde el usuario no es miembro. Completa círculos antes de abrir otros, así empiezan antes.
- *   Si no hay, uno nuevo.
- * - `always_new`: siempre uno nuevo.
- */
-export interface CircleAssignmentSettings {
-  readonly strategy: 'fill_oldest' | 'always_new';
-  /**
-   * Cadencias que se pueden crear (`CIRCLE_CADENCES_ENABLED`, COPAYNI-121). Las juntas que ya
-   * existen no la consultan: deshabilitar una cadencia impide crear juntas nuevas, no detiene
-   * las que están en curso.
-   */
-  readonly cadences: readonly Cadence[];
-  /** Un círculo nuevo empieza este número de meses después del mes actual. */
-  readonly startOffsetMonths: number;
-  /** Zona horaria IANA que define el mes actual. */
-  readonly timeZone: string;
-}
+export { CIRCLE_ASSIGNMENT, SLOT_PRICING, type CircleAssignmentSettings };
 
 export interface AvailableSlot extends SlotQuote {
   available: boolean;
@@ -94,16 +79,30 @@ export class GetAvailableSlotsUseCase {
     months: number,
     circleId?: string,
     currency?: string,
+    /** Frecuencia pedida; la mensual si no se indica. La API la expone en COPAYNI-116. */
+    cadenceId?: CadenceId,
+    /**
+     * Cadencias que el cliente declara soportar (COPAYNI-115). Por defecto solo la mensual, que
+     * es lo que sabe dibujar la app publicada.
+     */
+    supported: readonly Cadence[] = [Cadence.default],
   ): Promise<AvailableSlotsResult> {
     const [joinConfig, profile] = await Promise.all([
       this.joinConfigs.getForUser(principal.userId, currency),
       trustProfileOf(principal.userId, this.eligibility, this.history),
     ]);
     const payout = offeredPayout(joinConfig, payoutAmount, months);
+    // Con `circleId` la cadencia que manda es la del círculo, que `slotsOf` comprueba contra lo
+    // declarado: la frecuencia pedida solo tiene sentido cuando se va a emparejar o a abrir uno.
     const result =
       circleId === undefined
-        ? await this.assigned(principal.userId, payout, months)
-        : await this.slotsOf(circleId, principal.userId, payout, months);
+        ? await this.assigned(
+            principal.userId,
+            payout,
+            months,
+            requestedCadence(cadenceId, this.assignment.cadences, supported),
+          )
+        : await this.slotsOf(circleId, principal.userId, payout, months, supported);
     return {
       ...result,
       slots: result.slots.map((slot) => ({
@@ -117,14 +116,16 @@ export class GetAvailableSlotsUseCase {
     userId: string,
     payout: Money,
     months: number,
+    cadence: Cadence,
   ): Promise<SlotsWithoutRestrictions> {
-    const currentPeriod = Period.fromDate(this.clock.now(), this.assignment.timeZone);
+    const today = LocalDate.fromDate(this.clock.now(), this.assignment.timeZone);
     const circle =
       this.assignment.strategy === 'fill_oldest'
         ? await this.circles.findOldestJoinable({
             payout,
             months,
-            startsAfter: currentPeriod,
+            cadence,
+            startsAfter: today,
             userId,
           })
         : null;
@@ -132,8 +133,9 @@ export class GetAvailableSlotsUseCase {
       circle?.terms ??
       CircleTerms.create({
         payout,
-        months,
-        startsOn: currentPeriod.addMonths(this.assignment.startOffsetMonths),
+        turns: months,
+        cadence,
+        startsOn: nextStart(today, cadence, this.assignment.startOffsetMonths),
       });
 
     return {
@@ -151,9 +153,13 @@ export class GetAvailableSlotsUseCase {
     userId: string,
     payout: Money,
     months: number,
+    supported: readonly Cadence[],
   ): Promise<SlotsWithoutRestrictions> {
     const circle = await this.circles.findById(circleId);
     if (!circle) throw new NotFoundError('No se encontró el círculo', 'CIRCLE_NOT_FOUND');
+    // Alcanzar un círculo por su identificador no salta la declaración de capacidad: es la otra
+    // puerta por la que un cliente podría llegar a una cadencia que no sabe mostrar (COPAYNI-115).
+    assertSupportedByClient(circle.terms.cadence, supported);
     if (!circle.terms.payout.equals(payout) || circle.terms.months !== months) {
       throw new ValidationError('El círculo no tiene ese payout y esa duración', {
         circleId: 'terms_mismatch',

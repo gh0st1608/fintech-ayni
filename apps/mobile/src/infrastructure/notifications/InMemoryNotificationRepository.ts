@@ -16,7 +16,15 @@ export interface InMemoryNotificationOptions {
 /** Ejemplos del Figma (2052:2373) para el modo dev sin backend. */
 function samples(currency: string, now: Date): AppNotification[] {
   const hoursAgo = (hours: number) => new Date(now.getTime() - hours * 3_600_000);
-  const base = { circleId: 'c-1', dueOn: null, period: null, documentType: null, read: false };
+  const base = {
+    circleId: 'c-1',
+    dueOn: null,
+    period: null,
+    cadence: null,
+    turn: null,
+    documentType: null,
+    read: false,
+  };
   return [
     {
       ...base,

@@ -1,4 +1,5 @@
 import type {
+  Cadence,
   CircleDetail,
   CirclesPage,
   CycleState,
@@ -58,6 +59,8 @@ export interface StaffAuthPort {
 
 export interface CirclesFilter {
   state?: CycleState;
+  /** Solo las juntas de esta cadencia (COPAYNI-118). */
+  cadence?: Cadence;
   cursor?: string | null;
   limit?: number;
 }
@@ -113,6 +116,8 @@ export interface InstallmentsFilter extends PageFilter {
   status?: InstallmentStatus;
   /** `YYYY-MM`. */
   period?: string;
+  /** Solo las cuotas de juntas de esta cadencia (COPAYNI-118). */
+  cadence?: Cadence;
 }
 
 /** Finanzas, solo lectura (docs/api/admin.md, "Finanzas"). */

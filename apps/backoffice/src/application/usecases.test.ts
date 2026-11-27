@@ -45,9 +45,9 @@ describe('dominio', () => {
   });
 
   it('calcula los turnos ocupados sin pasar del 100 %', () => {
-    expect(fillRatio({ members: 3, months: 6 })).toBe(0.5);
-    expect(fillRatio({ members: 7, months: 6 })).toBe(1);
-    expect(fillRatio({ members: 0, months: 0 })).toBe(0);
+    expect(fillRatio({ members: 3, turns: 6 })).toBe(0.5);
+    expect(fillRatio({ members: 7, turns: 6 })).toBe(1);
+    expect(fillRatio({ members: 0, turns: 0 })).toBe(0);
   });
 
   it('solo los errores transitorios se reintentan', () => {

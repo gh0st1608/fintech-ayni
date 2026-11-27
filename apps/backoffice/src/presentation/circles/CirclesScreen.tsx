@@ -1,6 +1,13 @@
 import { Link, useSearchParams } from 'react-router';
 
-import { CYCLE_STATES, type CycleState, fillRatio } from '@/domain/circles/Circle';
+import {
+  CADENCE_LABELS,
+  CADENCES,
+  type Cadence,
+  CYCLE_STATES,
+  type CycleState,
+  fillRatio,
+} from '@/domain/circles/Circle';
 
 import {
   Badge,
@@ -11,45 +18,73 @@ import {
   inputClass,
   Spinner,
 } from '../components/ui';
-import { formatMoney, formatPeriod, STATE_LABELS } from '../format';
+import { formatDay, formatMoney, STATE_LABELS } from '../format';
 import { useCircles } from './useCircles';
 
 const isState = (value: string | null): value is CycleState =>
   (CYCLE_STATES as readonly string[]).includes(value ?? '');
+
+const isCadence = (value: string | null): value is Cadence =>
+  (CADENCES as readonly string[]).includes(value ?? '');
 
 /** Juntas por estado (docs/backoffice-plan.md, fase 2). El filtro vive en la URL. */
 export function CirclesScreen() {
   const [params, setParams] = useSearchParams();
   const raw = params.get('state');
   const state = isState(raw) ? raw : undefined;
-  const circles = useCircles(state);
+  const rawCadence = params.get('cadence');
+  const cadence = isCadence(rawCadence) ? rawCadence : undefined;
+  const circles = useCircles(state, cadence);
+  /** Los dos filtros viven en la URL y se combinan: cambiar uno conserva el otro. */
+  const withFilter = (next: Partial<{ state: string; cadence: string }>) => {
+    const merged = { state: state ?? '', cadence: cadence ?? '', ...next };
+    return Object.fromEntries(Object.entries(merged).filter(([, value]) => value !== ''));
+  };
   const items = circles.data?.pages.flatMap((page) => page.items) ?? [];
 
   return (
     <section className="flex flex-col gap-6">
       <header className="flex flex-wrap items-end justify-between gap-4">
         <h1 className="text-2xl font-semibold">Juntas</h1>
-        <div className="w-full sm:w-64">
-          <Field label="Estado">
-            {(field) => (
-              <select
-                {...field}
-                className={inputClass}
-                value={state ?? ''}
-                onChange={(event) => {
-                  const next = event.target.value;
-                  setParams(next ? { state: next } : {});
-                }}
-              >
-                <option value="">Todos</option>
-                {CYCLE_STATES.map((value) => (
-                  <option key={value} value={value}>
-                    {STATE_LABELS[value]}
-                  </option>
-                ))}
-              </select>
-            )}
-          </Field>
+        <div className="flex w-full flex-wrap gap-4 sm:w-auto">
+          <div className="w-full sm:w-56">
+            <Field label="Estado">
+              {(field) => (
+                <select
+                  {...field}
+                  className={inputClass}
+                  value={state ?? ''}
+                  onChange={(event) => setParams(withFilter({ state: event.target.value }))}
+                >
+                  <option value="">Todos</option>
+                  {CYCLE_STATES.map((value) => (
+                    <option key={value} value={value}>
+                      {STATE_LABELS[value]}
+                    </option>
+                  ))}
+                </select>
+              )}
+            </Field>
+          </div>
+          <div className="w-full sm:w-56">
+            <Field label="Cadencia">
+              {(field) => (
+                <select
+                  {...field}
+                  className={inputClass}
+                  value={cadence ?? ''}
+                  onChange={(event) => setParams(withFilter({ cadence: event.target.value }))}
+                >
+                  <option value="">Todas</option>
+                  {CADENCES.map((value) => (
+                    <option key={value} value={value}>
+                      {CADENCE_LABELS[value]}
+                    </option>
+                  ))}
+                </select>
+              )}
+            </Field>
+          </div>
         </div>
       </header>
 
@@ -77,6 +112,9 @@ export function CirclesScreen() {
                   Estado
                 </th>
                 <th scope="col" className="px-4 py-2 font-medium">
+                  Cadencia
+                </th>
+                <th scope="col" className="px-4 py-2 font-medium">
                   Inicio
                 </th>
                 <th scope="col" className="px-4 py-2 font-medium">
@@ -100,9 +138,13 @@ export function CirclesScreen() {
                       {STATE_LABELS[circle.state]}
                     </Badge>
                   </td>
-                  <td className="px-4 py-2">{formatPeriod(circle.startsOn)}</td>
                   <td className="px-4 py-2">
-                    {circle.members} de {circle.months} ({Math.round(fillRatio(circle) * 100)} %)
+                    <Badge tone="neutral">{CADENCE_LABELS[circle.cadence]}</Badge>
+                  </td>
+                  {/* El día real del primer turno: fuera de la mensual no es el 1 del mes. */}
+                  <td className="px-4 py-2">{formatDay(circle.startsOnDate)}</td>
+                  <td className="px-4 py-2">
+                    {circle.members} de {circle.turns} ({Math.round(fillRatio(circle) * 100)} %)
                   </td>
                 </tr>
               ))}

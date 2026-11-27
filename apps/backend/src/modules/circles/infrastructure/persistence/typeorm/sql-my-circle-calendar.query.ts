@@ -17,9 +17,9 @@ export class SqlMyCircleCalendarQuery implements MyCircleCalendarPort {
   async find(circleId: string): Promise<MyCircleCalendar | null> {
     if (!isUuid(circleId)) return null;
     const [circle] = await this.dataSource.query<
-      { cycle_state: CycleState; current_period: string | null }[]
+      { cycle_state: CycleState; current_period: string | null; current_turn: number | null }[]
     >(
-      `SELECT cycle_state, to_char(current_period, 'YYYY-MM') AS current_period
+      `SELECT cycle_state, to_char(current_period, 'YYYY-MM') AS current_period, current_turn
          FROM circles WHERE id = $1`,
       [circleId],
     );
@@ -34,22 +34,24 @@ export class SqlMyCircleCalendarQuery implements MyCircleCalendarPort {
           ORDER BY m.position`,
         [circleId],
       ),
-      this.dataSource.query<{ period: string }[]>(
-        `SELECT to_char(period, 'YYYY-MM') AS period FROM circle_payouts
-          WHERE circle_id = $1 ORDER BY period`,
+      // Por turno, no por mes: en una junta semanal cuatro payouts caen en el mismo mes
+      // (COPAYNI-117). La columna la llenó la expansión y la fijó la contracción (COPAYNI-109).
+      this.dataSource.query<{ turn: number }[]>(
+        `SELECT turn FROM circle_payouts WHERE circle_id = $1 ORDER BY turn`,
         [circleId],
       ),
     ]);
     return {
       state: circle.cycle_state,
       currentPeriod: circle.current_period,
+      currentTurn: circle.current_turn === null ? null : Number(circle.current_turn),
       members: members.map((member) => ({
         userId: member.user_id,
         position: Number(member.position),
         firstName: member.first_name,
         lastName: member.last_name,
       })),
-      paidPeriods: payouts.map(({ period }) => period),
+      paidTurns: payouts.map(({ turn }) => Number(turn)),
     };
   }
 }

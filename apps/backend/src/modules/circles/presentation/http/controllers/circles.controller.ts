@@ -43,6 +43,8 @@ import { JoinConfigResponse } from '../dto/join-config.response';
 import { RecommendedCirclesResponse } from '../dto/recommended-circles.dto';
 import { CurrencyQuery } from '../dto/currency.dto';
 import { SlotsQuery, SlotsResponse } from '../dto/slots.dto';
+import { Cadence } from '../../../domain/value-objects/cadence';
+import { ClientCadences, CLIENT_CADENCES_HEADER } from '../client-cadences';
 
 /** La genera el cliente una vez por borrador (en la app, un UUID) y la repite en los reintentos. */
 const IDEMPOTENCY_KEY = /^[A-Za-z0-9_-]{16,255}$/;
@@ -77,23 +79,42 @@ export class CirclesController {
   async joinConfig(
     @CurrentPrincipal() principal: Principal,
     @Query() query: CurrencyQuery,
+    @ClientCadences() cadences: Cadence[],
   ): Promise<JoinConfigResponse> {
     return JoinConfigResponse.from(
-      await this.getJoinConfig.execute(principal, query.currency),
+      await this.getJoinConfig.execute(principal, query.currency, cadences),
       this.termsSettings.version,
     );
   }
 
+  @ApiHeader({
+    name: CLIENT_CADENCES_HEADER,
+    required: false,
+    description:
+      'Cadencias que la app sabe mostrar, separadas por comas (monthly, biweekly, weekly). ' +
+      'Sin la cabecera, el servidor solo ofrece mensuales: es lo que entiende la app publicada ' +
+      '(COPAYNI-115).',
+  })
   @Get('recommended')
   @ApiOkResponse({
     type: RecommendedCirclesResponse,
     description: 'Envuelto en { success, data, traceId }',
   })
   @ApiUnauthorizedResponse({ description: 'Sin token o token inválido (UNAUTHORIZED)' })
-  async recommended(@CurrentPrincipal() principal: Principal): Promise<RecommendedCirclesResponse> {
-    return RecommendedCirclesResponse.from(await this.listRecommended.execute(principal));
+  async recommended(
+    @CurrentPrincipal() principal: Principal,
+    @ClientCadences() cadences: Cadence[],
+  ): Promise<RecommendedCirclesResponse> {
+    return RecommendedCirclesResponse.from(await this.listRecommended.execute(principal, cadences));
   }
 
+  @ApiHeader({
+    name: CLIENT_CADENCES_HEADER,
+    required: false,
+    description:
+      'Cadencias que la app sabe mostrar, separadas por comas (monthly, biweekly, weekly). ' +
+      'Sin la cabecera, las cuotas se calculan en mensual (COPAYNI-115).',
+  })
   @Get('installment-options')
   @ApiOkResponse({
     type: InstallmentOptionsResponse,
@@ -109,12 +130,27 @@ export class CirclesController {
   async installmentOptions(
     @CurrentPrincipal() principal: Principal,
     @Query() query: InstallmentOptionsQuery,
+    @ClientCadences() cadences: Cadence[],
   ): Promise<InstallmentOptionsResponse> {
     return InstallmentOptionsResponse.from(
-      await this.getInstallmentOptions.execute(principal, query.payoutAmount, query.currency),
+      await this.getInstallmentOptions.execute(
+        principal,
+        query.payoutAmount,
+        query.currency,
+        query.cadence,
+        cadences,
+      ),
     );
   }
 
+  @ApiHeader({
+    name: CLIENT_CADENCES_HEADER,
+    required: false,
+    description:
+      'Cadencias que la app sabe mostrar, separadas por comas (monthly, biweekly, weekly). ' +
+      'Sin la cabecera, el servidor solo ofrece mensuales: es lo que entiende la app publicada ' +
+      '(COPAYNI-115).',
+  })
   @Get('slots')
   @ApiOkResponse({ type: SlotsResponse, description: 'Envuelto en { success, data, traceId }' })
   @ApiBadRequestResponse({
@@ -132,6 +168,7 @@ export class CirclesController {
   async slots(
     @CurrentPrincipal() principal: Principal,
     @Query() query: SlotsQuery,
+    @ClientCadences() cadences: Cadence[],
   ): Promise<SlotsResponse> {
     return SlotsResponse.from(
       await this.getAvailableSlots.execute(
@@ -140,6 +177,8 @@ export class CirclesController {
         query.months,
         query.circleId,
         query.currency,
+        query.cadence,
+        cadences,
       ),
     );
   }
@@ -168,6 +207,7 @@ export class CirclesController {
   @ApiUnauthorizedResponse({ description: 'Sin token o token inválido (UNAUTHORIZED)' })
   async join(
     @CurrentPrincipal() principal: Principal,
+    @ClientCadences() cadences: Cadence[],
     @Headers('idempotency-key') idempotencyKey: string | undefined,
     @Body() body: JoinCircleRequest,
     @Res({ passthrough: true }) response: StatusResponse,
@@ -181,6 +221,7 @@ export class CirclesController {
       ...body,
       userId: principal.userId,
       idempotencyKey,
+      supportedCadences: cadences.map(({ id }) => id),
     });
     if (!result.created) response.status(HttpStatus.OK);
     return JoinCircleResponse.from(result);

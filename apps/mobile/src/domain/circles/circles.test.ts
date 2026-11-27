@@ -61,6 +61,7 @@ describe('availablePayoutRange', () => {
     userPayoutLimit,
     savingProgramMax: pen(1000000),
     currencies: [{ code: 'PEN', official: true, rateToOfficial: '1' }],
+    cadences: [{ id: 'monthly', unit: 'Mes', turnDays: 30, default: true }],
     termsVersion: '2026-11',
   });
 
@@ -182,9 +183,22 @@ describe('JoinCircleDraft', () => {
     expect(() => incomplete.joinRequest()).toThrow(IncompleteJoinDraftError);
 
     const request = incomplete.withPayoutMethod('bankAccount').joinRequest();
-    expect(request).toEqual({ circleId: 'c-1', payout: pen(6000), months: 6, position: 3 });
-    expect(joinRequestFingerprint(request)).toBe('c-1|PEN|600000|6|3');
-    expect(joinRequestFingerprint({ ...request, circleId: null })).toBe('new|PEN|600000|6|3');
+    // La cadencia viaja en el pedido: la mensual mientras no se elija otra (COPAYNI-116).
+    expect(request).toEqual({
+      circleId: 'c-1',
+      payout: pen(6000),
+      months: 6,
+      position: 3,
+      cadence: 'monthly',
+    });
+    // La cadencia entra en la huella: el mismo monto y turno en otra frecuencia es otra unión.
+    expect(joinRequestFingerprint(request)).toBe('c-1|PEN|600000|6|3|monthly');
+    expect(joinRequestFingerprint({ ...request, circleId: null })).toBe(
+      'new|PEN|600000|6|3|monthly',
+    );
+    expect(joinRequestFingerprint({ ...request, cadence: 'weekly' })).toBe(
+      'c-1|PEN|600000|6|3|weekly',
+    );
   });
 
   it('cambiar el monto descarta la cuota; repetir el mismo la conserva', () => {

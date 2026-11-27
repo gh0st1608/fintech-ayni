@@ -45,7 +45,7 @@ const RETAINING = new SlotPricing(
     maxDiscountBps: 0,
     adminFeeBps: 0,
     adminFeeMode: 'added_to_installments',
-    retentionInstallments: 2,
+    retentionCoverageDays: 60,
   }),
 );
 /** El ejemplo de pending-scope §3.1: 30.000 en 10 meses desde noviembre de 2026. */
@@ -155,7 +155,7 @@ describe('Retención del payout (COPAYNI-60)', () => {
     expect(legacy.retention).toBeUndefined();
     expect(RETAINING.quoteOf(TERMS, 10, legacy).retention).toEqual(pen(0));
     expect(() =>
-      SlotPricingRules.create({ ...RETAINING_RULES, retentionInstallments: 13 }),
+      SlotPricingRules.create({ ...RETAINING_RULES, retentionCoverageDays: 400 }),
     ).toThrow(expect.objectContaining({ code: 'INVALID_SLOT_PRICING_RULES' }));
   });
 

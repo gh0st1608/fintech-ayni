@@ -13,6 +13,7 @@ import {
   type AdminCircleSummary,
 } from '../../../application/ports/admin-circles-query.port';
 import { type CycleState } from '../../../domain/entities/circle-cycle';
+import { type CadenceId } from '../../../domain/value-objects/cadence';
 
 interface SummaryRow {
   id: string;
@@ -20,7 +21,9 @@ interface SummaryRow {
   payout_amount: string;
   currency: string;
   months: number;
+  cadence: CadenceId;
   starts_on: string;
+  starts_on_date: string;
   members: number;
   created_at: Date;
 }
@@ -53,8 +56,9 @@ interface ProposalRow {
 const SUMMARY_COLUMNS = `
   c.id, c.cycle_state, c.payout_amount::text AS payout_amount, c.currency,
   -- El informe habla en meses y la columna pasó a llamarse turns (COPAYNI-109).
-  c.turns AS months,
-  to_char(c.starts_on, 'YYYY-MM') AS starts_on, c.created_at,
+  c.turns AS months, c.cadence,
+  to_char(c.starts_on, 'YYYY-MM') AS starts_on,
+  to_char(c.starts_on, 'YYYY-MM-DD') AS starts_on_date, c.created_at,
   (SELECT count(*)::int FROM circle_memberships m
     WHERE m.circle_id = c.id AND m.expelled_at IS NULL) AS members`;
 
@@ -76,7 +80,10 @@ const toSummary = (row: SummaryRow): AdminCircleSummary => ({
   state: row.cycle_state,
   payout: Money.of(Number(row.payout_amount), row.currency.trim()),
   months: row.months,
+  turns: row.months,
+  cadence: row.cadence,
   startsOn: row.starts_on,
+  startsOnDate: row.starts_on_date,
   members: row.members,
   createdAt: row.created_at,
 });
@@ -86,7 +93,7 @@ const toSummary = (row: SummaryRow): AdminCircleSummary => ({
 export class SqlAdminCirclesQuery implements AdminCirclesQueryPort {
   constructor(@InjectDataSource() private readonly dataSource: DataSource) {}
 
-  async list({ state, limit, cursor }: AdminCirclesFilter): Promise<AdminCirclesPage> {
+  async list({ state, cadence, limit, cursor }: AdminCirclesFilter): Promise<AdminCirclesPage> {
     const after = cursor ? decodeCursor(cursor) : null;
     const rows = await this.dataSource.query<(SummaryRow & { created_at_text: string })[]>(
       `SELECT ${SUMMARY_COLUMNS},
@@ -94,10 +101,11 @@ export class SqlAdminCirclesQuery implements AdminCirclesQueryPort {
                 AS created_at_text
          FROM circles c
         WHERE ($1::text IS NULL OR c.cycle_state = $1)
+          AND ($5::text IS NULL OR c.cadence = $5)
           AND ($2::timestamptz IS NULL OR (c.created_at, c.id) < ($2::timestamptz, $3::uuid))
         ORDER BY c.created_at DESC, c.id DESC
         LIMIT $4`,
-      [state ?? null, after?.createdAt ?? null, after?.id ?? null, limit + 1],
+      [state ?? null, after?.createdAt ?? null, after?.id ?? null, limit + 1, cadence ?? null],
     );
     const page = rows.slice(0, limit);
     const last = page.at(-1);

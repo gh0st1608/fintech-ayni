@@ -3,6 +3,7 @@ import { DomainError } from '@/domain/shared/errors/DomainError';
 import type { Money } from '@/domain/shared/value-objects/Money';
 
 import type { JoinDraftRequest } from './JoinedCircle';
+import type { Cadence } from './MyCircleDetail';
 import type { JoinTarget } from './RecommendedCircle';
 import type { InstallmentOption } from './value-objects/InstallmentOption';
 import type { Slot } from './value-objects/Slot';
@@ -17,6 +18,12 @@ export class IncompleteJoinDraftError extends DomainError {
  */
 export class JoinCircleDraft {
   private constructor(
+    /**
+     * Frecuencia elegida (COPAYNI-116). Es el paso 0 y arranca en la mensual, que es la única
+     * que existía: cambiarla descarta todo lo elegido después, porque las cuotas, los turnos y
+     * las fechas dependen de ella.
+     */
+    readonly cadence: Cadence,
     readonly payoutAmount: Money | null,
     readonly installment: InstallmentOption | null,
     readonly slot: Slot | null,
@@ -27,18 +34,27 @@ export class JoinCircleDraft {
   ) {}
 
   static empty(): JoinCircleDraft {
-    return new JoinCircleDraft(null, null, null);
+    return new JoinCircleDraft('monthly', null, null, null);
   }
 
   /** Empieza desde un recomendado: ese monto y, para pedir sus slots, ese círculo. */
   static forTarget(amount: Money, target: JoinTarget): JoinCircleDraft {
-    return new JoinCircleDraft(amount, null, null, null, target);
+    return new JoinCircleDraft(target.cadence ?? 'monthly', amount, null, null, null, target);
+  }
+
+  /**
+   * Repetir la misma frecuencia no cambia nada; otra descarta el monto, la cuota y el turno,
+   * porque las combinaciones ofrecibles y las fechas se recalculan (COPAYNI-116).
+   */
+  withCadence(cadence: Cadence): JoinCircleDraft {
+    if (this.cadence === cadence) return this;
+    return new JoinCircleDraft(cadence, this.payoutAmount, null, null, this.payoutMethod);
   }
 
   /** Repetir el mismo monto conserva la cuota y el turno; otro monto los descarta. */
   withPayoutAmount(amount: Money): JoinCircleDraft {
     if (this.payoutAmount?.equals(amount)) return this;
-    return new JoinCircleDraft(amount, null, null, this.payoutMethod);
+    return new JoinCircleDraft(this.cadence, amount, null, null, this.payoutMethod);
   }
 
   /** El círculo cuyos slots se piden: el recomendado, si la duración elegida es la suya. */
@@ -54,6 +70,7 @@ export class JoinCircleDraft {
     }
     const keepsSlot = this.installment?.sameAs(option) ?? false;
     return new JoinCircleDraft(
+      this.cadence,
       this.payoutAmount,
       option,
       keepsSlot ? this.slot : null,
@@ -67,6 +84,7 @@ export class JoinCircleDraft {
       throw new IncompleteJoinDraftError('Choose the payout and the installment before the slot');
     }
     return new JoinCircleDraft(
+      this.cadence,
       this.payoutAmount,
       this.installment,
       slot,
@@ -79,7 +97,14 @@ export class JoinCircleDraft {
     if (!this.payoutAmount || !this.installment || !this.slot) {
       throw new IncompleteJoinDraftError('Choose the slot before the payout method');
     }
-    return new JoinCircleDraft(this.payoutAmount, this.installment, this.slot, type, this.target);
+    return new JoinCircleDraft(
+      this.cadence,
+      this.payoutAmount,
+      this.installment,
+      this.slot,
+      type,
+      this.target,
+    );
   }
 
   /** Los cuatro pasos están elegidos: se puede confirmar la unión (COPAYNI-31). */
@@ -103,14 +128,23 @@ export class JoinCircleDraft {
     return {
       circleId: this.slot!.circleId,
       payout: this.payoutAmount!,
-      months: this.installment!.months,
+      months: this.installment!.turns,
       position: this.slot!.position,
+      cadence: this.cadence,
     };
   }
 }
 
 /** Dos borradores con la misma huella piden la misma unión: comparten la clave de idempotencia. */
 export function joinRequestFingerprint(request: JoinDraftRequest): string {
-  const { circleId, payout, months, position } = request;
-  return [circleId ?? 'new', payout.currency, payout.amount, months, position].join('|');
+  const { circleId, payout, months, position, cadence } = request;
+  // La cadencia entra en la huella: el mismo monto y turno en otra frecuencia es otra unión.
+  return [
+    circleId ?? 'new',
+    payout.currency,
+    payout.amount,
+    months,
+    position,
+    cadence ?? 'monthly',
+  ].join('|');
 }

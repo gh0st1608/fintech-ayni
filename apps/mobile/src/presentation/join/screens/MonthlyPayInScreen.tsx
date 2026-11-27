@@ -32,7 +32,8 @@ export function MonthlyPayInScreen({ onEdit, onNext }: MonthlyPayInScreenProps) 
   const formatMoney = useFormatMoney();
   const { draft } = useJoinFlow();
   const payout = draft.payoutAmount;
-  const options = useInstallmentOptions(payout);
+  // Las combinaciones dependen de la frecuencia: cambiarla las recalcula (COPAYNI-116).
+  const options = useInstallmentOptions(payout, draft.cadence);
 
   let body: React.ReactNode;
   if (!payout) {
@@ -57,7 +58,9 @@ export function MonthlyPayInScreen({ onEdit, onNext }: MonthlyPayInScreenProps) 
       </View>
     );
   } else {
-    body = <InstallmentPicker payout={payout} options={options.data} onNext={onNext} />;
+    body = (
+      <InstallmentPicker payout={payout} options={options.data} onEdit={onEdit} onNext={onNext} />
+    );
   }
 
   return (
@@ -85,38 +88,68 @@ export function MonthlyPayInScreen({ onEdit, onNext }: MonthlyPayInScreenProps) 
 }
 
 function InstallmentPicker({
+  payout,
   options,
+  onEdit,
   onNext,
 }: {
   payout: Money;
   options: InstallmentOption[];
+  onEdit: () => void;
   onNext: () => void;
 }) {
   const { t } = useTranslation();
   const formatMoney = useFormatMoney();
-  const { draft, setInstallment } = useJoinFlow();
+  const { draft, discarded, clearDiscarded, setInstallment } = useJoinFlow();
   const previous = draft.installment;
 
   return (
     <ScrollView contentContainerStyle={styles.content}>
       <AppText variant="highlight" weight="semibold" accessibilityRole="header">
-        {t('join.monthlyPayIn.question')}
+        {t('join.monthlyPayIn.question', {
+          per: t(`circles.cadences.${draft.cadence}.per`),
+        })}
       </AppText>
+      {/*
+        Cambiar la frecuencia o el monto recalcula las combinaciones y descarta el turno: se dice
+        cuál de los dos cambió, en lugar de que la lista cambie sin explicación (COPAYNI-116).
+      */}
+      {discarded !== null && (
+        <View style={styles.notice} testID="installment-recalculated">
+          <AppText accessibilityRole="alert" variant="caption">
+            {t(
+              discarded === 'cadence'
+                ? 'join.monthlyPayIn.cadenceChanged'
+                : 'join.monthlyPayIn.amountChanged',
+            )}
+          </AppText>
+          <Button
+            label={t('join.monthlyPayIn.dismiss')}
+            variant="secondary"
+            onPress={clearDiscarded}
+          />
+        </View>
+      )}
       {options.length === 0 ? (
-        <AppText accessibilityRole="alert">{t('join.monthlyPayIn.empty')}</AppText>
+        <NoCombinations payout={payout} onEdit={onEdit} />
       ) : (
         <View style={styles.options} accessibilityLabel={t('join.monthlyPayIn.optionsLabel')}>
           {options.map((option) => {
             const amount = formatMoney(option.installment, { trimZeroDecimals: true });
-            const months = t('join.monthlyPayIn.optionMonths', { months: option.months });
+            const per = t(`circles.cadences.${option.cadence}.per`);
+            const turns = t('join.monthlyPayIn.optionTurns', {
+              turns: t(`circles.cadences.${option.cadence}.turns`, { count: option.turns }),
+            });
+            // La duración la calcula el servidor: la app no cuenta meses (COPAYNI-116).
+            const duration = t('join.monthlyPayIn.duration', { days: option.approximateDays });
             // Al volver del paso 3 se marca la cuota del borrador.
             const selected = previous !== null && option.sameAs(previous);
             return (
               <Pressable
-                key={option.months}
+                key={option.turns}
                 accessibilityRole="button"
                 accessibilityLabel={[
-                  `${t('join.monthlyPayIn.option', { amount })}, ${months}`,
+                  `${t('join.monthlyPayIn.option', { amount, per })}, ${turns}, ${duration}`,
                   option.withinMonthlyLimit ? null : t('join.monthlyPayIn.exceedsLimit'),
                 ]
                   .filter(Boolean)
@@ -124,6 +157,7 @@ function InstallmentPicker({
                 accessibilityState={{ selected, disabled: !option.withinMonthlyLimit }}
                 disabled={!option.withinMonthlyLimit}
                 onPress={() => {
+                  clearDiscarded();
                   setInstallment(option);
                   onNext();
                 }}
@@ -133,14 +167,17 @@ function InstallmentPicker({
                   !option.withinMonthlyLimit && styles.optionDisabled,
                   pressed && styles.pressed,
                 ]}
-                testID={`installment-option-${option.months}`}
+                testID={`installment-option-${option.turns}`}
               >
                 <View style={styles.optionText}>
                   <AppText color={colors.neutral500} variant="caption">
                     <AppText weight="semibold" color={colors.primary}>
                       {amount}
                     </AppText>
-                    {t('join.monthlyPayIn.perMonth')}
+                    {` ${per}`}
+                  </AppText>
+                  <AppText variant="footnote" color={colors.neutral600}>
+                    {duration}
                   </AppText>
                   {!option.withinMonthlyLimit && (
                     <AppText variant="footnote" color={colors.neutral600}>
@@ -149,7 +186,7 @@ function InstallmentPicker({
                   )}
                 </View>
                 <AppText variant="caption" weight="semibold">
-                  {months}
+                  {turns}
                 </AppText>
                 <Chevron />
               </Pressable>
@@ -162,11 +199,41 @@ function InstallmentPicker({
   );
 }
 
+/**
+ * Ningún número de turnos reparte ese monto en cuotas exactas (COPAYNI-125).
+ *
+ * No se deja una lista vacía sin motivo: la persona eligió un monto válido del slider y no tiene
+ * por qué deducir que el problema es la divisibilidad en céntimos.
+ */
+function NoCombinations({ payout, onEdit }: { payout: Money; onEdit: () => void }) {
+  const { t } = useTranslation();
+  const formatMoney = useFormatMoney();
+  const amount = formatMoney(payout, { trimZeroDecimals: true });
+
+  return (
+    <View style={styles.center}>
+      <AppText weight="semibold" accessibilityRole="header" style={styles.centerText}>
+        {t('join.monthlyPayIn.emptyTitle')}
+      </AppText>
+      <AppText accessibilityRole="alert" style={styles.centerText}>
+        {t('join.monthlyPayIn.emptyBody', { amount })}
+      </AppText>
+      <Button label={t('join.monthlyPayIn.changeAmount')} variant="secondary" onPress={onEdit} />
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: spacing.lg },
   centerText: { textAlign: 'center' },
   content: { gap: spacing.l, paddingVertical: spacing.l },
   options: { gap: spacing.sm },
+  notice: {
+    gap: spacing.sm,
+    padding: spacing.lg,
+    borderRadius: radius.md,
+    backgroundColor: colors.primary100,
+  },
   option: {
     minHeight: MIN_TOUCH_TARGET,
     flexDirection: 'row',

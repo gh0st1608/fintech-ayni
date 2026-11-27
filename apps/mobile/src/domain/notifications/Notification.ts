@@ -1,3 +1,4 @@
+import type { Cadence } from '@/domain/circles/MyCircleDetail';
 import type { Money } from '@/domain/shared/value-objects/Money';
 
 /**
@@ -35,6 +36,12 @@ export interface AppNotification {
   dueOn: string | null;
   /** `YYYY-MM` del mes, si aplica. */
   period: string | null;
+  /**
+   * Cadencia de la junta y turno del aviso (COPAYNI-120). Sin cadencia se asume mensual, que es
+   * la de todas las juntas anteriores a la épica y lo que manda el backend para ellas.
+   */
+  cadence: Cadence | null;
+  turn: number | null;
   documentType: string | null;
   occurredAt: Date;
   read: boolean;

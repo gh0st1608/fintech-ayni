@@ -17,8 +17,13 @@ describe('JoinConfigResponse', () => {
       { code: 'PEN', official: true, rateToOfficial: '1' },
       { code: 'USD', official: false, rateToOfficial: '3.75' },
     ];
+    // Las frecuencias que se pueden elegir viajan tal cual (COPAYNI-116).
+    const cadences = [
+      { id: 'monthly' as const, unit: 'Mes', turnDays: 30, default: true },
+      { id: 'weekly' as const, unit: 'Semana', turnDays: 7, default: false },
+    ];
 
-    expect(JoinConfigResponse.from({ config, currencies }, '2026-11')).toEqual({
+    expect(JoinConfigResponse.from({ config, currencies, cadences }, '2026-11')).toEqual({
       payout: {
         min: { amount: 1_000, currency: 'USD' },
         max: { amount: 5_000, currency: 'USD' },
@@ -27,6 +32,7 @@ describe('JoinConfigResponse', () => {
       userPayoutLimit: { amount: 3_000, currency: 'USD' },
       savingProgramMax: { amount: 9_000, currency: 'USD' },
       currencies,
+      cadences,
       termsVersion: '2026-11',
     });
   });

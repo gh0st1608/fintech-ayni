@@ -9,7 +9,7 @@ import {
   CIRCLE_CYCLE_REPOSITORY,
   type CircleCycleRepositoryPort,
 } from '../ports/circle-cycle-repository.port';
-import { CIRCLE_CYCLE, type CircleCycleSettings } from './cycle-settings';
+import { CIRCLE_CYCLE, type CircleCycleSettings, delinquencyFor } from './cycle-settings';
 import { SLOT_PRICING } from './get-available-slots.use-case';
 
 export interface SetCirclePauseCommand {
@@ -56,7 +56,7 @@ export class SetCirclePauseUseCase {
         const cycle = CircleCycle.restore({
           ...stored,
           dueDay: this.settings.dueDay,
-          delinquency: this.settings.delinquency,
+          delinquency: delinquencyFor(this.settings, stored.terms.cadence),
           fund: { balance: stored.fundBalance, feeShareBps: this.settings.fundFeeShareBps },
           members: stored.members.map(({ userId, position, price, deductPayIn }) => ({
             userId,

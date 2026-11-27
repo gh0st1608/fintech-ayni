@@ -22,11 +22,16 @@ const myCircleDetailDto = z.object({
   circleId: z.string().min(1),
   state: z.enum(['collecting', 'approving', 'contributing', 'paused', 'cancelled', 'finished']),
   payout: moneyDto,
-  months: z.number().int().positive(),
+  // `turnCount`, `cadence` y las fechas reales son el contrato de cadencias (COPAYNI-117). El
+  // alias `months` que sigue enviando el servidor no se lee: la app habla de turnos.
+  turnCount: z.number().int().positive(),
+  cadence: z.enum(['monthly', 'biweekly', 'weekly']),
   startsOn: z.string().regex(PERIOD),
+  startsOnDate: z.string().regex(DATE),
   endsOn: z.string().regex(PERIOD),
+  endsOnDate: z.string().regex(DATE),
   currentPeriod: z.string().regex(PERIOD).nullable(),
-  currentMonth: z.number().int().positive().nullable(),
+  currentTurn: z.number().int().positive().nullable(),
   position: z.number().int().positive(),
   payoutPeriod: z.string().regex(PERIOD),
   type: slotTypeDto,
@@ -45,7 +50,9 @@ const myCircleDetailDto = z.object({
   turns: z.array(
     z.object({
       position: z.number().int().positive(),
+      turn: z.number().int().positive(),
       period: z.string().regex(PERIOD),
+      payoutOn: z.string().regex(DATE),
       memberName: z.string().nullable(),
       isMe: z.boolean(),
       status: z.enum(['paid', 'current', 'upcoming', 'vacant']),

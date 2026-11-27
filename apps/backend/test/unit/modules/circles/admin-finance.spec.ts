@@ -13,6 +13,7 @@ function finance(): AdminFinanceQueryPort {
     installmentTotals: jest.fn(() => Promise.resolve([])),
     installments: jest.fn(() => Promise.resolve(emptyPage)),
     payouts: jest.fn(() => Promise.resolve(emptyPage)),
+    fundTotals: jest.fn(() => Promise.resolve([])),
     fundMovements: jest.fn(() => Promise.resolve(emptyPage)),
   };
 }

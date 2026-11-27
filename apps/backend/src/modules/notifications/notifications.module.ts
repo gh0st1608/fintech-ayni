@@ -1,3 +1,5 @@
+import { dueSoonByCadenceFrom } from './domain/due-soon-lead';
+
 import { Module } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 
@@ -65,6 +67,9 @@ import { NotificationsController } from './presentation/notifications.controller
       inject: [ConfigService],
       useFactory: (config: AppConfigService): NotificationSettings => ({
         dueSoonDays: config.get('NOTIFICATION_DUE_SOON_DAYS', { infer: true }),
+        dueSoonDaysByCadence: dueSoonByCadenceFrom(
+          config.get('NOTIFICATION_DUE_SOON_DAYS_BY_CADENCE', { infer: true }),
+        ),
         timeZone: config.get('BUSINESS_TIME_ZONE', { infer: true }),
       }),
     },

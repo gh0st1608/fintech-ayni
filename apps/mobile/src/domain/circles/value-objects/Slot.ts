@@ -1,3 +1,4 @@
+import type { Cadence } from '../MyCircleDetail';
 import { DomainError } from '@/domain/shared/errors/DomainError';
 import { Money } from '@/domain/shared/value-objects/Money';
 
@@ -24,6 +25,7 @@ export class SlotNoLongerAvailableError extends DomainError {
 }
 
 const PERIOD = /^(\d{4})-(0[1-9]|1[0-2])$/;
+const DAY = /^\d{4}-\d{2}-\d{2}$/;
 
 /**
  * Turno de cobro de un Game'ya: el mes en que el miembro recibe el payout. El precio (fee o
@@ -35,6 +37,13 @@ export class Slot {
     readonly position: number,
     /** Mes de cobro en formato YYYY-MM. */
     readonly payoutPeriod: string,
+    /**
+     * Día real de cobro (YYYY-MM-DD), calculado por el servidor (COPAYNI-116).
+     *
+     * Es lo que se muestra al elegir turno: fuera de la cadencia mensual el mes no distingue un
+     * turno de otro, porque cuatro turnos semanales caen en el mismo.
+     */
+    readonly payoutOn: string,
     readonly type: SlotType,
     /** Fee por cobrar antes (Fastest Payout); cero en los demás. */
     readonly fee: Money,
@@ -67,6 +76,8 @@ export class Slot {
   static create(props: {
     position: number;
     payoutPeriod: string;
+    /** Un backend anterior no lo envía: entonces se asume el día 1 del mes de cobro. */
+    payoutOn?: string;
     type: SlotType;
     fee: Money;
     discount: Money;
@@ -83,6 +94,10 @@ export class Slot {
     if (!PERIOD.test(payoutPeriod)) {
       throw new InvalidSlotError(`Invalid payout period: ${payoutPeriod}`);
     }
+    const payoutOn = props.payoutOn ?? `${payoutPeriod}-01`;
+    if (!DAY.test(payoutOn)) {
+      throw new InvalidSlotError(`Invalid payout date: ${payoutOn}`);
+    }
     if (fee.currency !== discount.currency || fee.amount < 0 || discount.amount < 0) {
       throw new InvalidSlotError('Slot fee and discount must be non-negative in one currency');
     }
@@ -98,6 +113,7 @@ export class Slot {
     return new Slot(
       position,
       payoutPeriod,
+      payoutOn,
       type,
       fee,
       discount,
@@ -109,15 +125,38 @@ export class Slot {
     );
   }
 
-  /** Primer día del mes de cobro, para formatearlo con el idioma activo. */
+  /** El día de cobro, para formatearlo con el idioma activo. */
   get payoutDate(): Date {
-    const [year, month] = this.payoutPeriod.split('-').map(Number);
-    return new Date(year!, month! - 1, 1);
+    const [year, month, day] = this.payoutOn.split('-').map(Number);
+    return new Date(year!, month! - 1, day!);
   }
 }
 
 export interface SlotGroup {
   type: SlotType;
   /** En orden de cobro; incluye los ocupados para mostrarlos deshabilitados. */
+  slots: Slot[];
+}
+
+/**
+ * Los slots de una junta con sus condiciones reales (COPAYNI-116).
+ *
+ * Las fechas y la duración las calcula el servidor: la app las muestra tal cual. Fuera de la
+ * cadencia mensual no se pueden derivar de los meses, porque cuatro turnos semanales caen en el
+ * mismo mes.
+ */
+export interface SlotsQuote {
+  /** Círculo ofrecido; `null` si es uno nuevo, que se crea al unirse. */
+  circleId: string | null;
+  cadence: Cadence;
+  /** Cómo se llama un turno: «Mes», «Quincena», «Semana». */
+  unit: string;
+  turns: number;
+  /** `YYYY-MM-DD` del primer turno. */
+  startsOnDate: string;
+  /** `YYYY-MM-DD` del último turno: cuándo termina la junta. */
+  endsOnDate: string;
+  /** Días corridos que dura la junta. */
+  durationDays: number;
   slots: Slot[];
 }

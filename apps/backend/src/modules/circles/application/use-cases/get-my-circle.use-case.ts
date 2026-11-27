@@ -1,10 +1,12 @@
 import { Inject, Injectable } from '@nestjs/common';
 
 import { type Principal } from '../../../../shared/application/ports/access-token-verifier.port';
+import { type LocalDate } from '../../../../shared/domain/value-objects/local-date';
 import { Period } from '../../../../shared/domain/value-objects/period';
 import { NotFoundError } from '../../../../shared/errors/app-error';
 import { type CycleState } from '../../domain/entities/circle-cycle';
 import { type SlotPricing, type SlotQuote } from '../../domain/services/slot-pricing';
+import { TurnSchedule } from '../../domain/services/turn-schedule';
 import { type CircleTerms } from '../../domain/value-objects/circle-terms';
 import { CIRCLE_REPOSITORY, type CircleRepositoryPort } from '../ports/circle-repository.port';
 import {
@@ -24,7 +26,14 @@ export type TurnStatus = 'paid' | 'current' | 'upcoming' | 'vacant';
 
 export interface CircleTurn {
   position: number;
+  /**
+   * Ordinal del turno (1..N). Coincide con `position`, y existe con su propio nombre porque es
+   * lo que identifica el turno: el mes no lo hace fuera de la cadencia mensual (COPAYNI-117).
+   */
+  turn: number;
   period: Period;
+  /** Día real en que ese turno cobra el pozo, calculado por `TurnSchedule`. */
+  payoutOn: LocalDate;
   /** Nombre abreviado ("María R."): el resto de los datos de los demás miembros no se muestra. */
   memberName: string | null;
   isMe: boolean;
@@ -39,6 +48,10 @@ export interface MyCircleDetail {
   currentPeriod: Period | null;
   /** Mes del ciclo en curso, de 1 a `months`; `null` si todavía no empezó. */
   currentMonth: number | null;
+  /** Turno en curso, de 1 a `turns`; `null` si todavía no empezó (COPAYNI-117). */
+  currentTurn: number | null;
+  /** Día real del último turno, que es cuando termina la junta. */
+  endsOnDate: LocalDate;
   /** La próxima cuota que debe en este círculo, si tiene. */
   nextDue: DueInstallment | null;
   turns: CircleTurn[];
@@ -82,21 +95,28 @@ export class GetMyCircleUseCase {
     const currentPeriod = current === null ? null : Period.parse(current);
     const currentMonth =
       currentPeriod === null ? null : terms.startsOnPeriod.monthsUntil(currentPeriod) + 1;
-    const paid = new Set(calendar.paidPeriods);
-    const turns = Array.from({ length: terms.months }, (_, index): CircleTurn => {
+    // El turno en curso sale de la columna; solo se deriva del mes cuando falta, igual que el
+    // backfill de la expansión (COPAYNI-107), y eso solo acierta en cadencia mensual.
+    const currentTurn = calendar.currentTurn ?? (terms.cadence.isMonthly() ? currentMonth : null);
+    // El cronograma es el único que hace aritmética de calendario de la junta (COPAYNI-105).
+    const schedule = new TurnSchedule(terms.startsOn, terms.cadence, terms.turns);
+    const paid = new Set(calendar.paidTurns);
+    const turns = Array.from({ length: terms.turns }, (_unused, index): CircleTurn => {
       const position = index + 1;
-      const period = terms.startsOnPeriod.addMonths(index);
+      const payoutOn = schedule.payoutOn(position);
       const member = calendar.members.find((candidate) => candidate.position === position);
-      const status: TurnStatus = paid.has(period.toString())
+      const status: TurnStatus = paid.has(position)
         ? 'paid'
         : !member
           ? 'vacant'
-          : current === period.toString()
+          : currentTurn === position
             ? 'current'
             : 'upcoming';
       return {
         position,
-        period,
+        turn: position,
+        period: payoutOn.period,
+        payoutOn,
         memberName: member ? abbreviatedName(member) : null,
         isMe: member?.userId === principal.userId,
         status,
@@ -110,6 +130,8 @@ export class GetMyCircleUseCase {
       quote: this.pricing.quoteOf(terms, membership.position, membership.price),
       currentPeriod,
       currentMonth,
+      currentTurn,
+      endsOnDate: schedule.endsOn(),
       nextDue: dues.find((due) => due.circleId === circle.id) ?? null,
       turns,
     };

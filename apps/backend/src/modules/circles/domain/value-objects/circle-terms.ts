@@ -137,6 +137,16 @@ export class CircleTerms {
     return this.schedule().payoutOn(position).period;
   }
 
+  /**
+   * Día real en que cobra el slot `position`.
+   *
+   * Es lo que se le muestra a quien elige su turno (COPAYNI-116): fuera de la cadencia mensual
+   * el mes no distingue un turno de otro, porque cuatro turnos semanales caen en el mismo.
+   */
+  payoutDateOf(position: number): LocalDate {
+    return this.schedule().payoutOn(position);
+  }
+
   get currency(): string {
     return this.payout.currency;
   }
@@ -144,6 +154,16 @@ export class CircleTerms {
   /** Mes del último cobro del círculo. */
   get endsOn(): Period {
     return this.schedule().endsOn().period;
+  }
+
+  /**
+   * Día real del último turno: cuándo termina la junta.
+   *
+   * Es lo que se le muestra a la persona (COPAYNI-116), porque fuera de la cadencia mensual el
+   * mes de `endsOn` no dice qué día termina: cuatro turnos semanales caben en el mismo mes.
+   */
+  get endsOnDate(): LocalDate {
+    return this.schedule().endsOn();
   }
 
   /**

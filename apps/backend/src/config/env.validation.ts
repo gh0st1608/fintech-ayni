@@ -18,7 +18,14 @@ import {
   validateSync,
 } from 'class-validator';
 
-import { CADENCE_IDS, type CadenceId } from '../modules/circles/domain/value-objects/cadence';
+import {
+  Cadence,
+  CADENCE_IDS,
+  type CadenceId,
+} from '../modules/circles/domain/value-objects/cadence';
+import { MAX_CIRCLE_TURNS } from '../modules/circles/domain/value-objects/turn-options';
+import { cadenceCanBeOffered } from '../modules/agreements/domain/template-approvals';
+import { dueSoonByCadenceFrom } from '../modules/notifications/domain/due-soon-lead';
 import { currencySettingsFrom } from '../shared/infrastructure/currency/currency-settings';
 
 /** Identidad del personal del back-office (docs/backoffice-plan.md, BO2). */
@@ -246,6 +253,22 @@ export class EnvironmentVariables {
   CIRCLE_DURATION_OPTIONS!: number[];
 
   /**
+   * Turnos mínimo y máximo que puede elegir el usuario (COPAYNI-125). Con los dos puestos, el
+   * rango sustituye a `CIRCLE_DURATION_OPTIONS`; sin ellos rige la lista, que es lo que hay hoy
+   * en producción. Conviven porque ningún rango reproduce exactamente `6,10,12`: activar el rango
+   * cambia lo que se ofrece, y eso se despliega cuando negocio lo decida, no al desplegar código.
+   */
+  @IsOptional()
+  @IsInt()
+  @Min(2)
+  CIRCLE_TURNS_MIN?: number;
+
+  @IsOptional()
+  @IsInt()
+  @Max(MAX_CIRCLE_TURNS)
+  CIRCLE_TURNS_MAX?: number;
+
+  /**
    * Cadencias de junta que se pueden crear, separadas por comas (COPAYNI-121). Separa el
    * despliegue del código de la activación de la funcionalidad: con el valor por defecto el
    * producto se comporta como antes de admitir cadencias. `monthly` no se puede quitar, porque
@@ -291,6 +314,33 @@ export class EnvironmentVariables {
   @Min(0)
   @Max(28)
   DELINQUENCY_GRACE_DAYS: number = 3;
+
+  /**
+   * Gracia y mora de las cadencias distintas de la mensual (COPAYNI-111), como
+   * `weekly:1,biweekly:2` y `weekly:150`. Las variables de arriba son los valores de la cadencia
+   * mensual, que no cambian.
+   *
+   * Hacen falta porque el riesgo no es el mismo: con 3 días de gracia no hay solape con la cuota
+   * siguiente ni en una junta semanal, pero sí hay 52 ocasiones anuales de incurrir en mora en
+   * lugar de 12, y un cargo del 3 % aplicado 52 veces al año sobre el mismo capital en lugar de
+   * 12. Los valores definitivos los decide riesgo y finanzas (COPAYNI-102); la estructura existe
+   * para que no se habilite una cadencia sin ellos.
+   */
+  @Transform(toList)
+  @ArrayUnique()
+  @Matches(/^(monthly|biweekly|weekly):\d{1,2}$/, {
+    each: true,
+    message: 'DELINQUENCY_GRACE_DAYS_BY_CADENCE admite entradas cadencia:días, p. ej. weekly:1',
+  })
+  DELINQUENCY_GRACE_DAYS_BY_CADENCE: string[] = [];
+
+  @Transform(toList)
+  @ArrayUnique()
+  @Matches(/^(monthly|biweekly|weekly):\d{1,5}$/, {
+    each: true,
+    message: 'LATE_FEE_BPS_BY_CADENCE admite entradas cadencia:bps, p. ej. weekly:150',
+  })
+  LATE_FEE_BPS_BY_CADENCE: string[] = [];
 
   /**
    * Cargo por mora sobre la cuota vencida, cobrado una vez, en puntos básicos (R18, propuesto:
@@ -345,13 +395,28 @@ export class EnvironmentVariables {
   TRUST_FASTEST_MIN_COMPLETED_CIRCLES: number = 0;
 
   /**
-   * Cuotas base retenidas del payout de cada turno, que pagan sus últimas cuotas (COPAYNI-60;
-   * proporcional desde P1/P5 de pending-scope §3.2). 0 desactiva la retención.
+   * Días de cobertura que retiene el payout de cada turno, y que pagan sus últimas cuotas
+   * (COPAYNI-60; proporcional desde P1/P5 de pending-scope §3.2). 0 desactiva la retención.
+   *
+   * Va en días y no en número de cuotas (COPAYNI-112) porque el mismo número dejaba de significar
+   * lo mismo al cambiar la cadencia: 2 cuotas cubren 2 meses en mensual y 2 semanas en semanal, y
+   * la protección caía a una séptima parte sin que nadie lo hubiera decidido. 60 días equivalen a
+   * las 2 cuotas de antes en una junta mensual, así que ningún círculo existente cambia.
    */
   @IsInt()
   @Min(0)
-  @Max(12)
-  PAYOUT_RETENTION_INSTALLMENTS: number = 2;
+  @Max(366)
+  PAYOUT_RETENTION_COVERAGE_DAYS: number = 60;
+
+  /**
+   * Tope de la retención como parte del pozo, en puntos básicos (COPAYNI-112). 10000 es sin tope
+   * efectivo, que es el comportamiento actual: en una junta de 4 turnos, quien cobra primero ve
+   * retenido el 50 % del pozo. Si eso se acota, lo decide riesgo y finanzas (COPAYNI-102).
+   */
+  @IsInt()
+  @Min(0)
+  @Max(10000)
+  PAYOUT_RETENTION_MAX_POT_BPS: number = 10_000;
 
   /**
    * Antigüedad máxima de la autenticación del personal para una acción crítica, como pausar un
@@ -457,6 +522,17 @@ export class EnvironmentVariables {
   @Min(1)
   @Max(15)
   NOTIFICATION_DUE_SOON_DAYS: number = 3;
+
+  /**
+   * Antelación del recordatorio por cadencia, como `cadencia:dias` separadas por comas
+   * (COPAYNI-120). Sin entrada para una cadencia rige `NOTIFICATION_DUE_SOON_DAYS`, calibrado
+   * para un ciclo de 30 días; con 0 no se manda recordatorio previo, solo el del vencimiento.
+   * La antelación tiene que ser menor que el ciclo, o el aviso llega antes del turno anterior.
+   */
+  @Transform(toList)
+  @IsString({ each: true })
+  @Matches(/^[a-z]+:\d{1,2}$/, { each: true })
+  NOTIFICATION_DUE_SOON_DAYS_BY_CADENCE: string[] = [];
 
   /**
    * Aviso en el celular (COPAYNI-85). `fake` solo registra el envío, para desarrollo y pruebas, y
@@ -1039,6 +1115,119 @@ export function exportsTelemetry(
  * Valida y tipa las variables de entorno. El mensaje de error nombra cada variable
  * inválida y su regla, nunca su valor (puede ser un secreto).
  */
+/** Separador de los mensajes de configuración inválida, uno por línea. */
+const LINE_BREAK = '\n';
+
+/**
+ * Gracia y mora de cada cadencia habilitada (COPAYNI-111): la API no inicia sin ellas.
+ *
+ * Una cadencia habilitada sin parámetros propios no cae en los de la mensual en silencio, porque
+ * están calibrados para un ciclo de 30 días: aplicarlos a uno de 7 multiplica por cuatro las
+ * ocasiones de mora al año sin que nadie lo haya decidido. Y la gracia tiene que ser más corta que
+ * el ciclo, o se solaparía con la cuota siguiente.
+ */
+function assertDelinquencyByCadence(env: EnvironmentVariables): void {
+  const parse = (entries: readonly string[]): Map<string, number> =>
+    new Map(
+      entries.map((entry) => {
+        const [id, value] = entry.split(':');
+        return [id!, Number(value)];
+      }),
+    );
+  const grace = parse(env.DELINQUENCY_GRACE_DAYS_BY_CADENCE);
+  const fees = parse(env.LATE_FEE_BPS_BY_CADENCE);
+  grace.set('monthly', env.DELINQUENCY_GRACE_DAYS);
+  fees.set('monthly', env.LATE_FEE_BPS);
+
+  const problems: string[] = [];
+  for (const id of env.CIRCLE_CADENCES_ENABLED) {
+    if (!grace.has(id)) {
+      problems.push(`- DELINQUENCY_GRACE_DAYS_BY_CADENCE: falta ${id}, que está habilitada`);
+    }
+    if (!fees.has(id)) {
+      problems.push(`- LATE_FEE_BPS_BY_CADENCE: falta ${id}, que está habilitada`);
+    }
+  }
+  for (const [id, days] of grace) {
+    const cycleDays = Cadence.parse(id).approximateTurnDays();
+    if (days >= cycleDays) {
+      problems.push(
+        `- DELINQUENCY_GRACE_DAYS_BY_CADENCE: ${id} tiene ${days} días de gracia y su ciclo dura ${cycleDays}`,
+      );
+    }
+  }
+  if (problems.length > 0) {
+    throw new Error(['Configuración inválida:', ...problems].join(LINE_BREAK));
+  }
+}
+
+/**
+ * El rango de turnos, si está configurado (COPAYNI-125).
+ *
+ * Los dos extremos van juntos: con uno solo no se sabe si el otro es el de la lista, el mínimo
+ * del dominio o ninguno, y adivinarlo cambiaría en silencio lo que se le ofrece a la gente.
+ */
+function assertTurnsRange(env: EnvironmentVariables): void {
+  const { CIRCLE_TURNS_MIN: min, CIRCLE_TURNS_MAX: max } = env;
+  const problems: string[] = [];
+  if ((min === undefined) !== (max === undefined)) {
+    problems.push('- CIRCLE_TURNS_MIN y CIRCLE_TURNS_MAX: o se configuran los dos, o ninguno');
+  }
+  if (min !== undefined && max !== undefined && max < min) {
+    problems.push(`- CIRCLE_TURNS_MAX: ${max} es menor que el mínimo ${min}`);
+  }
+  if (problems.length > 0) {
+    throw new Error(['Configuración inválida:', ...problems].join(LINE_BREAK));
+  }
+}
+
+/**
+ * Antelación del recordatorio de cuota por cadencia (COPAYNI-120).
+ *
+ * Tiene que ser menor que la duración del ciclo: con 3 días de antelación sobre un ciclo de 7, el
+ * recordatorio de un turno llegaría antes de que venza el anterior, y la persona recibiría dos
+ * avisos de cuotas distintas casi juntos.
+ */
+function assertDueSoonByCadence(env: EnvironmentVariables): void {
+  const byCadence = dueSoonByCadenceFrom(env.NOTIFICATION_DUE_SOON_DAYS_BY_CADENCE);
+  const problems: string[] = [];
+  for (const id of env.CIRCLE_CADENCES_ENABLED) {
+    const cadence = Cadence.parse(id);
+    const days = byCadence[id] ?? env.NOTIFICATION_DUE_SOON_DAYS;
+    const cycleDays = cadence.approximateTurnDays();
+    if (days >= cycleDays) {
+      problems.push(
+        `- NOTIFICATION_DUE_SOON_DAYS_BY_CADENCE: ${id} avisa ${days} días antes y su ciclo dura ${cycleDays}`,
+      );
+    }
+  }
+  if (problems.length > 0) {
+    throw new Error(['Configuración inválida:', ...problems].join(LINE_BREAK));
+  }
+}
+
+/**
+ * Plantilla de contrato y pagaré aprobada para cada cadencia habilitada (COPAYNI-119).
+ *
+ * El documento que el miembro firma describe la obligación que asume, y las plantillas hablan de
+ * «meses» y de «mes de cobro». Habilitar una cadencia sin su documento aprobado haría firmar un
+ * texto que dice algo distinto de lo que el sistema cobra, y el pagaré es el título que respalda
+ * el cobro. Por eso el bloqueo es del sistema y no de un procedimiento: sin aprobación, no
+ * arranca.
+ *
+ * La mensual sale con su texto provisional, que es una decisión tomada y acotada por el tope de
+ * payout (pending-scope §3.3); cualquier otra necesita aprobación de Legal.
+ */
+function assertAgreementTemplates(env: EnvironmentVariables): void {
+  const problems = env.CIRCLE_CADENCES_ENABLED.filter((id) => !cadenceCanBeOffered(id)).map(
+    (id) =>
+      `- CIRCLE_CADENCES_ENABLED: ${id} no tiene plantilla de contrato aprobada (COPAYNI-119)`,
+  );
+  if (problems.length > 0) {
+    throw new Error(['Configuración inválida:', ...problems].join(LINE_BREAK));
+  }
+}
+
 /** Monedas admitidas con su tipo de cambio (pending-scope M2): la API no inicia sin él. */
 function assertCurrencies(env: EnvironmentVariables): void {
   try {
@@ -1078,6 +1267,11 @@ export function validateEnvironment(config: Record<string, unknown>): Environmen
       'Configuración inválida:\n- CIRCLE_CADENCES_ENABLED: monthly no se puede deshabilitar',
     );
   }
+  // Ya se sabe que las cadencias son válidas: cada una habilitada necesita su gracia y su mora.
+  if (errors.length === 0) assertDelinquencyByCadence(env);
+  if (errors.length === 0) assertTurnsRange(env);
+  if (errors.length === 0) assertDueSoonByCadence(env);
+  if (errors.length === 0) assertAgreementTemplates(env);
   if (env.NODE_ENV === 'production' && env.STAFF_AUTH_PROVIDER === 'dev') {
     throw new Error(
       'Configuración inválida:\n- STAFF_AUTH_PROVIDER: dev no se admite en production',

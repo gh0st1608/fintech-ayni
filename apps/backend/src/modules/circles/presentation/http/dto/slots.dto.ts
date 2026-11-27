@@ -1,8 +1,9 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { IsInt, IsOptional, IsUUID, Matches, Max, Min } from 'class-validator';
+import { IsIn, IsInt, IsOptional, IsUUID, Matches, Max, Min } from 'class-validator';
 
 import { type AvailableSlotsResult } from '../../../application/use-cases/get-available-slots.use-case';
+import { CADENCE_IDS, type CadenceId } from '../../../domain/value-objects/cadence';
 import { catchUpTotal, SLOT_TYPES, type SlotType } from '../../../domain/services/slot-pricing';
 import { SLOT_RESTRICTIONS, type SlotRestriction } from '../../../domain/services/trust-policy';
 import { MoneyResponse } from './join-config.response';
@@ -40,6 +41,17 @@ export class SlotsQuery {
   @IsOptional()
   @Matches(/^[A-Z]{3}$/)
   currency?: string;
+
+  @ApiProperty({
+    required: false,
+    enum: CADENCE_IDS,
+    description:
+      'Frecuencia de los turnos (COPAYNI-116). La mensual si falta. Tiene que estar habilitada ' +
+      'en el servidor y declarada por el cliente en x-ayni-cadences',
+  })
+  @IsOptional()
+  @IsIn(CADENCE_IDS)
+  cadence?: CadenceId;
 }
 
 export class SlotResponse {
@@ -48,6 +60,14 @@ export class SlotResponse {
 
   @ApiProperty({ example: '2026-11', description: 'Mes de cobro (YYYY-MM)' })
   payoutPeriod!: string;
+
+  @ApiProperty({
+    example: '2026-11-04',
+    description:
+      'Día real de cobro de ese turno (YYYY-MM-DD). Es lo que se muestra al elegir: en una ' +
+      'junta semanal cuatro turnos caen en el mismo mes (COPAYNI-116)',
+  })
+  payoutOn!: string;
 
   @ApiProperty({ enum: SLOT_TYPES })
   type!: SlotType;
@@ -111,22 +131,58 @@ export class SlotsResponse {
   @ApiProperty({ type: MoneyResponse })
   payout!: MoneyResponse;
 
-  @ApiProperty({ example: 10 })
+  @ApiProperty({ example: 10, deprecated: true, description: 'Alias de turns' })
   months!: number;
+
+  @ApiProperty({ example: 10, description: 'Turnos de la junta, que son sus puestos y sus cuotas' })
+  turns!: number;
+
+  @ApiProperty({ enum: CADENCE_IDS, description: 'Frecuencia de los turnos' })
+  cadence!: CadenceId;
+
+  @ApiProperty({ example: 'Mes', description: 'Cómo se llama un turno: Mes, Quincena o Semana' })
+  unit!: string;
+
+  @ApiProperty({ example: '2027-08', description: 'Mes del último turno' })
+  endsOn!: string;
+
+  @ApiProperty({
+    example: '2027-08-01',
+    description:
+      'Día real del último turno (YYYY-MM-DD): la fecha en que termina la junta. Es lo que se ' +
+      'muestra, y no una duración en meses, que fuera de la mensual no cuadra (COPAYNI-116)',
+  })
+  endsOnDate!: string;
+
+  @ApiProperty({
+    example: 28,
+    description: 'Días corridos que dura la junta, del primer vencimiento al último',
+  })
+  durationDays!: number;
 
   @ApiProperty({ type: [SlotResponse], description: 'Todos los slots, en orden de cobro' })
   slots!: SlotResponse[];
 
   static from({ circleId, terms, slots }: AvailableSlotsResult): SlotsResponse {
+    const { endsOnDate } = terms;
     return {
       circleId,
       startsOn: terms.startsOnPeriod.toString(),
       startsOnDate: terms.startsOn.toString(),
       payout: MoneyResponse.from(terms.payout),
       months: terms.months,
+      turns: terms.turns,
+      cadence: terms.cadence.id,
+      unit: terms.cadence.turnLabel(),
+      endsOn: terms.endsOn.toString(),
+      endsOnDate: endsOnDate.toString(),
+      // Del primer vencimiento al último: 4 turnos semanales son 21 días de distancia entre el
+      // primero y el cuarto, y la junta dura 28 contando el turno final.
+      durationDays: terms.startsOn.daysUntil(endsOnDate) + terms.cadence.approximateTurnDays(),
       slots: slots.map((slot) => ({
         position: slot.position,
         payoutPeriod: slot.payoutPeriod.toString(),
+        payoutOn: terms.payoutDateOf(slot.position).toString(),
         type: slot.type,
         fee: MoneyResponse.from(slot.fee),
         discount: MoneyResponse.from(slot.discount),
