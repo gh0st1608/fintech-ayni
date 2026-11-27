@@ -135,7 +135,10 @@
       "emptyBody": "Con {{amount}} ninguna cantidad de turnos da una cuota exacta en céntimos. Prueba con otro monto.",
       "suggestion": "Con {{amount}} sí: {{turns}} de {{installment}}",
       "changeAmount": "Cambiar el monto",
-      "optionTurns": "por {{turns}}"
+      "optionTurns": "por {{turns}}",
+      "cadenceChanged": "Cambiaste la frecuencia: estas son las opciones nuevas.",
+      "amountChanged": "Cambiaste el monto: estas son las opciones nuevas.",
+      "dismiss": "Entendido"
     },
     "slot": {
       "title": "Turno de cobro",

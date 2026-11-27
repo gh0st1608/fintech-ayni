@@ -4,6 +4,7 @@ import { Text } from 'react-native';
 
 import { AppError } from '@/domain/shared/errors/AppError';
 import { Money } from '@/domain/shared/value-objects/Money';
+import { InstallmentOption } from '@/domain/circles/value-objects/InstallmentOption';
 import { InMemoryCircleQuoteRepository } from '@/infrastructure/circles/InMemoryCircleQuoteRepository';
 import { createTestContainer } from '@test/fakes/createTestContainer';
 import { renderWithProviders } from '@test/renderWithProviders';
@@ -25,9 +26,36 @@ function Draft({ payout }: { payout: number | null }) {
   const installment = draft.installment;
   return (
     <Text testID="draft">
-      {installment ? `${installment.months}x${installment.installment.toMajor()}` : 'none'}
+      {installment ? `${installment.turns}x${installment.installment.toMajor()}` : 'none'}
     </Text>
   );
+}
+
+/**
+ * Elige una cuota y después cambia la frecuencia o el monto, como quien vuelve atrás en el
+ * flujo (COPAYNI-116).
+ */
+function Rechooser({ change }: { change: 'cadence' | 'amount' }) {
+  const { draft, start, setInstallment, setCadence, setPayoutAmount } = useJoinFlow();
+  const step = useRef(0);
+  useEffect(() => {
+    if (step.current === 0) {
+      step.current = 1;
+      start(pen(30_000));
+      return;
+    }
+    if (step.current === 1 && draft.installment) {
+      step.current = 2;
+      if (change === 'cadence') setCadence('weekly');
+      else setPayoutAmount(pen(12_000));
+    }
+  }, [change, draft, setCadence, setPayoutAmount, start]);
+  useEffect(() => {
+    if (step.current === 1 && draft.payoutAmount && !draft.installment) {
+      setInstallment(InstallmentOption.create({ turns: 10, installment: pen(3_000) }));
+    }
+  }, [draft, setInstallment]);
+  return <Text testID="draft">{draft.installment ? 'con cuota' : 'none'}</Text>;
 }
 
 async function renderPayIn({
@@ -47,6 +75,36 @@ async function renderPayIn({
 }
 
 const option = (name: RegExp) => screen.findByRole('button', { name });
+
+describe('MonthlyPayInScreen tras cambiar un paso anterior (COPAYNI-116)', () => {
+  it.each([
+    ['cadence', /Cambiaste la frecuencia/],
+    ['amount', /Cambiaste el monto/],
+  ] as const)('avisa de que las opciones se recalcularon al cambiar %s', async (change, text) => {
+    await renderWithProviders(
+      <JoinFlowProvider>
+        <Rechooser change={change} />
+        <MonthlyPayInScreen onEdit={jest.fn()} onNext={jest.fn()} />
+      </JoinFlowProvider>,
+      createTestContainer(),
+    );
+
+    const notice = await screen.findByTestId('installment-recalculated');
+    expect(notice).toHaveTextContent(text);
+    // La cuota elegida se descartó: hay que volver a elegirla.
+    expect(screen.getByTestId('draft')).toHaveTextContent('none');
+
+    await fireEvent.press(screen.getByRole('button', { name: 'Entendido' }));
+    expect(screen.queryByTestId('installment-recalculated')).toBeNull();
+  });
+
+  it('sin haber elegido cuota no avisa de nada', async () => {
+    // Cambiar un paso antes de elegir los siguientes no recalcula nada que se haya visto.
+    await renderPayIn();
+
+    expect(screen.queryByTestId('installment-recalculated')).toBeNull();
+  });
+});
 
 describe('MonthlyPayInScreen', () => {
   it('muestra el paso 2 de 4 con el resumen del monto y las combinaciones del backend', async () => {

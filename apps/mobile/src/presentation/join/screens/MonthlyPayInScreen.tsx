@@ -100,14 +100,36 @@ function InstallmentPicker({
 }) {
   const { t } = useTranslation();
   const formatMoney = useFormatMoney();
-  const { draft, setInstallment } = useJoinFlow();
+  const { draft, discarded, clearDiscarded, setInstallment } = useJoinFlow();
   const previous = draft.installment;
 
   return (
     <ScrollView contentContainerStyle={styles.content}>
       <AppText variant="highlight" weight="semibold" accessibilityRole="header">
-        {t('join.monthlyPayIn.question')}
+        {t('join.monthlyPayIn.question', {
+          per: t(`circles.cadences.${draft.cadence}.per`),
+        })}
       </AppText>
+      {/*
+        Cambiar la frecuencia o el monto recalcula las combinaciones y descarta el turno: se dice
+        cuál de los dos cambió, en lugar de que la lista cambie sin explicación (COPAYNI-116).
+      */}
+      {discarded !== null && (
+        <View style={styles.notice} testID="installment-recalculated">
+          <AppText accessibilityRole="alert" variant="caption">
+            {t(
+              discarded === 'cadence'
+                ? 'join.monthlyPayIn.cadenceChanged'
+                : 'join.monthlyPayIn.amountChanged',
+            )}
+          </AppText>
+          <Button
+            label={t('join.monthlyPayIn.dismiss')}
+            variant="secondary"
+            onPress={clearDiscarded}
+          />
+        </View>
+      )}
       {options.length === 0 ? (
         <NoCombinations payout={payout} onEdit={onEdit} />
       ) : (
@@ -135,6 +157,7 @@ function InstallmentPicker({
                 accessibilityState={{ selected, disabled: !option.withinMonthlyLimit }}
                 disabled={!option.withinMonthlyLimit}
                 onPress={() => {
+                  clearDiscarded();
                   setInstallment(option);
                   onNext();
                 }}
@@ -205,6 +228,12 @@ const styles = StyleSheet.create({
   centerText: { textAlign: 'center' },
   content: { gap: spacing.l, paddingVertical: spacing.l },
   options: { gap: spacing.sm },
+  notice: {
+    gap: spacing.sm,
+    padding: spacing.lg,
+    borderRadius: radius.md,
+    backgroundColor: colors.primary100,
+  },
   option: {
     minHeight: MIN_TOUCH_TARGET,
     flexDirection: 'row',

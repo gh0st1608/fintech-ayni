@@ -135,7 +135,10 @@
       "emptyBody": "With {{amount}} no number of turns gives an exact installment in cents. Try another amount.",
       "suggestion": "With {{amount}} it works: {{turns}} of {{installment}}",
       "changeAmount": "Change the amount",
-      "optionTurns": "for {{turns}}"
+      "optionTurns": "for {{turns}}",
+      "cadenceChanged": "You changed the frequency: these are the new options.",
+      "amountChanged": "You changed the amount: these are the new options.",
+      "dismiss": "Got it"
     },
     "slot": {
       "title": "Payout Slot",
