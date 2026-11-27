@@ -29,6 +29,20 @@ import { TestClock } from '@test/support/create-test-app';
 const pen = (major: number) => Money.of(major * 100, 'PEN');
 const at = (iso: string) => new Date(iso);
 
+/** Los diez meses del círculo de prueba, para el calendario del documento. */
+const MONTHS = [
+  '2026-12',
+  '2027-01',
+  '2027-02',
+  '2027-03',
+  '2027-04',
+  '2027-05',
+  '2027-06',
+  '2027-07',
+  '2027-08',
+  '2027-09',
+];
+
 const DATA: AgreementData = {
   payout: pen(6_000),
   months: 10,
@@ -38,6 +52,17 @@ const DATA: AgreementData = {
   retention: pen(1_200),
   startsOn: '2026-12',
   payoutPeriod: '2027-02',
+  // Lo que el documento necesita para describir la obligación real (COPAYNI-119).
+  cadence: 'monthly' as const,
+  turns: 10,
+  unit: 'mes',
+  startsOnDate: '2026-12-01',
+  endsOnDate: '2027-09-01',
+  payoutOn: '2027-02-01',
+  netPayout: pen(4_800),
+  dueDates: MONTHS.map((month, index) => ({ turn: index + 1, dueOn: `${month}-01` })),
+  graceDays: 3,
+  lateFeeBps: 300,
 };
 
 const POLICY: AuthPolicy = {

@@ -24,6 +24,7 @@ import {
   type CadenceId,
 } from '../modules/circles/domain/value-objects/cadence';
 import { MAX_CIRCLE_TURNS } from '../modules/circles/domain/value-objects/turn-options';
+import { cadenceCanBeOffered } from '../modules/agreements/domain/template-approvals';
 import { dueSoonByCadenceFrom } from '../modules/notifications/domain/due-soon-lead';
 import { currencySettingsFrom } from '../shared/infrastructure/currency/currency-settings';
 
@@ -1205,6 +1206,28 @@ function assertDueSoonByCadence(env: EnvironmentVariables): void {
   }
 }
 
+/**
+ * Plantilla de contrato y pagaré aprobada para cada cadencia habilitada (COPAYNI-119).
+ *
+ * El documento que el miembro firma describe la obligación que asume, y las plantillas hablan de
+ * «meses» y de «mes de cobro». Habilitar una cadencia sin su documento aprobado haría firmar un
+ * texto que dice algo distinto de lo que el sistema cobra, y el pagaré es el título que respalda
+ * el cobro. Por eso el bloqueo es del sistema y no de un procedimiento: sin aprobación, no
+ * arranca.
+ *
+ * La mensual sale con su texto provisional, que es una decisión tomada y acotada por el tope de
+ * payout (pending-scope §3.3); cualquier otra necesita aprobación de Legal.
+ */
+function assertAgreementTemplates(env: EnvironmentVariables): void {
+  const problems = env.CIRCLE_CADENCES_ENABLED.filter((id) => !cadenceCanBeOffered(id)).map(
+    (id) =>
+      `- CIRCLE_CADENCES_ENABLED: ${id} no tiene plantilla de contrato aprobada (COPAYNI-119)`,
+  );
+  if (problems.length > 0) {
+    throw new Error(['Configuración inválida:', ...problems].join(LINE_BREAK));
+  }
+}
+
 /** Monedas admitidas con su tipo de cambio (pending-scope M2): la API no inicia sin él. */
 function assertCurrencies(env: EnvironmentVariables): void {
   try {
@@ -1248,6 +1271,7 @@ export function validateEnvironment(config: Record<string, unknown>): Environmen
   if (errors.length === 0) assertDelinquencyByCadence(env);
   if (errors.length === 0) assertTurnsRange(env);
   if (errors.length === 0) assertDueSoonByCadence(env);
+  if (errors.length === 0) assertAgreementTemplates(env);
   if (env.NODE_ENV === 'production' && env.STAFF_AUTH_PROVIDER === 'dev') {
     throw new Error(
       'Configuración inválida:\n- STAFF_AUTH_PROVIDER: dev no se admite en production',

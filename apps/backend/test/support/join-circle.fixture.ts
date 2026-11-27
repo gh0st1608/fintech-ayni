@@ -146,7 +146,8 @@ export function createJoinCircleUseCase(
     },
     { applicantFor: () => Promise.resolve(applicant) },
     options.debts ?? NO_DEBTS,
-    { dueDay: TEST_DUE_DAY },
+    // La unión necesita la morosidad para el documento que se firma (COPAYNI-119).
+    { dueDay: TEST_DUE_DAY, delinquency: TEST_DELINQUENCY, delinquencyByCadence: {} },
     historyWith(options.completedCircles ?? 1),
     TEST_TRUST,
     options.currencies ?? TEST_CURRENCIES,

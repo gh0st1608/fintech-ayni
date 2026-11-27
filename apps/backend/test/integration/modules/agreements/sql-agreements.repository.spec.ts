@@ -29,6 +29,20 @@ const JOINED = at('2026-11-16T12:00:00Z');
 /** 48 h y un segundo después de la unión: el plazo de firma venció. */
 const AFTER_TTL = at('2026-11-18T12:00:01Z');
 
+/** Los diez meses del círculo de prueba, para el calendario del documento. */
+const MONTHS = [
+  '2026-12',
+  '2027-01',
+  '2027-02',
+  '2027-03',
+  '2027-04',
+  '2027-05',
+  '2027-06',
+  '2027-07',
+  '2027-08',
+  '2027-09',
+];
+
 const DATA = {
   payout: pen(6_000),
   months: 10,
@@ -38,6 +52,17 @@ const DATA = {
   retention: pen(1_200),
   startsOn: '2026-12',
   payoutPeriod: '2027-02',
+  // Lo que el documento necesita para describir la obligación real (COPAYNI-119).
+  cadence: 'monthly' as const,
+  turns: 10,
+  unit: 'mes',
+  startsOnDate: '2026-12-01',
+  endsOnDate: '2027-09-01',
+  payoutOn: '2027-02-01',
+  netPayout: pen(4_800),
+  dueDates: MONTHS.map((month, index) => ({ turn: index + 1, dueOn: `${month}-01` })),
+  graceDays: 3,
+  lateFeeBps: 300,
 };
 
 describe('Acuerdos de firma sobre PostgreSQL (COPAYNI-89)', () => {

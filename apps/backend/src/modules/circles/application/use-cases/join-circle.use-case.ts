@@ -48,7 +48,7 @@ import {
   type MembershipAgreementsPort,
 } from '../ports/membership-agreements.port';
 import { CIRCLE_TERMS, type CircleTermsSettings } from './circle-terms';
-import { CIRCLE_CYCLE, type CircleCycleSettings } from './cycle-settings';
+import { CIRCLE_CYCLE, type CircleCycleSettings, delinquencyFor } from './cycle-settings';
 import { TRUST_SETTINGS, type TrustSettings, trustProfileOf } from './trust';
 import {
   JOIN_CONFIG_REPOSITORY,
@@ -138,7 +138,11 @@ export class JoinCircleUseCase {
     @Inject(CIRCLE_ASSIGNMENT) private readonly assignment: CircleAssignmentSettings,
     @Inject(JOIN_ELIGIBILITY) private readonly eligibility: JoinEligibilityPort,
     @Inject(MEMBER_DEBTS) private readonly debts: MemberDebtsPort,
-    @Inject(CIRCLE_CYCLE) private readonly cycle: Pick<CircleCycleSettings, 'dueDay'>,
+    @Inject(CIRCLE_CYCLE)
+    private readonly cycle: Pick<
+      CircleCycleSettings,
+      'dueDay' | 'delinquency' | 'delinquencyByCadence'
+    >,
     @Inject(MEMBER_HISTORY) private readonly history: MemberHistoryPort,
     @Inject(TRUST_SETTINGS) private readonly trust: TrustSettings,
     @Inject(CURRENCIES) private readonly currencies: CurrencySettings,
@@ -246,6 +250,8 @@ export class JoinCircleUseCase {
         retention: quote.retention,
         startsOn: terms.startsOnPeriod.toString(),
         payoutPeriod: quote.payoutPeriod.toString(),
+        // El documento describe la obligación con fechas reales, no con meses (COPAYNI-119).
+        ...this.agreementSchedule(terms, position, quote),
       },
     });
   }
@@ -401,5 +407,49 @@ export class JoinCircleUseCase {
       throw new CircleAlreadyStartedError();
     }
     return { circle, isNew: false };
+  }
+
+  /**
+   * Lo que el contrato y el pagaré necesitan del calendario (COPAYNI-119).
+   *
+   * El cronograma sale de `TurnSchedule`, que es el único que hace aritmética de calendario de la
+   * junta, y los parámetros de morosidad de la cadencia (COPAYNI-111): el documento tiene que
+   * decir el cargo por mora que de verdad se le va a aplicar.
+   */
+  private agreementSchedule(
+    terms: CircleTerms,
+    position: number,
+    quote: SlotQuote,
+  ): {
+    cadence: CadenceId;
+    turns: number;
+    unit: string;
+    startsOnDate: string;
+    endsOnDate: string;
+    payoutOn: string;
+    netPayout: Money;
+    dueDates: { turn: number; dueOn: string }[];
+    graceDays: number;
+    lateFeeBps: number;
+  } {
+    const schedule = TurnSchedule.forCollection({
+      startsOn: terms.startsOn,
+      cadence: terms.cadence,
+      turns: terms.turns,
+      dueDay: this.cycle.dueDay,
+    });
+    const delinquency = delinquencyFor(this.cycle, terms.cadence);
+    return {
+      cadence: terms.cadence.id,
+      turns: terms.turns,
+      unit: terms.cadence.turnLabel().toLowerCase(),
+      startsOnDate: terms.startsOn.toString(),
+      endsOnDate: terms.endsOnDate.toString(),
+      payoutOn: terms.payoutDateOf(position).toString(),
+      netPayout: quote.netPayout,
+      dueDates: schedule.all().map(({ turn, dueOn }) => ({ turn, dueOn: dueOn.toString() })),
+      graceDays: delinquency.graceDays,
+      lateFeeBps: delinquency.lateFeeBps,
+    };
   }
 }

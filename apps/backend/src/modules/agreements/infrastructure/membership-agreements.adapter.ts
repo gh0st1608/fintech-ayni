@@ -35,16 +35,8 @@ export class MembershipAgreementsAdapter implements MembershipAgreementsPort {
       userId: props.userId,
       circleId: props.circleId,
       position: props.position,
-      data: {
-        payout: terms.payout,
-        months: terms.months,
-        position: terms.position,
-        baseInstallment: terms.baseInstallment,
-        totalPaid: terms.totalPaid,
-        retention: terms.retention,
-        startsOn: terms.startsOn,
-        payoutPeriod: terms.payoutPeriod,
-      },
+      // El puerto y la plantilla hablan de lo mismo: los términos viajan tal cual.
+      data: { ...terms },
     });
   }
 
