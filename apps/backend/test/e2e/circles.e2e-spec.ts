@@ -32,6 +32,9 @@ describe('GET /v1/circles/join-config', () => {
           { code: 'PEN', official: true, rateToOfficial: '1' },
           { code: 'USD', official: false, rateToOfficial: '3.75' },
         ],
+        // Sin la cabecera `x-ayni-cadences` solo va la mensual, que es lo que recibe la app
+        // publicada: con una sola cadencia no muestra el paso de frecuencia (COPAYNI-115, 116).
+        cadences: [{ id: 'monthly', unit: 'Mes', turnDays: 30, default: true }],
         termsVersion: '2026-11',
       },
       traceId: response.headers['x-trace-id'],

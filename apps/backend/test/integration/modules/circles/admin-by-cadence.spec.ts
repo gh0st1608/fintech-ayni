@@ -115,10 +115,13 @@ describe('Back-office por cadencia sobre PostgreSQL (COPAYNI-118)', () => {
   });
 
   it('los totales de cuotas no mezclan cadencias en una sola cifra', async () => {
-    const period = '2026-12';
-    await circle({ cadence: 'monthly', startsOn: '2026-12-01', amount: 500_000 });
-    await circle({ cadence: 'weekly', startsOn: '2026-12-02', amount: 100_000 });
-    await circle({ cadence: 'weekly', startsOn: '2026-12-09', amount: 100_000 });
+    // Los totales suman todas las filas del período, así que el mes tiene que ser uno que ninguna
+    // otra prueba escriba: el mes que viene lo llenan las uniones de media suite, y con la base
+    // compartida entre archivos en paralelo el conteo de la mensual salía al azar.
+    const period = '2029-06';
+    await circle({ cadence: 'monthly', startsOn: '2029-06-01', amount: 500_000 });
+    await circle({ cadence: 'weekly', startsOn: '2029-06-02', amount: 100_000 });
+    await circle({ cadence: 'weekly', startsOn: '2029-06-09', amount: 100_000 });
 
     const totals = (await finance.installmentTotals(period)).filter(
       ({ status }) => status === 'paid',
@@ -137,9 +140,10 @@ describe('Back-office por cadencia sobre PostgreSQL (COPAYNI-118)', () => {
   });
 
   it('el filtro de cadencia también acota los totales', async () => {
-    const period = '2027-01';
-    await circle({ cadence: 'monthly', startsOn: '2027-01-01', amount: 500_000 });
-    await circle({ cadence: 'weekly', startsOn: '2027-01-06', amount: 100_000 });
+    // Otro mes propio, por lo mismo que el caso anterior.
+    const period = '2029-07';
+    await circle({ cadence: 'monthly', startsOn: '2029-07-01', amount: 500_000 });
+    await circle({ cadence: 'weekly', startsOn: '2029-07-06', amount: 100_000 });
 
     const totals = await finance.installmentTotals(period, 'weekly');
 

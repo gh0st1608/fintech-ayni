@@ -44,6 +44,9 @@ docker compose -f infra/local/compose.yaml --profile tunnel up -d
 
 - Inspector de ngrok: <http://localhost:4040>.
 - Para probar el gateway sin el túnel: <http://localhost:8080/health/live>.
+- Si el **5432** ya lo ocupa otro proyecto de la máquina, `DB_PORT` elige el puerto publicado y hay
+  que usar el mismo al correr las pruebas: `DB_PORT=55433 npm run db:up` y
+  `DB_PORT=55433 npm test`. En `.env`, `DB_PORT` tiene que coincidir.
 
 ### 2. Backend
 

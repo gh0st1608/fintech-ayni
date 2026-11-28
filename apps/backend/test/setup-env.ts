@@ -32,8 +32,11 @@ export const TEST_ENV = {
   SAVING_PROGRAM_MAX: '100000000',
   CIRCLE_DURATION_OPTIONS: '6,10,12',
   // PostgreSQL de compose.yaml (npm run db:up) o el service de CI. Credenciales solo de prueba.
-  DB_HOST: '127.0.0.1',
-  DB_PORT: '5432',
+  // DB_HOST y DB_PORT se pueden reemplazar desde el entorno para quien ya tenga el 5432 ocupado
+  // por otro proyecto: `DB_PORT=55433 npm run db:up && DB_PORT=55433 npm test` usa ese puerto en
+  // el contenedor y en las pruebas. El resto de los valores son fijos a propósito.
+  DB_HOST: process.env.DB_HOST ?? '127.0.0.1',
+  DB_PORT: process.env.DB_PORT ?? '5432',
   DB_NAME: 'ayni_test',
   DB_USERNAME: 'ayni',
   DB_PASSWORD: 'ayni',

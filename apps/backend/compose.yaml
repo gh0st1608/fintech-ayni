@@ -1,12 +1,14 @@
 # PostgreSQL para desarrollo y pruebas, misma versión mayor que RDS (ADR 2).
 # Uso: npm run db:up. Credenciales solo locales; crea las bases ayni (dev) y ayni_test.
+# DB_PORT elige el puerto publicado, por si el 5432 ya lo ocupa otro proyecto en la misma máquina:
+# `DB_PORT=55433 npm run db:up`, y las pruebas con el mismo DB_PORT (test/setup-env.ts).
 name: ayni-backend
 
 services:
   postgres:
     image: postgres:17.6-alpine
     ports:
-      - '127.0.0.1:5432:5432'
+      - '127.0.0.1:${DB_PORT:-5432}:5432'
     environment:
       POSTGRES_USER: ayni
       POSTGRES_PASSWORD: ayni
