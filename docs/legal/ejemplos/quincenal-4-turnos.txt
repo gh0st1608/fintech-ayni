@@ -1,0 +1,94 @@
+Junta quincenal de 4 turnos, turno 1
+====================================
+
+Generado con renderAgreement el 2026-11-27 (COPAYNI-119). Datos de la junta:
+  Pozo: S/ 3000.00   Turnos: 4   Cadencia: biweekly
+  Cuota base por turno: S/ 750.00
+  Inicio: 2026-12-02   Fin: 2027-01-13
+  Turno del titular: 1 (fastest_payout), cobra el 2026-12-02
+  Total a aportar: S/ 3660.00   Retención: S/ 750.00   Recibe de inmediato: S/ 2250.00
+  Gracia: 2 día(s)   Cargo por mora: 1.40 %
+
+------------------------------------------------------------------------------------------------
+--- CONTRATO ---
+------------------------------------------------------------------------------------------------
+
+CONTRATO DE PARTICIPACIÓN EN CÍRCULO DE AHORRO (GAME'YA)
+
+AVISO: TEXTO PROVISIONAL, PENDIENTE DE REDACCIÓN POR EL ÁREA LEGAL.
+No constituye asesoría legal ni un título valor con mérito ejecutivo.
+Ver docs/pending-scope.md §3.3 (PG1 a PG5).
+
+1. OBJETO
+El participante se incorpora a un círculo de ahorro de 4 quincenas, con aportes de
+frecuencia quincenal, que inicia el 2026-12-02 y termina el
+2027-01-13.
+Referencia aproximada, sin valor como plazo: unos 1.8 meses
+(56 días corridos). El plazo de la obligación son las fechas de arriba.
+
+2. TURNO Y COBRO
+Turno asignado: 1 de 4.
+Fecha de cobro del pozo: 2026-12-02.
+Monto del pozo: 3000.00 PEN.
+Retención aplicada al cobro, que paga sus últimas cuotas: 750.00 PEN.
+Importe que recibe de inmediato: 2250.00 PEN.
+
+3. APORTES
+Cuota base por turno: 750.00 PEN.
+Total a aportar por el turno, incluidos cargos y descuentos: 3660.00 PEN.
+Calendario de vencimientos (4 quincenas, frecuencia quincenal):
+  Turno 1: vence el 2026-12-02.
+  Turno 2: vence el 2026-12-16.
+  Turno 3: vence el 2026-12-30.
+  Turno 4: vence el 2027-01-13.
+
+4. INCUMPLIMIENTO
+Días de gracia desde el vencimiento: 2.
+Cargo por mora sobre la cuota vencida: 1.40 %.
+El impago de una cuota, vencida la gracia, da lugar a la exclusión del círculo, al cargo por
+mora indicado y al bloqueo para unirse a otro círculo hasta regularizar la deuda.
+
+5. DEVOLUCIÓN
+Al excluido antes de su fecha de cobro se le devuelven sus cuotas aportadas, menos la
+penalidad vigente, al cierre del círculo. La devolución se retiene mientras exista deuda
+pendiente.
+
+Versión de la plantilla: contract-provisional-2-biweekly
+Aprobación de la plantilla: NINGUNA. Este documento no debe emitirse.
+
+
+------------------------------------------------------------------------------------------------
+--- PAGARÉ ---
+------------------------------------------------------------------------------------------------
+
+PAGARÉ
+
+AVISO: TEXTO PROVISIONAL, PENDIENTE DE REDACCIÓN POR EL ÁREA LEGAL.
+No constituye asesoría legal ni un título valor con mérito ejecutivo.
+Ver docs/pending-scope.md §3.3 (PG1 a PG5).
+
+Por el presente documento el participante reconoce la obligación de pagar a la cooperativa
+las cuotas pendientes del círculo de ahorro en el que participa, en caso de incumplimiento
+posterior al cobro del pozo.
+
+Importe máximo garantizado: 3000.00 PEN.
+Cuota base por turno: 750.00 PEN.
+Turno: 1 de 4, frecuencia quincenal.
+Fecha de cobro del pozo: 2026-12-02.
+
+Calendario de vencimientos (4 quincenas, frecuencia quincenal):
+  Turno 1: vence el 2026-12-02.
+  Turno 2: vence el 2026-12-16.
+  Turno 3: vence el 2026-12-30.
+  Turno 4: vence el 2027-01-13.
+
+La obligación se hace exigible por el saldo impago de las cuotas restantes a las fechas
+indicadas, más el cargo por mora de 1.40 % sobre cada cuota vencida,
+descontada la retención aplicada al cobro del pozo.
+
+PENDIENTE DE LEGAL: el monto de un pagaré debe ser determinado y aquí la deuda es contingente
+(PG3). La forma de fijarlo y la vía de firma (PG1 y PG2) condicionan la validez del título.
+
+Versión de la plantilla: promissory-note-provisional-2-biweekly
+Aprobación de la plantilla: NINGUNA. Este documento no debe emitirse.
+

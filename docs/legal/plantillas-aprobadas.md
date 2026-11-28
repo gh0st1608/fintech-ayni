@@ -69,7 +69,9 @@ documento imprime esos valores, y quedan fijados en el texto que se firma.
 ## Cómo se aprueba una cadencia
 
 1. Generar el documento renderizado de esa cadencia con datos reales de una junta de ejemplo
-   (`renderAgreement`), y adjuntarlo a la revisión.
+   (`renderAgreement`), y adjuntarlo a la revisión. **Ya están generados** en
+   [ejemplos/](ejemplos/README.md): semanal de 4 y de 12 turnos, quincenal de 4 y la mensual de 10
+   que se emite hoy, cada uno con su contrato y su pagaré.
 2. Legal revisa ese texto exacto, no un resumen.
 3. Con el visto bueno: añadir la fila en este archivo y la entrada en `template-approvals.ts` con
    `basis: 'legal'`, quién aprobó y la fecha, en el mismo cambio.
