@@ -1,5 +1,6 @@
 import { validateEnvironment } from '@src/config/env.validation';
 import {
+  priceOf,
   retainedInstallments,
   SlotPricing,
 } from '@src/modules/circles/domain/services/slot-pricing';
@@ -162,6 +163,21 @@ describe('Retención acotada como parte del pozo (COPAYNI-102)', () => {
         expect(retained(terms, position, WITH_CAP)).toBe(2);
       }
     }
+  });
+
+  it('una junta mensual que ya existe conserva la retención que firmó (COPAYNI-122)', () => {
+    // El tope solo gobierna las uniones nuevas: el precio queda congelado en la membresía
+    // (`circle_memberships.price`) y `quoteOf` lo devuelve tal cual. Es lo que sostiene la
+    // promesa de que ningún círculo en curso cambió de cuota ni de retención.
+    const terms = monthly(6);
+    const firmado = WITHOUT_CAP.quote(terms, 1);
+
+    expect(WITH_CAP.quoteOf(terms, 1, priceOf(firmado)).retention).toEqual(firmado.retention);
+    expect(
+      retainedInstallments(WITH_CAP.quoteOf(terms, 1, priceOf(firmado)), terms.baseInstallment),
+    ).toBe(2);
+    // Y quien se une hoy a una junta igual recibe la retención acotada.
+    expect(retained(terms, 1, WITH_CAP)).toBe(1);
   });
 
   it('en semanal el tope manda sobre los 60 días de cobertura', () => {
