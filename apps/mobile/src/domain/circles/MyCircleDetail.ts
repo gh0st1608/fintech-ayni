@@ -13,6 +13,14 @@ export type TurnStatus = 'paid' | 'current' | 'upcoming' | 'vacant';
 /** Frecuencia de los turnos de una junta (docs/api/circles.md, COPAYNI-100). */
 export type Cadence = 'monthly' | 'biweekly' | 'weekly';
 
+/**
+ * Las cadencias que **esta** versión de la app sabe dibujar, que es lo que declara en la
+ * cabecera `x-ayni-cadences` (COPAYNI-115). El servidor solo ofrece las que estén aquí y además
+ * habilitadas; sin la cabecera responde únicamente la mensual, que es lo que recibe la app
+ * publicada. Quitar una de esta lista deja de pedirla sin tocar nada más.
+ */
+export const SUPPORTED_CADENCES: readonly Cadence[] = ['monthly', 'biweekly', 'weekly'];
+
 export interface CircleTurn {
   position: number;
   /**

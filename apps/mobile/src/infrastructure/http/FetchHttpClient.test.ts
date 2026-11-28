@@ -81,6 +81,8 @@ describe('FetchHttpClient', () => {
       'X-Request-Id': 'req-1',
       'Accept-Language': 'es',
       Authorization: 'Bearer token-123',
+      // Lo que esta app sabe dibujar (COPAYNI-115): sin esto el servidor solo ofrece mensuales.
+      'X-Ayni-Cadences': 'monthly,biweekly,weekly',
     });
   });
 

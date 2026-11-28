@@ -1,3 +1,5 @@
+import { SUPPORTED_CADENCES } from '@/domain/circles/MyCircleDetail';
+
 import { AppError, type AppErrorKind } from '@/domain/shared/errors/AppError';
 import type {
   HttpBodyRequestOptions,
@@ -218,6 +220,9 @@ export class FetchHttpClient implements HttpClientPort {
     const headers: Record<string, string> = {
       Accept: options.accept ?? 'application/json',
       'X-Request-Id': this.generateRequestId(),
+      // Capacidad del cliente (COPAYNI-115): sin esta cabecera el servidor solo ofrece juntas
+      // mensuales. Va en todas las peticiones porque es una propiedad de la app, no del endpoint.
+      'X-Ayni-Cadences': SUPPORTED_CADENCES.join(','),
       ...options.headers,
     };
     if (options.body !== undefined) headers['Content-Type'] = 'application/json';
