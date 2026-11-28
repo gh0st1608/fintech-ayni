@@ -26,12 +26,13 @@ export interface TemplateApproval {
  * Plantillas aprobadas por cadencia.
  *
  * El contrato y el pagaré describen la obligación que el miembro asume, así que su texto tiene
- * que coincidir con el calendario que el sistema aplica. Hoy solo la cadencia mensual tiene un
- * texto emitible, y lo tiene sobre base **provisional**: el aviso va dentro del propio documento.
+ * que coincidir con el calendario que el sistema aplica. Las tres cadencias tienen hoy un texto
+ * emitible y las tres lo tienen sobre base **provisional**: el aviso va dentro del propio
+ * documento, y lo que acota la exposición es el tope de payout.
  *
  * Una cadencia sin entrada aquí no se puede habilitar: la validación de entorno lo impide al
- * arrancar (COPAYNI-119 bloquea COPAYNI-116). Añadir una entrada con base `legal` es lo que
- * desbloquea esa cadencia, y el registro humano está en `docs/legal/plantillas-aprobadas.md`.
+ * arrancar (COPAYNI-119 bloquea COPAYNI-116). El registro humano, con quién aprobó qué y sobre
+ * qué base, está en `docs/legal/plantillas-aprobadas.md`; los dos tienen que decir lo mismo.
  */
 export const TEMPLATE_APPROVALS: Readonly<Partial<Record<CadenceId, TemplateApproval>>> = {
   monthly: {
@@ -39,6 +40,19 @@ export const TEMPLATE_APPROVALS: Readonly<Partial<Record<CadenceId, TemplateAppr
     approvedBy: 'PO (Erick Galindo)',
     approvedOn: '2026-11-16',
     reference: 'pending-scope §3.3: lanzar con firma simple por OTP y tope de payout bajo',
+  },
+  biweekly: {
+    basis: 'provisional-po',
+    approvedBy: 'PO (Erick Galindo)',
+    approvedOn: '2026-11-28',
+    reference: 'docs/legal/ejemplos/quincenal-4-turnos.txt, revisado por el PO (COPAYNI-119)',
+  },
+  weekly: {
+    basis: 'provisional-po',
+    approvedBy: 'PO (Erick Galindo)',
+    approvedOn: '2026-11-28',
+    reference:
+      'docs/legal/ejemplos/semanal-4-turnos.txt y semanal-12-turnos.txt, revisados por el PO (COPAYNI-119)',
   },
 };
 
@@ -50,12 +64,19 @@ export function approvalFor(cadence: CadenceId): TemplateApproval | null {
 /**
  * Cadencias que se pueden habilitar hoy sin firmar un documento falso.
  *
- * La mensual sale con su texto provisional porque es una decisión tomada y acotada; cualquier
- * otra necesita que Legal haya aprobado su documento, porque sus plantillas dirían «meses» y
- * «mes de cobro» sobre una obligación que vence por semanas.
+ * Basta con que la cadencia tenga una aprobación registrada, de Legal o del PO. Hasta el 28 de
+ * noviembre de 2026 la base provisional solo valía para la mensual, porque las plantillas de
+ * entonces decían «meses» y «mes de cobro» sobre una obligación que vence por semanas: emitirlas
+ * en semanal habría sido firmar un texto falso. Eso dejó de ser cierto con COPAYNI-119: el
+ * documento se renderiza por cadencia, con sus turnos, sus fechas reales de vencimiento, su
+ * retención y su cargo por mora, y los cuatro ejemplos están en `docs/legal/ejemplos/`. Sobre
+ * ese texto, el PO asumió para las tres cadencias la misma decisión que ya había tomado para la
+ * mensual (pending-scope §3.3), con la exposición acotada por el tope de payout.
+ *
+ * Lo que **no** cambia: una base `provisional-po` sigue valiendo como reconocimiento de deuda
+ * firmado y no como título valor con mérito ejecutivo, y el aviso sigue dentro del documento.
+ * Las preguntas de ejecutabilidad del pagaré siguen abiertas en COPAYNI-99.
  */
 export function cadenceCanBeOffered(cadence: CadenceId): boolean {
-  const approval = approvalFor(cadence);
-  if (!approval) return false;
-  return cadence === 'monthly' || approval.basis === 'legal';
+  return approvalFor(cadence) !== null;
 }

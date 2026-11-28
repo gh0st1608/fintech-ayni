@@ -1,7 +1,7 @@
 Junta mensual de 10 turnos, turno 3 (referencia)
 ================================================
 
-Generado con renderAgreement el 2026-11-27 (COPAYNI-119). Datos de la junta:
+Generado con renderAgreement el 2026-11-28 (COPAYNI-119). Datos de la junta:
   Pozo: S/ 30000.00   Turnos: 10   Cadencia: monthly
   Cuota base por turno: S/ 3000.00
   Inicio: 2026-12-01   Fin: 2027-09-01

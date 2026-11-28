@@ -115,22 +115,17 @@ describe('Gracia y mora de cada cadencia (COPAYNI-102)', () => {
     }
   });
 
-  it('habilitar una cadencia ya no depende de estos valores, solo de la plantilla legal', () => {
-    // Antes de la decisión, habilitar `weekly` fallaba también por la gracia y la mora. Ahora lo
-    // único que lo bloquea es la aprobación del documento (COPAYNI-119).
-    let message = '';
-    try {
+  it('habilitar una cadencia ya no depende de estos valores', () => {
+    // Antes de la decisión, habilitar `weekly` fallaba por la gracia y la mora; después, por la
+    // plantilla del contrato. Con la aprobación del PO sobre los documentos renderizados
+    // (COPAYNI-119, 28/11/2026) ya no lo bloquea ninguna de las dos cosas.
+    expect(() =>
       validateEnvironment({
         ...TEST_ENV,
         CIRCLE_CADENCES_ENABLED: 'monthly,weekly',
         NOTIFICATION_DUE_SOON_DAYS_BY_CADENCE: 'weekly:1',
-      });
-    } catch (error) {
-      message = (error as Error).message;
-    }
-
-    expect(message).toMatch(/weekly no tiene plantilla de contrato aprobada/);
-    expect(message).not.toMatch(/DELINQUENCY_GRACE_DAYS_BY_CADENCE|LATE_FEE_BPS_BY_CADENCE/);
+      }),
+    ).not.toThrow();
   });
 });
 

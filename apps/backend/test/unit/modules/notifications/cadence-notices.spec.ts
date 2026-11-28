@@ -140,11 +140,10 @@ describe('Antelación del recordatorio por cadencia (COPAYNI-120)', () => {
       DELINQUENCY_GRACE_DAYS_BY_CADENCE: 'weekly:1',
       LATE_FEE_BPS_BY_CADENCE: 'weekly:150',
     };
-    // Los 3 días por defecto sobre un ciclo de 7 se admiten; 7 o más, no. Con `weekly:1` lo único
-    // que impide arrancar es la plantilla del contrato (COPAYNI-119), ya no la antelación.
+    // Los 3 días por defecto sobre un ciclo de 7 se admiten; 7 o más, no.
     expect(() =>
       validateEnvironment({ ...env, NOTIFICATION_DUE_SOON_DAYS_BY_CADENCE: 'weekly:1' }),
-    ).toThrow(/weekly no tiene plantilla de contrato aprobada/);
+    ).not.toThrow();
     expect(() =>
       validateEnvironment({ ...env, NOTIFICATION_DUE_SOON_DAYS_BY_CADENCE: 'weekly:7' }),
     ).toThrow(/NOTIFICATION_DUE_SOON_DAYS_BY_CADENCE/);

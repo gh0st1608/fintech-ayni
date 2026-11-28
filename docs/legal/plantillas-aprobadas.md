@@ -22,17 +22,28 @@ aplica, no con una equivalencia aproximada a meses.
 | Cadencia  | Versión de la plantilla                                           | Base             | Aprobó               | Fecha      | Referencia                                                  |
 | --------- | ----------------------------------------------------------------- | ---------------- | -------------------- | ---------- | ----------------------------------------------------------- |
 | monthly   | `contract-provisional-2-monthly`, `promissory-note-provisional-2-monthly` | `provisional-po` | PO (Erick Galindo)   | 2026-11-16 | [pending-scope §3.3](../pending-scope.md#33-pagaré-ejecutable-preguntas-para-legal-p3): lanzar con firma simple por OTP y tope de payout bajo |
-| biweekly  | —                                                                 | —                | **Sin aprobación**   | —          | Bloquea habilitar `biweekly` en `CIRCLE_CADENCES_ENABLED`   |
-| weekly    | —                                                                 | —                | **Sin aprobación**   | —          | Bloquea habilitar `weekly` en `CIRCLE_CADENCES_ENABLED`     |
+| biweekly  | `contract-provisional-2-biweekly`, `promissory-note-provisional-2-biweekly` | `provisional-po` | PO (Erick Galindo)   | 2026-11-28 | [ejemplos/quincenal-4-turnos.txt](ejemplos/quincenal-4-turnos.txt), revisado por el PO |
+| weekly    | `contract-provisional-2-weekly`, `promissory-note-provisional-2-weekly` | `provisional-po` | PO (Erick Galindo)   | 2026-11-28 | [ejemplos/semanal-4-turnos.txt](ejemplos/semanal-4-turnos.txt) y [semanal-12-turnos.txt](ejemplos/semanal-12-turnos.txt), revisados por el PO |
 
 ### Qué significa cada base
 
 - **`legal`**: el área legal redactó y aprobó el documento **renderizado** de esa cadencia, no la
   plantilla en abstracto. Es lo que exige COPAYNI-119 para habilitarla.
-- **`provisional-po`**: el texto **no** lo redactó Legal. El PO aceptó emitirlo así el 16 de
-  noviembre de 2026, con la exposición acotada por el tope de payout. Sirve como reconocimiento de
-  deuda firmado; **no** como título valor con mérito ejecutivo. El aviso va dentro del propio
-  documento.
+- **`provisional-po`**: el texto **no** lo redactó Legal. El PO aceptó emitirlo así —la mensual
+  el 16 de noviembre de 2026, la semanal y la quincenal el 28—, con la exposición acotada por el
+  tope de payout. Sirve como reconocimiento de deuda firmado; **no** como título valor con mérito
+  ejecutivo. El aviso va dentro del propio documento.
+
+### Por qué las tres cadencias salen con base provisional
+
+Hasta el 28 de noviembre de 2026 el sistema solo admitía base provisional en la mensual, y exigía
+`legal` para cualquier otra. La razón era el texto: las plantillas de entonces decían «meses» y
+«mes de cobro», y emitir eso en una junta semanal habría sido firmar algo falso. COPAYNI-119
+cambió el documento —turnos, fechas reales de cada vencimiento, retención, gracia y mora de esa
+cadencia— y sobre ese texto el PO tomó para las tres la misma decisión que ya había tomado para la
+mensual. Lo que no cambió: **sigue pendiente la revisión de Legal**, y sigue abierta la
+ejecutabilidad del pagaré (PG1 a PG6, COPAYNI-99). Cuando Legal revise, la base de cada fila pasa
+a `legal` y se actualiza la entrada del código en el mismo cambio.
 
 ## Qué tiene que revisar Legal para aprobar una cadencia
 
@@ -75,5 +86,8 @@ documento imprime esos valores, y quedan fijados en el texto que se firma.
 2. Legal revisa ese texto exacto, no un resumen.
 3. Con el visto bueno: añadir la fila en este archivo y la entrada en `template-approvals.ts` con
    `basis: 'legal'`, quién aprobó y la fecha, en el mismo cambio.
-4. Recién entonces se puede añadir la cadencia a `CIRCLE_CADENCES_ENABLED`. Antes de eso, la API no
-   arranca con ella habilitada.
+4. Recién entonces se puede añadir la cadencia a `CIRCLE_CADENCES_ENABLED`. Sin ninguna
+   aprobación registrada, la API no arranca con ella habilitada.
+
+Las tres cadencias están hoy en el paso 4 con base provisional del PO, no con el visto bueno de
+Legal: los pasos 2 y 3 siguen pendientes y son los que convierten cada fila a `legal`.

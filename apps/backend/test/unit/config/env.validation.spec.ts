@@ -199,11 +199,12 @@ describe('validateEnvironment', () => {
         validateEnvironment({ ...REQUIRED, CIRCLE_CADENCES_ENABLED: ' monthly ' })
           .CIRCLE_CADENCES_ENABLED,
       ).toEqual(['monthly']);
-      // Habilitar otra exige su plantilla de contrato aprobada (COPAYNI-119), y hoy solo la tiene
-      // la mensual: ninguna configuración habilita la semanal mientras siga así.
-      expect(() =>
-        validateEnvironment({ ...REQUIRED, CIRCLE_CADENCES_ENABLED: 'monthly, weekly' }),
-      ).toThrow(/weekly no tiene plantilla de contrato aprobada/);
+      // Habilitar otra exige su plantilla de contrato aprobada (COPAYNI-119). Las tres la
+      // tienen desde el 28/11/2026, sobre base provisional del PO.
+      expect(
+        validateEnvironment({ ...REQUIRED, CIRCLE_CADENCES_ENABLED: 'monthly, weekly' })
+          .CIRCLE_CADENCES_ENABLED,
+      ).toEqual(['monthly', 'weekly']);
     });
 
     it('no arranca si se deshabilita la mensual: es la de todos los círculos que existen', () => {

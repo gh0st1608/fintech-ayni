@@ -1,7 +1,7 @@
 Junta semanal de 4 turnos, turno 1
 ==================================
 
-Generado con renderAgreement el 2026-11-27 (COPAYNI-119). Datos de la junta:
+Generado con renderAgreement el 2026-11-28 (COPAYNI-119). Datos de la junta:
   Pozo: S/ 3000.00   Turnos: 4   Cadencia: weekly
   Cuota base por turno: S/ 750.00
   Inicio: 2026-12-02   Fin: 2026-12-23
@@ -54,7 +54,7 @@ penalidad vigente, al cierre del círculo. La devolución se retiene mientras ex
 pendiente.
 
 Versión de la plantilla: contract-provisional-2-weekly
-Aprobación de la plantilla: NINGUNA. Este documento no debe emitirse.
+Aprobación de la plantilla: provisional-po — PO (Erick Galindo), 2026-11-28.
 
 
 ------------------------------------------------------------------------------------------------
@@ -90,5 +90,5 @@ PENDIENTE DE LEGAL: el monto de un pagaré debe ser determinado y aquí la deuda
 (PG3). La forma de fijarlo y la vía de firma (PG1 y PG2) condicionan la validez del título.
 
 Versión de la plantilla: promissory-note-provisional-2-weekly
-Aprobación de la plantilla: NINGUNA. Este documento no debe emitirse.
+Aprobación de la plantilla: provisional-po — PO (Erick Galindo), 2026-11-28.
 

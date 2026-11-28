@@ -9,15 +9,20 @@ Cada archivo lleva el contrato y el pagaré de la misma junta, precedidos por su
 
 | Archivo                                            | Junta                                        | Cuota base | Retención | Recibe de inmediato | Gracia | Mora   | Plantilla      |
 | -------------------------------------------------- | -------------------------------------------- | ---------- | --------- | ------------------- | ------ | ------ | -------------- |
-| [semanal-4-turnos.txt](semanal-4-turnos.txt)       | Semanal, 4 turnos, S/ 3.000, turno 1         | S/ 750     | S/ 750    | S/ 2.250            | 1 día  | 0,70 % | Sin aprobación |
-| [semanal-12-turnos.txt](semanal-12-turnos.txt)     | Semanal, 12 turnos, S/ 6.000, turno 1        | S/ 500     | S/ 1.500  | S/ 4.500            | 1 día  | 0,70 % | Sin aprobación |
-| [quincenal-4-turnos.txt](quincenal-4-turnos.txt)   | Quincenal, 4 turnos, S/ 3.000, turno 1       | S/ 750     | S/ 750    | S/ 2.250            | 2 días | 1,40 % | Sin aprobación |
+| [semanal-4-turnos.txt](semanal-4-turnos.txt)       | Semanal, 4 turnos, S/ 3.000, turno 1         | S/ 750     | S/ 750    | S/ 2.250            | 1 día  | 0,70 % | `provisional-po` |
+| [semanal-12-turnos.txt](semanal-12-turnos.txt)     | Semanal, 12 turnos, S/ 6.000, turno 1        | S/ 500     | S/ 1.500  | S/ 4.500            | 1 día  | 0,70 % | `provisional-po` |
+| [quincenal-4-turnos.txt](quincenal-4-turnos.txt)   | Quincenal, 4 turnos, S/ 3.000, turno 1       | S/ 750     | S/ 750    | S/ 2.250            | 2 días | 1,40 % | `provisional-po` |
 | [mensual-10-turnos.txt](mensual-10-turnos.txt)     | Mensual, 10 turnos, S/ 30.000, turno 3       | S/ 3.000   | S/ 6.000  | S/ 24.000           | 3 días | 3,00 % | `provisional-po` |
 
-Los tres primeros llevan dentro del propio texto la línea **«Aprobación de la plantilla: NINGUNA.
-Este documento no debe emitirse»**, porque esa es la situación hoy: la validación de entorno impide
-arrancar la API con una cadencia sin plantilla aprobada. El cuarto es el que **ya se emite** en
-producción, con la aprobación provisional del PO del 16/11/2026, y está aquí para comparar.
+Los cuatro llevan dentro del propio texto la línea **«Aprobación de la plantilla: provisional-po
+— PO (Erick Galindo)»** con su fecha: el 16/11/2026 la mensual, que ya se emite en producción, y
+el 28/11/2026 la semanal y la quincenal, que el PO firmó sobre **estos** textos. Los cuatro llevan
+también el aviso de que el texto está pendiente de redacción por el área legal: valen como
+reconocimiento de deuda firmado, no como título valor con mérito ejecutivo.
+
+**Que el PO los haya firmado no sustituye la revisión de Legal**, que es la que convierte la base
+a `legal` en [plantillas-aprobadas.md](../plantillas-aprobadas.md). Lo que cambia es que las
+cadencias ya se pueden habilitar y probar.
 
 ## Por qué cada ejemplo
 

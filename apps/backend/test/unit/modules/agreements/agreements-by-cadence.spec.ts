@@ -170,47 +170,60 @@ describe('Documentos por cadencia (COPAYNI-119)', () => {
     expect(contract).toContain('Aprobación de la plantilla: provisional-po — PO (Erick Galindo)');
     expect(contract).toContain('TEXTO PROVISIONAL, PENDIENTE DE REDACCIÓN POR EL ÁREA LEGAL');
 
-    // Y una cadencia sin aprobación lo dice en el propio texto, además de no poder habilitarse.
+    // Y la semanal dice la suya, que es la misma base y la fecha en que el PO la firmó.
     const [weekly] = documents(WEEKLY);
     expect(weekly).toContain(
-      'Aprobación de la plantilla: NINGUNA. Este documento no debe emitirse.',
+      'Aprobación de la plantilla: provisional-po — PO (Erick Galindo), 2026-11-28.',
     );
+    // El aviso sigue dentro del documento: vale como reconocimiento de deuda, no como título.
+    expect(weekly).toContain('TEXTO PROVISIONAL, PENDIENTE DE REDACCIÓN POR EL ÁREA LEGAL');
   });
 });
 
 describe('Registro de aprobaciones (COPAYNI-119)', () => {
-  it('solo la mensual tiene plantilla emitible, y sobre base provisional', () => {
+  it('las tres cadencias tienen plantilla emitible, y las tres sobre base provisional', () => {
+    // La mensual desde el 16/11/2026; la semanal y la quincenal desde el 28/11, cuando el PO
+    // firmó los documentos renderizados de `docs/legal/ejemplos/` (COPAYNI-119).
     expect(approvalFor('monthly')).toMatchObject({
       basis: 'provisional-po',
       approvedBy: 'PO (Erick Galindo)',
       approvedOn: '2026-11-16',
     });
-    expect(approvalFor('weekly')).toBeNull();
-    expect(approvalFor('biweekly')).toBeNull();
+    for (const cadence of ['weekly', 'biweekly'] as const) {
+      expect(approvalFor(cadence)).toMatchObject({
+        basis: 'provisional-po',
+        approvedBy: 'PO (Erick Galindo)',
+        approvedOn: '2026-11-28',
+      });
+    }
   });
 
-  it.each([
-    ['monthly', true],
-    ['weekly', false],
-    ['biweekly', false],
-  ] as const)('la cadencia %s se puede ofrecer: %s', (cadence: CadenceId, offered) => {
-    expect(cadenceCanBeOffered(cadence)).toBe(offered);
+  it.each(['monthly', 'weekly', 'biweekly'] as const)(
+    'la cadencia %s se puede ofrecer porque tiene aprobación registrada',
+    (cadence: CadenceId) => {
+      expect(cadenceCanBeOffered(cadence)).toBe(true);
+      expect(cadenceCanBeOffered(cadence)).toBe(approvalFor(cadence) !== null);
+    },
+  );
+
+  it('una cadencia sin entrada en el registro no se puede ofrecer', () => {
+    // El mecanismo de COPAYNI-119 sigue en pie aunque hoy las tres estén aprobadas: lo que
+    // habilita una cadencia es su fila en el registro, no una variable de entorno.
+    expect(cadenceCanBeOffered('trimestral' as CadenceId)).toBe(false);
   });
 
-  it('la API no arranca con una cadencia cuya plantilla no está aprobada', () => {
-    // Es el bloqueo de COPAYNI-119 sobre COPAYNI-116, aplicado por el sistema: un cambio de
-    // variable de entorno no puede poner en producción un contrato que nadie aprobó.
+  it('la API arranca con las tres cadencias habilitadas', () => {
     const env = {
       ...TEST_ENV,
-      DELINQUENCY_GRACE_DAYS_BY_CADENCE: 'weekly:1',
-      LATE_FEE_BPS_BY_CADENCE: 'weekly:70',
-      NOTIFICATION_DUE_SOON_DAYS_BY_CADENCE: 'weekly:1',
+      DELINQUENCY_GRACE_DAYS_BY_CADENCE: 'weekly:1,biweekly:2',
+      LATE_FEE_BPS_BY_CADENCE: 'weekly:70,biweekly:140',
+      NOTIFICATION_DUE_SOON_DAYS_BY_CADENCE: 'weekly:1,biweekly:2',
     };
 
     expect(() =>
-      validateEnvironment({ ...env, CIRCLE_CADENCES_ENABLED: 'monthly,weekly' }),
-    ).toThrow(/weekly no tiene plantilla de contrato aprobada/);
-    // Y con solo la mensual arranca, que es lo que hay hoy en producción.
+      validateEnvironment({ ...env, CIRCLE_CADENCES_ENABLED: 'monthly,biweekly,weekly' }),
+    ).not.toThrow();
+    // Y con solo la mensual también, que es lo que hay hoy en producción.
     expect(() => validateEnvironment({ ...TEST_ENV })).not.toThrow();
   });
 });
