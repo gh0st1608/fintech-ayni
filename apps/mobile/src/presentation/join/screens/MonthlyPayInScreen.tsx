@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import ROCKET from '@assets/images/shared/rocket.png';
+import { offersCadenceChoice } from '@/domain/circles/JoinConfig';
 import type { InstallmentOption } from '@/domain/circles/value-objects/InstallmentOption';
 import type { Money } from '@/domain/shared/value-objects/Money';
 import { useFormatMoney } from '@/presentation/formatters/formatMoney';
@@ -14,23 +15,27 @@ import { Screen } from '@/presentation/shared/components/Screen';
 import { Stepper } from '@/presentation/shared/components/Stepper';
 import { colors, MIN_TOUCH_TARGET, radius, spacing } from '@/presentation/theme/tokens';
 
-import { JoinSummary } from '../components/JoinSummary';
+import { JoinSummary, type JoinSummaryRow } from '../components/JoinSummary';
 import { useInstallmentOptions } from '../hooks/useInstallmentOptions';
+import { useJoinConfig } from '../hooks/useJoinConfig';
 import { useJoinFlow } from '../JoinFlowProvider';
 import { JOIN_FLOW_STEPS } from './PayoutAmountScreen';
 
 interface MonthlyPayInScreenProps {
   /** Vuelve al paso 1; el borrador conserva el monto elegido. */
   onEdit: () => void;
+  /** Vuelve al paso de frecuencia (COPAYNI-116); ausente si no hay frecuencia que elegir. */
+  onEditCadence?: () => void;
   /** Se llama con la cuota ya guardada en el borrador; la ruta navega al paso 3. */
   onNext: () => void;
 }
 
 /** Paso 2 de 4 (Figma 55:9334): combinaciones cuota × meses calculadas por el backend. */
-export function MonthlyPayInScreen({ onEdit, onNext }: MonthlyPayInScreenProps) {
+export function MonthlyPayInScreen({ onEdit, onEditCadence, onNext }: MonthlyPayInScreenProps) {
   const { t } = useTranslation();
   const formatMoney = useFormatMoney();
   const { draft } = useJoinFlow();
+  const config = useJoinConfig();
   const payout = draft.payoutAmount;
   // Las combinaciones dependen de la frecuencia: cambiarla las recalcula (COPAYNI-116).
   const options = useInstallmentOptions(payout, draft.cadence);
@@ -63,6 +68,26 @@ export function MonthlyPayInScreen({ onEdit, onNext }: MonthlyPayInScreenProps) 
     );
   }
 
+  // Lo elegido hasta aquí, en el orden de los pasos. La frecuencia solo si hay más de una: con
+  // una sola el resumen es el de hoy, un renglón con el monto (COPAYNI-116).
+  const summaryRows: JoinSummaryRow[] = [];
+  if (config.data && offersCadenceChoice(config.data) && onEditCadence) {
+    summaryRows.push({
+      label: t('join.frequency.summaryLabel'),
+      value: t(`circles.cadences.${draft.cadence}.turn`),
+      editLabel: t('join.frequency.editA11y'),
+      onEdit: onEditCadence,
+    });
+  }
+  if (payout) {
+    summaryRows.push({
+      label: t('join.monthlyPayIn.summaryLabel'),
+      value: formatMoney(payout, { trimZeroDecimals: true }),
+      editLabel: t('join.monthlyPayIn.editA11y'),
+      onEdit,
+    });
+  }
+
   return (
     <Screen edges={['bottom']}>
       <Stepper
@@ -70,18 +95,7 @@ export function MonthlyPayInScreen({ onEdit, onNext }: MonthlyPayInScreenProps) 
         total={JOIN_FLOW_STEPS}
         accessibilityLabel={t('join.step', { current: 2, total: JOIN_FLOW_STEPS })}
       />
-      {payout && (
-        <JoinSummary
-          rows={[
-            {
-              label: t('join.monthlyPayIn.summaryLabel'),
-              value: formatMoney(payout, { trimZeroDecimals: true }),
-              editLabel: t('join.monthlyPayIn.editA11y'),
-              onEdit,
-            },
-          ]}
-        />
-      )}
+      {summaryRows.length > 0 && <JoinSummary rows={summaryRows} />}
       {body}
     </Screen>
   );

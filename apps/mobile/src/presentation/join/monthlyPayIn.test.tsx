@@ -5,7 +5,9 @@ import { Text } from 'react-native';
 import { AppError } from '@/domain/shared/errors/AppError';
 import { Money } from '@/domain/shared/value-objects/Money';
 import { InstallmentOption } from '@/domain/circles/value-objects/InstallmentOption';
+import type { CadenceOption } from '@/domain/circles/JoinConfig';
 import { InMemoryCircleQuoteRepository } from '@/infrastructure/circles/InMemoryCircleQuoteRepository';
+import { InMemoryJoinConfigRepository } from '@/infrastructure/circles/InMemoryJoinConfigRepository';
 import { createTestContainer } from '@test/fakes/createTestContainer';
 import { renderWithProviders } from '@test/renderWithProviders';
 
@@ -58,20 +60,30 @@ function Rechooser({ change }: { change: 'cadence' | 'amount' }) {
   return <Text testID="draft">{draft.installment ? 'con cuota' : 'none'}</Text>;
 }
 
+const WEEKLY: CadenceOption = { id: 'weekly', unit: 'Semana', turnDays: 7, default: false };
+const MONTHLY: CadenceOption = { id: 'monthly', unit: 'Mes', turnDays: 30, default: true };
+
+/** Un contenedor cuyo servidor ofrece más de una frecuencia, como cuando están habilitadas. */
+const withCadences = (cadences: CadenceOption[]) =>
+  createTestContainer({
+    joinConfig: new InMemoryJoinConfigRepository('PEN', { latencyMs: 0, cadences }),
+  });
+
 async function renderPayIn({
   payout = 30_000 as number | null,
   setup = createTestContainer(),
 } = {}) {
   const onEdit = jest.fn();
+  const onEditCadence = jest.fn();
   const onNext = jest.fn();
   const view = await renderWithProviders(
     <JoinFlowProvider>
       <Draft payout={payout} />
-      <MonthlyPayInScreen onEdit={onEdit} onNext={onNext} />
+      <MonthlyPayInScreen onEdit={onEdit} onEditCadence={onEditCadence} onNext={onNext} />
     </JoinFlowProvider>,
     setup,
   );
-  return { ...view, onEdit, onNext };
+  return { ...view, onEdit, onEditCadence, onNext };
 }
 
 const option = (name: RegExp) => screen.findByRole('button', { name });
@@ -115,11 +127,30 @@ describe('MonthlyPayInScreen', () => {
     expect(await option(/5\.?000.*por mes.*6 meses/)).toBeTruthy();
     expect(await option(/3\.?000.*por mes.*10 meses/)).toBeTruthy();
     expect(await option(/2\.?500.*por mes.*12 meses/)).toBeTruthy();
+    // El aviso no nombra ninguna cadencia: el mismo texto vale en semanal y en quincenal.
     expect(
-      screen.getByText(
-        'La cuota mensual puede variar según el costo o los descuentos de tu turno.',
-      ),
+      screen.getByText('Tu cuota puede variar según el costo o los descuentos de tu turno.'),
     ).toBeTruthy();
+  });
+
+  it('con una sola frecuencia el resumen es el de hoy: solo el monto', async () => {
+    await renderPayIn();
+
+    const summary = screen.getByTestId('join-summary');
+    expect(summary).toHaveTextContent(/30\.000/);
+    expect(screen.queryByRole('button', { name: 'Cambiar la frecuencia' })).toBeNull();
+  });
+
+  it('con varias frecuencias el resumen muestra la elegida y deja cambiarla (COPAYNI-116)', async () => {
+    const { onEditCadence } = await renderPayIn({ setup: withCadences([MONTHLY, WEEKLY]) });
+
+    const summary = await screen.findByTestId('join-summary');
+    // Las dos decisiones tomadas hasta aquí, en el orden en que se tomaron.
+    expect(summary).toHaveTextContent(/Mes/);
+    expect(summary).toHaveTextContent(/30\.000/);
+
+    await fireEvent.press(screen.getByRole('button', { name: 'Cambiar la frecuencia' }));
+    expect(onEditCadence).toHaveBeenCalledTimes(1);
   });
 
   it('tocar una cuota la guarda en el borrador y pasa al turno (Figma 55:9334)', async () => {

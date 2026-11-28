@@ -8,8 +8,11 @@ export function useJoinScreenOptions() {
   const options = (title: string) => ({ title, headerBackButtonDisplayMode: 'minimal' }) as const;
   return {
     chooseService: options(t('join.title')),
+    frequency: options(t('join.frequency.title')),
     payoutAmount: options(t('join.payout.title')),
-    monthlyPayIn: options(t('join.monthlyPayIn.title')),
+    // La mensual es el título por defecto; fuera de ella la pone la propia pantalla, que es
+    // la que conoce la cadencia del borrador (COPAYNI-116).
+    monthlyPayIn: options(t('join.monthlyPayIn.titles.monthly')),
     slot: options(t('join.slot.title')),
     payoutMethod: options(t('join.payoutMethod.title')),
     confirm: options(t('join.confirm.title')),

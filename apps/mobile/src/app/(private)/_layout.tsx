@@ -37,6 +37,7 @@ export default function PrivateLayout() {
       <Stack>
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="join/index" options={joinOptions.chooseService} />
+        <Stack.Screen name="join/frequency" options={joinOptions.frequency} />
         <Stack.Screen name="join/payout-amount" options={joinOptions.payoutAmount} />
         <Stack.Screen name="join/monthly-pay-in" options={joinOptions.monthlyPayIn} />
         <Stack.Screen name="join/slot" options={joinOptions.slot} />

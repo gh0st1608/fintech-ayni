@@ -115,7 +115,11 @@
       }
     },
     "monthlyPayIn": {
-      "title": "Cuota mensual",
+      "titles": {
+        "monthly": "Cuota mensual",
+        "biweekly": "Cuota quincenal",
+        "weekly": "Cuota semanal"
+      },
       "question": "¿Cuánto quieres pagar {{per}}?",
       "summaryLabel": "Monto a recibir",
       "edit": "Editar",
@@ -124,7 +128,7 @@
       "option": "{{amount}} {{per}}",
       "optionMonths": "por {{months}} meses",
       "exceedsLimit": "Supera tu límite mensual de cuotas.",
-      "info": "La cuota mensual puede variar según el costo o los descuentos de tu turno.",
+      "info": "Tu cuota puede variar según el costo o los descuentos de tu turno.",
       "empty": "No hay cuotas disponibles para este monto. Prueba con otro monto a recibir.",
       "missingPayout": "Primero elige el monto a recibir.",
       "choosePayout": "Elegir el monto",

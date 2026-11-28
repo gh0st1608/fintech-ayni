@@ -115,7 +115,11 @@
       }
     },
     "monthlyPayIn": {
-      "title": "Monthly Pay-in",
+      "titles": {
+        "monthly": "Monthly Pay-in",
+        "biweekly": "Fortnightly pay-in",
+        "weekly": "Weekly pay-in"
+      },
       "question": "How much do you want to pay {{per}}?",
       "summaryLabel": "Payout amount",
       "edit": "Edit",
@@ -124,7 +128,7 @@
       "option": "{{amount}} {{per}}",
       "optionMonths": "for {{months}} months",
       "exceedsLimit": "Exceeds your monthly pay-in limit.",
-      "info": "Your monthly pay-in may vary depending on your slot fees or discounts.",
+      "info": "Your installment may vary depending on your slot fees or discounts.",
       "empty": "There are no pay-ins available for this amount. Try another payout amount.",
       "missingPayout": "Choose the payout amount first.",
       "choosePayout": "Choose the amount",

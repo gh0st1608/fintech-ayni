@@ -20,6 +20,9 @@ const placeholders = (text: string) =>
 
 const reference = flatten(LANGUAGE_CATALOG.find(({ code }) => code === 'es')!.resources);
 
+/** Cómo se dice «mensual» en cada idioma. Un idioma nuevo tiene que declarar la suya. */
+const MONTHLY_WORD: Record<string, RegExp> = { es: /mensual/i, en: /monthly/i };
+
 describe('archivos JSON de idioma', () => {
   it('el catálogo y los idiomas soportados coinciden', () => {
     expect(SUPPORTED_LANGUAGES.map(({ code }) => code)).toEqual(
@@ -45,6 +48,17 @@ describe('archivos JSON de idioma', () => {
         for (const [key, value] of Object.entries(translations)) {
           expect([key, placeholders(value)]).toEqual([key, placeholders(reference[key] ?? '')]);
         }
+      });
+
+      it('ningún texto de una cadencia no mensual dice «mensual» (COPAYNI-116)', () => {
+        // El criterio de la historia: las duraciones se expresan en su unidad y nunca dicen
+        // «mensual» si no lo es. «biweekly» contiene «weekly», así que el filtro cubre las dos.
+        const word = MONTHLY_WORD[_code];
+        expect(word).toBeDefined();
+        const offenders = Object.entries(translations).filter(
+          ([key, value]) => key.includes('weekly') && word!.test(value),
+        );
+        expect(offenders).toEqual([]);
       });
 
       it('no contiene monedas: se formatean en runtime', () => {
