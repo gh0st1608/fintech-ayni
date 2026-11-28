@@ -153,14 +153,21 @@ describe('validateEnvironment', () => {
       const env = validateEnvironment({
         ...REQUIRED,
         CIRCLE_TURNS_MIN: '2',
-        CIRCLE_TURNS_MAX: '24',
+        CIRCLE_TURNS_MAX: '12',
       });
-      expect([env.CIRCLE_TURNS_MIN, env.CIRCLE_TURNS_MAX]).toEqual([2, 24]);
+      expect([env.CIRCLE_TURNS_MIN, env.CIRCLE_TURNS_MAX]).toEqual([2, 12]);
+    });
+
+    it('no arranca con un máximo por encima del tope decidido (COPAYNI-101)', () => {
+      // 12 turnos en las tres cadencias; 13 no se configura por variable de entorno.
+      expect(() =>
+        validateEnvironment({ ...REQUIRED, CIRCLE_TURNS_MIN: '2', CIRCLE_TURNS_MAX: '13' }),
+      ).toThrow(/CIRCLE_TURNS_MAX/);
     });
 
     it.each([
       ['solo el mínimo', { CIRCLE_TURNS_MIN: '2' }],
-      ['solo el máximo', { CIRCLE_TURNS_MAX: '24' }],
+      ['solo el máximo', { CIRCLE_TURNS_MAX: '12' }],
     ])('no arranca con %s: no se adivina el otro extremo', (_case, override) => {
       expect(() => validateEnvironment({ ...REQUIRED, ...override })).toThrow(
         /CIRCLE_TURNS_MIN y CIRCLE_TURNS_MAX/,
@@ -189,14 +196,14 @@ describe('validateEnvironment', () => {
 
     it('habilita las que se indiquen, y solo esas', () => {
       expect(
-        validateEnvironment({
-          ...REQUIRED,
-          CIRCLE_CADENCES_ENABLED: 'monthly, weekly',
-          // Habilitar una cadencia exige sus parámetros de morosidad (COPAYNI-111).
-          DELINQUENCY_GRACE_DAYS_BY_CADENCE: 'weekly:1',
-          LATE_FEE_BPS_BY_CADENCE: 'weekly:150',
-        }).CIRCLE_CADENCES_ENABLED,
-      ).toEqual(['monthly', 'weekly']);
+        validateEnvironment({ ...REQUIRED, CIRCLE_CADENCES_ENABLED: ' monthly ' })
+          .CIRCLE_CADENCES_ENABLED,
+      ).toEqual(['monthly']);
+      // Habilitar otra exige su plantilla de contrato aprobada (COPAYNI-119), y hoy solo la tiene
+      // la mensual: ninguna configuración habilita la semanal mientras siga así.
+      expect(() =>
+        validateEnvironment({ ...REQUIRED, CIRCLE_CADENCES_ENABLED: 'monthly, weekly' }),
+      ).toThrow(/weekly no tiene plantilla de contrato aprobada/);
     });
 
     it('no arranca si se deshabilita la mensual: es la de todos los círculos que existen', () => {
@@ -226,16 +233,19 @@ describe('validateEnvironment', () => {
       const env = validateEnvironment(REQUIRED);
       expect(env.DELINQUENCY_GRACE_DAYS).toBe(3);
       expect(env.LATE_FEE_BPS).toBe(300);
-      expect(env.DELINQUENCY_GRACE_DAYS_BY_CADENCE).toEqual([]);
+      // Y las demás cadencias traen los valores que decidió COPAYNI-102, que no tocan la mensual.
+      expect(env.DELINQUENCY_GRACE_DAYS_BY_CADENCE).toEqual(['biweekly:2', 'weekly:1']);
+      expect(env.LATE_FEE_BPS_BY_CADENCE).toEqual(['biweekly:140', 'weekly:70']);
     });
 
     it('no arranca si una cadencia habilitada no tiene gracia ni mora propias', () => {
-      // No caen en los valores de la mensual en silencio: están calibrados para 30 días.
-      expect(() => validateEnvironment(weekly)).toThrow(
-        /DELINQUENCY_GRACE_DAYS_BY_CADENCE: falta weekly/,
-      );
+      // No caen en los valores de la mensual en silencio: están calibrados para 30 días. Los de
+      // COPAYNI-102 vienen por defecto, así que el caso es una configuración que los reemplaza.
       expect(() =>
-        validateEnvironment({ ...weekly, DELINQUENCY_GRACE_DAYS_BY_CADENCE: 'weekly:1' }),
+        validateEnvironment({ ...weekly, DELINQUENCY_GRACE_DAYS_BY_CADENCE: 'biweekly:2' }),
+      ).toThrow(/DELINQUENCY_GRACE_DAYS_BY_CADENCE: falta weekly/);
+      expect(() =>
+        validateEnvironment({ ...weekly, LATE_FEE_BPS_BY_CADENCE: 'biweekly:140' }),
       ).toThrow(/LATE_FEE_BPS_BY_CADENCE: falta weekly/);
     });
 
@@ -249,9 +259,10 @@ describe('validateEnvironment', () => {
       ).toThrow(/weekly tiene 7 días de gracia y su ciclo dura 7/);
     });
 
-    it('acepta los valores de cada cadencia habilitada', () => {
+    it('acepta los valores que se configuren para cada cadencia', () => {
+      // Sin habilitar la semanal, que todavía no tiene plantilla aprobada (COPAYNI-119).
       const env = validateEnvironment({
-        ...weekly,
+        ...REQUIRED,
         DELINQUENCY_GRACE_DAYS_BY_CADENCE: 'weekly:1',
         LATE_FEE_BPS_BY_CADENCE: 'weekly:150',
       });
@@ -498,9 +509,9 @@ describe('validateEnvironment', () => {
       expect(validateEnvironment({ ...REQUIRED })).toMatchObject({
         TRUST_FASTEST_MIN_COMPLETED_CIRCLES: 0,
         // 60 días de cobertura son las 2 cuotas que se retenían antes en una junta mensual
-        // (COPAYNI-112), y sin tope efectivo sobre el pozo, que es el comportamiento actual.
+        // (COPAYNI-112), con el tope del 25 % del pozo que decidió COPAYNI-102.
         PAYOUT_RETENTION_COVERAGE_DAYS: 60,
-        PAYOUT_RETENTION_MAX_POT_BPS: 10_000,
+        PAYOUT_RETENTION_MAX_POT_BPS: 2_500,
       });
       expect(() =>
         validateEnvironment({ ...REQUIRED, PAYOUT_RETENTION_COVERAGE_DAYS: '400' }),

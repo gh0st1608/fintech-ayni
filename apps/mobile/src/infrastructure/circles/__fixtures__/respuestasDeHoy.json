@@ -1,0 +1,305 @@
+{
+  "joinConfig": {
+    "payout": {
+      "min": {
+        "amount": 300000,
+        "currency": "PEN"
+      },
+      "max": {
+        "amount": 12000000,
+        "currency": "PEN"
+      },
+      "step": {
+        "amount": 50000,
+        "currency": "PEN"
+      }
+    },
+    "userPayoutLimit": null,
+    "savingProgramMax": {
+      "amount": 100000000,
+      "currency": "PEN"
+    },
+    "currencies": [
+      {
+        "code": "PEN",
+        "official": true,
+        "rateToOfficial": "1"
+      },
+      {
+        "code": "USD",
+        "official": false,
+        "rateToOfficial": "3.75"
+      }
+    ],
+    "cadences": [
+      {
+        "id": "monthly",
+        "unit": "Mes",
+        "turnDays": 30,
+        "default": true
+      }
+    ],
+    "termsVersion": "2026-11"
+  },
+  "installmentOptions": {
+    "payout": {
+      "amount": 9750000,
+      "currency": "PEN"
+    },
+    "options": [
+      {
+        "turns": 6,
+        "months": 6,
+        "installment": {
+          "amount": 1625000,
+          "currency": "PEN"
+        },
+        "cadence": "monthly",
+        "unit": "Mes",
+        "approximateDays": 180
+      },
+      {
+        "turns": 10,
+        "months": 10,
+        "installment": {
+          "amount": 975000,
+          "currency": "PEN"
+        },
+        "cadence": "monthly",
+        "unit": "Mes",
+        "approximateDays": 300
+      },
+      {
+        "turns": 12,
+        "months": 12,
+        "installment": {
+          "amount": 812500,
+          "currency": "PEN"
+        },
+        "cadence": "monthly",
+        "unit": "Mes",
+        "approximateDays": 360
+      }
+    ]
+  },
+  "slots": {
+    "circleId": null,
+    "startsOn": "2026-12",
+    "startsOnDate": "2026-12-01",
+    "payout": {
+      "amount": 9750000,
+      "currency": "PEN"
+    },
+    "months": 10,
+    "turns": 10,
+    "cadence": "monthly",
+    "unit": "Mes",
+    "endsOn": "2027-09",
+    "endsOnDate": "2027-09-01",
+    "durationDays": 304,
+    "slots": [
+      {
+        "position": 1,
+        "payoutPeriod": "2026-12",
+        "payoutOn": "2026-12-01",
+        "type": "fastest_payout",
+        "fee": {
+          "amount": 975000,
+          "currency": "PEN"
+        },
+        "discount": {
+          "amount": 0,
+          "currency": "PEN"
+        },
+        "catchUp": {
+          "amount": 0,
+          "currency": "PEN"
+        },
+        "retention": {
+          "amount": 1950000,
+          "currency": "PEN"
+        },
+        "available": true,
+        "allowed": false,
+        "notAllowedReason": "trust_required"
+      },
+      {
+        "position": 2,
+        "payoutPeriod": "2027-01",
+        "payoutOn": "2027-01-01",
+        "type": "fastest_payout",
+        "fee": {
+          "amount": 487500,
+          "currency": "PEN"
+        },
+        "discount": {
+          "amount": 0,
+          "currency": "PEN"
+        },
+        "catchUp": {
+          "amount": 0,
+          "currency": "PEN"
+        },
+        "retention": {
+          "amount": 1950000,
+          "currency": "PEN"
+        },
+        "available": true,
+        "allowed": false,
+        "notAllowedReason": "trust_required"
+      }
+    ]
+  },
+  "join": {
+    "circleId": "01747f89-c13b-429c-a21c-b24fcd5a03d9",
+    "startsOn": "2026-12",
+    "startsOnDate": "2026-12-01",
+    "payout": {
+      "amount": 9750000,
+      "currency": "PEN"
+    },
+    "months": 10,
+    "turns": 10,
+    "cadence": "monthly",
+    "endsOnDate": "2027-09-01",
+    "position": 3,
+    "payoutPeriod": "2027-02",
+    "type": "lowest_fees",
+    "installments": [
+      {
+        "amount": 1365000,
+        "currency": "PEN"
+      },
+      {
+        "amount": 1365000,
+        "currency": "PEN"
+      },
+      {
+        "amount": 1365000,
+        "currency": "PEN"
+      }
+    ],
+    "netPayout": {
+      "amount": 7800000,
+      "currency": "PEN"
+    },
+    "catchUp": {
+      "amount": 0,
+      "currency": "PEN"
+    },
+    "retention": {
+      "amount": 1950000,
+      "currency": "PEN"
+    },
+    "created": true
+  },
+  "myCircles": {
+    "items": [
+      {
+        "circleId": "01747f89-c13b-429c-a21c-b24fcd5a03d9",
+        "status": "active",
+        "payout": {
+          "amount": 9750000,
+          "currency": "PEN"
+        },
+        "months": 10,
+        "startsOn": "2026-12",
+        "startsOnDate": "2026-12-01",
+        "endsOn": "2027-09",
+        "position": 3,
+        "payoutPeriod": "2027-02",
+        "type": "lowest_fees",
+        "installments": [
+          {
+            "amount": 1365000,
+            "currency": "PEN"
+          },
+          {
+            "amount": 1365000,
+            "currency": "PEN"
+          },
+          {
+            "amount": 1365000,
+            "currency": "PEN"
+          }
+        ],
+        "adminFee": {
+          "amount": 1170000,
+          "currency": "PEN"
+        },
+        "netPayout": {
+          "amount": 7800000,
+          "currency": "PEN"
+        },
+        "joinedAt": "2026-11-28T04:00:04.342Z",
+        "expelled": false
+      }
+    ],
+    "nextCursor": null
+  },
+  "myCircleDetail": {
+    "circleId": "01747f89-c13b-429c-a21c-b24fcd5a03d9",
+    "state": "collecting",
+    "payout": {
+      "amount": 9750000,
+      "currency": "PEN"
+    },
+    "months": 10,
+    "turnCount": 10,
+    "cadence": "monthly",
+    "unit": "Mes",
+    "startsOn": "2026-12",
+    "startsOnDate": "2026-12-01",
+    "endsOn": "2027-09",
+    "endsOnDate": "2027-09-01",
+    "currentPeriod": null,
+    "currentMonth": null,
+    "currentTurn": null,
+    "position": 3,
+    "payoutPeriod": "2027-02",
+    "type": "lowest_fees",
+    "installments": [
+      {
+        "amount": 1365000,
+        "currency": "PEN"
+      },
+      {
+        "amount": 1365000,
+        "currency": "PEN"
+      },
+      {
+        "amount": 1365000,
+        "currency": "PEN"
+      }
+    ],
+    "netPayout": {
+      "amount": 7800000,
+      "currency": "PEN"
+    },
+    "retention": {
+      "amount": 1950000,
+      "currency": "PEN"
+    },
+    "nextDue": null,
+    "turns": [
+      {
+        "position": 1,
+        "turn": 1,
+        "period": "2026-12",
+        "payoutOn": "2026-12-01",
+        "memberName": null,
+        "isMe": false,
+        "status": "vacant"
+      },
+      {
+        "position": 2,
+        "turn": 2,
+        "period": "2027-01",
+        "payoutOn": "2027-01-01",
+        "memberName": null,
+        "isMe": false,
+        "status": "vacant"
+      }
+    ]
+  }
+}

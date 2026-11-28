@@ -53,12 +53,12 @@ describe('GetInstallmentOptionsUseCase', () => {
   });
 
   it('con el rango configurado ofrece solo las combinaciones que existen', async () => {
-    const useCase = useCaseFor(configWith({ turnRange: { min: 2, max: 24 } }));
+    const useCase = useCaseFor(configWith({ turnRange: { min: 2, max: 12 } }));
 
     const { options } = await useCase.execute(principal, 1_200_000);
 
-    expect(options.map(({ turns }) => turns)).toEqual([2, 3, 4, 5, 6, 8, 10, 12, 15, 16, 20, 24]);
-    // 7, 9, 11, 13 y 14 no dividen 12.000 en céntimos exactos y no se ofrecen.
+    expect(options.map(({ turns }) => turns)).toEqual([2, 3, 4, 5, 6, 8, 10, 12]);
+    // 7, 9 y 11 no dividen 12.000 en céntimos exactos y no se ofrecen.
     expect(options.map(({ turns }) => turns)).not.toContain(7);
   });
 

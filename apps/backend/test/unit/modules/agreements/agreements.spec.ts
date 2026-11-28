@@ -267,8 +267,9 @@ describe('Firma del contrato y del pagaré (COPAYNI-89)', () => {
     expect(contract.text).toContain('CONTRATO DE PARTICIPACIÓN');
     // El texto provisional avisa que no lo redactó Legal (pending-scope §3.3).
     expect(contract.text).toContain('TEXTO PROVISIONAL');
-    expect(contract.text).toContain('Cuota base mensual: 600.00 PEN');
-    expect(contract.text).toContain('Monto del pozo a recibir: 6000.00 PEN');
+    // El documento nombra la cuota por turno, no por mes (COPAYNI-119).
+    expect(contract.text).toContain('Cuota base por turno: 600.00 PEN');
+    expect(contract.text).toContain('Monto del pozo: 6000.00 PEN');
     expect(hashOf(contract.text)).toBe(contract.hash);
   });
 

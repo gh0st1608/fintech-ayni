@@ -40,6 +40,9 @@ describe('GET /v1/circles/slots', () => {
     expect(response.body.data.slots[0]).toEqual({
       position: 1,
       payoutPeriod: startsOn,
+      // El día real de cobro, que la app muestra tal cual (COPAYNI-116): en mensual es el
+      // CIRCLE_INSTALLMENT_DUE_DAY, que por defecto es el 1.
+      payoutOn: `${startsOn}-01`,
       type: 'fastest_payout',
       fee: { amount: 300_000, currency: 'PEN' },
       discount: { amount: 0, currency: 'PEN' },

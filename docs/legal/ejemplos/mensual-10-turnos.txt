@@ -1,0 +1,104 @@
+Junta mensual de 10 turnos, turno 3 (referencia)
+================================================
+
+Generado con renderAgreement el 2026-11-27 (COPAYNI-119). Datos de la junta:
+  Pozo: S/ 30000.00   Turnos: 10   Cadencia: monthly
+  Cuota base por turno: S/ 3000.00
+  Inicio: 2026-12-01   Fin: 2027-09-01
+  Turno del titular: 3 (lowest_fees), cobra el 2027-02-01
+  Total a aportar: S/ 33600.00   Retención: S/ 6000.00   Recibe de inmediato: S/ 24000.00
+  Gracia: 3 día(s)   Cargo por mora: 3.00 %
+
+------------------------------------------------------------------------------------------------
+--- CONTRATO ---
+------------------------------------------------------------------------------------------------
+
+CONTRATO DE PARTICIPACIÓN EN CÍRCULO DE AHORRO (GAME'YA)
+
+AVISO: TEXTO PROVISIONAL, PENDIENTE DE REDACCIÓN POR EL ÁREA LEGAL.
+No constituye asesoría legal ni un título valor con mérito ejecutivo.
+Ver docs/pending-scope.md §3.3 (PG1 a PG5).
+
+1. OBJETO
+El participante se incorpora a un círculo de ahorro de 10 meses, con aportes de
+frecuencia mensual, que inicia el 2026-12-01 y termina el
+2027-09-01.
+
+2. TURNO Y COBRO
+Turno asignado: 3 de 10.
+Fecha de cobro del pozo: 2027-02-01.
+Monto del pozo: 30000.00 PEN.
+Retención aplicada al cobro, que paga sus últimas cuotas: 6000.00 PEN.
+Importe que recibe de inmediato: 24000.00 PEN.
+
+3. APORTES
+Cuota base por turno: 3000.00 PEN.
+Total a aportar por el turno, incluidos cargos y descuentos: 33600.00 PEN.
+Calendario de vencimientos (10 meses, frecuencia mensual):
+  Turno 1: vence el 2026-12-01.
+  Turno 2: vence el 2027-01-01.
+  Turno 3: vence el 2027-02-01.
+  Turno 4: vence el 2027-03-01.
+  Turno 5: vence el 2027-04-01.
+  Turno 6: vence el 2027-05-01.
+  Turno 7: vence el 2027-06-01.
+  Turno 8: vence el 2027-07-01.
+  Turno 9: vence el 2027-08-01.
+  Turno 10: vence el 2027-09-01.
+
+4. INCUMPLIMIENTO
+Días de gracia desde el vencimiento: 3.
+Cargo por mora sobre la cuota vencida: 3.00 %.
+El impago de una cuota, vencida la gracia, da lugar a la exclusión del círculo, al cargo por
+mora indicado y al bloqueo para unirse a otro círculo hasta regularizar la deuda.
+
+5. DEVOLUCIÓN
+Al excluido antes de su fecha de cobro se le devuelven sus cuotas aportadas, menos la
+penalidad vigente, al cierre del círculo. La devolución se retiene mientras exista deuda
+pendiente.
+
+Versión de la plantilla: contract-provisional-2-monthly
+Aprobación de la plantilla: provisional-po — PO (Erick Galindo), 2026-11-16.
+
+
+------------------------------------------------------------------------------------------------
+--- PAGARÉ ---
+------------------------------------------------------------------------------------------------
+
+PAGARÉ
+
+AVISO: TEXTO PROVISIONAL, PENDIENTE DE REDACCIÓN POR EL ÁREA LEGAL.
+No constituye asesoría legal ni un título valor con mérito ejecutivo.
+Ver docs/pending-scope.md §3.3 (PG1 a PG5).
+
+Por el presente documento el participante reconoce la obligación de pagar a la cooperativa
+las cuotas pendientes del círculo de ahorro en el que participa, en caso de incumplimiento
+posterior al cobro del pozo.
+
+Importe máximo garantizado: 30000.00 PEN.
+Cuota base por turno: 3000.00 PEN.
+Turno: 3 de 10, frecuencia mensual.
+Fecha de cobro del pozo: 2027-02-01.
+
+Calendario de vencimientos (10 meses, frecuencia mensual):
+  Turno 1: vence el 2026-12-01.
+  Turno 2: vence el 2027-01-01.
+  Turno 3: vence el 2027-02-01.
+  Turno 4: vence el 2027-03-01.
+  Turno 5: vence el 2027-04-01.
+  Turno 6: vence el 2027-05-01.
+  Turno 7: vence el 2027-06-01.
+  Turno 8: vence el 2027-07-01.
+  Turno 9: vence el 2027-08-01.
+  Turno 10: vence el 2027-09-01.
+
+La obligación se hace exigible por el saldo impago de las cuotas restantes a las fechas
+indicadas, más el cargo por mora de 3.00 % sobre cada cuota vencida,
+descontada la retención aplicada al cobro del pozo.
+
+PENDIENTE DE LEGAL: el monto de un pagaré debe ser determinado y aquí la deuda es contingente
+(PG3). La forma de fijarlo y la vía de firma (PG1 y PG2) condicionan la validez del título.
+
+Versión de la plantilla: promissory-note-provisional-2-monthly
+Aprobación de la plantilla: provisional-po — PO (Erick Galindo), 2026-11-16.
+

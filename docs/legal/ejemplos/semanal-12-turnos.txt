@@ -1,0 +1,110 @@
+Junta semanal de 12 turnos, turno 1
+===================================
+
+Generado con renderAgreement el 2026-11-27 (COPAYNI-119). Datos de la junta:
+  Pozo: S/ 6000.00   Turnos: 12   Cadencia: weekly
+  Cuota base por turno: S/ 500.00
+  Inicio: 2026-12-02   Fin: 2027-02-17
+  Turno del titular: 1 (fastest_payout), cobra el 2026-12-02
+  Total a aportar: S/ 7320.00   Retención: S/ 1500.00   Recibe de inmediato: S/ 4500.00
+  Gracia: 1 día(s)   Cargo por mora: 0.70 %
+
+------------------------------------------------------------------------------------------------
+--- CONTRATO ---
+------------------------------------------------------------------------------------------------
+
+CONTRATO DE PARTICIPACIÓN EN CÍRCULO DE AHORRO (GAME'YA)
+
+AVISO: TEXTO PROVISIONAL, PENDIENTE DE REDACCIÓN POR EL ÁREA LEGAL.
+No constituye asesoría legal ni un título valor con mérito ejecutivo.
+Ver docs/pending-scope.md §3.3 (PG1 a PG5).
+
+1. OBJETO
+El participante se incorpora a un círculo de ahorro de 12 semanas, con aportes de
+frecuencia semanal, que inicia el 2026-12-02 y termina el
+2027-02-17.
+Referencia aproximada, sin valor como plazo: unos 2.8 meses
+(84 días corridos). El plazo de la obligación son las fechas de arriba.
+
+2. TURNO Y COBRO
+Turno asignado: 1 de 12.
+Fecha de cobro del pozo: 2026-12-02.
+Monto del pozo: 6000.00 PEN.
+Retención aplicada al cobro, que paga sus últimas cuotas: 1500.00 PEN.
+Importe que recibe de inmediato: 4500.00 PEN.
+
+3. APORTES
+Cuota base por turno: 500.00 PEN.
+Total a aportar por el turno, incluidos cargos y descuentos: 7320.00 PEN.
+Calendario de vencimientos (12 semanas, frecuencia semanal):
+  Turno 1: vence el 2026-12-02.
+  Turno 2: vence el 2026-12-09.
+  Turno 3: vence el 2026-12-16.
+  Turno 4: vence el 2026-12-23.
+  Turno 5: vence el 2026-12-30.
+  Turno 6: vence el 2027-01-06.
+  Turno 7: vence el 2027-01-13.
+  Turno 8: vence el 2027-01-20.
+  Turno 9: vence el 2027-01-27.
+  Turno 10: vence el 2027-02-03.
+  Turno 11: vence el 2027-02-10.
+  Turno 12: vence el 2027-02-17.
+
+4. INCUMPLIMIENTO
+Días de gracia desde el vencimiento: 1.
+Cargo por mora sobre la cuota vencida: 0.70 %.
+El impago de una cuota, vencida la gracia, da lugar a la exclusión del círculo, al cargo por
+mora indicado y al bloqueo para unirse a otro círculo hasta regularizar la deuda.
+
+5. DEVOLUCIÓN
+Al excluido antes de su fecha de cobro se le devuelven sus cuotas aportadas, menos la
+penalidad vigente, al cierre del círculo. La devolución se retiene mientras exista deuda
+pendiente.
+
+Versión de la plantilla: contract-provisional-2-weekly
+Aprobación de la plantilla: NINGUNA. Este documento no debe emitirse.
+
+
+------------------------------------------------------------------------------------------------
+--- PAGARÉ ---
+------------------------------------------------------------------------------------------------
+
+PAGARÉ
+
+AVISO: TEXTO PROVISIONAL, PENDIENTE DE REDACCIÓN POR EL ÁREA LEGAL.
+No constituye asesoría legal ni un título valor con mérito ejecutivo.
+Ver docs/pending-scope.md §3.3 (PG1 a PG5).
+
+Por el presente documento el participante reconoce la obligación de pagar a la cooperativa
+las cuotas pendientes del círculo de ahorro en el que participa, en caso de incumplimiento
+posterior al cobro del pozo.
+
+Importe máximo garantizado: 6000.00 PEN.
+Cuota base por turno: 500.00 PEN.
+Turno: 1 de 12, frecuencia semanal.
+Fecha de cobro del pozo: 2026-12-02.
+
+Calendario de vencimientos (12 semanas, frecuencia semanal):
+  Turno 1: vence el 2026-12-02.
+  Turno 2: vence el 2026-12-09.
+  Turno 3: vence el 2026-12-16.
+  Turno 4: vence el 2026-12-23.
+  Turno 5: vence el 2026-12-30.
+  Turno 6: vence el 2027-01-06.
+  Turno 7: vence el 2027-01-13.
+  Turno 8: vence el 2027-01-20.
+  Turno 9: vence el 2027-01-27.
+  Turno 10: vence el 2027-02-03.
+  Turno 11: vence el 2027-02-10.
+  Turno 12: vence el 2027-02-17.
+
+La obligación se hace exigible por el saldo impago de las cuotas restantes a las fechas
+indicadas, más el cargo por mora de 0.70 % sobre cada cuota vencida,
+descontada la retención aplicada al cobro del pozo.
+
+PENDIENTE DE LEGAL: el monto de un pagaré debe ser determinado y aquí la deuda es contingente
+(PG3). La forma de fijarlo y la vía de firma (PG1 y PG2) condicionan la validez del título.
+
+Versión de la plantilla: promissory-note-provisional-2-weekly
+Aprobación de la plantilla: NINGUNA. Este documento no debe emitirse.
+
