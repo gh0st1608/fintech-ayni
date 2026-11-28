@@ -100,6 +100,22 @@ describe('telemetría', () => {
   });
 
   describe('exportación OTLP', () => {
+    /**
+     * El exportador OTLP por HTTP carga su transporte con un `import()` dinámico, y dentro de la
+     * VM de Jest, Node lo rechaza si falta `--experimental-vm-modules`: el envío muere con
+     * `ERR_VM_DYNAMIC_IMPORT_CALLBACK_MISSING_FLAG` y al colector no llega ninguna señal, así que
+     * la prueba falla sin decir por qué (COPAYNI-123). `npm test` y `npm run test:e2e` ya pasan
+     * el flag; `npx jest` a secas, no. Mejor decirlo que dejar que parezca un defecto del código.
+     */
+    beforeAll(() => {
+      const flag = '--experimental-vm-modules';
+      if (!process.execArgv.includes(flag)) {
+        throw new Error(
+          `Esta prueba necesita ${flag}: ejecutarla con \`npm test\`, no con \`npx jest\`.`,
+        );
+      }
+    });
+
     let collector: Server;
     let endpoint: string;
     let received: Export[];

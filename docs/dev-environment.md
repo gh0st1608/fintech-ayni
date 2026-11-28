@@ -47,6 +47,12 @@ docker compose -f infra/local/compose.yaml --profile tunnel up -d
 - Si el **5432** ya lo ocupa otro proyecto de la máquina, `DB_PORT` elige el puerto publicado y hay
   que usar el mismo al correr las pruebas: `DB_PORT=55433 npm run db:up` y
   `DB_PORT=55433 npm test`. En `.env`, `DB_PORT` tiene que coincidir.
+- Las pruebas se corren **con los scripts de npm** (`npm test`, `npm run test:e2e`), nunca con
+  `npx jest` a secas: los scripts pasan `--experimental-vm-modules`, y sin ese flag el exportador
+  de telemetría no puede cargar su transporte y su prueba falla sin explicar por qué (COPAYNI-123).
+- Las suites de integración y e2e necesitan además **floci** levantado
+  (`docker compose -f infra/local/compose.yaml up -d floci`): sin él fallan las pruebas de S3, SES
+  y SNS.
 
 ### 2. Backend
 
